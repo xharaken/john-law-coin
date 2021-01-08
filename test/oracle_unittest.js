@@ -43,10 +43,11 @@ function parameterized_test(accounts,
     assert.isTrue(_mode_level != _other_level);
 
     let _supply = await TokenSupply.new();
-    let _oracle = await OracleForTesting.new(
-        _level_max, _reclaim_threshold,
-        _proportional_reward_rate, _supply.address,
-        {gas: 12000000});
+    let _oracle = await OracleForTesting.new({gas: 12000000});
+    await _oracle.initialize(_supply.address);
+    await _oracle.override_constants(_level_max, _reclaim_threshold,
+                                     _proportional_reward_rate);
+    await _supply.set_delegated_owner(_oracle.address);
     await _supply.set_delegated_owner(_oracle.address);
 
     let current = await get_current([accounts[2]]);
@@ -57,35 +58,6 @@ function parameterized_test(accounts,
     assert.equal(current.epochs[1].phase, Oracle.Phase.RECLAIM);
     assert.equal(current.epochs[2].phase, Oracle.Phase.REVEAL);
     assert.equal(current.epoch % 3, 0);
-
-    // Invalid oracle
-    await should_throw(async () => {
-      await Oracle.new(-1, 1, 0, _supply.address);
-    }, "out-of-bounds");
-
-    await should_throw(async () => {
-      await Oracle.new(0, 1, 0, _supply.address);
-    }, "constructor");
-
-    await should_throw(async () => {
-      await Oracle.new(1, 1, 0, _supply.address);
-    }, "constructor");
-
-    await should_throw(async () => {
-      await Oracle.new(2, 2, 0, _supply.address);
-    }, "constructor");
-
-    await should_throw(async () => {
-      await Oracle.new(2, -1, 0, _supply.address);
-    }, "out-of-bounds");
-
-    await should_throw(async () => {
-      await Oracle.new(2, 1, -1, _supply.address);
-    }, "out-of-bounds");
-
-    await should_throw(async () => {
-      await Oracle.new(2, 1, 101, _supply.address);
-    }, "constructor");
 
     await should_throw(async () => {
       await _oracle.advance_phase(-1);
@@ -2081,11 +2053,13 @@ function parameterized_test(accounts,
     }, "Ownable");
 
     _supply = await TokenSupply.new({from: accounts[2]});
-    _oracle = await OracleForTesting.new(
-        _level_max, _reclaim_threshold,
-        _proportional_reward_rate, _supply.address,
-        {from: accounts[2], gas: 12000000});
+    _oracle = await OracleForTesting.new({from: accounts[2], gas: 12000000});
+    await _oracle.initialize(_supply.address, {from: accounts[2]});
+    await _oracle.override_constants(_level_max, _reclaim_threshold,
+                                     _proportional_reward_rate,
+                                     {from: accounts[2]});
     await _supply.set_delegated_owner(_oracle.address, {from: accounts[2]});
+
     deposit_holder = await TokenHolder.new(
         _supply.address, {from: accounts[2]});
     reclaim_holder = await TokenHolder.new(

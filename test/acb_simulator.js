@@ -57,27 +57,38 @@ function parameterized_test(accounts,
       " reclaim=" + _reclaim_threshold +
       " voter=" + _voter_count +
       " iter=" + _iteration;
-  _coin_transfer_max = 100000000;
-  _initial_coin_supply = 2100000;
-
   assert.isTrue(_voter_count <= accounts.length - 1);
 
   it(test_name, async function () {
-    let _acb = await ACBForTesting.new(_bond_redemption_price,
-                                       _bond_redemption_period,
-                                       _phase_duration,
-                                       _proportional_reward_rate,
-                                       _deposit_rate,
-                                       _dumping_factor,
-                                       _reclaim_threshold,
-                                       _level_to_exchange_rate,
-                                       _level_to_bond_price,
-                                       _coin_transfer_max,
-                                       _initial_coin_supply,
-                                       {from: accounts[0], gas: 30000000});
+    _coin_transfer_max = 100000000;
+    let _level_max = _level_to_exchange_rate.length;
+
+    let _acb = await ACBForTesting.new({from: accounts[0], gas: 30000000});
+    await _acb.initialize({from: accounts[0]});
+    await _acb.override_constants(_bond_redemption_price,
+                                  _bond_redemption_period,
+                                  _phase_duration,
+                                  _deposit_rate,
+                                  _dumping_factor,
+                                  _level_to_exchange_rate,
+                                  _level_to_bond_price,
+                                  _coin_transfer_max,
+                                  {from: accounts[0]});
+
+    let _oracle = await OracleForTesting.new(
+        {from: accounts[0], gas: 12000000});
+    await _oracle.initialize(await _acb.coin_supply_address(),
+                            {from: accounts[0]});
+    await _oracle.override_constants(_level_max, _reclaim_threshold,
+                                     _proportional_reward_rate,
+                                     {from: accounts[0]});
+    await _oracle.transferOwnership(_acb.address, {from: accounts[0]});
+
+    await _acb.activate(_oracle.address, {from: accounts[0]});
+
+    _initial_coin_supply = (await _acb.get_initial_coin_supply()).toNumber();
 
     let _lost_deposit = [0, 0, 0];
-    let _level_max = _level_to_exchange_rate.length;
 
     let _voters = [];
     for (let i = 0; i < _voter_count; i++) {

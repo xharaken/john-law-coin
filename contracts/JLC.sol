@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.7.1 <0.9.0;
 
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "openzeppelin-solidity/contracts/access/Ownable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/math/SignedSafeMath.sol";
@@ -44,7 +46,7 @@ contract TokenHolder is Ownable {
   // Attributes
   // ----------------
   // |amount_|: The amount of tokens.
-  uint public amount_ = 0;
+  uint public amount_;
 
   // Constructor
   //
@@ -81,8 +83,8 @@ contract TokenSupply is Ownable {
   // |amount_|: The amount of the total supply.
   // |delegated_owner_|: The token supply can also be used by the delegated
   // owner.
-  uint public amount_ = 0;
-  address private delegated_owner_ = address(0);
+  uint public amount_;
+  address private delegated_owner_;
 
   // Events.
   event SendToEvent(TokenHolder indexed src_holder,
@@ -194,7 +196,14 @@ contract TokenSupply is Ownable {
 
 // Oracle is a mechanism to determine one "truth" level in 0, 1, 2, ...,
 // LEVEL_MAX - 1 using the commit-reveal-reclaim voting scheme.
-contract Oracle is Ownable {
+contract Oracle is OwnableUpgradeable {
+
+  // Constants. The values are defined in initialize(). The values never
+  // change during the contract execution but use 'internal' (instead of
+  // 'constant') because tests wants to override them.
+  uint internal LEVEL_MAX;
+  uint internal RECLAIM_THRESHOLD;
+  uint internal PROPORTIONAL_REWARD_RATE;
 
   // The valid phase transition is: COMMIT => REVEAL => RECLAIM.
   enum Phase {
@@ -263,21 +272,17 @@ contract Oracle is Ownable {
 
   // Attributes
   // ----------------
-  // |level_max_|: The number of the oracle levels.
-  // |reclaim_threshold_|: The reclaim threshold.
-  // |proportional_reward_rate_|: The proportional reward rate.
   // |epochs_|: The oracle creates three Epoch objects and uses them in a
   // round-robin manner (commit => reveal => reclaim).
   // |epoch_|: The current epoch. The Epoch object at |epoch % 3| is in
   // the commit phase. The Epoch object at |(epoch - 1) % 3| is in the
   // reveal phase. The Epoch object at |(epoch - 2) % 3| is in the
   // reclaim phase.
-  uint internal level_max_;
-  uint internal reclaim_threshold_;
-  uint internal proportional_reward_rate_;
-  TokenSupply internal coin_supply_;
+  // |coin_supply|: The total coin supply the oracle uses to mint, burn
+  // and transfer coins.
   Epoch[3] internal epochs_;
   uint internal epoch_;
+  TokenSupply internal coin_supply_;
 
   // Events.
   event CommitEvent(address indexed, bytes32, uint, TokenHolder);
@@ -285,50 +290,57 @@ contract Oracle is Ownable {
   event ReclaimEvent(address indexed, TokenHolder, uint);
   event AdvancePhaseEvent(uint indexed, uint, uint);
 
-  // Constructor.
+  // Initializer.
   //
   // Parameters
   // ----------------
-  // |level_max|: The number of the oracle levels.
-  // |reclaim_threshold|: If the "truth" level is 7 and |reclaim_threshold| is
-  // 2, the voters who voted for 5, 6, 7, 8 and 9 can reclaim their deposited
-  // coins. Other voters lose their deposited coins.
-  // |proportional_reward_rate|: The lost deposited coins and the coins minted
-  // by ACB are distributed to the voters who voted for the "truth" level as a
-  // reward. The |proportional_reward_rate| percentage of the reward is
-  // distributed to the voters in proportion to the coins they deposited. The
-  // rest of the reward is distributed to the voters evenly.
   // |coin_supply|: The total coin supply.
-  constructor(uint level_max, uint reclaim_threshold,
-              uint proportional_reward_rate, TokenSupply coin_supply) {
-    require(2 <= level_max && level_max < 100,
-            "constructor: 2 <= level_max < 100");
-    require(0 <= reclaim_threshold && reclaim_threshold < level_max,
-            "constructor: 0 <= reclaim_threshold < level_max");
-    require(0 <= proportional_reward_rate &&
-            proportional_reward_rate <= 100,
-            "constructor: 0 <= proportional_reward_rate <= 100");
-    level_max_ = level_max;
-    reclaim_threshold_ = reclaim_threshold;
-    proportional_reward_rate_ = proportional_reward_rate;
-    coin_supply_ = coin_supply;
-    // Start with 3 because epoch 0 in the commit entry is not distinguishable
-    // from an uninitialized commit entry.
-    epoch_ = 3;
+  function initialize(TokenSupply coin_supply)
+      public initializer {
+    __Ownable_init();
+
+    // The number of the oracle levels.
+    LEVEL_MAX = 7;
     
+    // If the "truth" level is 7 and RECLAIM_THRESHOLD is 2, the voters who
+    // voted for 5, 6, 7, 8 and 9 can reclaim their deposited coins. Other
+    // voters lose their deposited coins.
+    RECLAIM_THRESHOLD = 1;
+    
+    // The lost deposited coins and the coins minted by ACB are distributed to
+    // the voters who voted for the "truth" level as a reward. The
+    // PROPORTIONAL_REWARD_RATE of the reward is distributed to the voters in
+    // proportion to the coins they deposited. The rest of the reward is
+    // distributed to the voters evenly.
+    PROPORTIONAL_REWARD_RATE = 80; // 80%
+
+    require(2 <= LEVEL_MAX && LEVEL_MAX < 100,
+            "initializer: 2 <= LEVEL_MAX < 100");
+    require(0 <= RECLAIM_THRESHOLD && RECLAIM_THRESHOLD < LEVEL_MAX,
+            "initializer: 0 <= RECLAIM_THRESHOLD < LEVEL_MAX");
+    require(0 <= PROPORTIONAL_REWARD_RATE &&
+            PROPORTIONAL_REWARD_RATE <= 100,
+            "initializer: 0 <= PROPORTIONAL_REWARD_RATE <= 100");
+    
+    coin_supply_ = coin_supply;
+
     for (uint i = 0; i < 3; i++) {
-      for (uint level = 0; level < level_max; level++) {
+      for (uint level = 0; level < LEVEL_MAX; level++) {
         epochs_[i].votes.push(Vote(0, 0, false, false));
       }
-      epochs_[i].reward_holder = new TokenHolder(coin_supply);
+      epochs_[i].reward_holder = new TokenHolder(coin_supply_);
       epochs_[i].reward_total = 0;
-      epochs_[i].deposit_holder = new TokenHolder(coin_supply);
+      epochs_[i].deposit_holder = new TokenHolder(coin_supply_);
     }
     epochs_[0].phase = Phase.COMMIT;
     epochs_[1].phase = Phase.RECLAIM;
     epochs_[2].phase = Phase.REVEAL;
+    
+    // Start with 3 because epoch 0 in the commit entry is not distinguishable
+    // from an uninitialized commit entry.
+    epoch_ = 3;
   }
-      
+
   // Do commit.
   //
   // Parameters
@@ -344,6 +356,8 @@ contract Oracle is Ownable {
   function commit(address sender, bytes32 committed_hash,
                   uint deposit, TokenHolder balance_holder)
       public onlyOwner returns (bool) {
+    require(epoch_ >= 3, "commit: epoch_ >= 3");
+    
     Epoch storage epoch = epochs_[epoch_ % 3];
     require(epoch.phase == Phase.COMMIT,
             "commit: epoch.phase == Phase.COMMIT");
@@ -351,15 +365,13 @@ contract Oracle is Ownable {
       return false;
     }
     // One voter can commit only once per epoch.
-    require(epoch_ >= 3,
-            "commit: epoch_ >= 3");
     if (epoch.commits[sender].epoch == epoch_) {
       return false;
     }
 
     // Create a commit entry.
     epoch.commits[sender] = Commit(
-        committed_hash, deposit, level_max_, Phase.COMMIT, epoch_);
+        committed_hash, deposit, LEVEL_MAX, Phase.COMMIT, epoch_);
     require(epoch.commits[sender].phase == Phase.COMMIT,
             "commit: epoch.commits[sender].phase == Phase.COMMIT");
 
@@ -384,14 +396,14 @@ contract Oracle is Ownable {
   // True if the reveal succeeded. False otherwise.
   function reveal(address sender, uint revealed_level, uint revealed_salt)
       public onlyOwner returns (bool) {
+    require(epoch_ >= 3, "reveal: epoch_ >= 3");
+    
     Epoch storage epoch = epochs_[(epoch_ - 1) % 3];
     require(epoch.phase == Phase.REVEAL,
             "reveal: epoch.phase == Phase.REVEAL");
-    if (revealed_level < 0 || level_max_ <= revealed_level) {
+    if (revealed_level < 0 || LEVEL_MAX <= revealed_level) {
       return false;
     }
-    require(epoch_ >= 3,
-            "reveal: epoch_ >= 3");
     if (epoch.commits[sender].epoch != epoch_ - 1) {
       // The corresponding commit was not found.
       return false;
@@ -432,11 +444,11 @@ contract Oracle is Ownable {
   // The amount of reclaimed coins.
   function reclaim(address sender, TokenHolder balance_holder)
       public onlyOwner returns (uint) {
+    require(epoch_ >= 3, "reclaim: epoch_ >= 3");
+    
     Epoch storage epoch = epochs_[(epoch_ - 2) % 3];
     require(epoch.phase == Phase.RECLAIM,
             "reclaim: epoch.phase == Phase.RECLAIM");
-    require(epoch_ >= 3,
-            "reclaim: epoch_ >= 3");
     if (epoch.commits[sender].epoch != epoch_ - 2){
       // The corresponding commit was not found.
       return 0;
@@ -449,11 +461,11 @@ contract Oracle is Ownable {
     epoch.commits[sender].phase = Phase.RECLAIM;
     uint deposit = epoch.commits[sender].deposit;
     uint revealed_level = epoch.commits[sender].revealed_level;
-    if (revealed_level == level_max_) {
+    if (revealed_level == LEVEL_MAX) {
       return 0;
     }
-    require(0 <= revealed_level && revealed_level < level_max_,
-            "reclaim: 0 <= revealed_level < level_max_");
+    require(0 <= revealed_level && revealed_level < LEVEL_MAX,
+            "reclaim: 0 <= revealed_level < LEVEL_MAX");
 
     if (!epoch.votes[revealed_level].should_reclaim) {
       return 0;
@@ -473,21 +485,21 @@ contract Oracle is Ownable {
               "reclaim: epoch.votes[revealed_level].count > 0");
       // The voter who voted for the "truth" level can receive the reward.
       //
-      // The |proportional_reward_rate_| percentage of the reward is
-      // distributed to the voters in proportion to the coins they deposited.
-      // This incentivizes voters who have more coins and thus should have
-      // more power on determining the "truth" level to join the oracle game.
+      // The PROPORTIONAL_REWARD_RATE of the reward is distributed to the
+      // voters in proportion to the coins they deposited. This incentivizes
+      // voters who have more coins and thus should have more power on
+      // determining the "truth" level to join the oracle game.
       //
       // The rest of the reward is distributed to the voters evenly. This
       // incentivizes more voters to join the oracle game.
       uint proportional_reward = 0;
       if (epoch.votes[revealed_level].deposit > 0) {
         proportional_reward = (
-            (proportional_reward_rate_ * epoch.reward_total * deposit) /
+            (PROPORTIONAL_REWARD_RATE * epoch.reward_total * deposit) /
             (100 * epoch.votes[revealed_level].deposit));
       }
       uint constant_reward = (
-          ((100 - proportional_reward_rate_) * epoch.reward_total) /
+          ((100 - PROPORTIONAL_REWARD_RATE) * epoch.reward_total) /
           (100 * epoch.votes[revealed_level].count));
       coin_supply_.send_to(epoch.reward_holder,
                            balance_holder,
@@ -511,8 +523,7 @@ contract Oracle is Ownable {
   // None.
   function advance_phase(uint mint)
       public onlyOwner returns (uint) {
-    require(epoch_ >= 3,
-            "advance_phase: epoch_ >= 3");
+    require(epoch_ >= 3, "advance_phase: epoch_ >= 3");
     
     // Step 1: Move the commit phase to the reveal phase.
     Epoch storage epoch = epochs_[epoch_ % 3];
@@ -526,18 +537,18 @@ contract Oracle is Ownable {
             "advance_phase: epoch.phase == Phase.REVEAL");
 
     uint mode_level = get_mode_level();
-    if (0 <= mode_level && mode_level < level_max_) {
+    if (0 <= mode_level && mode_level < LEVEL_MAX) {
       uint deposit_voted = 0;
       uint deposit_to_reclaim = 0;
-      for (uint level = 0; level < level_max_; level++) {
+      for (uint level = 0; level < LEVEL_MAX; level++) {
         require(epoch.votes[level].should_reclaim == false,
                 "advance_phase: epoch.votes[level].should_reclaim == false");
         require(epoch.votes[level].should_reward == false,
                 "advance_phase: epoch.votes[level].should_reward == false");
         deposit_voted += epoch.votes[level].deposit;
-        if ((mode_level < reclaim_threshold_ ||
-             mode_level - reclaim_threshold_ <= level) &&
-            level <= mode_level + reclaim_threshold_) {
+        if ((mode_level < RECLAIM_THRESHOLD ||
+             mode_level - RECLAIM_THRESHOLD <= level) &&
+            level <= mode_level + RECLAIM_THRESHOLD) {
           // Voters who voted for the oracle levels in [mode_level -
           // reclaim_threshold, mode_level + reclaim_threshold] are eligible
           // to reclaim the deposited coins. Other voters lose the deposited
@@ -593,7 +604,7 @@ contract Oracle is Ownable {
     //
     // The mapping cannot be erased due to the restriction of Solidity.
     // epoch.commits = {}
-    for (uint level = 0; level < level_max_; level++) {
+    for (uint level = 0; level < LEVEL_MAX; level++) {
       epoch.votes[level] = Vote(0, 0, false, false);
     }
     require(epoch.deposit_holder.amount_() == 0,
@@ -624,15 +635,17 @@ contract Oracle is Ownable {
   // smallest mode. If there are no votes, return LEVEL_MAX.
   function get_mode_level()
       public onlyOwner view returns (uint) {
+    require(epoch_ >= 3, "get_mode_level: epoch_ >= 3");
+    
     Epoch storage epoch = epochs_[(epoch_ - 1) % 3];
     require(epoch.phase == Phase.REVEAL,
             "get_mode_level: epoch.phase == Phase.REVEAL");
-    uint mode_level = level_max_;
+    uint mode_level = LEVEL_MAX;
     uint max_deposit = 0;
     uint max_count = 0;
-    for (uint level = 0; level < level_max_; level++) {
+    for (uint level = 0; level < LEVEL_MAX; level++) {
       if (epoch.votes[level].count > 0 &&
-          (mode_level == level_max_ ||
+          (mode_level == LEVEL_MAX ||
            max_deposit < epoch.votes[level].deposit ||
            (max_deposit == epoch.votes[level].deposit &&
             max_count < epoch.votes[level].count))){
@@ -641,16 +654,30 @@ contract Oracle is Ownable {
         mode_level = level;
       }
     }
-    if (mode_level == level_max_) {
+    if (mode_level == LEVEL_MAX) {
       require(max_deposit == 0,
               "get_mode_level: max_deposit == 0");
       require(max_count == 0,
               "get_mode_level: max_count == 0");
-      return level_max_;
+      return LEVEL_MAX;
     }
-    require(0 <= mode_level && mode_level < level_max_,
-            "get_mode_level: 0 <= mode_level < level_max_");
+    require(0 <= mode_level && mode_level < LEVEL_MAX,
+            "get_mode_level: 0 <= mode_level < LEVEL_MAX");
     return mode_level;
+  }
+
+  // Return LEVEL_MAX.
+  //
+  // Parameters
+  // ----------------
+  // None.
+  //
+  // Returns
+  // ----------------
+  // Returns LEVEL_MAX.
+  function get_level_max()
+      public onlyOwner view returns (uint) {
+    return LEVEL_MAX;
   }
 
   // Calculate the committed hash.
@@ -689,12 +716,11 @@ contract Oracle is Ownable {
 //------------------------------------------------------------------------------
 
 // The ACB contract.
-contract ACB {
+contract ACB is OwnableUpgradeable, PausableUpgradeable {
 
-  // Constants. The values never change during the contract execution but use
-  // 'internal' (instead of 'constant') because ACBForTesting wants to override
-  // them.
-  //
+  // Constants. The values are defined in initialize(). The values never
+  // change during the contract execution but use 'internal' (instead of
+  // 'constant') because tests wants to override them.
   // The bond redemption price and the redemption period.
   uint internal BOND_REDEMPTION_PRICE = 1000; // A bond is redeemed at 1000 USD.
   uint internal BOND_REDEMPTION_PERIOD = 84 * 24 * 60 * 60; // 12 weeks.
@@ -730,17 +756,10 @@ contract ACB {
   // the smart contract.
   uint[] internal LEVEL_TO_EXCHANGE_RATE = [7, 8, 9, 10, 11, 12, 13];
   uint internal EXCHANGE_RATE_DIVISOR = 10;
-  uint internal LEVEL_MAX = LEVEL_TO_EXCHANGE_RATE.length;
 
   // LEVEL_TO_EXCHANGE_RATE is the mapping from the oracle levels to the
   // bond prices
   uint[] internal LEVEL_TO_BOND_PRICE = [970, 980, 990, 997, 997, 997, 997];
-
-  // The reclaim threshold in the oracle.
-  uint internal RECLAIM_THRESHOLD = 1;
-
-  // The proportional reward rate in the oracle.
-  uint internal PROPORTIONAL_REWARD_RATE = 80; // 80%
 
   // The duration of the commit / reveal / reclaim phase.
   uint internal PHASE_DURATION = 7 * 24 * 60 * 60; // 1 week.
@@ -782,7 +801,6 @@ contract ACB {
   // th coins and USD.
   // |current_epoch_start_|: The timestamp that started the current epoch.
   // |oracle_level_|: The current oracle level.
-  // |timestamp_|: The current timestamp.
   mapping (address => TokenHolder) internal balances_;
   mapping (address => mapping (uint => TokenHolder)) internal bonds_;
   TokenSupply internal coin_supply_;
@@ -800,35 +818,176 @@ contract ACB {
   event PurchaseBondsEvent(address indexed, uint, uint);
   event RedeemBondsEvent(address indexed, uint[], uint);
   event ControlSupplyEvent(int, int, uint);
+
+  //----------------------------------------------------------------------------
+  // initialize(), activate(), pause() and unpause() are the only functions
+  // the genesis account has the privilege to call. This is needed for the
+  // genesis account to upgrade the smart contract and fix bugs until it is
+  // in good shape. The genesis account has no control about monetary protocols
+  // of the ACB.
+  //----------------------------------------------------------------------------
   
-  // Constructor.
+  // Initializer.
   //
   // Parameters
   // ----------------
   // None.
-  constructor() {
-    address genesis_account = msg.sender;
-    
-    require(LEVEL_MAX == 7,
-            "constructor: LEVEL_MAX == 7");
-    require(LEVEL_TO_BOND_PRICE.length == LEVEL_MAX,
-            "constructor: LEVEL_TO_BOND_PRICE.length == LEVEL_MAX");
+  function initialize()
+      public initializer {
+    __Ownable_init();
+    __Pausable_init();
+
+    // The bond redemption price and the redemption period.
+    BOND_REDEMPTION_PRICE = 1000; // A bond is redeemed at 1000 USD.
+    BOND_REDEMPTION_PERIOD = 84 * 24 * 60 * 60; // 12 weeks.
+
+    // The following table shows the mapping from the oracle levels to the
+    // exchange rates and the bond prices. Voters can vote for one of the oracle
+    // levels.
+    //
+    //  -----------------------------------------------------------------------
+    //  | oracle level | exchange rate    | bond price (annual interest rate) |
+    //  -----------------------------------------------------------------------
+    //  | 0            | 1 coin = 0.7 USD | 970 coins (14.1%)                 |
+    //  | 1            | 1 coin = 0.8 USD | 980 coins (9.16%)                 |
+    //  | 2            | 1 coin = 0.9 USD | 990 coins (4.46%)                 |
+    //  | 3            | 1 coin = 1.0 USD | 997 coins (1.31%)                 |
+    //  | 4            | 1 coin = 1.1 USD | 997 coins (1.31%)                 |
+    //  | 5            | 1 coin = 1.2 USD | 997 coins (1.31%)                 |
+    //  | 6            | 1 coin = 1.3 USD | 997 coins (1.31%)                 |
+    //  -----------------------------------------------------------------------
+    //
+    // In the bootstrap phase in which no currency exchanger supports the coin
+    // <=> USD conversions, voters are expected to vote for the oracle level 4
+    // (i.e., 1 coin = 1.1 USD). This helps increase the total coin supply
+    // gradually in the bootstrap phase and incentivize early adopters. Once
+    // currency exchangers support the conversions, voters are expected to vote
+    // for the oracle level that corresponds to the exchange rate determined by
+    // the currency exchangers.
+    //
+    // LEVEL_TO_EXCHANGE_RATE is the mapping from the oracle levels to the
+    // exchange rates. The real exchange rate is obtained by dividing the values
+    // by EXCHANGE_RATE_DIVISOR. For example, 11 corresponds to the exchange
+    // rate of 1.1. This translation is needed to avoid using decimal numbers in
+    // the smart contract.
+    LEVEL_TO_EXCHANGE_RATE = [7, 8, 9, 10, 11, 12, 13];
+    EXCHANGE_RATE_DIVISOR = 10;
+
+    // LEVEL_TO_EXCHANGE_RATE is the mapping from the oracle levels to the
+    // bond prices
+    LEVEL_TO_BOND_PRICE = [970, 980, 990, 997, 997, 997, 997];
+
+    // The duration of the commit / reveal / reclaim phase.
+    PHASE_DURATION = 7 * 24 * 60 * 60; // 1 week.
+
+    // The percentage of the coin balance the voter needs to deposit.
+    DEPOSIT_RATE = 10; // 10%.
+
+    // To avoid supplying / burning too many coins to / from the system in
+    // one epoch, ACB multiplies a dumping factor to the expected amount of
+    // coins to be supplied or burned calculated by the Quantum Theory of
+    // Money.
+    DUMPING_FACTOR = 10; // 10%.
+
+    // The initial coin supply given to the genesis account.
+    // It is important to give a substantial amount of coins to the genesis
+    // account so that the genesis account can have power to determine the
+    // exchange rate until the ecosystem stabilizes. When real-world currency
+    // exchangers start converting the coins with USD and the oracle gets
+    // enough honest voters to agree on the real exchange rate consistently,
+    // the genesis account can lose its power by decreasing its coin balance.
+    // This mechanism is mandatory to stabilize the exchange rate and bootstrap
+    // the ecosystem successfully.
+    INITIAL_COIN_SUPPLY = 2100000; // 2.1 M USD
+
+    // The maximum coins that can be transferred in one transaction.
+    COIN_TRANSFER_MAX = 100000; // 100000 USD
+  
+    require(1 <= BOND_REDEMPTION_PRICE && BOND_REDEMPTION_PRICE <= 100000,
+            "initializer: BOND_REDEMPTION_PRICE");
+    require(1 <= BOND_REDEMPTION_PERIOD &&
+            BOND_REDEMPTION_PERIOD <= 365 * 24 * 60 * 60,
+            "initializer: BOND_REDEMPTION_PERIOD");
+    require(1 <= PHASE_DURATION && PHASE_DURATION <= 30 * 24 * 60 * 60,
+            "initializer: PHASE_DURATION");
+    require(0 <= DEPOSIT_RATE && DEPOSIT_RATE <= 100,
+            "initializer: DEPOSIT_RATE");
+    require(1 <= DUMPING_FACTOR && DUMPING_FACTOR <= 100,
+            "initializer: DUMPING_FACTOR");
+    require(0 <= INITIAL_COIN_SUPPLY,
+            "initializer: INITIAL_COIN_SUPPLY");
+    for (uint i = 0; i < LEVEL_TO_BOND_PRICE.length; i++) {
+      require(
+          LEVEL_TO_BOND_PRICE[i] <= BOND_REDEMPTION_PRICE,
+          "initializer: LEVEL_TO_BOND_PRICE[i] <= BOND_REDEMPTION_PRICE");
+    }
     
     coin_supply_ = new TokenSupply();
     bond_supply_ = new TokenSupply();
-    oracle_ = new Oracle(LEVEL_MAX,
-                         RECLAIM_THRESHOLD,
-                         PROPORTIONAL_REWARD_RATE,
-                         coin_supply_);
-    coin_supply_.set_delegated_owner(address(oracle_));
-    bond_supply_.set_delegated_owner(address(oracle_));
-    oracle_level_ = LEVEL_MAX;
     bond_budget_ = 0;
     current_epoch_start_ = 0;
 
     // Mint the initial coins in the genesis account.
-    require(create_account(), "constructor: create_account()");
-    coin_supply_.mint(balances_[genesis_account], INITIAL_COIN_SUPPLY);
+    require(create_account(), "initializer: create_account()");
+    coin_supply_.mint(balances_[msg.sender], INITIAL_COIN_SUPPLY);
+
+    // Pause until the ACB is activated.
+    _pause();
+  }
+
+  // Activate the ACB with an oracle. This function should be called only once
+  // just after the ACB is initialized.
+  //
+  // Parameters
+  // ----------------
+  // |oracle|: The oracle. The ownership of the oracle should be transferred to
+  // the ACB before activate() is called.
+  //
+  // Returns
+  // ----------------
+  // None.
+  function activate(Oracle oracle)
+      public whenPaused onlyOwner {
+    require(LEVEL_TO_EXCHANGE_RATE.length == oracle.get_level_max(),
+            "activate: LEVEL_TO_EXCHANGE_RATE.length == get_level_max()");
+    require(LEVEL_TO_BOND_PRICE.length == oracle.get_level_max(),
+            "activate: LEVEL_TO_BOND_PRICE.length == get_level_max()");
+    
+    oracle_ = oracle;
+    coin_supply_.set_delegated_owner(address(oracle));
+    bond_supply_.set_delegated_owner(address(oracle));
+    oracle_level_ = oracle.get_level_max();
+
+    // Activate the ACB.
+    _unpause();
+  }
+
+  // Pause the ACB in emergency cases.
+  //
+  // Parameters
+  // ----------------
+  // None.
+  //
+  // Returns
+  // ----------------
+  // None.
+  function pause()
+      public whenNotPaused onlyOwner {
+    _pause();
+  }
+
+  // Unpause the ACB.
+  //
+  // Parameters
+  // ----------------
+  // None.
+  //
+  // Returns
+  // ----------------
+  // None.
+  function unpause()
+      public whenPaused onlyOwner {
+    _unpause();
   }
 
   // Create a new user account.
@@ -841,10 +1000,10 @@ contract ACB {
   // ----------------
   // True if it succeeds. False otherwise.
   function create_account()
-      public returns (bool) {
+      public whenNotPaused returns (bool) {
     address sender = msg.sender;
     
-    if (address(balances_[sender]) != address(0x0)) {
+    if (balances_[sender] != TokenHolder(0)) {
       return false;
     }
     balances_[sender] = new TokenHolder(coin_supply_);
@@ -873,10 +1032,10 @@ contract ACB {
   //  - Fourth value (boolean): Whether this vote resulted in a oracle phase
   //    update.
   function vote(bytes32 committed_hash, uint revealed_level, uint revealed_salt)
-      public returns (bool, bool, uint, bool) {
+      public whenNotPaused returns (bool, bool, uint, bool) {
     address sender = msg.sender;
     
-    if (address(balances_[sender]) == address(0x0)) {
+    if (balances_[sender] == TokenHolder(0)) {
       return (false, false, 0, false);
     }
     
@@ -888,9 +1047,9 @@ contract ACB {
       
       uint mint = 0;
       oracle_level_ = oracle_.get_mode_level();
-      if (oracle_level_ != LEVEL_MAX) {
-        require(0 <= oracle_level_ && oracle_level_ < LEVEL_MAX,
-                "vote: 0 <= oracle_level_ < LEVEL_MAX");
+      if (oracle_level_ != oracle_.get_level_max()) {
+        require(0 <= oracle_level_ && oracle_level_ < oracle_.get_level_max(),
+                "vote: 0 <= oracle_level_ < oracle_.get_level_max()");
         // Translate the mode level to the exchange rate.
         uint exchange_rate = LEVEL_TO_EXCHANGE_RATE[oracle_level_];
 
@@ -950,13 +1109,13 @@ contract ACB {
   // ----------------
   // The amount of successfully transferred coins.
   function transfer(address receiver, uint amount)
-      public returns (uint) {
+      public whenNotPaused returns (uint) {
     address sender = msg.sender;
     
-    if (address(balances_[sender]) == address(0x0)) {
+    if (balances_[sender] == TokenHolder(0)) {
       return 0;
     }
-    if (address(balances_[receiver]) == address(0x0)) {
+    if (balances_[receiver] == TokenHolder(0)) {
       return 0;
     }
     if (sender == receiver) {
@@ -986,10 +1145,10 @@ contract ACB {
   // The redemption timestamp of the purchased bonds if it succeeds.
   // -1 otherwise.
   function purchase_bonds(uint count)
-      public returns (uint) {
+      public whenNotPaused returns (uint) {
     address sender = msg.sender;
     
-    if (address(balances_[sender]) == address(0x0)) {
+    if (balances_[sender] == TokenHolder(0)) {
       return 0;
     }
     if (count <= 0 || (COIN_TRANSFER_MAX <= count * BOND_REDEMPTION_PRICE)) {
@@ -1000,8 +1159,8 @@ contract ACB {
       return 0;
     }
 
-    uint bond_price = LEVEL_TO_BOND_PRICE[LEVEL_MAX - 1];
-    if (0 <= oracle_level_ && oracle_level_ < LEVEL_MAX) {
+    uint bond_price = LEVEL_TO_BOND_PRICE[oracle_.get_level_max() - 1];
+    if (0 <= oracle_level_ && oracle_level_ < oracle_.get_level_max()) {
       bond_price = LEVEL_TO_BOND_PRICE[oracle_level_];
     }
     uint amount = bond_price * count;
@@ -1015,7 +1174,7 @@ contract ACB {
 
     // From now on, the bonds are identified by their redemption timestamp.
     uint redemption = get_timestamp() + BOND_REDEMPTION_PERIOD;
-    if (address(bonds_[sender][redemption]) == address(0x0)) {
+    if (bonds_[sender][redemption] == TokenHolder(0)) {
       bonds_[sender][redemption] = new TokenHolder(bond_supply_);
     } else {
       require(bonds_[sender][redemption].amount_() > 0,
@@ -1052,10 +1211,10 @@ contract ACB {
   // ----------------
   // The number of successfully redeemed bonds.
   function redeem_bonds(uint[] memory redemptions)
-      public returns (uint) {
+      public whenNotPaused returns (uint) {
     address sender = msg.sender;
     
-    if (address(balances_[sender]) == address(0x0)) {
+    if (balances_[sender] == TokenHolder(0)) {
       return 0;
     }
     if (redemptions.length == 0) {
@@ -1063,7 +1222,7 @@ contract ACB {
     }
 
     for (uint i = 0; i < redemptions.length; i++) {
-      if (address(bonds_[sender][redemptions[i]]) == address(0x0)) {
+      if (bonds_[sender][redemptions[i]] == TokenHolder(0)) {
         return 0;
       }
       for (uint j = i + 1; j < redemptions.length; j++) {
@@ -1079,8 +1238,8 @@ contract ACB {
     uint count_total = 0;
     for (uint i = 0; i < redemptions.length; i++) {
       uint redemption = redemptions[i];
-      require(address(bonds_[sender][redemption]) != address(0x0),
-              "redeem: address(bonds_[sender][redemption]) != address(0x0)");
+      require(bonds_[sender][redemption] != TokenHolder(0),
+              "redeem: bonds_[sender][redemption] != TokenHolder(0)");
       uint count = bonds_[sender][redemption].amount_();
       if (redemption > get_timestamp()) {
         // If the bonds have not yet hit their redemption timestamp, ACB
@@ -1105,8 +1264,8 @@ contract ACB {
       bond_supply_.burn(bonds_[sender][redemption], count);
       if (bonds_[sender][redemption].amount_() == 0) {
         delete bonds_[sender][redemption];
-        require(address(bonds_[sender][redemption]) == address(0x0),
-                "redeem: address(bonds_[sender][redemption]) == address(0x0)");
+        require(bonds_[sender][redemption] == TokenHolder(0),
+                "redeem: bonds_[sender][redemption] == TokenHolder(0)");
       }
     }
     require(int(bond_supply_.amount_()) + bond_budget_ >= 0,
@@ -1127,7 +1286,7 @@ contract ACB {
   // ----------------
   // The amount of coins that need to be newly minted by ACB.
   function _control_supply(int delta)
-      internal returns (uint) {
+      internal whenNotPaused returns (uint) {
     require(int(bond_supply_.amount_()) + bond_budget_ >= 0,
             "_control_supply: bond_supply_.amount_() + bond_budget_ >= 0");
 
@@ -1150,8 +1309,8 @@ contract ACB {
       require(bond_budget_ <= 0, "_control_supply: bond_budget_ <= 0");
     } else {
       require(delta < 0, "_control_supply: delta < 0");
-      require(0 <= oracle_level_ && oracle_level_ < LEVEL_MAX,
-              "_control_supply: 0 <= oracle_level_ < LEVEL_MAX");
+      require(0 <= oracle_level_ && oracle_level_ < oracle_.get_level_max(),
+              "_control_supply: 0 <= oracle_level_ < oracle_.get_level_max()");
       // Decrease the total coin supply. Issue new bonds to decrease the coin
       // supply.
       bond_budget_ = -delta / int(LEVEL_TO_BOND_PRICE[oracle_level_]);

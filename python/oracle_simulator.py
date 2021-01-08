@@ -9,12 +9,14 @@ class OracleSimulator(unittest.TestCase):
         print("level_max=%d reclaim=%d prop=%d voter_count=%d iter=%d" %
               (level_max, reclaim_threshold,
                proportional_reward_rate, voter_count, iteration))
-        self.level_max = level_max
-        self.reclaim_threshold = reclaim_threshold
-        self.proportional_reward_rate = proportional_reward_rate
+
+        Oracle.LEVEL_MAX = level_max
+        Oracle.RECLAIM_THRESHOLD = reclaim_threshold
+        Oracle.PROPORTIONAL_REWARD_RATE = proportional_reward_rate
+
         self.supply = TokenSupply()
-        self.oracle = Oracle(level_max, reclaim_threshold,
-                             proportional_reward_rate, self.supply)
+        self.oracle = Oracle(self.supply)
+
         self.voter_count = voter_count
         self.iteration = iteration
         self.prev_mint = 0
@@ -53,7 +55,7 @@ class OracleSimulator(unittest.TestCase):
             voters[i].committed = (random.randint(0, 99) < 95)
             if voters[i].committed:
                 voters[i].deposit = random.randint(0, 10)
-                voters[i].committed_level = random.randint(0, self.level_max)
+                voters[i].committed_level = random.randint(0, Oracle.LEVEL_MAX)
                 voters[i].committed_salt = random.randint(0, 10)
                 self.supply.mint(voters[i].balance_holder, voters[i].deposit)
                 result = self.oracle.commit(
@@ -86,7 +88,7 @@ class OracleSimulator(unittest.TestCase):
                 if random.randint(0, 99) < 95:
                     voters[i].revealed_level = voters[i].committed_level
                 else:
-                    voters[i].revealed_level = random.randint(0, self.level_max)
+                    voters[i].revealed_level = random.randint(0, Oracle.LEVEL_MAX)
                 if random.randint(0, 99) < 95:
                     voters[i].revealed_salt = voters[i].committed_salt
                 else:
@@ -95,7 +97,7 @@ class OracleSimulator(unittest.TestCase):
                     voters[i].committed_correctly and
                     voters[i].revealed_level == voters[i].committed_level and
                     0 <= voters[i].revealed_level and
-                    voters[i].revealed_level < self.level_max and
+                    voters[i].revealed_level < Oracle.LEVEL_MAX and
                     voters[i].revealed_salt == voters[i].committed_salt)
                 result = self.oracle.reveal(
                     voters[i].address,
@@ -111,8 +113,8 @@ class OracleSimulator(unittest.TestCase):
                                        voters[i].revealed_level,
                                        voters[i].revealed_salt), False)
 
-        deposits = [0] * self.level_max
-        counts = [0] * self.level_max
+        deposits = [0] * Oracle.LEVEL_MAX
+        counts = [0] * Oracle.LEVEL_MAX
         deposit_total = 0
         for i in range(len(voters)):
             if voters[i].committed_correctly:
@@ -124,10 +126,10 @@ class OracleSimulator(unittest.TestCase):
 
         max_deposit = 0
         max_count = 0
-        mode_level = self.level_max
-        for level in range(self.level_max):
+        mode_level = Oracle.LEVEL_MAX
+        for level in range(Oracle.LEVEL_MAX):
             if (counts[level] > 0 and
-                (mode_level == self.level_max or
+                (mode_level == Oracle.LEVEL_MAX or
                  max_deposit < deposits[level] or
                  (max_deposit == deposits[level] and
                   max_count < counts[level]))):
@@ -139,12 +141,12 @@ class OracleSimulator(unittest.TestCase):
 
         mint = random.randint(0, 20)
         deposit_to_reclaim = 0
-        if mode_level == self.level_max:
+        if mode_level == Oracle.LEVEL_MAX:
             reward_total = deposit_total + mint
         else:
-            for level in range(self.level_max):
-                if (mode_level - self.reclaim_threshold <= level and
-                    level <= mode_level + self.reclaim_threshold):
+            for level in range(Oracle.LEVEL_MAX):
+                if (mode_level - Oracle.RECLAIM_THRESHOLD <= level and
+                    level <= mode_level + Oracle.RECLAIM_THRESHOLD):
                     deposit_to_reclaim += deposits[level]
             reward_total = deposit_total - deposit_to_reclaim + mint
         self.assertEqual(deposit_to_reclaim + reward_total,
@@ -163,25 +165,26 @@ class OracleSimulator(unittest.TestCase):
                 reclaim_amount = 0
                 if (voters[i].revealed_correctly and
                     voters[i].revealed_level == mode_level):
-                    self.assertNotEqual(mode_level, self.level_max)
+                    self.assertNotEqual(mode_level, Oracle.LEVEL_MAX)
                     proportional_reward = 0
                     if deposits[mode_level] > 0:
                         proportional_reward = int(
-                            (self.proportional_reward_rate * reward_total *
+                            (Oracle.PROPORTIONAL_REWARD_RATE * reward_total *
                              voters[i].deposit) /
                             (100 * deposits[mode_level]))
                     constant_reward = int(
-                        ((100 - self.proportional_reward_rate) * reward_total) /
+                        ((100 - Oracle.PROPORTIONAL_REWARD_RATE)
+                         * reward_total) /
                         (100 * counts[mode_level]))
                     reclaim_amount = (voters[i].deposit +
                                       proportional_reward +
                                       constant_reward)
                 elif (voters[i].revealed_correctly and
-                      mode_level - self.reclaim_threshold <=
+                      mode_level - Oracle.RECLAIM_THRESHOLD <=
                       voters[i].revealed_level and
                       voters[i].revealed_level <=
-                      mode_level + self.reclaim_threshold):
-                    self.assertNotEqual(mode_level, self.level_max)
+                      mode_level + Oracle.RECLAIM_THRESHOLD):
+                    self.assertNotEqual(mode_level, Oracle.LEVEL_MAX)
                     reclaim_amount = voters[i].deposit
                 self.assertEqual(self.oracle.reclaim(
                     voters[i].address, voters[i].balance_holder),

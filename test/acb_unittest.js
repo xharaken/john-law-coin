@@ -48,23 +48,46 @@ function parameterized_test(accounts,
       " level_to_exchange_rate=" + _level_to_exchange_rate +
       " level_to_bond_price=" + _level_to_bond_price +
       " reclaim=" + _reclaim_threshold;
-  _coin_transfer_max = 100000000;
-  _initial_coin_supply = 2100000;
 
   it(test_name, async function () {
-    let _acb = await ACBForTesting.new(_bond_redemption_price,
-                                       _bond_redemption_period,
-                                       _phase_duration,
-                                       _proportional_reward_rate,
-                                       _deposit_rate,
-                                       _dumping_factor,
-                                       _reclaim_threshold,
-                                       _level_to_exchange_rate,
-                                       _level_to_bond_price,
-                                       _coin_transfer_max,
-                                       _initial_coin_supply,
-                                       {from: accounts[1], gas: 30000000});
+    _coin_transfer_max = 100000000;
     let _level_max = _level_to_exchange_rate.length;
+
+    let _acb = await ACBForTesting.new({from: accounts[1], gas: 30000000});
+    await _acb.initialize({from: accounts[1]});
+    await _acb.override_constants(_bond_redemption_price,
+                                  _bond_redemption_period,
+                                  _phase_duration,
+                                  _deposit_rate,
+                                  _dumping_factor,
+                                  _level_to_exchange_rate,
+                                  _level_to_bond_price,
+                                  _coin_transfer_max,
+                                  {from: accounts[1]});
+
+    let _oracle = await OracleForTesting.new(
+        {from: accounts[1], gas: 12000000});
+    await _oracle.initialize(await _acb.coin_supply_address(),
+                             {from: accounts[1]});
+    assert.equal(await _acb.paused(), true);
+    await _oracle.override_constants(_level_max, _reclaim_threshold,
+                                     _proportional_reward_rate,
+                                     {from: accounts[1]});
+    await _oracle.transferOwnership(_acb.address, {from: accounts[1]});
+
+    await _acb.activate(_oracle.address, {from: accounts[1]});
+    assert.equal(await _acb.paused(), false);
+
+    await should_throw(async () => {
+      await _acb.activate(_oracle.address, {from: accounts[1]});
+    }, "Pausable");
+
+    await _acb.pause({from: accounts[1]});
+    await _acb.activate(_oracle.address, {from: accounts[1]});
+    assert.equal(await _acb.paused(), false);
+
+    _initial_coin_supply = (await _acb.get_initial_coin_supply()).toNumber();
+
     let _default_level;
     for(let level = 0; level < _level_max; level++) {
       if (_level_to_exchange_rate[level] == 11) {
@@ -86,7 +109,7 @@ function parameterized_test(accounts,
       assert.equal(await _acb.create_account.call(
           {from: accounts[1]}), false);
       await check_create_account({from: accounts[2]});
-      check_create_account({from: accounts[3]});
+      await check_create_account({from: accounts[3]});
       assert.equal(await _acb.create_account.call({from: accounts[1]}), false);
       assert.equal(await _acb.create_account.call({from: accounts[2]}), false);
       assert.equal(await _acb.create_account.call({from: accounts[3]}), false);
@@ -2933,6 +2956,44 @@ function parameterized_test(accounts,
       await holder.set_amount(1, {from: accounts[1]});
     }, "Ownable");
 
+    // Pausable
+    await _acb.pause({from: accounts[1]});
+    await should_throw(async () => {
+      await _acb.pause({from: accounts[1]});
+    }, "Pausable");
+
+    await should_throw(async () => {
+      await _acb.create_account({from: accounts[1]});
+    }, "Pausable");
+
+    await should_throw(async () => {
+      await _acb.vote(await _acb.hash(0, 0, {from: accounts[1]}),
+                      0, 0, {from: accounts[1]});
+    }, "Pausable");
+
+    await should_throw(async () => {
+      await _acb.transfer(accounts[2], 1, {from: accounts[1]});
+    }, "Pausable");
+
+    await should_throw(async () => {
+      await _acb.purchase_bonds(1, {from: accounts[1]});
+    }, "Pausable");
+
+    await should_throw(async () => {
+      await _acb.redeem_bonds([t12], {from: accounts[1]});
+    }, "Pausable");
+
+    await should_throw(async () => {
+      await _acb.control_supply(0, {from: accounts[1]});
+    }, "Pausable");
+
+    await _acb.unpause({from: accounts[1]});
+    await should_throw(async () => {
+      await _acb.unpause({from: accounts[1]});
+    }, "Pausable");
+    await should_throw(async () => {
+      await _acb.activate(_oracle, {from: accounts[1]});
+    }, "Pausable");
 
     async function _mint_at_default_level() {
       let current = await get_current([], []);

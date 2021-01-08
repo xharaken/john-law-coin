@@ -31,31 +31,36 @@ class ACBUnitTest(unittest.TestCase):
         ACB.BOND_REDEMPTION_PRICE = bond_redemption_price
         ACB.BOND_REDEMPTION_PERIOD = bond_redemption_period
         ACB.PHASE_DURATION = phase_duration
-        ACB.PROPORTIONAL_REWARD_RATE = proportional_reward_rate
         ACB.DEPOSIT_RATE = deposit_rate
         ACB.DUMPING_FACTOR = dumping_factor
-        ACB.RECLAIM_THRESHOLD = reclaim_threshold
         ACB.LEVEL_TO_EXCHANGE_RATE = level_to_exchange_rate
-        ACB.LEVEL_MAX = len(ACB.LEVEL_TO_EXCHANGE_RATE)
         ACB.LEVEL_TO_BOND_PRICE = level_to_bond_price
         ACB.COIN_TRANSFER_MAX = 100000000
 
         self.accounts = ['0x0000', '0x1000', '0x2000', '0x3000', '0x4000',
                          '0x5000', '0x6000', '0x7000']
+
+        Oracle.LEVEL_MAX = len(level_to_exchange_rate)
+        Oracle.RECLAIM_THRESHOLD = reclaim_threshold
+        Oracle.PROPORTIONAL_REWARD_RATE = proportional_reward_rate
+
         self.acb = ACB(self.accounts[1])
         self.acb.check_constants_for_testing()
+        oracle = Oracle(self.acb.coin_supply)
+        self.acb.activate(oracle)
 
-        for level in range(ACB.LEVEL_MAX):
+        for level in range(Oracle.LEVEL_MAX):
             if (ACB.LEVEL_TO_EXCHANGE_RATE[level] ==
                 1.1 * ACB.EXCHANGE_RATE_DIVISOR):
                 self.default_level = level
-        assert(0 < self.default_level and self.default_level < ACB.LEVEL_MAX - 1)
+        assert(0 < self.default_level and
+               self.default_level < Oracle.LEVEL_MAX - 1)
 
     def teardown(self):
         pass
 
     def run(self):
-        if (0 and ACB.LEVEL_TO_BOND_PRICE[ACB.LEVEL_MAX - 1] >= 2 and
+        if (0 and ACB.LEVEL_TO_BOND_PRICE[Oracle.LEVEL_MAX - 1] >= 2 and
             ACB.BOND_REDEMPTION_PRICE >= 2 and
             ACB.BOND_REDEMPTION_PERIOD >= 3 and
             ACB.PHASE_DURATION >= 2):
@@ -118,7 +123,7 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin_supply.amount, ACB.INITIAL_COIN_SUPPLY)
 
         # _control_supply
-        acb.oracle_level = ACB.LEVEL_MAX - 1
+        acb.oracle_level = Oracle.LEVEL_MAX - 1
         bond_price = ACB.LEVEL_TO_BOND_PRICE[acb.oracle_level]
         self.assertEqual(acb.bond_supply.amount, 0)
         self.assertEqual(acb.bond_budget, 0)
@@ -653,7 +658,7 @@ class ACBUnitTest(unittest.TestCase):
             accounts[4], Oracle.hash(
                 accounts[4], self.default_level, 1),
             self.default_level, 1), (True, False, 0, True))
-        self.assertEqual(acb.oracle_level, ACB.LEVEL_MAX)
+        self.assertEqual(acb.oracle_level, Oracle.LEVEL_MAX)
         self.assertEqual(acb.balances[accounts[4]].amount,
                          balance - deposit_4[now])
         balance = acb.balances[accounts[4]].amount
@@ -677,7 +682,7 @@ class ACBUnitTest(unittest.TestCase):
             accounts[4], Oracle.hash(
                 accounts[4], self.default_level, 2),
             self.default_level, 1), (True, True, 0, True))
-        self.assertEqual(acb.oracle_level, ACB.LEVEL_MAX)
+        self.assertEqual(acb.oracle_level, Oracle.LEVEL_MAX)
         self.assertEqual(acb.balances[accounts[4]].amount,
                          balance - deposit_4[now])
         balance = acb.balances[accounts[4]].amount
@@ -692,10 +697,10 @@ class ACBUnitTest(unittest.TestCase):
         mint = self.mint_at_default_level()
 
         balance = acb.balances[accounts[4]].amount
-        reward = int((100 - ACB.PROPORTIONAL_REWARD_RATE) *
+        reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                      mint / 100)
         if deposit_4[(now - 2) % 3] > 0:
-            reward += int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward += int(Oracle.PROPORTIONAL_REWARD_RATE *
                           mint / 100)
         remainder[now] = mint - reward
         deposit_4[now] = int(balance * ACB.DEPOSIT_RATE / 100)
@@ -727,7 +732,7 @@ class ACBUnitTest(unittest.TestCase):
             accounts[4], Oracle.hash(
                 accounts[4], self.default_level, 4),
             self.default_level, 3), (True, True, 0, True))
-        self.assertEqual(acb.oracle_level, ACB.LEVEL_MAX)
+        self.assertEqual(acb.oracle_level, Oracle.LEVEL_MAX)
         self.assertEqual(acb.balances[accounts[4]].amount,
                          balance - deposit_4[now])
         balance = acb.balances[accounts[4]].amount
@@ -746,10 +751,10 @@ class ACBUnitTest(unittest.TestCase):
 
         balance = acb.balances[accounts[4]].amount
         coin_supply = acb.coin_supply.amount
-        reward = int((100 - ACB.PROPORTIONAL_REWARD_RATE) *
+        reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                      mint / 100)
         if deposit_4[(now - 2) % 3] > 0:
-            reward += int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward += int(Oracle.PROPORTIONAL_REWARD_RATE *
                           mint / 100)
         remainder[now] = mint - reward
         deposit_4[now] = int(balance * ACB.DEPOSIT_RATE / 100)
@@ -778,10 +783,10 @@ class ACBUnitTest(unittest.TestCase):
 
         balance = acb.balances[accounts[4]].amount
         coin_supply = acb.coin_supply.amount
-        reward = int((100 - ACB.PROPORTIONAL_REWARD_RATE) *
+        reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                      mint / 100)
         if deposit_4[(now - 2) % 3] > 0:
-            reward += int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward += int(Oracle.PROPORTIONAL_REWARD_RATE *
                           self.mint_at_default_level() / 100)
         remainder[now] = mint - reward
         deposit_4[now] = int(balance * ACB.DEPOSIT_RATE / 100)
@@ -811,10 +816,10 @@ class ACBUnitTest(unittest.TestCase):
 
         balance = acb.balances[accounts[4]].amount
         coin_supply = acb.coin_supply.amount
-        reward = int((100 - ACB.PROPORTIONAL_REWARD_RATE) *
+        reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                      mint / 100)
         if deposit_4[(now - 2) % 3] > 0:
-            reward += int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward += int(Oracle.PROPORTIONAL_REWARD_RATE *
                           mint / 100)
         remainder[now] = mint - reward
         deposit_4[now] = int(balance * ACB.DEPOSIT_RATE / 100)
@@ -843,10 +848,10 @@ class ACBUnitTest(unittest.TestCase):
 
         balance = acb.balances[accounts[4]].amount
         coin_supply = acb.coin_supply.amount
-        reward = int((100 - ACB.PROPORTIONAL_REWARD_RATE) *
+        reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                      mint / 100)
         if deposit_4[(now - 2) % 3] > 0:
-            reward += int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward += int(Oracle.PROPORTIONAL_REWARD_RATE *
                           mint / 100)
         remainder[now] = mint - reward
         deposit_4[now] = int(balance * ACB.DEPOSIT_RATE / 100)
@@ -889,7 +894,7 @@ class ACBUnitTest(unittest.TestCase):
             accounts[4], Oracle.hash(
                 accounts[4], self.default_level, -1),
             self.default_level, -1), (True, False, 0, True))
-        self.assertEqual(acb.oracle_level, ACB.LEVEL_MAX)
+        self.assertEqual(acb.oracle_level, Oracle.LEVEL_MAX)
         self.assertEqual(acb.balances[accounts[4]].amount,
                          balance_4 - deposit_4[now])
         balance_5 = acb.balances[accounts[5]].amount
@@ -924,7 +929,7 @@ class ACBUnitTest(unittest.TestCase):
             accounts[4], Oracle.hash(
                 accounts[4], self.default_level, 1),
             self.default_level, 0), (True, False, 0, True))
-        self.assertEqual(acb.oracle_level, ACB.LEVEL_MAX)
+        self.assertEqual(acb.oracle_level, Oracle.LEVEL_MAX)
         self.assertEqual(acb.balances[accounts[4]].amount,
                          balance_4 - deposit_4[now])
         balance_5 = acb.balances[accounts[5]].amount
@@ -960,7 +965,7 @@ class ACBUnitTest(unittest.TestCase):
             accounts[4], Oracle.hash(
                 accounts[4], self.default_level, 2),
             self.default_level, 1), (True, True, 0, True))
-        self.assertEqual(acb.oracle_level, ACB.LEVEL_MAX)
+        self.assertEqual(acb.oracle_level, Oracle.LEVEL_MAX)
         self.assertEqual(acb.balances[accounts[4]].amount,
                          balance_4 - deposit_4[now])
         balance_5 = acb.balances[accounts[5]].amount
@@ -989,19 +994,19 @@ class ACBUnitTest(unittest.TestCase):
 
         coin_supply = acb.coin_supply.amount
         reward_total = 0 + mint
-        constant_reward = int((100 - ACB.PROPORTIONAL_REWARD_RATE) *
+        constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (3 * 100))
         reward_4 = reward_5 = reward_6 = 0
         deposit_total = (deposit_4[(now - 2) % 3] + deposit_5[(now - 2) % 3] +
                          deposit_6[(now - 2) % 3])
         if deposit_total > 0:
-            reward_4 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_4 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_4[(now - 2) % 3] /
                            (deposit_total * 100))
-            reward_5 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_5 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_5[(now - 2) % 3] /
                            (deposit_total * 100))
-            reward_6 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_6 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_6[(now - 2) % 3] /
                            (deposit_total * 100))
         remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
@@ -1050,19 +1055,19 @@ class ACBUnitTest(unittest.TestCase):
 
         coin_supply = acb.coin_supply.amount
         reward_total = 0 + mint
-        constant_reward = int((100 - ACB.PROPORTIONAL_REWARD_RATE) *
+        constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (3 * 100))
         reward_4 = reward_5 = reward_6 = 0
         deposit_total = (deposit_4[(now - 2) % 3] + deposit_5[(now - 2) % 3] +
                          deposit_6[(now - 2) % 3])
         if deposit_total > 0:
-            reward_4 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_4 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_4[(now - 2) % 3] /
                            (deposit_total * 100))
-            reward_5 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_5 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_5[(now - 2) % 3] /
                            (deposit_total * 100))
-            reward_6 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_6 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_6[(now - 2) % 3] /
                            (deposit_total * 100))
         remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
@@ -1113,19 +1118,19 @@ class ACBUnitTest(unittest.TestCase):
 
         coin_supply = acb.coin_supply.amount
         reward_total = 0 + mint
-        constant_reward = int((100 - ACB.PROPORTIONAL_REWARD_RATE) *
+        constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (3 * 100))
         reward_4 = reward_5 = reward_6 = 0
         deposit_total = (deposit_4[(now - 2) % 3] + deposit_5[(now - 2) % 3] +
                          deposit_6[(now - 2) % 3])
         if deposit_total > 0:
-            reward_4 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_4 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_4[(now - 2) % 3] /
                            (deposit_total * 100))
-            reward_5 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_5 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_5[(now - 2) % 3] /
                            (deposit_total * 100))
-            reward_6 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_6 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_6[(now - 2) % 3] /
                            (deposit_total * 100))
         remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
@@ -1177,19 +1182,19 @@ class ACBUnitTest(unittest.TestCase):
 
         coin_supply = acb.coin_supply.amount
         reward_total = 0 + mint
-        constant_reward = int((100 - ACB.PROPORTIONAL_REWARD_RATE) *
+        constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (3 * 100))
         reward_4 = reward_5 = reward_6 = 0
         deposit_total = (deposit_4[(now - 2) % 3] + deposit_5[(now - 2) % 3] +
                          deposit_6[(now - 2) % 3])
         if deposit_total > 0:
-            reward_4 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_4 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_4[(now - 2) % 3] /
                            (deposit_total * 100))
-            reward_5 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_5 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_5[(now - 2) % 3] /
                            (deposit_total * 100))
-            reward_6 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_6 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_6[(now - 2) % 3] /
                            (deposit_total * 100))
         remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
@@ -1238,7 +1243,7 @@ class ACBUnitTest(unittest.TestCase):
 
         coin_supply = acb.coin_supply.amount
         reward_total = 0 + mint
-        constant_reward = int((100 - ACB.PROPORTIONAL_REWARD_RATE) *
+        constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (3 * 100))
         reward_4 = 0
         reward_5 = 0
@@ -1289,15 +1294,15 @@ class ACBUnitTest(unittest.TestCase):
 
         coin_supply = acb.coin_supply.amount
         reward_total = deposit_6[(now - 2) % 3] + mint
-        constant_reward = int((100 - ACB.PROPORTIONAL_REWARD_RATE) *
+        constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (2 * 100))
         reward_4 = reward_5 = reward_6 = 0
         deposit_total = (deposit_4[(now - 2) % 3] + deposit_5[(now - 2) % 3])
         if deposit_total > 0:
-            reward_4 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_4 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_4[(now - 2) % 3] /
                            (deposit_total * 100))
-            reward_5 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_5 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_5[(now - 2) % 3] /
                            (deposit_total * 100))
         remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
@@ -1345,13 +1350,13 @@ class ACBUnitTest(unittest.TestCase):
         coin_supply = acb.coin_supply.amount
         reward_total = (deposit_4[(now - 2) % 3] + deposit_5[(now - 2) % 3] +
                         mint)
-        constant_reward = int((100 - ACB.PROPORTIONAL_REWARD_RATE) *
+        constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (1 * 100))
         reward_4 = 0
         reward_5 = 0
         reward_6 = 0
         if deposit_6[(now - 2) % 3] > 0:
-            reward_6 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_6 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total / 100)
         remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 1)
@@ -1405,7 +1410,7 @@ class ACBUnitTest(unittest.TestCase):
             accounts[4], Oracle.hash(
                 accounts[4], self.default_level, 10),
             self.default_level, 9), (True, True, 0, True))
-        self.assertEqual(acb.oracle_level, ACB.LEVEL_MAX)
+        self.assertEqual(acb.oracle_level, Oracle.LEVEL_MAX)
         self.assertEqual(acb.balances[accounts[4]].amount,
                          balance_4 - deposit_4[now])
         balance_5 = acb.balances[accounts[5]].amount
@@ -1434,16 +1439,16 @@ class ACBUnitTest(unittest.TestCase):
 
         coin_supply = acb.coin_supply.amount
         reward_total = 0 + mint
-        constant_reward = int((100 - ACB.PROPORTIONAL_REWARD_RATE) *
+        constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (3 * 100))
         reward_4 = reward_5 = reward_6 = 0
         deposit_total = (deposit_4[(now - 2) % 3] + deposit_5[(now - 2) % 3] +
                          deposit_6[(now - 2) % 3])
         if deposit_total > 0:
-            reward_5 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_5 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_5[(now - 2) % 3] /
                            (deposit_total * 100))
-            reward_6 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_6 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_6[(now - 2) % 3] /
                            (deposit_total * 100))
         remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
@@ -1481,12 +1486,12 @@ class ACBUnitTest(unittest.TestCase):
 
         coin_supply = acb.coin_supply.amount
         reward_total = deposit_4[(now - 2) % 3] + mint
-        constant_reward = int((100 - ACB.PROPORTIONAL_REWARD_RATE) *
+        constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (2 * 100))
         reward_4 = reward_5 = reward_6 = 0
         deposit_total = (deposit_5[(now - 2) % 3] + deposit_6[(now - 2) % 3])
         if deposit_total > 0:
-            reward_6 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_6 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_6[(now - 2) % 3] /
                            (deposit_total * 100))
         remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
@@ -1513,7 +1518,7 @@ class ACBUnitTest(unittest.TestCase):
 
         coin_supply = acb.coin_supply.amount
         reward_total = deposit_5[(now - 2) % 3] + mint
-        constant_reward = int((100 - ACB.PROPORTIONAL_REWARD_RATE) *
+        constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (1 * 100))
         reward_4 = 0
         reward_5 = 0
@@ -1543,7 +1548,7 @@ class ACBUnitTest(unittest.TestCase):
             accounts[1], Oracle.hash(
                 accounts[1], self.default_level, -1),
             self.default_level, -1), (True, True, 0, True))
-        self.assertEqual(acb.oracle_level, ACB.LEVEL_MAX)
+        self.assertEqual(acb.oracle_level, Oracle.LEVEL_MAX)
         self.assertEqual(acb.coin_supply.amount,
                          coin_supply + mint -
                          remainder[(now - 1) % 3])
@@ -1613,7 +1618,7 @@ class ACBUnitTest(unittest.TestCase):
             accounts[4], Oracle.hash(
                 accounts[4], self.default_level, 2),
             0, 1), (True, True, 0, True))
-        self.assertEqual(acb.oracle_level, ACB.LEVEL_MAX)
+        self.assertEqual(acb.oracle_level, Oracle.LEVEL_MAX)
         self.assertEqual(acb.balances[accounts[4]].amount,
                          balance_4 - deposit_4[now])
         balance_5 = acb.balances[accounts[5]].amount
@@ -1643,20 +1648,20 @@ class ACBUnitTest(unittest.TestCase):
         coin_supply = acb.coin_supply.amount
         reclaim_4 = 0
         in_threshold = False
-        if self.default_level - 0 <= ACB.RECLAIM_THRESHOLD:
+        if self.default_level - 0 <= Oracle.RECLAIM_THRESHOLD:
             in_threshold = True
             reclaim_4 = deposit_4[(now - 2) % 3]
         reward_total = (deposit_4[(now - 2) % 3] - reclaim_4 +
                         mint)
-        constant_reward = int((100 - ACB.PROPORTIONAL_REWARD_RATE) *
+        constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (2 * 100))
         reward_4 = reward_5 = reward_6 = 0
         deposit_total = (deposit_5[(now - 2) % 3] + deposit_6[(now - 2) % 3])
         if deposit_total > 0:
-            reward_5 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_5 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_5[(now - 2) % 3] /
                            (deposit_total * 100))
-            reward_6 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_6 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_6[(now - 2) % 3] /
                            (deposit_total * 100))
         remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
@@ -1713,19 +1718,19 @@ class ACBUnitTest(unittest.TestCase):
 
         coin_supply = acb.coin_supply.amount
         reward_total = 0 + mint
-        constant_reward = int((100 - ACB.PROPORTIONAL_REWARD_RATE) *
+        constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (3 * 100))
         reward_4 = reward_5 = reward_6 = 0
         deposit_total = (deposit_4[(now - 2) % 3] + deposit_5[(now - 2) % 3] +
                          deposit_6[(now - 2) % 3])
         if deposit_total > 0:
-            reward_4 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_4 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_4[(now - 2) % 3] /
                            (deposit_total * 100))
-            reward_5 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_5 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_5[(now - 2) % 3] /
                            (deposit_total * 100))
-            reward_6 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_6 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_6[(now - 2) % 3] /
                            (deposit_total * 100))
         remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
@@ -1773,19 +1778,19 @@ class ACBUnitTest(unittest.TestCase):
 
         coin_supply = acb.coin_supply.amount
         reward_total = 0 + mint
-        constant_reward = int((100 - ACB.PROPORTIONAL_REWARD_RATE) *
+        constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (3 * 100))
         reward_4 = reward_5 = reward_6 = 0
         deposit_total = (deposit_4[(now - 2) % 3] + deposit_5[(now - 2) % 3] +
                          deposit_6[(now - 2) % 3])
         if deposit_total > 0:
-            reward_4 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_4 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_4[(now - 2) % 3] /
                            (deposit_total * 100))
-            reward_5 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_5 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_5[(now - 2) % 3] /
                            (deposit_total * 100))
-            reward_6 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_6 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                        reward_total * deposit_6[(now - 2) % 3] /
                            (deposit_total * 100))
         remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
@@ -1832,19 +1837,19 @@ class ACBUnitTest(unittest.TestCase):
         coin_supply = acb.coin_supply.amount
         reclaim_4 = reclaim_5 = 0
         in_threshold = False
-        if self.default_level - 0 <= ACB.RECLAIM_THRESHOLD:
+        if self.default_level - 0 <= Oracle.RECLAIM_THRESHOLD:
             in_threshold = True
             reclaim_4 = deposit_4[(now - 2) % 3]
             reclaim_5 = deposit_5[(now - 2) % 3]
         reward_total = (deposit_4[(now - 2) % 3] - reclaim_4 +
                         deposit_5[(now - 2) % 3] - reclaim_5 +
                         mint)
-        constant_reward = int((100 - ACB.PROPORTIONAL_REWARD_RATE) *
+        constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (1 * 100))
         reward_4 = reward_5 = reward_6 = 0
         deposit_total =  deposit_6[(now - 2) % 3]
         if deposit_total > 0:
-            reward_6 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_6 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_6[(now - 2) % 3] /
                            (deposit_total * 100))
         remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
@@ -1892,19 +1897,19 @@ class ACBUnitTest(unittest.TestCase):
 
         coin_supply = acb.coin_supply.amount
         reward_total = 0 + mint
-        constant_reward = int((100 - ACB.PROPORTIONAL_REWARD_RATE) *
+        constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (3 * 100))
         reward_4 = reward_5 = reward_6 = 0
         deposit_total = (deposit_4[(now - 2) % 3] + deposit_5[(now - 2) % 3] +
                          deposit_6[(now - 2) % 3])
         if deposit_total > 0:
-            reward_4 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_4 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_4[(now - 2) % 3] /
                            (deposit_total * 100))
-            reward_5 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_5 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_5[(now - 2) % 3] /
                            (deposit_total * 100))
-            reward_6 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_6 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_6[(now - 2) % 3] /
                            (deposit_total * 100))
         remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
@@ -1936,7 +1941,7 @@ class ACBUnitTest(unittest.TestCase):
         deposit_6[now] = int(balance_6 * ACB.DEPOSIT_RATE / 100)
         self.assertEqual(acb.vote(
             accounts[6], Oracle.hash(
-                accounts[6], ACB.LEVEL_MAX - 1, 7),
+                accounts[6], Oracle.LEVEL_MAX - 1, 7),
             self.default_level, 6),
                          (True, True, deposit_6[(now - 2) % 3] +
                           reward_6 + constant_reward, False))
@@ -1953,19 +1958,19 @@ class ACBUnitTest(unittest.TestCase):
 
         coin_supply = acb.coin_supply.amount
         reward_total = 0 + mint
-        constant_reward = int((100 - ACB.PROPORTIONAL_REWARD_RATE) *
+        constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (3 * 100))
         reward_4 = reward_5 = reward_6 = 0
         deposit_total = (deposit_4[(now - 2) % 3] + deposit_5[(now - 2) % 3] +
                          deposit_6[(now - 2) % 3])
         if deposit_total > 0:
-            reward_4 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_4 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_4[(now - 2) % 3] /
                            (deposit_total * 100))
-            reward_5 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_5 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_5[(now - 2) % 3] /
                            (deposit_total * 100))
-            reward_6 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_6 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_6[(now - 2) % 3] /
                            (deposit_total * 100))
         remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
@@ -1998,7 +2003,7 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.vote(
             accounts[6], Oracle.hash(
                 accounts[6], self.default_level, 8),
-            ACB.LEVEL_MAX - 1, 7),
+            Oracle.LEVEL_MAX - 1, 7),
                          (True, True, deposit_6[(now - 2) % 3] +
                           reward_6 + constant_reward, False))
         self.assertEqual(acb.balances[accounts[6]].amount,
@@ -2015,20 +2020,21 @@ class ACBUnitTest(unittest.TestCase):
         coin_supply = acb.coin_supply.amount
         reclaim_6 = 0
         in_threshold = False
-        if ACB.LEVEL_MAX - 1 - self.default_level <= ACB.RECLAIM_THRESHOLD:
+        if (Oracle.LEVEL_MAX - 1 - self.default_level <=
+            Oracle.RECLAIM_THRESHOLD):
             in_threshold = True
             reclaim_6 = deposit_6[(now - 2) % 3]
         reward_total = (deposit_6[(now - 2) % 3] - reclaim_6 +
                         mint)
-        constant_reward = int((100 - ACB.PROPORTIONAL_REWARD_RATE) *
+        constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (2 * 100))
         reward_4 = reward_5 = reward_6 = 0
         deposit_total = deposit_4[(now - 2) % 3] + deposit_5[(now - 2) % 3]
         if deposit_total > 0:
-            reward_4 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_4 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_4[(now - 2) % 3] /
                            (deposit_total * 100))
-            reward_5 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_5 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_5[(now - 2) % 3] /
                            (deposit_total * 100))
         remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
@@ -2085,19 +2091,19 @@ class ACBUnitTest(unittest.TestCase):
 
         coin_supply = acb.coin_supply.amount
         reward_total = 0 + mint
-        constant_reward = int((100 - ACB.PROPORTIONAL_REWARD_RATE) *
+        constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (3 * 100))
         reward_4 = reward_5 = reward_6 = 0
         deposit_total = (deposit_4[(now - 2) % 3] + deposit_5[(now - 2) % 3] +
                          deposit_6[(now - 2) % 3])
         if deposit_total > 0:
-            reward_4 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_4 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_4[(now - 2) % 3] /
                            (deposit_total * 100))
-            reward_5 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_5 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_5[(now - 2) % 3] /
                            (deposit_total * 100))
-            reward_6 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_6 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_6[(now - 2) % 3] /
                            (deposit_total * 100))
         remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
@@ -2118,7 +2124,7 @@ class ACBUnitTest(unittest.TestCase):
         deposit_5[now] = int(balance_5 * ACB.DEPOSIT_RATE / 100)
         self.assertEqual(acb.vote(
             accounts[5], Oracle.hash(
-                accounts[5], ACB.LEVEL_MAX - 1, 10),
+                accounts[5], Oracle.LEVEL_MAX - 1, 10),
             self.default_level, 9),
                          (True, True, deposit_5[(now - 2) % 3] +
                           reward_5 + constant_reward, False))
@@ -2129,7 +2135,7 @@ class ACBUnitTest(unittest.TestCase):
         deposit_6[now] = int(balance_6 * ACB.DEPOSIT_RATE / 100)
         self.assertEqual(acb.vote(
             accounts[6], Oracle.hash(
-                accounts[6], ACB.LEVEL_MAX - 1, 10),
+                accounts[6], Oracle.LEVEL_MAX - 1, 10),
             self.default_level, 9),
                          (True, True, deposit_6[(now - 2) % 3] +
                           reward_6 + constant_reward, False))
@@ -2148,19 +2154,19 @@ class ACBUnitTest(unittest.TestCase):
 
         coin_supply = acb.coin_supply.amount
         reward_total = 0 + mint
-        constant_reward = int((100 - ACB.PROPORTIONAL_REWARD_RATE) *
+        constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (3 * 100))
         reward_4 = reward_5 = reward_6 = 0
         deposit_total = (deposit_4[(now - 2) % 3] + deposit_5[(now - 2) % 3] +
                          deposit_6[(now - 2) % 3])
         if deposit_total > 0:
-            reward_4 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_4 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_4[(now - 2) % 3] /
                            (deposit_total * 100))
-            reward_5 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_5 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_5[(now - 2) % 3] /
                            (deposit_total * 100))
-            reward_6 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_6 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_6[(now - 2) % 3] /
                            (deposit_total * 100))
         remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
@@ -2182,7 +2188,7 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.vote(
             accounts[5], Oracle.hash(
                 accounts[5], self.default_level, 11),
-            ACB.LEVEL_MAX - 1, 10),
+            Oracle.LEVEL_MAX - 1, 10),
                          (True, True, deposit_5[(now - 2) % 3] +
                           reward_5 + constant_reward, False))
         self.assertEqual(acb.balances[accounts[5]].amount,
@@ -2193,7 +2199,7 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.vote(
             accounts[6], Oracle.hash(
                 accounts[6], self.default_level, 11),
-            ACB.LEVEL_MAX - 1, 10),
+            Oracle.LEVEL_MAX - 1, 10),
                          (True, True, deposit_6[(now - 2) % 3] +
                           reward_6 + constant_reward, False))
         self.assertEqual(acb.balances[accounts[6]].amount,
@@ -2210,19 +2216,19 @@ class ACBUnitTest(unittest.TestCase):
         coin_supply = acb.coin_supply.amount
         reclaim_5 = reclaim_6 = 0
         in_threshold = False
-        if ACB.LEVEL_MAX - 1 - self.default_level <= ACB.RECLAIM_THRESHOLD:
+        if Oracle.LEVEL_MAX - 1 - self.default_level <= Oracle.RECLAIM_THRESHOLD:
             in_threshold = True
             reclaim_5 = deposit_5[(now - 2) % 3]
             reclaim_6 = deposit_6[(now - 2) % 3]
         reward_total = (deposit_5[(now - 2) % 3] - reclaim_5 +
                         deposit_6[(now - 2) % 3] - reclaim_6 +
                         mint)
-        constant_reward = int((100 - ACB.PROPORTIONAL_REWARD_RATE) *
+        constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (1 * 100))
         reward_4 = reward_5 = reward_6 = 0
         deposit_total = deposit_4[(now - 2) % 3]
         if deposit_total > 0:
-            reward_4 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_4 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_4[(now - 2) % 3] /
                            (deposit_total * 100))
         remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
@@ -2273,19 +2279,19 @@ class ACBUnitTest(unittest.TestCase):
 
         coin_supply = acb.coin_supply.amount
         reward_total = 0 + mint
-        constant_reward = int((100 - ACB.PROPORTIONAL_REWARD_RATE) *
+        constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (3 * 100))
         reward_4 = reward_5 = reward_6 = 0
         deposit_total = (deposit_4[(now - 2) % 3] + deposit_5[(now - 2) % 3] +
                          deposit_6[(now - 2) % 3])
         if deposit_total > 0:
-            reward_4 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_4 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_4[(now - 2) % 3] /
                            (deposit_total * 100))
-            reward_5 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_5 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_5[(now - 2) % 3] /
                            (deposit_total * 100))
-            reward_6 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_6 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_6[(now - 2) % 3] /
                            (deposit_total * 100))
         remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
@@ -2294,7 +2300,7 @@ class ACBUnitTest(unittest.TestCase):
         deposit_4[now] = int(balance_4 * ACB.DEPOSIT_RATE / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.hash(
-                accounts[4], ACB.LEVEL_MAX - 1, 13),
+                accounts[4], Oracle.LEVEL_MAX - 1, 13),
             self.default_level, 12),
                          (True, True, deposit_4[(now - 2) % 3] +
                           reward_4 + constant_reward, True))
@@ -2334,19 +2340,19 @@ class ACBUnitTest(unittest.TestCase):
 
         coin_supply = acb.coin_supply.amount
         reward_total = 0 + mint
-        constant_reward = int((100 - ACB.PROPORTIONAL_REWARD_RATE) *
+        constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (3 * 100))
         reward_4 = reward_5 = reward_6 = 0
         deposit_total = (deposit_4[(now - 2) % 3] + deposit_5[(now - 2) % 3] +
                          deposit_6[(now - 2) % 3])
         if deposit_total > 0:
-            reward_4 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_4 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_4[(now - 2) % 3] /
                            (deposit_total * 100))
-            reward_5 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_5 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_5[(now - 2) % 3] /
                            (deposit_total * 100))
-            reward_6 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_6 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_6[(now - 2) % 3] /
                            (deposit_total * 100))
         remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
@@ -2356,7 +2362,7 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.vote(
             accounts[4], Oracle.hash(
                 accounts[4], self.default_level, 14),
-            ACB.LEVEL_MAX - 1, 13),
+            Oracle.LEVEL_MAX - 1, 13),
                          (True, True, deposit_4[(now - 2) % 3] +
                           reward_4 + constant_reward, True))
         self.assertEqual(acb.oracle_level, self.default_level)
@@ -2396,20 +2402,20 @@ class ACBUnitTest(unittest.TestCase):
         coin_supply = acb.coin_supply.amount
         reclaim_4 = 0
         in_threshold = False
-        if ACB.LEVEL_MAX - 1 - self.default_level <= ACB.RECLAIM_THRESHOLD:
+        if Oracle.LEVEL_MAX - 1 - self.default_level <= Oracle.RECLAIM_THRESHOLD:
             in_threshold = True
             reclaim_4 = deposit_4[(now - 2) % 3]
         reward_total = (deposit_4[(now - 2) % 3] - reclaim_4 +
                         mint)
-        constant_reward = int((100 - ACB.PROPORTIONAL_REWARD_RATE) *
+        constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (2 * 100))
         reward_4 = reward_5 = reward_6 = 0
         deposit_total = (deposit_5[(now - 2) % 3] + deposit_6[(now - 2) % 3])
         if deposit_total > 0:
-            reward_5 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_5 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_5[(now - 2) % 3] /
                            (deposit_total * 100))
-            reward_6 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_6 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_6[(now - 2) % 3] /
                            (deposit_total * 100))
         remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
@@ -2458,13 +2464,13 @@ class ACBUnitTest(unittest.TestCase):
 
         coin_supply = acb.coin_supply.amount
         reward_total = 0 + mint
-        constant_reward = int((100 - ACB.PROPORTIONAL_REWARD_RATE) *
+        constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (3 * 100))
         reward_4 = reward_5 = reward_6 = 0
         deposit_total = (deposit_4[(now - 2) % 3] + deposit_5[(now - 2) % 3] +
                          deposit_6[(now - 2) % 3])
         if deposit_total > 0:
-            reward_4 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_4 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_4[(now - 2) % 3] /
                            (deposit_total * 100))
         remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
@@ -2493,12 +2499,12 @@ class ACBUnitTest(unittest.TestCase):
         coin_supply = acb.coin_supply.amount
         reward_total = (deposit_5[(now - 2) % 3] + deposit_6[(now - 2) % 3] +
                         mint)
-        constant_reward = int((100 - ACB.PROPORTIONAL_REWARD_RATE) *
+        constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (1 * 100))
         reward_4 = reward_5 = reward_6 = 0
         deposit_total = deposit_4[(now - 2) % 3]
         if deposit_total > 0:
-            reward_4 = int(ACB.PROPORTIONAL_REWARD_RATE *
+            reward_4 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_4[(now - 2) % 3] /
                            (deposit_total * 100))
         remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
@@ -2528,7 +2534,7 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.purchase_bonds(accounts[1], 2), t12)
         self.assertEqual(acb.bond_supply.amount, 2)
 
-        for level in range(2, ACB.LEVEL_MAX + 2):
+        for level in range(2, Oracle.LEVEL_MAX + 2):
             now = (now + 1) % 3
             acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
 
@@ -2557,12 +2563,12 @@ class ACBUnitTest(unittest.TestCase):
 
             coin_supply = acb.coin_supply.amount
             reward_total = mint
-            constant_reward = int((100 - ACB.PROPORTIONAL_REWARD_RATE) *
+            constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                                   reward_total / (1 * 100))
             reward_4 = 0
             deposit_total = deposit_4[(now - 2) % 3]
             if deposit_total > 0:
-                reward_4 = int(ACB.PROPORTIONAL_REWARD_RATE *
+                reward_4 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                                reward_total * deposit_4[(now - 2) % 3] /
                                (deposit_total * 100))
             remainder[now] = (reward_total - reward_4 - constant_reward * 1)
@@ -2572,7 +2578,7 @@ class ACBUnitTest(unittest.TestCase):
                 accounts[4], Oracle.hash(
                     accounts[4], level, 4444), level - 1, 4444),
                              (True,
-                              True if level < ACB.LEVEL_MAX + 1 else False,
+                              True if level < Oracle.LEVEL_MAX + 1 else False,
                               deposit_4[(now - 2) % 3] + reward_4 +
                               constant_reward,
                               True))

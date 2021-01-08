@@ -5,14 +5,32 @@ import "./JLC.sol";
 
 // A contract to test Oracle.
 contract OracleForTesting is Oracle {
-  constructor(uint level_max, uint reclaim_threshold,
-              uint proportional_reward_rate, TokenSupply coin_supply)
-      Oracle(level_max, reclaim_threshold,
-             proportional_reward_rate, coin_supply) {
+
+  function override_constants(uint level_max,
+                              uint reclaim_threshold,
+                              uint proportional_reward_rate)
+      public {
+    LEVEL_MAX = level_max;
+    RECLAIM_THRESHOLD = reclaim_threshold;
+    PROPORTIONAL_REWARD_RATE = proportional_reward_rate;
+    
+    require(2 <= LEVEL_MAX && LEVEL_MAX < 100,
+            "override_constants: 2 <= LEVEL_MAX < 100");
+    require(0 <= RECLAIM_THRESHOLD && RECLAIM_THRESHOLD < LEVEL_MAX,
+            "override_constants: 0 <= RECLAIM_THRESHOLD < LEVEL_MAX");
+    require(0 <= PROPORTIONAL_REWARD_RATE &&
+            PROPORTIONAL_REWARD_RATE <= 100,
+            "override_constants: 0 <= PROPORTIONAL_REWARD_RATE <= 100");
+
+    for (uint i = 0; i < 3; i++) {
+      for (uint level = epochs_[i].votes.length; level < LEVEL_MAX; level++) {
+        epochs_[i].votes.push(Vote(0, 0, false, false));
+      }
+    }
   }
   
   function get_vote(uint epoch_index, uint level)
-      public onlyOwner view returns (uint, uint, bool, bool) {
+      public view returns (uint, uint, bool, bool) {
     require(0 <= epoch_index && epoch_index <= 2,
             "get_vote: 0 <= epoch_index <= 2");
     require(0 <= level && level < epochs_[epoch_index].votes.length,
@@ -22,7 +40,7 @@ contract OracleForTesting is Oracle {
   }
 
   function get_commit(uint epoch_index, address account)
-      public onlyOwner view returns (bytes32, uint, uint, Phase, uint) {
+      public view returns (bytes32, uint, uint, Phase, uint) {
     require(0 <= epoch_index && epoch_index <= 2,
             "get_commit: 0 <= epoch_index <= 2");
     Commit memory commit = epochs_[epoch_index].commits[account];
@@ -54,71 +72,42 @@ contract OracleForTesting is Oracle {
 contract ACBForTesting is ACB {
   uint private timestamp_;
 
-  constructor(uint bond_redemption_price,
-              uint bond_redemption_period,
-              uint phase_duration,
-              uint proportional_reward_rate,
-              uint deposit_rate,
-              uint dumping_factor,
-              uint reclaim_threshold,
-              uint[] memory level_to_exchange_rate,
-              uint[] memory level_to_bond_price,
-              uint coin_transfer_max,
-              uint initial_coin_supply)
-      ACB() {
+  function override_constants(uint bond_redemption_price,
+                              uint bond_redemption_period,
+                              uint phase_duration,
+                              uint deposit_rate,
+                              uint dumping_factor,
+                              uint[] memory level_to_exchange_rate,
+                              uint[] memory level_to_bond_price,
+                              uint coin_transfer_max)
+      public {
     BOND_REDEMPTION_PRICE = bond_redemption_price;
     BOND_REDEMPTION_PERIOD = bond_redemption_period;
     PHASE_DURATION = phase_duration;
-    PROPORTIONAL_REWARD_RATE = proportional_reward_rate;
     DEPOSIT_RATE = deposit_rate;
     DUMPING_FACTOR = dumping_factor;
-    RECLAIM_THRESHOLD = reclaim_threshold;
     LEVEL_TO_EXCHANGE_RATE = level_to_exchange_rate;
-    LEVEL_MAX = LEVEL_TO_EXCHANGE_RATE.length;
     LEVEL_TO_BOND_PRICE = level_to_bond_price;
     COIN_TRANSFER_MAX = coin_transfer_max;
-    INITIAL_COIN_SUPPLY = initial_coin_supply;
-
-    oracle_ = new Oracle(LEVEL_MAX,
-                         RECLAIM_THRESHOLD,
-                         PROPORTIONAL_REWARD_RATE,
-                         coin_supply_);
-    coin_supply_.set_delegated_owner(address(oracle_));
-    bond_supply_.set_delegated_owner(address(oracle_));
-    oracle_level_ = LEVEL_MAX;
     
-    check_constants();
-  }
-
-  function check_constants()
-      private view {
     require(1 <= BOND_REDEMPTION_PRICE && BOND_REDEMPTION_PRICE <= 100000,
-            "check_constants: BOND_REDEMPTION_PRICE");
+            "override_constants: BOND_REDEMPTION_PRICE");
     require(1 <= BOND_REDEMPTION_PERIOD &&
             BOND_REDEMPTION_PERIOD <= 365 * 24 * 60 * 60,
-            "check_constants: BOND_REDEMPTION_PERIOD");
+            "override_constants: BOND_REDEMPTION_PERIOD");
     require(1 <= PHASE_DURATION && PHASE_DURATION <= 30 * 24 * 60 * 60,
-            "check_constants: PHASE_DURATION");
-    require(0 <= PROPORTIONAL_REWARD_RATE && PROPORTIONAL_REWARD_RATE <= 100,
-            "check_constants: PROPORTIONAL_REWARD_RATE");
+            "override_constants: PHASE_DURATION");
     require(0 <= DEPOSIT_RATE && DEPOSIT_RATE <= 100,
-            "check_constants: DEPOSIT_RATE");
+            "override_constants: DEPOSIT_RATE");
     require(1 <= DUMPING_FACTOR && DUMPING_FACTOR <= 100,
-            "check_constants: DUMPING_FACTOR");
+            "override_constants: DUMPING_FACTOR");
     require(0 <= INITIAL_COIN_SUPPLY,
-            "check_constants: INITIAL_COIN_SUPPLY");
-    require(0 <= RECLAIM_THRESHOLD && RECLAIM_THRESHOLD < LEVEL_MAX,
-            "check_constants: RECLAIM_THRESHOLD");
-    require(LEVEL_TO_EXCHANGE_RATE.length == LEVEL_MAX,
-            "check_constants: LEVEL_TO_EXCHANGE_RATE.length == LEVEL_MAX");
-    require(LEVEL_TO_BOND_PRICE.length == LEVEL_MAX,
-            "check_constants: LEVEL_TO_BOND_PRICE.length == LEVEL_MAX");
+            "override_constants: INITIAL_COIN_SUPPLY");
     for (uint i = 0; i < LEVEL_TO_BOND_PRICE.length; i++) {
       require(
           LEVEL_TO_BOND_PRICE[i] <= BOND_REDEMPTION_PRICE,
-          "check_constants: LEVEL_TO_BOND_PRICE[i] <= BOND_REDEMPTION_PRICE");
+          "override_constants: LEVEL_TO_BOND_PRICE <= BOND_REDEMPTION_PRICE");
     }
-    require(LEVEL_MAX >= 3, "check_constants: LEVEL_MAX >= 3");
   }
 
   function control_supply(int delta)
@@ -167,6 +156,11 @@ contract ACBForTesting is ACB {
   function get_oracle_level()
       public view returns (uint) {
     return oracle_level_;
+  }
+
+  function get_initial_coin_supply()
+      public view returns (uint) {
+    return INITIAL_COIN_SUPPLY;
   }
 
   function coin_supply_address()

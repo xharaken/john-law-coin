@@ -33,10 +33,10 @@ function parameterized_test(accounts,
   it(test_name, async function () {
     let _prev_mint = 0;
     let _supply = await TokenSupply.new();
-    let _oracle = await OracleForTesting.new(
-        _level_max, _reclaim_threshold,
-        _proportional_reward_rate, _supply.address,
-        {gas: 12000000});
+    let _oracle = await OracleForTesting.new({gas: 12000000});
+    await _oracle.initialize(_supply.address);
+    await _oracle.override_constants(_level_max, _reclaim_threshold,
+                               _proportional_reward_rate);
     await _supply.set_delegated_owner(_oracle.address);
 
     for (let iter = 0; iter < _iteration; iter++) {

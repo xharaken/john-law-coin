@@ -203,7 +203,7 @@ class Vote:
 # the commit phase, the second Epoch object is in use for the reveal phase,
 # and the third Epoch object is in use for the reclaim phase.
 class Epoch:
-    def __init__(self, level_max):
+    def __init__(self):
         # Attributes
         # ----------------
         # |commits|: The commit entries.
@@ -215,7 +215,7 @@ class Epoch:
         # |phase|: The phase of this Epoch.
         self.commits = {}
         self.votes = []
-        for i in range(level_max):
+        for i in range(Oracle.LEVEL_MAX):
             self.votes.append(Vote())
         self.reward_holder = TokenHolder()
         self.reward_total = 0
@@ -226,47 +226,50 @@ class Epoch:
 # LEVEL_MAX - 1 using the commit-reveal-reclaim voting scheme.
 class Oracle:
 
+    # The number of the oracle levels.
+    LEVEL_MAX = 7
+
+    # If the "truth" level is 7 and RECLAIM_THRESHOLD is 2, the voters who
+    # voted for 5, 6, 7, 8 and 9 can reclaim their deposited coins. Other
+    # voters lose their deposited coins.
+    RECLAIM_THRESHOLD = 1
+
+    # The lost deposited coins and the coins minted by ACB are distributed to
+    # the voters who voted for the "truth" level as a reward. The
+    # PROPORTIONAL_REWARD_RATE of the reward is distributed to the voters in
+    # proportion to the coins they deposited. The rest of the reward is
+    # distributed to the voters evenly.
+    PROPORTIONAL_REWARD_RATE = 80 # 80%
+
     # Constructor
     #
     # Parameters
     # ----------------
-    # |level_max|: The number of the oracle levels.
-    # |reclaim_threshold|: If the "truth" level is 7 and |reclaim_threshold| is
-    # 2, the voters who voted for 5, 6, 7, 8 and 9 can reclaim their deposited
-    # coins. Other voters lose their deposited coins.
-    # |proportional_reward_rate|:  The lost deposited coins and the coins minted
-    # by ACB are distributed to the voters who voted for the "truth" level
-    # as a reward. The |proportional_reward_rate| percentage of the reward is
-    # distributed to the voters in proportion to the coins they deposited.
-    # The rest of the reward is distributed to the voters evenly.
     # |coin_supply|: The total coin supply.
-    def __init__(self, level_max, reclaim_threshold,
-                 proportional_reward_rate, coin_supply):
+    def __init__(self, coin_supply):
         # Attributes:
         # ----------------
-        # |level_max|: The number of the oracle levels.
-        # |reclaim_threshold|: The reclaim threshold.
-        # |proportional_reward_rate|: The proportional reward rate.
         # |epochs|: The oracle creates three Epoch objects and uses them in a
         # round-robin manner (commit => reveal => reclaim).
         # |epoch|: The current epoch. The Epoch object at |epoch % 3| is in
         # the commit phase. The Epoch object at |(epoch - 1) % 3| is in the
         # reveal phase. The Epoch object at |(epoch - 2) % 3| is in the
         # reclaim phase.
-        assert(2 <= level_max and level_max < 100)
-        assert(0 <= reclaim_threshold and reclaim_threshold < level_max)
-        assert(0 <= proportional_reward_rate and
-               proportional_reward_rate <= 100)
-        self.level_max = level_max
-        self.reclaim_threshold = reclaim_threshold
-        self.proportional_reward_rate = proportional_reward_rate
-        self.coin_supply = coin_supply
-        self.epochs = [Epoch(level_max), Epoch(level_max), Epoch(level_max)]
+        # |coin_supply|: The total coin supply the oracle uses to mint, burn
+        # and transfer coins.
+        assert(2 <= Oracle.LEVEL_MAX and Oracle.LEVEL_MAX < 100)
+        assert(0 <= Oracle.RECLAIM_THRESHOLD and
+               Oracle.RECLAIM_THRESHOLD < Oracle.LEVEL_MAX)
+        assert(0 <= Oracle.PROPORTIONAL_REWARD_RATE and
+               Oracle.PROPORTIONAL_REWARD_RATE <= 100)
+
+        self.epochs = [Epoch(), Epoch(), Epoch()]
         self.epochs[0].phase = Phase.COMMIT
         self.epochs[1].phase = Phase.RECLAIM
         self.epochs[2].phase = Phase.REVEAL
         # Start with 3 to avoid using epoch 0 in Solidity.
         self.epoch = 3
+        self.coin_supply = coin_supply
 
     # Do commit.
     #
@@ -281,6 +284,7 @@ class Oracle:
     # ----------------
     # True if the commit succeeded. False otherwise.
     def commit(self, sender, committed_hash, deposit, balance_holder):
+        assert(self.coin_supply)
         epoch = self.epochs[self.epoch % 3]
         assert(epoch.phase == Phase.COMMIT)
         assert(deposit >= 0)
@@ -293,7 +297,7 @@ class Oracle:
 
         # Create a commit entry.
         epoch.commits[sender] = Commit(
-            committed_hash, deposit, self.level_max, Phase.COMMIT, self.epoch)
+            committed_hash, deposit, Oracle.LEVEL_MAX, Phase.COMMIT, self.epoch)
 
         # Move the deposited coins to the deposit holder.
         self.coin_supply.send_to(balance_holder, epoch.deposit_holder, deposit)
@@ -313,9 +317,10 @@ class Oracle:
     # ----------------
     # True if the reveal succeeded. False otherwise.
     def reveal(self, sender, revealed_level, revealed_salt):
+        assert(self.coin_supply)
         epoch = self.epochs[(self.epoch - 1) % 3]
         assert(epoch.phase == Phase.REVEAL)
-        if revealed_level < 0 or self.level_max <= revealed_level:
+        if revealed_level < 0 or Oracle.LEVEL_MAX <= revealed_level:
             return False
         if (sender not in epoch.commits or
             epoch.commits[sender].epoch != self.epoch - 1):
@@ -352,6 +357,7 @@ class Oracle:
     # ----------------
     # The amount of reclaimed coins.
     def reclaim(self, sender, balance_holder):
+        assert(self.coin_supply)
         epoch = self.epochs[(self.epoch - 2) % 3]
         assert(epoch.phase == Phase.RECLAIM)
         if (sender not in epoch.commits or
@@ -365,9 +371,9 @@ class Oracle:
         epoch.commits[sender].phase = Phase.RECLAIM
         deposit = epoch.commits[sender].deposit
         revealed_level = epoch.commits[sender].revealed_level
-        if revealed_level == self.level_max:
+        if revealed_level == Oracle.LEVEL_MAX:
             return 0
-        assert(0 <= revealed_level and revealed_level < self.level_max)
+        assert(0 <= revealed_level and revealed_level < Oracle.LEVEL_MAX)
 
         if not epoch.votes[revealed_level].should_reclaim:
             return 0
@@ -383,7 +389,7 @@ class Oracle:
             assert(epoch.votes[revealed_level].count > 0)
             # The voter who voted for the "truth" level can receive the reward.
             #
-            # The |self.proportional_reward_rate| percentage of the reward is
+            # The PROPORTIONAL_REWARD_RATE percentage of the reward is
             # distributed to the voters in proportion to the coins they
             # deposited. This incentivizes voters who have more coins and thus
             # should have more power on determining the "truth" level to join
@@ -394,12 +400,12 @@ class Oracle:
             proportional_reward = 0
             if epoch.votes[revealed_level].deposit > 0:
                 proportional_reward = divide(
-                    self.proportional_reward_rate *
+                    Oracle.PROPORTIONAL_REWARD_RATE *
                     epoch.reward_total * deposit,
                     100 * epoch.votes[revealed_level].deposit)
             assert(proportional_reward >= 0)
             constant_reward = divide(
-                ((100 - self.proportional_reward_rate) * epoch.reward_total),
+                ((100 - Oracle.PROPORTIONAL_REWARD_RATE) * epoch.reward_total),
                 100 * epoch.votes[revealed_level].count)
             assert(constant_reward >= 0)
             self.coin_supply.send_to(epoch.reward_holder,
@@ -423,6 +429,7 @@ class Oracle:
         assert(mint >= 0)
 
         # Step 1: Move the commit phase to the reveal phase.
+        assert(self.coin_supply)
         epoch = self.epochs[self.epoch % 3]
         assert(epoch.phase == Phase.COMMIT)
         epoch.phase = Phase.REVEAL
@@ -432,17 +439,17 @@ class Oracle:
         assert(epoch.phase == Phase.REVEAL)
 
         mode_level = self.get_mode_level()
-        if 0 <= mode_level and mode_level < self.level_max:
+        if 0 <= mode_level and mode_level < Oracle.LEVEL_MAX:
             deposit_voted = 0
             deposit_to_reclaim = 0
-            for level in range(self.level_max):
+            for level in range(Oracle.LEVEL_MAX):
                 assert(epoch.votes[level].should_reclaim == False)
                 assert(epoch.votes[level].should_reward == False)
                 deposit_voted += epoch.votes[level].deposit
-                if (mode_level - self.reclaim_threshold <= level and
-                    level <= mode_level + self.reclaim_threshold):
+                if (mode_level - Oracle.RECLAIM_THRESHOLD <= level and
+                    level <= mode_level + Oracle.RECLAIM_THRESHOLD):
                     # Voters who voted for the oracle levels in [mode_level -
-                    # reclaim_threshold, mode_level + reclaim_threshold] are
+                    # RECLAIM_THRESHOLD, mode_level + RECLAIM_THRESHOLD] are
                     # eligible to reclaim the deposited coins. Other voters
                     # lose the deposited coins.
                     epoch.votes[level].should_reclaim = True
@@ -489,7 +496,7 @@ class Oracle:
         # The mapping cannot be erased due to the restriction of Solidity.
         # epoch.commits = {}
         epoch.votes = []
-        for i in range(self.level_max):
+        for i in range(Oracle.LEVEL_MAX):
             epoch.votes.append(Vote())
         assert(epoch.deposit_holder.amount == 0)
         assert(epoch.reward_holder.amount == 0)
@@ -513,25 +520,26 @@ class Oracle:
     # If there are multiple modes that has the largest votes, return the
     # smallest mode. If there are no votes, return LEVEL_MAX.
     def get_mode_level(self):
+        assert(self.coin_supply)
         epoch = self.epochs[(self.epoch - 1) % 3]
         assert(epoch.phase == Phase.REVEAL)
-        mode_level = self.level_max
+        mode_level = Oracle.LEVEL_MAX
         max_deposit = 0
         max_count = 0
-        for level in range(self.level_max):
+        for level in range(Oracle.LEVEL_MAX):
             if (epoch.votes[level].count > 0 and
-                (mode_level == self.level_max or
+                (mode_level == Oracle.LEVEL_MAX or
                  max_deposit < epoch.votes[level].deposit or
                  (max_deposit == epoch.votes[level].deposit and
                   max_count < epoch.votes[level].count))):
                 max_deposit = epoch.votes[level].deposit
                 max_count = epoch.votes[level].count
                 mode_level = level
-        if mode_level == self.level_max:
+        if mode_level == Oracle.LEVEL_MAX:
             assert(max_deposit == 0)
             assert(max_count == 0)
-            return self.level_max
-        assert(0 <= mode_level and mode_level < self.level_max)
+            return Oracle.LEVEL_MAX
+        assert(0 <= mode_level and mode_level < Oracle.LEVEL_MAX)
         return mode_level
 
     # Calculate the committed hash.
@@ -604,19 +612,10 @@ class ACB:
     # the smart contract.
     LEVEL_TO_EXCHANGE_RATE = [7, 8, 9, 10, 11, 12, 13]
     EXCHANGE_RATE_DIVISOR = 10
-    LEVEL_MAX = len(LEVEL_TO_EXCHANGE_RATE)
-    assert(LEVEL_MAX == 7)
 
     # LEVEL_TO_EXCHANGE_RATE is the mapping from the oracle levels to the
     # bond prices
     LEVEL_TO_BOND_PRICE = [970, 980, 990, 997, 997, 997, 997]
-    assert(len(LEVEL_TO_BOND_PRICE) == LEVEL_MAX)
-
-    # The reclaim threshold in the oracle.
-    RECLAIM_THRESHOLD = 1
-
-    # The proportional reward rate in the oracle.
-    PROPORTIONAL_REWARD_RATE = 80 # 80%
 
     # The duration of the commit / reveal / reclaim phase.
     PHASE_DURATION = 7 * 24 * 60 * 60 # 1 week.
@@ -660,23 +659,20 @@ class ACB:
         # of bonds ACM wants to sell to decrease the total coin supply. If
         # |bond_budget| is negative, it indicates the number of bonds ACB
         # wants to redeem to increase the total coin supply.
+        # |current_epoch_start|: The timestamp that started the current epoch.
+        # |timestamp|: The current timestamp.
         # |oracle|: The oracle to determine the current exchange rate between
         # th coins and USD.
-        # |current_epoch_start|: The timestamp that started the current epoch.
         # |oracle_level|: The current oracle level.
-        # |timestamp|: The current timestamp.
         self.balances = {}
         self.bonds = {}
         self.coin_supply = TokenSupply()
         self.bond_supply = TokenSupply()
         self.bond_budget = 0
-        self.oracle = Oracle(ACB.LEVEL_MAX,
-                             ACB.RECLAIM_THRESHOLD,
-                             ACB.PROPORTIONAL_REWARD_RATE,
-                             self.coin_supply)
         self.current_epoch_start = 0
-        self.oracle_level = ACB.LEVEL_MAX
         self.timestamp = 0
+        self.oracle = None
+        self.oracle_level = 0
 
         # Mint the initial coins in the genesis account.
         self.create_account(genesis_account)
@@ -691,18 +687,29 @@ class ACB:
                ACB.BOND_REDEMPTION_PERIOD <= 365 * 24 * 60 * 60)
         assert(1 <= ACB.PHASE_DURATION and
                ACB.PHASE_DURATION <= 30 * 24 * 60 * 60)
-        assert(0 <= ACB.PROPORTIONAL_REWARD_RATE and
-               ACB.PROPORTIONAL_REWARD_RATE <= 100)
         assert(0 <= ACB.DEPOSIT_RATE and ACB.DEPOSIT_RATE <= 100)
         assert(1 <= ACB.DUMPING_FACTOR and ACB.DUMPING_FACTOR <= 100)
         assert(0 <= ACB.INITIAL_COIN_SUPPLY)
-        assert(0 <= ACB.RECLAIM_THRESHOLD and
-               ACB.RECLAIM_THRESHOLD < ACB.LEVEL_MAX)
-        assert(len(ACB.LEVEL_TO_EXCHANGE_RATE) == ACB.LEVEL_MAX)
-        assert(len(ACB.LEVEL_TO_BOND_PRICE) == ACB.LEVEL_MAX)
         for bond_price in ACB.LEVEL_TO_BOND_PRICE:
             assert(bond_price <= ACB.BOND_REDEMPTION_PRICE)
-        assert(ACB.LEVEL_MAX >= 3)
+
+    # Activate the ACB with an oracle. This function should be called only once
+    # just after the ACB is initialized.
+    #
+    # Parameters
+    # ----------------
+    # |oracle|: The oracle. The ownership of the oracle should be transferred to
+    # the ACB before activate() is called.
+    #
+    # Returns
+    # ----------------
+    # None.
+    def activate(self, oracle):
+        assert(len(ACB.LEVEL_TO_EXCHANGE_RATE) == Oracle.LEVEL_MAX)
+        assert(len(ACB.LEVEL_TO_BOND_PRICE) == Oracle.LEVEL_MAX)
+
+        self.oracle = oracle
+        self.oracle_level = Oracle.LEVEL_MAX
 
     # Create a new user account.
     #
@@ -756,9 +763,9 @@ class ACB:
 
             mint = 0
             self.oracle_level = self.oracle.get_mode_level()
-            if self.oracle_level != ACB.LEVEL_MAX:
+            if self.oracle_level != Oracle.LEVEL_MAX:
                 assert(0 <= self.oracle_level and
-                       self.oracle_level < ACB.LEVEL_MAX)
+                       self.oracle_level < Oracle.LEVEL_MAX)
                 # Translate the mode level to the exchange rate.
                 exchange_rate = ACB.LEVEL_TO_EXCHANGE_RATE[self.oracle_level]
 
@@ -853,8 +860,8 @@ class ACB:
             # ACB does not have enough bonds to sell.
             return 0
 
-        bond_price = ACB.LEVEL_TO_BOND_PRICE[ACB.LEVEL_MAX - 1]
-        if 0 <= self.oracle_level and self.oracle_level < ACB.LEVEL_MAX:
+        bond_price = ACB.LEVEL_TO_BOND_PRICE[Oracle.LEVEL_MAX - 1]
+        if 0 <= self.oracle_level and self.oracle_level < Oracle.LEVEL_MAX:
             bond_price = ACB.LEVEL_TO_BOND_PRICE[self.oracle_level]
         amount = bond_price * count
         if self.balances[sender].amount < amount:
@@ -974,7 +981,7 @@ class ACB:
         else:
             assert(delta < 0)
             assert(0 <= self.oracle_level and
-                   self.oracle_level < ACB.LEVEL_MAX)
+                   self.oracle_level < Oracle.LEVEL_MAX)
             # Decrease the total coin supply.
             # Issue new bonds to decrease the coin supply.
             self.bond_budget = divide(
