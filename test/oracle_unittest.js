@@ -47,6 +47,7 @@ function parameterized_test(accounts,
     await _oracle.initialize(_supply.address);
     await _oracle.override_constants(_level_max, _reclaim_threshold,
                                      _proportional_reward_rate);
+    print_contract_size(_oracle, "OracleForTesting");
     await _supply.set_delegated_owner(_oracle.address);
     await _supply.set_delegated_owner(_oracle.address);
 
@@ -2100,29 +2101,29 @@ function parameterized_test(accounts,
       await _oracle.advance_phase(1, {from: accounts[3]});
     }, "Ownable");
 
-    let supply = await TokenSupply.at(await _oracle.coin_supply_address());
+    let supply = await TokenSupply.at(await _oracle.coin_supply_());
     let holder = await TokenHolder.new(supply.address);
     await supply.mint(holder.address, 1, {from: accounts[2]});
 
     await should_throw(async () => {
-      let supply = await TokenSupply.at(await _oracle.coin_supply_address());
+      let supply = await TokenSupply.at(await _oracle.coin_supply_());
       let holder = await TokenHolder.new(supply.address);
       await supply.mint(holder.address, 1);
     }, "Ownable");
 
     await should_throw(async () => {
-      let supply = await TokenSupply.at(await _oracle.coin_supply_address());
+      let supply = await TokenSupply.at(await _oracle.coin_supply_());
       let holder = await TokenHolder.new(supply.address);
       await supply.mint(holder.address, 1, {from: accounts[3]});
     }, "Ownable");
 
     await should_throw(async () => {
-      let supply = await TokenSupply.at(await _oracle.coin_supply_address());
+      let supply = await TokenSupply.at(await _oracle.coin_supply_());
       await _supply.set_delegated_owner(_oracle.address);
     }, "Ownable");
 
     await should_throw(async () => {
-      let supply = await TokenSupply.at(await _oracle.coin_supply_address());
+      let supply = await TokenSupply.at(await _oracle.coin_supply_());
       let holder = await TokenHolder.new(supply.address);
       await _supply.set_delegated_owner(_oracle.address, {from: accounts[3]});
     }, "Ownable");
@@ -2226,8 +2227,8 @@ function parameterized_test(accounts,
       oracle.coin_supply = {};
       oracle.coin_supply.amount = (await (
           await TokenSupply.at(
-              await _oracle.coin_supply_address())).amount_()).toNumber();
-      oracle.epoch = (await _oracle.get_epoch()).toNumber();
+              await _oracle.coin_supply_())).amount_()).toNumber();
+      oracle.epoch = (await _oracle.epoch_()).toNumber();
       oracle.epochs = [];
       for (let epoch_index = 0; epoch_index < 3; epoch_index++) {
         let ret = await _oracle.get_epoch_members(epoch_index);
@@ -2278,4 +2279,12 @@ function parameterized_test(accounts,
 
   });
 
+}
+
+function print_contract_size(instance, name) {
+  let bytecode = instance.constructor._json.bytecode;
+  let deployed = instance.constructor._json.deployedBytecode;
+  let sizeOfB  = bytecode.length / 2;
+  let sizeOfD  = deployed.length / 2;
+  console.log(name + ": bytecode=" + sizeOfB + " deployed=" + sizeOfD);
 }

@@ -54,6 +54,7 @@ function parameterized_test(accounts,
     let _level_max = _level_to_exchange_rate.length;
 
     let _acb = await ACBForTesting.new({from: accounts[1], gas: 30000000});
+    print_contract_size(_acb, "ACBForTesting");
     await _acb.initialize({from: accounts[1]});
     await _acb.override_constants(_bond_redemption_price,
                                   _bond_redemption_period,
@@ -67,7 +68,8 @@ function parameterized_test(accounts,
 
     let _oracle = await OracleForTesting.new(
         {from: accounts[1], gas: 12000000});
-    await _oracle.initialize(await _acb.coin_supply_address(),
+    print_contract_size(_oracle, "OracleForTesting");
+    await _oracle.initialize(await _acb.coin_supply_(),
                              {from: accounts[1]});
     assert.equal(await _acb.paused(), true);
     await _oracle.override_constants(_level_max, _reclaim_threshold,
@@ -86,8 +88,6 @@ function parameterized_test(accounts,
     await _acb.activate(_oracle.address, {from: accounts[1]});
     assert.equal(await _acb.paused(), false);
 
-    _initial_coin_supply = (await _acb.get_initial_coin_supply()).toNumber();
-
     let _default_level;
     for(let level = 0; level < _level_max; level++) {
       if (_level_to_exchange_rate[level] == 11) {
@@ -99,6 +99,8 @@ function parameterized_test(accounts,
     let current;
     let redemptions = [];
     let sub_accounts = accounts.slice(1, 4);
+    let coin_supply = 0;
+    let bond_supply = 0;
 
     if (_level_to_bond_price[_level_max - 1] >= 2 &&
         _bond_redemption_price >= 2 &&
@@ -116,7 +118,8 @@ function parameterized_test(accounts,
 
       // initial coin supply
       current = await get_current(sub_accounts, []);
-      assert.equal(current.balances[accounts[1]].amount, _initial_coin_supply);
+      _initial_coin_supply = current.balances[accounts[1]].amount;
+      assert.isTrue(_initial_coin_supply > 10000);
       assert.equal(current.balances[accounts[2]].amount, 0);
       assert.equal(current.balances[accounts[3]].amount, 0);
 
@@ -310,7 +313,7 @@ function parameterized_test(accounts,
       assert.equal(current.bond_supply.amount, 0);
       assert.equal(current.bond_budget, 80);
 
-      let coin_supply = current.coin_supply.amount;
+      coin_supply = current.coin_supply.amount;
 
       await _acb.set_timestamp(
           (await _acb.get_timestamp()).toNumber() + _phase_duration);
@@ -565,7 +568,8 @@ function parameterized_test(accounts,
       redemptions.push(t5);
       await check_purchase_bonds(20, {from: accounts[2]}, t5);
       await _acb.set_timestamp(
-          (await _acb.get_timestamp()).toNumber() + _bond_redemption_period - 2);
+          (await _acb.get_timestamp()).toNumber() +
+            _bond_redemption_period - 2);
       let t6 =
           (await _acb.get_timestamp()).toNumber() + _bond_redemption_period;
       redemptions.push(t6);
@@ -1031,8 +1035,10 @@ function parameterized_test(accounts,
                  remainder[mod(now - 1, 3)]);
 
     // 3 commits on the stable level.
-    await _acb.reset_balances(
-        accounts[1], [accounts[4], accounts[5], accounts[6]]);
+    await _acb.reset_balance(accounts[1], _initial_coin_supply);
+    await _acb.reset_balance(accounts[4], 0);
+    await _acb.reset_balance(accounts[5], 0);
+    await _acb.reset_balance(accounts[6], 0);
 
     await check_transfer(accounts[4], 100, {from: accounts[1]}, 100);
     await check_transfer(accounts[5], 100, {from: accounts[1]}, 100);
@@ -1277,8 +1283,10 @@ function parameterized_test(accounts,
                  coin_supply + mint -
                  remainder[mod(now - 1, 3)]);
 
-    await _acb.reset_balances(
-        accounts[1], [accounts[4], accounts[5], accounts[6]]);
+    await _acb.reset_balance(accounts[1], _initial_coin_supply);
+    await _acb.reset_balance(accounts[4], 0);
+    await _acb.reset_balance(accounts[5], 0);
+    await _acb.reset_balance(accounts[6], 0);
 
     now = mod(now + 1, 3);
     await _acb.set_timestamp((
@@ -1746,8 +1754,10 @@ function parameterized_test(accounts,
     now = mod(now + 1, 3);
     await _acb.set_timestamp((
         await _acb.get_timestamp()).toNumber() + _phase_duration);
-    await _acb.reset_balances(
-        accounts[1], [accounts[4], accounts[5], accounts[6]]);
+    await _acb.reset_balance(accounts[1], _initial_coin_supply);
+    await _acb.reset_balance(accounts[4], 0);
+    await _acb.reset_balance(accounts[5], 0);
+    await _acb.reset_balance(accounts[6], 0);
     mint = await _mint_at_default_level();
 
     await check_transfer(accounts[4], 10000, {from: accounts[1]}, 10000);
@@ -1904,8 +1914,10 @@ function parameterized_test(accounts,
     now = mod(now + 1, 3);
     await _acb.set_timestamp((
         await _acb.get_timestamp()).toNumber() + _phase_duration);
-    await _acb.reset_balances(
-        accounts[1], [accounts[4], accounts[5], accounts[6]]);
+    await _acb.reset_balance(accounts[1], _initial_coin_supply);
+    await _acb.reset_balance(accounts[4], 0);
+    await _acb.reset_balance(accounts[5], 0);
+    await _acb.reset_balance(accounts[6], 0);
     mint = await _mint_at_default_level();
 
     await check_transfer(accounts[4], 2900, {from: accounts[1]}, 2900);
@@ -2099,8 +2111,10 @@ function parameterized_test(accounts,
     now = mod(now + 1, 3);
     await _acb.set_timestamp((
         await _acb.get_timestamp()).toNumber() + _phase_duration);
-    await _acb.reset_balances(
-        accounts[1], [accounts[4], accounts[5], accounts[6]]);
+    await _acb.reset_balance(accounts[1], _initial_coin_supply);
+    await _acb.reset_balance(accounts[4], 0);
+    await _acb.reset_balance(accounts[5], 0);
+    await _acb.reset_balance(accounts[6], 0);
     mint = await _mint_at_default_level();
 
     await check_transfer(accounts[4], 3100, {from: accounts[1]}, 3100);
@@ -2301,8 +2315,10 @@ function parameterized_test(accounts,
     now = mod(now + 1, 3);
     await _acb.set_timestamp((
         await _acb.get_timestamp()).toNumber() + _phase_duration);
-    await _acb.reset_balances(
-        accounts[1], [accounts[4], accounts[5], accounts[6]]);
+    await _acb.reset_balance(accounts[1], _initial_coin_supply);
+    await _acb.reset_balance(accounts[4], 0);
+    await _acb.reset_balance(accounts[5], 0);
+    await _acb.reset_balance(accounts[6], 0);
     mint = await _mint_at_default_level();
 
     await check_transfer(accounts[4], 10000, {from: accounts[1]}, 10000);
@@ -2496,8 +2512,10 @@ function parameterized_test(accounts,
     now = mod(now + 1, 3);
     await _acb.set_timestamp((
         await _acb.get_timestamp()).toNumber() + _phase_duration);
-    await _acb.reset_balances(
-        accounts[1], [accounts[4], accounts[5], accounts[6]]);
+    await _acb.reset_balance(accounts[1], _initial_coin_supply);
+    await _acb.reset_balance(accounts[4], 0);
+    await _acb.reset_balance(accounts[5], 0);
+    await _acb.reset_balance(accounts[6], 0);
     mint = await _mint_at_default_level();
 
     await check_transfer(accounts[4], 10000, {from: accounts[1]}, 10000);
@@ -2693,8 +2711,10 @@ function parameterized_test(accounts,
     now = mod(now + 1, 3);
     await _acb.set_timestamp((
         await _acb.get_timestamp()).toNumber() + _phase_duration);
-    await _acb.reset_balances(
-        accounts[1], [accounts[4], accounts[5], accounts[6]]);
+    await _acb.reset_balance(accounts[1], _initial_coin_supply);
+    await _acb.reset_balance(accounts[4], 0);
+    await _acb.reset_balance(accounts[5], 0);
+    await _acb.reset_balance(accounts[6], 0);
     mint = await _mint_at_default_level();
     current = await get_current(sub_accounts, []);
 
@@ -2844,9 +2864,12 @@ function parameterized_test(accounts,
         await _acb.get_timestamp()).toNumber() + _bond_redemption_period);
 
     await check_redeem_bonds([t12], {from: accounts[1]}, 2);
-    await _acb.reset_balances(
-        accounts[1], [accounts[2], accounts[3], accounts[4],
-                      accounts[5], accounts[6]]);
+    await _acb.reset_balance(accounts[1], _initial_coin_supply);
+    await _acb.reset_balance(accounts[2], 0);
+    await _acb.reset_balance(accounts[3], 0);
+    await _acb.reset_balance(accounts[4], 0);
+    await _acb.reset_balance(accounts[5], 0);
+    await _acb.reset_balance(accounts[6], 0);
 
     current = await get_current(sub_accounts, []);
     assert.equal(current.bond_supply.amount, 0);
@@ -2863,79 +2886,70 @@ function parameterized_test(accounts,
       await _acb._control_supply(0);
     }, "not a function");
 
+    coin_supply = await TokenSupply.at(await _acb.coin_supply_());
     await should_throw(async () => {
-      let supply = await TokenSupply.at(await _acb.coin_supply_address());
-      let holder = await TokenHolder.new(supply.address);
-      await supply.mint(holder, 1);
+      let holder = await TokenHolder.new(coin_supply.address);
+      await coin_supply.mint(holder, 1);
     }, "Ownable");
 
     await should_throw(async () => {
-      let supply = await TokenSupply.at(await _acb.coin_supply_address());
-      await supply.set_delegated_owner(accounts[1]);
+      await coin_supply.set_delegated_owner(accounts[1]);
     }, "Ownable");
 
     await should_throw(async () => {
-      let supply = await TokenSupply.at(await _acb.coin_supply_address());
-      let holder = await TokenHolder.new(supply.address);
-      await supply.mint(holder, 1, {from: accounts[1]});
+      let holder = await TokenHolder.new(coin_supply.address);
+      await coin_supply.mint(holder, 1, {from: accounts[1]});
     }, "Ownable");
 
     await should_throw(async () => {
-      let supply = await TokenSupply.at(await _acb.coin_supply_address());
-      await supply.set_delegated_owner(accounts[1], {from: accounts[1]});
+      await coin_supply.set_delegated_owner(accounts[1], {from: accounts[1]});
+    }, "Ownable");
+
+    bond_supply = await TokenSupply.at(await _acb.bond_supply_());
+    await should_throw(async () => {
+      let holder = await TokenHolder.new(bond_supply.address);
+      await bond_supply.mint(holder, 1);
     }, "Ownable");
 
     await should_throw(async () => {
-      let supply = await TokenSupply.at(await _acb.bond_supply_address());
-      let holder = await TokenHolder.new(supply.address);
-      await supply.mint(holder, 1);
+      await bond_supply.set_delegated_owner(accounts[1]);
     }, "Ownable");
 
     await should_throw(async () => {
-      let supply = await TokenSupply.at(await _acb.bond_supply_address());
-      await supply.set_delegated_owner(accounts[1]);
+      let holder = await TokenHolder.new(bond_supply.address);
+      await bond_supply.mint(holder, 1, {from: accounts[1]});
     }, "Ownable");
 
     await should_throw(async () => {
-      let supply = await TokenSupply.at(await _acb.bond_supply_address());
-      let holder = await TokenHolder.new(supply.address);
-      await supply.mint(holder, 1, {from: accounts[1]});
-    }, "Ownable");
-
-    await should_throw(async () => {
-      let supply = await TokenSupply.at(await _acb.bond_supply_address());
-      await supply.set_delegated_owner(accounts[1], {from: accounts[1]});
+      await bond_supply.set_delegated_owner(accounts[1], {from: accounts[1]});
     }, "Ownable");
 
     await should_throw(async () => {
       let holder = await TokenHolder.at(
-          await _acb.balance_holder_address(accounts[1]));
+          await _acb.get_balance_holder(accounts[1]));
       await holder.set_amount(1);
     }, "Ownable");
 
     await should_throw(async () => {
       let holder = await TokenHolder.at(
-          await _acb.balance_holder_address(accounts[1]));
+          await _acb.get_balance_holder(accounts[1]));
       await holder.set_amount(1, {from: accounts[1]});
     }, "Ownable");
 
+    let oracle = await Oracle.at(await _acb.oracle_());
     await should_throw(async () => {
-      let oracle = await Oracle.at(await _acb.oracle_address());
       await oracle.get_mode_level();
     }, "Ownable");
 
     await should_throw(async () => {
-      let oracle = await Oracle.at(await _acb.oracle_address());
       await oracle.get_mode_level({from: accounts[1]});
     }, "Ownable");
 
     await should_throw(async () => {
-      let oracle = await Oracle.at(await _acb.oracle_address());
       await oracle.advance_phase(0);
     }, "Ownable");
 
     await should_throw(async () => {
-      let oracle = await Oracle.at(await _acb.oracle_address());
       await oracle.advance_phase(0, {from: accounts[1]});
     }, "Ownable");
 
@@ -2946,13 +2960,13 @@ function parameterized_test(accounts,
 
     await should_throw(async () => {
       let holder = await TokenHolder.at(
-          await _acb.bond_holder_address(accounts[1], t13));
+          await _acb.get_bond_holder(accounts[1], t13));
       await holder.set_amount(1);
     }, "Ownable");
 
     await should_throw(async () => {
       let holder = await TokenHolder.at(
-          await _acb.bond_holder_address(accounts[1], t13));
+          await _acb.get_bond_holder(accounts[1], t13));
       await holder.set_amount(1, {from: accounts[1]});
     }, "Ownable");
 
@@ -3070,27 +3084,35 @@ function parameterized_test(accounts,
 
     async function get_current(accounts, redemptions) {
       let acb = {};
-      acb.bond_budget = (await _acb.get_bond_budget()).toNumber();
-      acb.oracle_level = (await _acb.get_oracle_level()).toNumber();
+      acb.bond_budget = (await _acb.bond_budget_()).toNumber();
+      acb.oracle_level = (await _acb.oracle_level_()).toNumber();
       acb.coin_supply = {};
-      acb.coin_supply.amount = (await _acb.get_coin_supply()).toNumber();
+      acb.coin_supply.amount =
+          (await (await TokenSupply.at(
+              await _acb.coin_supply_())).amount_()).toNumber();
       acb.bond_supply = {};
-      acb.bond_supply.amount = (await _acb.get_bond_supply()).toNumber();
+      acb.bond_supply.amount =
+          (await (await TokenSupply.at(
+              await _acb.bond_supply_())).amount_()).toNumber();
       acb.balances = {};
       acb.bonds = {};
-      let coin_amounts = await _acb.get_balances(accounts);
       for (let i = 0; i < accounts.length; i++) {
-        if (coin_amounts[i] >= 0) {
+        let balance_holder = await _acb.balances_(accounts[i]);
+        if (balance_holder != 0x0) {
           acb.balances[accounts[i]] = {};
-          acb.balances[accounts[i]].amount = coin_amounts[i].toNumber();
+          acb.balances[accounts[i]].amount =
+              (await (await TokenHolder.at(balance_holder))
+               .amount_()).toNumber();
         }
         acb.bonds[accounts[i]] = {};
-        let bond_amounts = await _acb.get_bonds(accounts[i], redemptions);
         for (let j = 0; j < redemptions.length; j++) {
-          if (bond_amounts[j] >= 0) {
+          let bond_holder =
+              await _acb.get_bond_holder(accounts[i], redemptions[j]);
+          if (bond_holder != 0x0) {
             acb.bonds[accounts[i]][redemptions[j]] = {};
             acb.bonds[accounts[i]][redemptions[j]].amount =
-                bond_amounts[j].toNumber();
+                (await (await TokenHolder.at(bond_holder))
+                 .amount_()).toNumber();
           }
         }
       }
@@ -3117,4 +3139,12 @@ function parameterized_test(accounts,
 
 function mod(i, j) {
   return (i % j) < 0 ? (i % j) + 0 + (j < 0 ? -j : j) : (i % j + 0);
+}
+
+function print_contract_size(instance, name) {
+  let bytecode = instance.constructor._json.bytecode;
+  let deployed = instance.constructor._json.deployedBytecode;
+  let sizeOfB  = bytecode.length / 2;
+  let sizeOfD  = deployed.length / 2;
+  console.log(name + ": bytecode=" + sizeOfB + " deployed=" + sizeOfD);
 }

@@ -775,7 +775,7 @@ class ACB:
                 # increased by 10%. If the exchange rate is 0.8 (i.e., 1 coin
                 # = 0.8 USD), the total coin supply is decreased by 20%.
                 delta = divide(self.coin_supply.amount *
-                               (exchange_rate - 1 * ACB.EXCHANGE_RATE_DIVISOR),
+                               (exchange_rate - ACB.EXCHANGE_RATE_DIVISOR),
                                ACB.EXCHANGE_RATE_DIVISOR)
 
                 # To avoid increasing or decreasing too many coins in one epoch,
@@ -868,8 +868,6 @@ class ACB:
             # The user does not have enough coins to purchase the bonds.
             return 0
 
-        assert(self.bond_supply.amount + self.bond_budget >= 0)
-
         # From now on, the bonds are identified by their redemption timestamp.
         redemption = self.get_timestamp() + ACB.BOND_REDEMPTION_PERIOD
         if redemption in self.bonds[sender]:
@@ -916,8 +914,6 @@ class ACB:
             if redemption not in self.bonds[sender]:
                 return 0
 
-        assert(self.bond_supply.amount + self.bond_budget >= 0)
-
         count_total = 0
         for redemption in redemptions:
             assert(redemption in self.bonds[sender])
@@ -959,8 +955,6 @@ class ACB:
     # ----------------
     # The amount of coins that need to be newly minted by ACB.
     def _control_supply(self, delta):
-        assert(self.bond_supply.amount + self.bond_budget >= 0)
-
         mint = 0
         if delta == 0:
             # No change in the total coin supply.

@@ -77,7 +77,7 @@ function parameterized_test(accounts,
 
     let _oracle = await OracleForTesting.new(
         {from: accounts[0], gas: 12000000});
-    await _oracle.initialize(await _acb.coin_supply_address(),
+    await _oracle.initialize(await _acb.coin_supply_(),
                             {from: accounts[0]});
     await _oracle.override_constants(_level_max, _reclaim_threshold,
                                      _proportional_reward_rate,
@@ -85,8 +85,6 @@ function parameterized_test(accounts,
     await _oracle.transferOwnership(_acb.address, {from: accounts[0]});
 
     await _acb.activate(_oracle.address, {from: accounts[0]});
-
-    _initial_coin_supply = (await _acb.get_initial_coin_supply()).toNumber();
 
     let _lost_deposit = [0, 0, 0];
 
@@ -177,20 +175,20 @@ function parameterized_test(accounts,
       }
       _voters[i].balance = amount;
       await _acb.coin_supply_mint(_voters[i].address, _voters[i].balance);
-      assert.equal((await _acb.get_balances([_voters[i].address]))[0],
+      assert.equal(await get_balance(_voters[i].address),
                    _voters[i].balance);
     }
-    let initial_coin_supply = (await _acb.get_coin_supply()).toNumber();
+    let initial_coin_supply = await get_coin_supply();
 
     let epoch = 0;
     for (let iter = 0; iter < _iteration; iter++) {
-      if (await _acb.get_coin_supply() >= _initial_coin_supply * 100) {
+      if ((await get_coin_supply()) >= initial_coin_supply * 100) {
         break;
       }
 
       _metrics.reset_local();
 
-      let coin_supply1 = (await _acb.get_coin_supply()).toNumber();
+      let coin_supply1 = await get_coin_supply();
 
       await _acb.set_timestamp(
           (await _acb.get_timestamp()).toNumber() + _phase_duration);
@@ -200,15 +198,15 @@ function parameterized_test(accounts,
       }
 
       epoch += 1;
-      let coin_supply2 = (await _acb.get_coin_supply()).toNumber();
-      let bond_supply = (await _acb.get_bond_supply()).toNumber();
-      let bond_budget = (await _acb.get_bond_budget()).toNumber();
+      let coin_supply2 = await get_coin_supply();
+      let bond_supply = await get_bond_supply();
+      let bond_budget = (await _acb.bond_budget_()).toNumber();
 
       await redeem_bonds();
       await purchase_bonds();
 
       if (true) {
-        let coin_supply3 = (await _acb.get_coin_supply()).toNumber();
+        let coin_supply3 = await get_coin_supply();
         console.log("epoch=" + epoch +
                     " reveal_hit=" + _metrics.reveal_hit +
                     "/" + (_metrics.reveal_hit + _metrics.reveal_miss) +
@@ -244,9 +242,9 @@ function parameterized_test(accounts,
                     "->" + coin_supply3 +
                     "=" + (coin_supply3 - coin_supply1) +
                     " bond_supply=" + bond_supply +
-                    "->" + (await _acb.get_bond_supply()).toNumber() +
+                    "->" + (await get_bond_supply()) +
                     " bond_budget=" + bond_budget +
-                    "->" + (await _acb.get_bond_budget()).toNumber()
+                    "->" + (await _acb.bond_budget_()).toNumber()
                    );
       }
       _metrics.update_total();
@@ -285,11 +283,10 @@ function parameterized_test(accounts,
                     "/" + _metrics.supply_nochange +
                     "/" + _metrics.supply_decreased +
                     " coin_supply=" +
-                    ((await _acb.get_coin_supply()).toNumber() -
-                     initial_coin_supply) +
+                    ((await get_coin_supply()) - initial_coin_supply) +
                     " mint=" + _metrics.total_mint +
                     " lost=" + _metrics.total_lost +
-                    " bond_supply=" + (await _acb.get_bond_supply()).toNumber()
+                    " bond_supply=" + await get_bond_supply()
                    );
     console.log("================");
     console.log();
@@ -297,14 +294,14 @@ function parameterized_test(accounts,
     async function purchase_bonds() {
       let start_index = randint(0, _voter_count - 1);
       for (let index = 0; index < _voter_count; index++) {
-        let bond_budget = (await _acb.get_bond_budget()).toNumber();
+        let bond_budget = (await _acb.bond_budget_()).toNumber();
         if (bond_budget <= 0) {
           continue;
         }
 
         let voter = _voters[(start_index + index) % _voter_count];
         let bond_price = _level_to_bond_price[_level_max - 1];
-        let oracle_level = (await _acb.get_oracle_level()).toNumber();
+        let oracle_level = (await _acb.oracle_level_()).toNumber();
         if (0 <= oracle_level && oracle_level < _level_max) {
           bond_price = _level_to_bond_price[oracle_level];
         }
@@ -319,8 +316,8 @@ function parameterized_test(accounts,
         assert.equal(await _acb.purchase_bonds.call(
             bond_budget + 1, {from: voter.address}), 0);
 
-        let coin_supply = (await _acb.get_coin_supply()).toNumber();
-        let bond_supply = (await _acb.get_bond_supply()).toNumber();
+        let coin_supply = await get_coin_supply();
+        let bond_supply = await get_bond_supply();
         let redemption = (await _acb.get_timestamp()).toNumber() +
             _bond_redemption_period;
         if (redemption in voter.bonds) {
@@ -331,13 +328,13 @@ function parameterized_test(accounts,
         voter.balance -= bond_price * count;
 
         await check_purchase_bonds(count, {from: voter.address}, redemption);
-        assert.equal((await _acb.get_balances([voter.address]))[0],
+        assert.equal(await get_balance(voter.address),
                      voter.balance);
-        assert.equal(await _acb.get_coin_supply(),
+        assert.equal(await get_coin_supply(),
                      coin_supply - bond_price * count);
-        assert.equal(await _acb.get_bond_supply(), bond_supply + count);
-        assert.equal(await _acb.get_bond_budget(), bond_budget - count);
-        assert.equal((await _acb.get_bonds(voter.address, [redemption]))[0],
+        assert.equal(await get_bond_supply(), bond_supply + count);
+        assert.equal(await _acb.bond_budget_(), bond_budget - count);
+        assert.equal(await get_bond(voter.address, redemption),
                      voter.bonds[redemption]);
 
         _metrics.purchase_hit += 1;
@@ -366,7 +363,7 @@ function parameterized_test(accounts,
 
         let fast_redeem_count = 0;
         let redeem_count = 0;
-        let bond_budget = (await _acb.get_bond_budget()).toNumber();
+        let bond_budget = (await _acb.bond_budget_()).toNumber();
         let timestamp = (await _acb.get_timestamp()).toNumber();
         for (let redemption of redemptions) {
           assert.isTrue(redemption in voter.bonds);
@@ -388,19 +385,19 @@ function parameterized_test(accounts,
         }
         voter.balance += _bond_redemption_price * redeem_count;
 
-        let coin_supply = (await _acb.get_coin_supply()).toNumber();
-        let bond_supply = (await _acb.get_bond_supply()).toNumber();
+        let coin_supply = await get_coin_supply();
+        let bond_supply = await get_bond_supply();
         await check_redeem_bonds(redemptions,
                                  {from: voter.address}, redeem_count);
-        assert.equal(await _acb.get_bond_budget(), bond_budget);
-        assert.equal((await _acb.get_balances([voter.address]))[0],
+        assert.equal(await _acb.bond_budget_(), bond_budget);
+        assert.equal(await get_balance(voter.address),
                      voter.balance);
         for (let redemption in voter.bonds) {
-          assert.equal((await _acb.get_bonds(voter.address, [redemption]))[0],
+          assert.equal(await get_bond(voter.address, redemption),
                        voter.bonds[redemption]);
         }
-        assert.equal(await _acb.get_bond_supply(), bond_supply - redeem_count);
-        assert.equal(await _acb.get_coin_supply(),
+        assert.equal(await get_bond_supply(), bond_supply - redeem_count);
+        assert.equal(await get_coin_supply(),
                      coin_supply + _bond_redemption_price * redeem_count);
 
         _metrics.fast_redeem_count += fast_redeem_count;
@@ -471,8 +468,8 @@ function parameterized_test(accounts,
         assert.equal(deposit_to_be_reclaimed, 0);
       }
 
-      let coin_supply = (await _acb.get_coin_supply()).toNumber();
-      let bond_supply = (await _acb.get_bond_supply()).toNumber();
+      let coin_supply = await get_coin_supply();
+      let bond_supply = await get_bond_supply();
       let delta = 0;
       if (mode_level != _level_max) {
         delta = Math.floor(coin_supply *
@@ -569,9 +566,9 @@ function parameterized_test(accounts,
               (Math.abs(_voters[i].revealed_level[prev_prev] - mode_level) <=
                _reclaim_threshold));
 
-        let coin_supply = (await _acb.get_coin_supply()).toNumber();
-        let bond_supply = (await _acb.get_bond_supply()).toNumber();
-        let bond_budget = (await _acb.get_bond_budget()).toNumber();
+        let coin_supply = await get_coin_supply();
+        let bond_supply = await get_bond_supply();
+        let bond_budget = (await _acb.bond_budget_()).toNumber();
 
         let reclaimed_deposit = 0;
         if (reclaim_result) {
@@ -615,7 +612,7 @@ function parameterized_test(accounts,
         assert.equal(ret[2], 0);
         assert.equal(ret[3], false);
 
-        assert.equal((await _acb.get_balances([_voters[i].address]))[0],
+        assert.equal(await get_balance(_voters[i].address),
                      _voters[i].balance);
 
         if (reveal_result) {
@@ -629,27 +626,27 @@ function parameterized_test(accounts,
           _metrics.reclaim_miss += 1;
         }
         if (commit_observed == false) {
-          assert.equal(await _acb.get_bond_supply(), bond_supply);
+          assert.equal(await get_bond_supply(), bond_supply);
           if (mode_level == _level_max) {
-            assert.equal(await _acb.get_bond_budget(), bond_budget);
+            assert.equal(await _acb.bond_budget_(), bond_budget);
           } else if (delta >= 0) {
-            assert.equal(await _acb.get_bond_budget(), -redeemable_bonds);
+            assert.equal(await _acb.bond_budget_(), -redeemable_bonds);
           } else {
-            assert.equal(await _acb.get_bond_budget(), issued_bonds);
+            assert.equal(await _acb.bond_budget_(), issued_bonds);
           }
-          assert.equal(await _acb.get_coin_supply(),
+          assert.equal(await get_coin_supply(),
                        coin_supply + mint -
                        _lost_deposit[mod(epoch - 1, 3)]);
-          assert.equal(await _acb.get_oracle_level(), mode_level);
+          assert.equal(await _acb.oracle_level_(), mode_level);
           commit_observed = true;
 
           _metrics.delta = delta;
           _metrics.mint = mint;
           _metrics.lost = _lost_deposit[mod(epoch - 1, 3)];
         } else {
-          assert.equal(await _acb.get_oracle_level(), mode_level);
-          assert.equal(await _acb.get_bond_supply(), bond_supply);
-          assert.equal(await _acb.get_bond_budget(), bond_budget);
+          assert.equal(await _acb.oracle_level_(), mode_level);
+          assert.equal(await get_bond_supply(), bond_supply);
+          assert.equal(await _acb.bond_budget_(), bond_budget);
         }
       }
 
@@ -707,6 +704,28 @@ function parameterized_test(accounts,
         assert.equal(args[1][i], redemptions[i]);
       }
       assert.equal(args[2], count_total);
+    }
+
+    async function get_balance(address) {
+      let holder = await _acb.balances_(address);
+      assert.isTrue(holder != 0x0);
+      return (await (await TokenHolder.at(holder)).amount_()).toNumber();
+    }
+
+    async function get_bond(address, redemption) {
+      let holder = await _acb.get_bond_holder(address, redemption);
+      assert.isTrue(holder != 0x0);
+      return (await (await TokenHolder.at(holder)).amount_()).toNumber();
+    }
+
+    async function get_coin_supply() {
+      return (await (await TokenSupply.at(
+          await _acb.coin_supply_())).amount_()).toNumber();
+    }
+
+    async function get_bond_supply() {
+      return (await (await TokenSupply.at(
+          await _acb.bond_supply_())).amount_()).toNumber();
     }
 
     function randint(a, b) {
