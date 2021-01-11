@@ -11,10 +11,6 @@ class OracleUnitTest(unittest.TestCase):
               (level_max, reclaim_threshold, proportional_reward_rate,
                mint, deposit, mode_level, other_level))
 
-        Oracle.LEVEL_MAX = level_max
-        Oracle.RECLAIM_THRESHOLD = reclaim_threshold
-        Oracle.PROPORTIONAL_REWARD_RATE = proportional_reward_rate
-
         self.mint = mint
         assert(mint >= 0)
         self.deposit = deposit
@@ -25,18 +21,20 @@ class OracleUnitTest(unittest.TestCase):
         assert(0 <= other_level and other_level < level_max)
         assert(mode_level != other_level)
 
-        self.supply = TokenSupply()
-        self.oracle = Oracle(self.supply)
+        self.coin = JohnLawCoin()
+        self.oracle = Oracle()
+        self.oracle.override_constants_for_testing(
+            level_max, reclaim_threshold, proportional_reward_rate)
 
         for i in [0, 1, 2]:
-            self.assertEqual(len(self.oracle.epochs[i].votes), level_max)
+            self.assertTrue(len(self.oracle.epochs[i].votes) >= level_max)
         self.assertEqual(self.oracle.epochs[0].phase, Phase.COMMIT)
         self.assertEqual(self.oracle.epochs[1].phase, Phase.RECLAIM)
         self.assertEqual(self.oracle.epochs[2].phase, Phase.REVEAL)
-        self.assertEqual(self.oracle.epoch % 3, 0)
+        self.assertEqual(self.oracle.epoch_timestamp % 3, 0)
 
     def teardown(self):
-        self.assertEqual(self.supply.amount, 0)
+        pass
 
     def run(self):
         _level_max = Oracle.LEVEL_MAX
@@ -46,40 +44,35 @@ class OracleUnitTest(unittest.TestCase):
         _deposit = self.deposit
         _mode_level = self.mode_level
         _other_level = self.other_level
-        _supply = self.supply
+        _coin = self.coin
         _oracle = self.oracle
 
         accounts = ['0x0000', '0x1000', '0x2000', '0x3000', '0x4000',
                     '0x5000', '0x6000', '0x7000']
 
-        deposit_holder = TokenHolder()
-        reclaim_holder = TokenHolder()
-
         # no commit -> no reveal -> no reclaim
         self.assertEqual(_oracle.get_mode_level(), _level_max)
 
-        coin_supply = _supply.amount
-        self.assertEqual(_oracle.advance_phase(_mint), 0)
-        self.assertEqual(_supply.amount, coin_supply + _mint)
-        self.assertEqual(_oracle.epoch % 3, 1)
+        coin_supply = _coin.total_supply
+        self.assertEqual(_oracle.advance(_coin, _mint), 0)
+        self.assertEqual(_coin.total_supply, coin_supply + _mint)
+        self.assertEqual(_oracle.epoch_timestamp % 3, 1)
         self.assertEqual(_oracle.get_mode_level(), _level_max)
         self.assertEqual(_oracle.epochs[0].phase, Phase.REVEAL)
         self.assertEqual(len(_oracle.epochs[0].commits), 0)
-        self.assertEqual(len(_oracle.epochs[0].votes), _level_max)
-        self.assertEqual(_oracle.epochs[0].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[0].deposit_holder.amount, 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].deposit_account), 0)
         self.assertEqual(_oracle.epochs[0].reward_total, 0)
         self.assertEqual(_oracle.epochs[1].phase, Phase.COMMIT)
         self.assertEqual(len(_oracle.epochs[1].commits), 0)
-        self.assertEqual(len(_oracle.epochs[1].votes), _level_max)
-        self.assertEqual(_oracle.epochs[1].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[1].deposit_holder.amount, 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[1].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[1].deposit_account), 0)
         self.assertEqual(_oracle.epochs[1].reward_total, 0)
         self.assertEqual(_oracle.epochs[2].phase, Phase.RECLAIM)
         self.assertEqual(len(_oracle.epochs[2].commits), 0)
-        self.assertEqual(len(_oracle.epochs[2].votes), _level_max)
-        self.assertEqual(_oracle.epochs[2].reward_holder.amount, _mint)
-        self.assertEqual(_oracle.epochs[2].deposit_holder.amount, 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[2].reward_account),
+                         _mint)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[2].deposit_account), 0)
         self.assertEqual(_oracle.epochs[2].reward_total, _mint)
 
         self.assertEqual(_oracle.reveal(accounts[1], -1, 1111), False)
@@ -88,94 +81,86 @@ class OracleUnitTest(unittest.TestCase):
         self.assertEqual(_oracle.reveal(
             accounts[1], _level_max, 1111), False)
 
-        coin_supply = _supply.amount
-        self.assertEqual(_oracle.advance_phase(_mint), _mint)
-        self.assertEqual(_supply.amount, coin_supply)
-        self.assertEqual(_oracle.epoch % 3, 2)
+        coin_supply = _coin.total_supply
+        self.assertEqual(_oracle.advance(_coin, _mint), _mint)
+        self.assertEqual(_coin.total_supply, coin_supply)
+        self.assertEqual(_oracle.epoch_timestamp % 3, 2)
         self.assertEqual(_oracle.get_mode_level(), _level_max)
         self.assertEqual(_oracle.epochs[0].phase, Phase.RECLAIM)
         self.assertEqual(len(_oracle.epochs[0].commits), 0)
-        self.assertEqual(len(_oracle.epochs[0].votes), _level_max)
-        self.assertEqual(_oracle.epochs[0].reward_holder.amount, _mint)
-        self.assertEqual(_oracle.epochs[0].deposit_holder.amount, 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].reward_account),
+                         _mint)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].deposit_account), 0)
         self.assertEqual(_oracle.epochs[0].reward_total, _mint)
         self.assertEqual(_oracle.epochs[1].phase, Phase.REVEAL)
         self.assertEqual(len(_oracle.epochs[1].commits), 0)
-        self.assertEqual(len(_oracle.epochs[1].votes), _level_max)
-        self.assertEqual(_oracle.epochs[1].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[1].deposit_holder.amount, 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[1].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[1].deposit_account), 0)
         self.assertEqual(_oracle.epochs[1].reward_total, 0)
         self.assertEqual(_oracle.epochs[2].phase, Phase.COMMIT)
         self.assertEqual(len(_oracle.epochs[2].commits), 0)
-        self.assertEqual(len(_oracle.epochs[2].votes), _level_max)
-        self.assertEqual(_oracle.epochs[2].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[2].deposit_holder.amount, 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[2].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[2].deposit_account), 0)
         self.assertEqual(_oracle.epochs[2].reward_total, 0)
 
-        self.assertEqual(_oracle.reclaim(accounts[1], reclaim_holder), 0)
-        self.assertEqual(_oracle.reclaim(accounts[1], reclaim_holder), 0)
+        self.assertEqual(_oracle.reclaim(_coin, accounts[1]), 0)
+        self.assertEqual(_oracle.reclaim(_coin, accounts[1]), 0)
 
-        coin_supply = _supply.amount
-        self.assertEqual(_oracle.advance_phase(_mint), _mint)
-        self.assertEqual(_supply.amount, coin_supply)
-        self.assertEqual(_oracle.epoch % 3, 0)
+        coin_supply = _coin.total_supply
+        self.assertEqual(_oracle.advance(_coin, _mint), _mint)
+        self.assertEqual(_coin.total_supply, coin_supply)
+        self.assertEqual(_oracle.epoch_timestamp % 3, 0)
         self.assertEqual(_oracle.get_mode_level(), _level_max)
         self.assertEqual(_oracle.epochs[0].phase, Phase.COMMIT)
         self.assertEqual(len(_oracle.epochs[0].commits), 0)
-        self.assertEqual(len(_oracle.epochs[0].votes), _level_max)
-        self.assertEqual(_oracle.epochs[0].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[0].deposit_holder.amount, 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].deposit_account), 0)
         self.assertEqual(_oracle.epochs[0].reward_total, 0)
         self.assertEqual(_oracle.epochs[1].phase, Phase.RECLAIM)
         self.assertEqual(len(_oracle.epochs[1].commits), 0)
-        self.assertEqual(len(_oracle.epochs[1].votes), _level_max)
-        self.assertEqual(_oracle.epochs[1].reward_holder.amount, _mint)
-        self.assertEqual(_oracle.epochs[1].deposit_holder.amount, 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[1].reward_account),
+                         _mint)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[1].deposit_account), 0)
         self.assertEqual(_oracle.epochs[1].reward_total, _mint)
         self.assertEqual(_oracle.epochs[2].phase, Phase.REVEAL)
         self.assertEqual(len(_oracle.epochs[2].commits), 0)
-        self.assertEqual(len(_oracle.epochs[2].votes), _level_max)
-        self.assertEqual(_oracle.epochs[2].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[2].deposit_holder.amount, 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[2].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[2].deposit_account), 0)
         self.assertEqual(_oracle.epochs[2].reward_total, 0)
 
         # 1 commit -> 1 reveal -> 1 reclaim
         self.assertEqual(_oracle.get_mode_level(), _level_max)
 
-        _supply.mint(deposit_holder, _deposit)
+        _coin.mint(accounts[1], _deposit)
+        balance = _coin.balance_of(accounts[1])
 
         with self.assertRaises(Exception):
-            _oracle.commit(accounts[1],
+            _oracle.commit(_coin, accounts[1],
                            Oracle.hash(accounts[1], _mode_level, 1111),
-                           -1,
-                           deposit_holder)
+                           -1)
 
         self.assertEqual(
-            _oracle.commit(accounts[1],
+            _oracle.commit(_coin, accounts[1],
                            Oracle.hash(accounts[1], _mode_level, 1111),
-                           _deposit + 1,
-                           deposit_holder), False)
+                           _deposit + 1), False)
         self.assertEqual(
-            _oracle.commit(accounts[1],
+            _oracle.commit(_coin, accounts[1],
                            Oracle.hash(accounts[1], _mode_level, 1111),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[1]), balance - _deposit)
         self.assertEqual(
-            _oracle.commit(accounts[1],
+            _oracle.commit(_coin, accounts[1],
                            Oracle.hash(accounts[1], _mode_level, 1111),
-                           _deposit,
-                           deposit_holder), False)
+                           _deposit), False)
         self.assertEqual(
-            _oracle.commit(accounts[1],
+            _oracle.commit(_coin, accounts[1],
                            Oracle.hash(accounts[1], 0, 1111),
-                           _deposit,
-                           deposit_holder), False)
+                           _deposit), False)
 
-        coin_supply = _supply.amount
-        self.assertEqual(_oracle.advance_phase(_mint), _mint)
-        self.assertEqual(_supply.amount, coin_supply)
-        self.assertEqual(_oracle.epoch % 3, 1)
+        coin_supply = _coin.total_supply
+        self.assertEqual(_oracle.advance(_coin, _mint), _mint)
+        self.assertEqual(_coin.total_supply, coin_supply)
+        self.assertEqual(_oracle.epoch_timestamp % 3, 1)
         self.assertEqual(_oracle.get_mode_level(), _level_max)
         self.assertEqual(_oracle.epochs[0].phase, Phase.REVEAL)
         self.assertEqual(len(_oracle.epochs[0].commits), 1)
@@ -185,22 +170,20 @@ class OracleUnitTest(unittest.TestCase):
                          _deposit)
         self.assertEqual(_oracle.epochs[0].commits[accounts[1]].revealed_level,
                          _level_max)
-        self.assertEqual(len(_oracle.epochs[0].votes), _level_max)
-        self.assertEqual(_oracle.epochs[0].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[0].deposit_holder.amount,
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].deposit_account),
                          _deposit)
         self.assertEqual(_oracle.epochs[0].reward_total, 0)
         self.assertEqual(_oracle.epochs[1].phase, Phase.COMMIT)
         self.assertEqual(len(_oracle.epochs[1].commits), 0)
-        self.assertEqual(len(_oracle.epochs[1].votes), _level_max)
-        self.assertEqual(_oracle.epochs[1].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[1].deposit_holder.amount, 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[1].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[1].deposit_account), 0)
         self.assertEqual(_oracle.epochs[1].reward_total, 0)
         self.assertEqual(_oracle.epochs[2].phase, Phase.RECLAIM)
         self.assertEqual(len(_oracle.epochs[2].commits), 0)
-        self.assertEqual(len(_oracle.epochs[2].votes), _level_max)
-        self.assertEqual(_oracle.epochs[2].reward_holder.amount, _mint)
-        self.assertEqual(_oracle.epochs[2].deposit_holder.amount, 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[2].reward_account),
+                         _mint)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[2].deposit_account), 0)
         self.assertEqual(_oracle.epochs[2].reward_total, _mint)
 
         self.assertEqual(_oracle.reveal(accounts[1], -1, 1111), False)
@@ -215,10 +198,10 @@ class OracleUnitTest(unittest.TestCase):
 
         self.assertEqual(_oracle.get_mode_level(), _mode_level)
 
-        coin_supply = _supply.amount
-        self.assertEqual(_oracle.advance_phase(_mint), _mint)
-        self.assertEqual(_supply.amount, coin_supply)
-        self.assertEqual(_oracle.epoch % 3, 2)
+        coin_supply = _coin.total_supply
+        self.assertEqual(_oracle.advance(_coin, _mint), _mint)
+        self.assertEqual(_coin.total_supply, coin_supply)
+        self.assertEqual(_oracle.epoch_timestamp % 3, 2)
         self.assertEqual(_oracle.get_mode_level(), _level_max)
         self.assertEqual(_oracle.epochs[0].phase, Phase.RECLAIM)
         self.assertEqual(len(_oracle.epochs[0].commits), 1)
@@ -228,7 +211,6 @@ class OracleUnitTest(unittest.TestCase):
                          _deposit)
         self.assertEqual(_oracle.epochs[0].commits[accounts[1]].revealed_level,
                          _mode_level)
-        self.assertEqual(len(_oracle.epochs[0].votes), _level_max)
         self.assertEqual(_oracle.epochs[0].votes[_mode_level].count, 1)
         self.assertEqual(_oracle.epochs[0].votes[_other_level].count, 0)
         for level in range(_level_max):
@@ -241,55 +223,53 @@ class OracleUnitTest(unittest.TestCase):
                 self.assertEqual(vote.should_reclaim, True)
             else:
                 self.assertEqual(vote.should_reclaim, False)
-        self.assertEqual(_oracle.epochs[0].reward_holder.amount, _mint)
-        self.assertEqual(_oracle.epochs[0].deposit_holder.amount,
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].reward_account),
+                         _mint)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].deposit_account),
                          _deposit)
         self.assertEqual(_oracle.epochs[0].reward_total, _mint)
         self.assertEqual(_oracle.epochs[1].phase, Phase.REVEAL)
         self.assertEqual(len(_oracle.epochs[1].commits), 0)
-        self.assertEqual(len(_oracle.epochs[1].votes), _level_max)
-        self.assertEqual(_oracle.epochs[1].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[1].deposit_holder.amount, 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[1].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[1].deposit_account), 0)
         self.assertEqual(_oracle.epochs[1].reward_total, 0)
         self.assertEqual(_oracle.epochs[2].phase, Phase.COMMIT)
         self.assertEqual(len(_oracle.epochs[2].commits), 0)
-        self.assertEqual(len(_oracle.epochs[2].votes), _level_max)
-        self.assertEqual(_oracle.epochs[2].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[2].deposit_holder.amount, 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[2].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[2].deposit_account), 0)
         self.assertEqual(_oracle.epochs[2].reward_total, 0)
 
         reclaim_amount = _deposit + self._reward(_mint, 1)
-        self.assertEqual(_oracle.reclaim(accounts[1], reclaim_holder),
+        balance = _coin.balance_of(accounts[1])
+        self.assertEqual(_oracle.reclaim(_coin, accounts[1]),
                          reclaim_amount)
-        self.assertEqual(reclaim_holder.amount, reclaim_amount)
-        _supply.burn(reclaim_holder, reclaim_amount)
-        self.assertEqual(_oracle.reclaim(accounts[1], reclaim_holder), 0)
-        self.assertEqual(_oracle.reclaim(accounts[2], reclaim_holder), 0)
+        self.assertEqual(_coin.balance_of(accounts[1]),
+                         balance + reclaim_amount)
+        self.assertEqual(_oracle.reclaim(_coin, accounts[1]), 0)
+        self.assertEqual(_oracle.reclaim(_coin, accounts[2]), 0)
 
-        coin_supply = _supply.amount
-        self.assertEqual(_oracle.advance_phase(_mint),
+        coin_supply = _coin.total_supply
+        self.assertEqual(_oracle.advance(_coin, _mint),
                          _mint - self._reward(_mint, 1) * 1)
-        self.assertEqual(_supply.amount,
+        self.assertEqual(_coin.total_supply,
                          coin_supply + self._reward(_mint, 1) * 1)
-        self.assertEqual(_oracle.epoch % 3, 0)
+        self.assertEqual(_oracle.epoch_timestamp % 3, 0)
         self.assertEqual(_oracle.get_mode_level(), _level_max)
         self.assertEqual(_oracle.epochs[0].phase, Phase.COMMIT)
         self.assertEqual(len(_oracle.epochs[0].commits), 1)
-        self.assertEqual(len(_oracle.epochs[0].votes), _level_max)
-        self.assertEqual(_oracle.epochs[0].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[0].deposit_holder.amount, 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].deposit_account), 0)
         self.assertEqual(_oracle.epochs[0].reward_total, 0)
         self.assertEqual(_oracle.epochs[1].phase, Phase.RECLAIM)
         self.assertEqual(len(_oracle.epochs[1].commits), 0)
-        self.assertEqual(len(_oracle.epochs[1].votes), _level_max)
-        self.assertEqual(_oracle.epochs[1].reward_holder.amount, _mint)
-        self.assertEqual(_oracle.epochs[1].deposit_holder.amount, 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[1].reward_account),
+                         _mint)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[1].deposit_account), 0)
         self.assertEqual(_oracle.epochs[1].reward_total, _mint)
         self.assertEqual(_oracle.epochs[2].phase, Phase.REVEAL)
         self.assertEqual(len(_oracle.epochs[2].commits), 0)
-        self.assertEqual(len(_oracle.epochs[2].votes), _level_max)
-        self.assertEqual(_oracle.epochs[2].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[2].deposit_holder.amount, 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[2].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[2].deposit_account), 0)
         self.assertEqual(_oracle.epochs[2].reward_total, 0)
 
         # 1 commit -> 1 reveal -> 1 reclaim
@@ -297,18 +277,18 @@ class OracleUnitTest(unittest.TestCase):
         #                         1 commit -> 1 reveal -> 1 reclaim
         self.assertEqual(_oracle.get_mode_level(), _level_max)
 
-        _supply.mint(deposit_holder, _deposit)
+        _coin.mint(accounts[1], _deposit)
+        balance = _coin.balance_of(accounts[1])
         self.assertEqual(
-            _oracle.commit(accounts[1],
+            _oracle.commit(_coin, accounts[1],
                            Oracle.hash(accounts[1], _mode_level, 1111),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[1]), balance - _deposit)
 
-        coin_supply = _supply.amount
-        self.assertEqual(_oracle.advance_phase(_mint), _mint)
-        self.assertEqual(_supply.amount, coin_supply)
-        self.assertEqual(_oracle.epoch % 3, 1)
+        coin_supply = _coin.total_supply
+        self.assertEqual(_oracle.advance(_coin, _mint), _mint)
+        self.assertEqual(_coin.total_supply, coin_supply)
+        self.assertEqual(_oracle.epoch_timestamp % 3, 1)
         self.assertEqual(_oracle.get_mode_level(), _level_max)
         self.assertEqual(_oracle.epochs[0].phase, Phase.REVEAL)
         self.assertEqual(len(_oracle.epochs[0].commits), 1)
@@ -318,41 +298,40 @@ class OracleUnitTest(unittest.TestCase):
                          _deposit)
         self.assertEqual(_oracle.epochs[0].commits[accounts[1]].revealed_level,
                          _level_max)
-        self.assertEqual(len(_oracle.epochs[0].votes), _level_max)
-        self.assertEqual(_oracle.epochs[0].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[0].deposit_holder.amount,
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].deposit_account),
                          _deposit)
         self.assertEqual(_oracle.epochs[0].reward_total, 0)
         self.assertEqual(_oracle.epochs[1].phase, Phase.COMMIT)
         self.assertEqual(len(_oracle.epochs[1].commits), 0)
-        self.assertEqual(len(_oracle.epochs[1].votes), _level_max)
-        self.assertEqual(_oracle.epochs[1].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[1].deposit_holder.amount, 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[1].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[1].deposit_account), 0)
         self.assertEqual(_oracle.epochs[1].reward_total, 0)
         self.assertEqual(_oracle.epochs[2].phase, Phase.RECLAIM)
         self.assertEqual(len(_oracle.epochs[2].commits), 0)
-        self.assertEqual(len(_oracle.epochs[2].votes), _level_max)
-        self.assertEqual(_oracle.epochs[2].reward_holder.amount, _mint)
-        self.assertEqual(_oracle.epochs[2].deposit_holder.amount, 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[2].reward_account),
+                         _mint)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[2].deposit_account), 0)
         self.assertEqual(_oracle.epochs[2].reward_total, _mint)
 
         self.assertEqual(_oracle.reveal(
             accounts[1], _mode_level, 1111), True)
 
-        _supply.mint(deposit_holder, _deposit)
+        _coin.mint(accounts[1], _deposit)
+        balance = _coin.balance_of(accounts[1])
         self.assertEqual(
-            _oracle.commit(accounts[1],
+            _oracle.commit(_coin, accounts[1],
                            Oracle.hash(accounts[1], _mode_level, 1111),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[1]), balance - _deposit)
+
 
         self.assertEqual(_oracle.get_mode_level(), _mode_level)
 
-        coin_supply = _supply.amount
-        self.assertEqual(_oracle.advance_phase(_mint), _mint)
-        self.assertEqual(_supply.amount, coin_supply)
-        self.assertEqual(_oracle.epoch % 3, 2)
+        coin_supply = _coin.total_supply
+        self.assertEqual(_oracle.advance(_coin, _mint), _mint)
+        self.assertEqual(_coin.total_supply, coin_supply)
+        self.assertEqual(_oracle.epoch_timestamp % 3, 2)
         self.assertEqual(_oracle.get_mode_level(), _level_max)
         self.assertEqual(_oracle.epochs[0].phase, Phase.RECLAIM)
         self.assertEqual(len(_oracle.epochs[0].commits), 1)
@@ -362,7 +341,6 @@ class OracleUnitTest(unittest.TestCase):
                          _deposit)
         self.assertEqual(_oracle.epochs[0].commits[accounts[1]].revealed_level,
                          _mode_level)
-        self.assertEqual(len(_oracle.epochs[0].votes), _level_max)
         self.assertEqual(_oracle.epochs[0].votes[_mode_level].count, 1)
         self.assertEqual(_oracle.epochs[0].votes[_other_level].count, 0)
         for level in range(_level_max):
@@ -374,8 +352,9 @@ class OracleUnitTest(unittest.TestCase):
                 self.assertEqual(vote.should_reclaim, True)
             else:
                 self.assertEqual(vote.should_reclaim, False)
-        self.assertEqual(_oracle.epochs[0].reward_holder.amount, _mint)
-        self.assertEqual(_oracle.epochs[0].deposit_holder.amount,
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].reward_account),
+                         _mint)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].deposit_account),
                          _deposit)
         self.assertEqual(_oracle.epochs[0].reward_total, _mint)
         self.assertEqual(_oracle.epochs[1].phase, Phase.REVEAL)
@@ -386,49 +365,48 @@ class OracleUnitTest(unittest.TestCase):
                          _deposit)
         self.assertEqual(_oracle.epochs[1].commits[accounts[1]].revealed_level,
                          _level_max)
-        self.assertEqual(len(_oracle.epochs[1].votes), _level_max)
-        self.assertEqual(_oracle.epochs[1].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[1].deposit_holder.amount,
+        self.assertEqual(_coin.balance_of(_oracle.epochs[1].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[1].deposit_account),
                          _deposit)
         self.assertEqual(_oracle.epochs[1].reward_total, 0)
         self.assertEqual(_oracle.epochs[2].phase, Phase.COMMIT)
         self.assertEqual(len(_oracle.epochs[2].commits), 0)
-        self.assertEqual(len(_oracle.epochs[2].votes), _level_max)
-        self.assertEqual(_oracle.epochs[2].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[2].deposit_holder.amount, 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[2].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[2].deposit_account), 0)
         self.assertEqual(_oracle.epochs[2].reward_total, 0)
 
         reclaim_amount = _deposit + self._reward(_mint, 1)
-        self.assertEqual(_oracle.reclaim(accounts[1], reclaim_holder),
+        balance = _coin.balance_of(accounts[1])
+        self.assertEqual(_oracle.reclaim(_coin, accounts[1]),
                          reclaim_amount)
-        self.assertEqual(reclaim_holder.amount, reclaim_amount)
-        _supply.burn(reclaim_holder, reclaim_amount)
+        self.assertEqual(_coin.balance_of(accounts[1]),
+                         balance + reclaim_amount)
 
         self.assertEqual(_oracle.reveal(
             accounts[1], _mode_level, 1111), True)
 
-        _supply.mint(deposit_holder, _deposit)
+        _coin.mint(accounts[1], _deposit)
+        balance = _coin.balance_of(accounts[1])
         self.assertEqual(
-            _oracle.commit(accounts[1],
+            _oracle.commit(_coin, accounts[1],
                            Oracle.hash(accounts[1], _mode_level, 1111),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[1]), balance - _deposit)
+
 
         self.assertEqual(_oracle.get_mode_level(), _mode_level)
 
-        coin_supply = _supply.amount
-        self.assertEqual(_oracle.advance_phase(_mint),
+        coin_supply = _coin.total_supply
+        self.assertEqual(_oracle.advance(_coin, _mint),
                          _mint - self._reward(_mint, 1) * 1)
-        self.assertEqual(_supply.amount,
+        self.assertEqual(_coin.total_supply,
                          coin_supply + self._reward(_mint, 1) * 1)
-        self.assertEqual(_oracle.epoch % 3, 0)
+        self.assertEqual(_oracle.epoch_timestamp % 3, 0)
         self.assertEqual(_oracle.get_mode_level(), _level_max)
         self.assertEqual(_oracle.epochs[0].phase, Phase.COMMIT)
         self.assertEqual(len(_oracle.epochs[0].commits), 1)
-        self.assertEqual(len(_oracle.epochs[0].votes), _level_max)
-        self.assertEqual(_oracle.epochs[0].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[0].deposit_holder.amount, 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].deposit_account), 0)
         self.assertEqual(_oracle.epochs[0].reward_total, 0)
         self.assertEqual(_oracle.epochs[1].phase, Phase.RECLAIM)
         self.assertEqual(len(_oracle.epochs[1].commits), 1)
@@ -438,7 +416,6 @@ class OracleUnitTest(unittest.TestCase):
                          _deposit)
         self.assertEqual(_oracle.epochs[1].commits[accounts[1]].revealed_level,
                          _mode_level)
-        self.assertEqual(len(_oracle.epochs[1].votes), _level_max)
         self.assertEqual(_oracle.epochs[1].votes[_mode_level].count, 1)
         self.assertEqual(_oracle.epochs[1].votes[_other_level].count, 0)
         for level in range(_level_max):
@@ -450,8 +427,9 @@ class OracleUnitTest(unittest.TestCase):
                 self.assertEqual(vote.should_reclaim, True)
             else:
                 self.assertEqual(vote.should_reclaim, False)
-        self.assertEqual(_oracle.epochs[1].reward_holder.amount, _mint)
-        self.assertEqual(_oracle.epochs[1].deposit_holder.amount,
+        self.assertEqual(_coin.balance_of(_oracle.epochs[1].reward_account),
+                         _mint)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[1].deposit_account),
                          _deposit)
         self.assertEqual(_oracle.epochs[1].reward_total, _mint)
         self.assertEqual(_oracle.epochs[2].phase, Phase.REVEAL)
@@ -462,41 +440,39 @@ class OracleUnitTest(unittest.TestCase):
                          _deposit)
         self.assertEqual(_oracle.epochs[2].commits[accounts[1]].revealed_level,
                          _level_max)
-        self.assertEqual(len(_oracle.epochs[2].votes), _level_max)
-        self.assertEqual(_oracle.epochs[2].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[2].deposit_holder.amount,
+        self.assertEqual(_coin.balance_of(_oracle.epochs[2].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[2].deposit_account),
                          _deposit)
         self.assertEqual(_oracle.epochs[2].reward_total, 0)
 
         reclaim_amount = _deposit + self._reward(_mint, 1)
-        self.assertEqual(_oracle.reclaim(accounts[1], reclaim_holder),
+        balance = _coin.balance_of(accounts[1])
+        self.assertEqual(_oracle.reclaim(_coin, accounts[1]),
                          reclaim_amount)
-        self.assertEqual(reclaim_holder.amount, reclaim_amount)
-        _supply.burn(reclaim_holder, reclaim_amount)
+        self.assertEqual(_coin.balance_of(accounts[1]),
+                         balance + reclaim_amount)
 
         self.assertEqual(_oracle.reveal(
             accounts[1], _mode_level, 1111), True)
 
         self.assertEqual(_oracle.get_mode_level(), _mode_level)
 
-        coin_supply = _supply.amount
-        self.assertEqual(_oracle.advance_phase(_mint),
+        coin_supply = _coin.total_supply
+        self.assertEqual(_oracle.advance(_coin, _mint),
                          _mint - self._reward(_mint, 1) * 1)
-        self.assertEqual(_supply.amount,
+        self.assertEqual(_coin.total_supply,
                          coin_supply + self._reward(_mint, 1) * 1)
-        self.assertEqual(_oracle.epoch % 3, 1)
+        self.assertEqual(_oracle.epoch_timestamp % 3, 1)
         self.assertEqual(_oracle.get_mode_level(), _level_max)
         self.assertEqual(_oracle.epochs[0].phase, Phase.REVEAL)
         self.assertEqual(len(_oracle.epochs[0].commits), 1)
-        self.assertEqual(len(_oracle.epochs[0].votes), _level_max)
-        self.assertEqual(_oracle.epochs[0].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[0].deposit_holder.amount, 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].deposit_account), 0)
         self.assertEqual(_oracle.epochs[0].reward_total, 0)
         self.assertEqual(_oracle.epochs[1].phase, Phase.COMMIT)
         self.assertEqual(len(_oracle.epochs[1].commits), 1)
-        self.assertEqual(len(_oracle.epochs[1].votes), _level_max)
-        self.assertEqual(_oracle.epochs[1].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[1].deposit_holder.amount, 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[1].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[1].deposit_account), 0)
         self.assertEqual(_oracle.epochs[1].reward_total, 0)
         self.assertEqual(_oracle.epochs[2].phase, Phase.RECLAIM)
         self.assertEqual(len(_oracle.epochs[2].commits), 1)
@@ -506,7 +482,6 @@ class OracleUnitTest(unittest.TestCase):
                          _deposit)
         self.assertEqual(_oracle.epochs[2].commits[accounts[1]].revealed_level,
                          _mode_level)
-        self.assertEqual(len(_oracle.epochs[2].votes), _level_max)
         self.assertEqual(_oracle.epochs[2].votes[_mode_level].count, 1)
         self.assertEqual(_oracle.epochs[2].votes[_other_level].count, 0)
         for level in range(_level_max):
@@ -518,101 +493,107 @@ class OracleUnitTest(unittest.TestCase):
                 self.assertEqual(vote.should_reclaim, True)
             else:
                 self.assertEqual(vote.should_reclaim, False)
-        self.assertEqual(_oracle.epochs[2].reward_holder.amount, _mint)
-        self.assertEqual(_oracle.epochs[2].deposit_holder.amount,
+        self.assertEqual(_coin.balance_of(_oracle.epochs[2].reward_account),
+                         _mint)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[2].deposit_account),
                          _deposit)
         self.assertEqual(_oracle.epochs[2].reward_total, _mint)
 
         reclaim_amount = _deposit + self._reward(_mint, 1)
-        self.assertEqual(_oracle.reclaim(accounts[1], reclaim_holder),
+        balance = _coin.balance_of(accounts[1])
+        self.assertEqual(_oracle.reclaim(_coin, accounts[1]),
                          reclaim_amount)
-        self.assertEqual(reclaim_holder.amount, reclaim_amount)
-        _supply.burn(reclaim_holder, reclaim_amount)
+        self.assertEqual(_coin.balance_of(accounts[1]),
+                         balance + reclaim_amount)
 
         self.assertEqual(_oracle.get_mode_level(), _level_max)
 
-        coin_supply = _supply.amount
-        self.assertEqual(_oracle.advance_phase(_mint),
+        coin_supply = _coin.total_supply
+        self.assertEqual(_oracle.advance(_coin, _mint),
                          _mint - self._reward(_mint, 1) * 1)
-        self.assertEqual(_supply.amount,
+        self.assertEqual(_coin.total_supply,
                          coin_supply + self._reward(_mint, 1) * 1)
-        self.assertEqual(_oracle.epoch % 3, 2)
+        self.assertEqual(_oracle.epoch_timestamp % 3, 2)
         self.assertEqual(_oracle.get_mode_level(), _level_max)
         self.assertEqual(_oracle.epochs[0].phase, Phase.RECLAIM)
         self.assertEqual(len(_oracle.epochs[0].commits), 1)
-        self.assertEqual(len(_oracle.epochs[0].votes), _level_max)
-        self.assertEqual(_oracle.epochs[0].reward_holder.amount, _mint)
-        self.assertEqual(_oracle.epochs[0].deposit_holder.amount, 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].reward_account),
+                         _mint)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].deposit_account), 0)
         self.assertEqual(_oracle.epochs[0].reward_total, _mint)
         self.assertEqual(_oracle.epochs[1].phase, Phase.REVEAL)
         self.assertEqual(len(_oracle.epochs[1].commits), 1)
-        self.assertEqual(len(_oracle.epochs[1].votes), _level_max)
-        self.assertEqual(_oracle.epochs[1].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[1].deposit_holder.amount, 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[1].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[1].deposit_account), 0)
         self.assertEqual(_oracle.epochs[1].reward_total, 0)
         self.assertEqual(_oracle.epochs[2].phase, Phase.COMMIT)
         self.assertEqual(len(_oracle.epochs[2].commits), 1)
-        self.assertEqual(len(_oracle.epochs[2].votes), _level_max)
-        self.assertEqual(_oracle.epochs[2].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[2].deposit_holder.amount, 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[2].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[2].deposit_account), 0)
         self.assertEqual(_oracle.epochs[2].reward_total, 0)
 
-        coin_supply = _supply.amount
-        self.assertEqual(_oracle.advance_phase(_mint), _mint)
-        self.assertEqual(_supply.amount, coin_supply)
+        coin_supply = _coin.total_supply
+        self.assertEqual(_oracle.advance(_coin, _mint), _mint)
+        self.assertEqual(_coin.total_supply, coin_supply)
 
         # 6 commits on the mode ->
         # 6 reveals on the mode ->
         # full reclaim
         self.assertEqual(_oracle.get_mode_level(), _level_max)
 
-        _supply.mint(deposit_holder, _deposit)
+        _coin.mint(accounts[1], _deposit)
+        balance = _coin.balance_of(accounts[1])
         self.assertEqual(
-            _oracle.commit(accounts[1],
+            _oracle.commit(_coin, accounts[1],
                            Oracle.hash(accounts[1], _mode_level, 1111),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[2],
-                           Oracle.hash(accounts[2], _mode_level, 2222),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[3],
-                           Oracle.hash(accounts[3], _mode_level, 3333),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[4],
-                           Oracle.hash(accounts[4], _mode_level, 4444),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[5],
-                           Oracle.hash(accounts[5], _mode_level, 5555),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[6],
-                           Oracle.hash(accounts[6], _mode_level, 6666),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[1]), balance - _deposit)
 
-        coin_supply = _supply.amount
-        self.assertEqual(_oracle.advance_phase(_mint), _mint)
-        self.assertEqual(_supply.amount, coin_supply)
-        self.assertEqual(_oracle.epoch % 3, 1)
+        _coin.mint(accounts[2], _deposit)
+        balance = _coin.balance_of(accounts[2])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[2],
+                           Oracle.hash(accounts[2], _mode_level, 2222),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[2]), balance - _deposit)
+
+        _coin.mint(accounts[3], _deposit)
+        balance = _coin.balance_of(accounts[3])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[3],
+                           Oracle.hash(accounts[3], _mode_level, 3333),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[3]), balance - _deposit)
+
+        _coin.mint(accounts[4], _deposit)
+        balance = _coin.balance_of(accounts[4])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[4],
+                           Oracle.hash(accounts[4], _mode_level, 4444),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[4]), balance - _deposit)
+
+        _coin.mint(accounts[5], _deposit)
+        balance = _coin.balance_of(accounts[5])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[5],
+                           Oracle.hash(accounts[5], _mode_level, 5555),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[5]), balance - _deposit)
+
+        _coin.mint(accounts[6], _deposit)
+        balance = _coin.balance_of(accounts[6])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[6],
+                           Oracle.hash(accounts[6], _mode_level, 6666),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[6]), balance - _deposit)
+
+
+        coin_supply = _coin.total_supply
+        self.assertEqual(_oracle.advance(_coin, _mint), _mint)
+        self.assertEqual(_coin.total_supply, coin_supply)
+        self.assertEqual(_oracle.epoch_timestamp % 3, 1)
         self.assertEqual(_oracle.get_mode_level(), _level_max)
         self.assertEqual(_oracle.epochs[0].phase, Phase.REVEAL)
         self.assertEqual(len(_oracle.epochs[0].commits), 6)
@@ -652,9 +633,8 @@ class OracleUnitTest(unittest.TestCase):
                          _deposit)
         self.assertEqual(_oracle.epochs[0].commits[accounts[6]].revealed_level,
                          _level_max)
-        self.assertEqual(len(_oracle.epochs[0].votes), _level_max)
-        self.assertEqual(_oracle.epochs[0].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[0].deposit_holder.amount,
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].deposit_account),
                          _deposit * 6)
         self.assertEqual(_oracle.epochs[0].reward_total, 0)
 
@@ -679,10 +659,10 @@ class OracleUnitTest(unittest.TestCase):
 
         self.assertEqual(_oracle.get_mode_level(), _mode_level)
 
-        coin_supply = _supply.amount
-        self.assertEqual(_oracle.advance_phase(_mint), _mint)
-        self.assertEqual(_supply.amount, coin_supply)
-        self.assertEqual(_oracle.epoch % 3, 2)
+        coin_supply = _coin.total_supply
+        self.assertEqual(_oracle.advance(_coin, _mint), _mint)
+        self.assertEqual(_coin.total_supply, coin_supply)
+        self.assertEqual(_oracle.epoch_timestamp % 3, 2)
         self.assertEqual(_oracle.get_mode_level(), _level_max)
         self.assertEqual(_oracle.epochs[0].phase, Phase.RECLAIM)
         self.assertEqual(len(_oracle.epochs[0].commits), 6)
@@ -698,7 +678,6 @@ class OracleUnitTest(unittest.TestCase):
                          _mode_level)
         self.assertEqual(_oracle.epochs[0].commits[accounts[6]].revealed_level,
                          _mode_level)
-        self.assertEqual(len(_oracle.epochs[0].votes), _level_max)
         self.assertEqual(_oracle.epochs[0].votes[_mode_level].count, 6)
         self.assertEqual(_oracle.epochs[0].votes[_other_level].count, 0)
         for level in range(_level_max):
@@ -710,52 +689,57 @@ class OracleUnitTest(unittest.TestCase):
                 self.assertEqual(vote.should_reclaim, True)
             else:
                 self.assertEqual(vote.should_reclaim, False)
-        self.assertEqual(_oracle.epochs[0].reward_holder.amount,
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].reward_account),
                          _mint)
-        self.assertEqual(_oracle.epochs[0].deposit_holder.amount,
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].deposit_account),
                          _deposit * 6)
         self.assertEqual(_oracle.epochs[0].reward_total, _mint)
 
         reclaim_amount = _deposit + self._reward(_mint, 6)
-        self.assertEqual(_oracle.reclaim(accounts[6], reclaim_holder),
+        balance = _coin.balance_of(accounts[6])
+        self.assertEqual(_oracle.reclaim(_coin, accounts[6]),
                          reclaim_amount)
-        self.assertEqual(reclaim_holder.amount, reclaim_amount)
-        _supply.burn(reclaim_holder, reclaim_amount)
-        self.assertEqual(_oracle.reclaim(accounts[5], reclaim_holder),
+        self.assertEqual(_coin.balance_of(accounts[6]),
+                         balance + reclaim_amount)
+        balance = _coin.balance_of(accounts[5])
+        self.assertEqual(_oracle.reclaim(_coin, accounts[5]),
                          reclaim_amount)
-        self.assertEqual(reclaim_holder.amount, reclaim_amount)
-        _supply.burn(reclaim_holder, reclaim_amount)
-        self.assertEqual(_oracle.reclaim(accounts[4], reclaim_holder),
+        self.assertEqual(_coin.balance_of(accounts[5]),
+                         balance + reclaim_amount)
+        balance = _coin.balance_of(accounts[4])
+        self.assertEqual(_oracle.reclaim(_coin, accounts[4]),
                          reclaim_amount)
-        self.assertEqual(reclaim_holder.amount, reclaim_amount)
-        _supply.burn(reclaim_holder, reclaim_amount)
-        self.assertEqual(_oracle.reclaim(accounts[3], reclaim_holder),
+        self.assertEqual(_coin.balance_of(accounts[4]),
+                         balance + reclaim_amount)
+        balance = _coin.balance_of(accounts[3])
+        self.assertEqual(_oracle.reclaim(_coin, accounts[3]),
                          reclaim_amount)
-        self.assertEqual(reclaim_holder.amount, reclaim_amount)
-        _supply.burn(reclaim_holder, reclaim_amount)
-        self.assertEqual(_oracle.reclaim(accounts[2], reclaim_holder),
+        self.assertEqual(_coin.balance_of(accounts[3]),
+                         balance + reclaim_amount)
+        balance = _coin.balance_of(accounts[2])
+        self.assertEqual(_oracle.reclaim(_coin, accounts[2]),
                          reclaim_amount)
-        self.assertEqual(reclaim_holder.amount, reclaim_amount)
-        _supply.burn(reclaim_holder, reclaim_amount)
-        self.assertEqual(_oracle.reclaim(accounts[1], reclaim_holder),
+        self.assertEqual(_coin.balance_of(accounts[2]),
+                         balance + reclaim_amount)
+        balance = _coin.balance_of(accounts[1])
+        self.assertEqual(_oracle.reclaim(_coin, accounts[1]),
                          reclaim_amount)
-        self.assertEqual(reclaim_holder.amount, reclaim_amount)
-        _supply.burn(reclaim_holder, reclaim_amount)
-        self.assertEqual(_oracle.reclaim(accounts[6], reclaim_holder), 0)
-        self.assertEqual(_oracle.reclaim(accounts[7], reclaim_holder), 0)
+        self.assertEqual(_coin.balance_of(accounts[1]),
+                         balance + reclaim_amount)
+        self.assertEqual(_oracle.reclaim(_coin, accounts[6]), 0)
+        self.assertEqual(_oracle.reclaim(_coin, accounts[7]), 0)
 
-        coin_supply = _supply.amount
-        self.assertEqual(_oracle.advance_phase(_mint),
+        coin_supply = _coin.total_supply
+        self.assertEqual(_oracle.advance(_coin, _mint),
                          _mint - self._reward(_mint, 6) * 6)
-        self.assertEqual(_supply.amount,
+        self.assertEqual(_coin.total_supply,
                          coin_supply + self._reward(_mint, 6) * 6)
-        self.assertEqual(_oracle.epoch % 3, 0)
+        self.assertEqual(_oracle.epoch_timestamp % 3, 0)
         self.assertEqual(_oracle.get_mode_level(), _level_max)
         self.assertEqual(_oracle.epochs[0].phase, Phase.COMMIT)
         self.assertEqual(len(_oracle.epochs[0].commits), 6)
-        self.assertEqual(len(_oracle.epochs[0].votes), _level_max)
-        self.assertEqual(_oracle.epochs[0].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[0].deposit_holder.amount, 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].deposit_account), 0)
         self.assertEqual(_oracle.epochs[0].reward_total, 0)
 
         # 6 commits on the mode ->
@@ -763,53 +747,59 @@ class OracleUnitTest(unittest.TestCase):
         # no reclaim
         self.assertEqual(_oracle.get_mode_level(), _level_max)
 
-        _supply.mint(deposit_holder, _deposit)
+        _coin.mint(accounts[1], _deposit)
+        balance = _coin.balance_of(accounts[1])
         self.assertEqual(
-            _oracle.commit(accounts[1],
+            _oracle.commit(_coin, accounts[1],
                            Oracle.hash(accounts[1], _mode_level, 1111),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[2],
-                           Oracle.hash(accounts[2], _mode_level, 2222),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[3],
-                           Oracle.hash(accounts[3], _mode_level, 3333),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[4],
-                           Oracle.hash(accounts[4], _mode_level, 4444),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[5],
-                           Oracle.hash(accounts[5], _mode_level, 5555),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[6],
-                           Oracle.hash(accounts[6], _mode_level, 6666),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[1]), balance - _deposit)
 
-        coin_supply = _supply.amount
-        self.assertEqual(_oracle.advance_phase(_mint), _mint)
-        self.assertEqual(_supply.amount, coin_supply)
-        self.assertEqual(_oracle.epoch % 3, 1)
+        _coin.mint(accounts[2], _deposit)
+        balance = _coin.balance_of(accounts[2])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[2],
+                           Oracle.hash(accounts[2], _mode_level, 2222),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[2]), balance - _deposit)
+
+        _coin.mint(accounts[3], _deposit)
+        balance = _coin.balance_of(accounts[3])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[3],
+                           Oracle.hash(accounts[3], _mode_level, 3333),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[3]), balance - _deposit)
+
+        _coin.mint(accounts[4], _deposit)
+        balance = _coin.balance_of(accounts[4])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[4],
+                           Oracle.hash(accounts[4], _mode_level, 4444),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[4]), balance - _deposit)
+
+        _coin.mint(accounts[5], _deposit)
+        balance = _coin.balance_of(accounts[5])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[5],
+                           Oracle.hash(accounts[5], _mode_level, 5555),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[5]), balance - _deposit)
+
+        _coin.mint(accounts[6], _deposit)
+        balance = _coin.balance_of(accounts[6])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[6],
+                           Oracle.hash(accounts[6], _mode_level, 6666),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[6]), balance - _deposit)
+
+
+        coin_supply = _coin.total_supply
+        self.assertEqual(_oracle.advance(_coin, _mint), _mint)
+        self.assertEqual(_coin.total_supply, coin_supply)
+        self.assertEqual(_oracle.epoch_timestamp % 3, 1)
         self.assertEqual(_oracle.get_mode_level(), _level_max)
         self.assertEqual(_oracle.epochs[0].phase, Phase.REVEAL)
         self.assertEqual(len(_oracle.epochs[0].commits), 6)
@@ -849,9 +839,8 @@ class OracleUnitTest(unittest.TestCase):
                          _deposit)
         self.assertEqual(_oracle.epochs[0].commits[accounts[6]].revealed_level,
                          _level_max)
-        self.assertEqual(len(_oracle.epochs[0].votes), _level_max)
-        self.assertEqual(_oracle.epochs[0].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[0].deposit_holder.amount,
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].deposit_account),
                          _deposit * 6)
         self.assertEqual(_oracle.epochs[0].reward_total, 0)
 
@@ -876,10 +865,10 @@ class OracleUnitTest(unittest.TestCase):
 
         self.assertEqual(_oracle.get_mode_level(), _mode_level)
 
-        coin_supply = _supply.amount
-        self.assertEqual(_oracle.advance_phase(_mint), _mint)
-        self.assertEqual(_supply.amount, coin_supply)
-        self.assertEqual(_oracle.epoch % 3, 2)
+        coin_supply = _coin.total_supply
+        self.assertEqual(_oracle.advance(_coin, _mint), _mint)
+        self.assertEqual(_coin.total_supply, coin_supply)
+        self.assertEqual(_oracle.epoch_timestamp % 3, 2)
         self.assertEqual(_oracle.get_mode_level(), _level_max)
         self.assertEqual(_oracle.epochs[0].phase, Phase.RECLAIM)
         self.assertEqual(len(_oracle.epochs[0].commits), 6)
@@ -895,7 +884,6 @@ class OracleUnitTest(unittest.TestCase):
                          _mode_level)
         self.assertEqual(_oracle.epochs[0].commits[accounts[6]].revealed_level,
                          _mode_level)
-        self.assertEqual(len(_oracle.epochs[0].votes), _level_max)
         self.assertEqual(_oracle.epochs[0].votes[_mode_level].count, 6)
         self.assertEqual(_oracle.epochs[0].votes[_other_level].count, 0)
         for level in range(_level_max):
@@ -907,26 +895,25 @@ class OracleUnitTest(unittest.TestCase):
                 self.assertEqual(vote.should_reclaim, True)
             else:
                 self.assertEqual(vote.should_reclaim, False)
-        self.assertEqual(_oracle.epochs[0].reward_holder.amount,
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].reward_account),
                          _mint)
-        self.assertEqual(_oracle.epochs[0].deposit_holder.amount,
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].deposit_account),
                          _deposit * 6)
         self.assertEqual(_oracle.epochs[0].reward_total, _mint)
 
-        self.assertEqual(_oracle.reclaim(accounts[7], reclaim_holder), 0)
+        self.assertEqual(_oracle.reclaim(_coin, accounts[7]), 0)
 
-        coin_supply = _supply.amount
-        self.assertEqual(_oracle.advance_phase(_mint),
+        coin_supply = _coin.total_supply
+        self.assertEqual(_oracle.advance(_coin, _mint),
                          _mint + _deposit * 6)
-        self.assertEqual(_supply.amount,
+        self.assertEqual(_coin.total_supply,
                          coin_supply - _deposit * 6)
-        self.assertEqual(_oracle.epoch % 3, 0)
+        self.assertEqual(_oracle.epoch_timestamp % 3, 0)
         self.assertEqual(_oracle.get_mode_level(), _level_max)
         self.assertEqual(_oracle.epochs[0].phase, Phase.COMMIT)
         self.assertEqual(len(_oracle.epochs[0].commits), 6)
-        self.assertEqual(len(_oracle.epochs[0].votes), _level_max)
-        self.assertEqual(_oracle.epochs[0].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[0].deposit_holder.amount, 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].deposit_account), 0)
         self.assertEqual(_oracle.epochs[0].reward_total, 0)
 
         # 4 commits on the mode + 2 commits on the other level ->
@@ -934,53 +921,59 @@ class OracleUnitTest(unittest.TestCase):
         # full reclaim
         self.assertEqual(_oracle.get_mode_level(), _level_max)
 
-        _supply.mint(deposit_holder, _deposit)
+        _coin.mint(accounts[1], _deposit)
+        balance = _coin.balance_of(accounts[1])
         self.assertEqual(
-            _oracle.commit(accounts[1],
+            _oracle.commit(_coin, accounts[1],
                            Oracle.hash(accounts[1], _mode_level, 1111),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[2],
-                           Oracle.hash(accounts[2], _other_level, 2222),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[3],
-                           Oracle.hash(accounts[3], _mode_level, 3333),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[4],
-                           Oracle.hash(accounts[4], _mode_level, 4444),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[5],
-                           Oracle.hash(accounts[5], _mode_level, 5555),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[6],
-                           Oracle.hash(accounts[6], _other_level, 6666),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[1]), balance - _deposit)
 
-        coin_supply = _supply.amount
-        self.assertEqual(_oracle.advance_phase(_mint), _mint)
-        self.assertEqual(_supply.amount, coin_supply)
-        self.assertEqual(_oracle.epoch % 3, 1)
+        _coin.mint(accounts[2], _deposit)
+        balance = _coin.balance_of(accounts[2])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[2],
+                           Oracle.hash(accounts[2], _other_level, 2222),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[2]), balance - _deposit)
+
+        _coin.mint(accounts[3], _deposit)
+        balance = _coin.balance_of(accounts[3])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[3],
+                           Oracle.hash(accounts[3], _mode_level, 3333),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[3]), balance - _deposit)
+
+        _coin.mint(accounts[4], _deposit)
+        balance = _coin.balance_of(accounts[4])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[4],
+                           Oracle.hash(accounts[4], _mode_level, 4444),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[4]), balance - _deposit)
+
+        _coin.mint(accounts[5], _deposit)
+        balance = _coin.balance_of(accounts[5])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[5],
+                           Oracle.hash(accounts[5], _mode_level, 5555),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[5]), balance - _deposit)
+
+        _coin.mint(accounts[6], _deposit)
+        balance = _coin.balance_of(accounts[6])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[6],
+                           Oracle.hash(accounts[6], _other_level, 6666),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[6]), balance - _deposit)
+
+
+        coin_supply = _coin.total_supply
+        self.assertEqual(_oracle.advance(_coin, _mint), _mint)
+        self.assertEqual(_coin.total_supply, coin_supply)
+        self.assertEqual(_oracle.epoch_timestamp % 3, 1)
         self.assertEqual(_oracle.get_mode_level(), _level_max)
         self.assertEqual(_oracle.epochs[0].phase, Phase.REVEAL)
         self.assertEqual(len(_oracle.epochs[0].commits), 6)
@@ -1020,9 +1013,8 @@ class OracleUnitTest(unittest.TestCase):
                          _deposit)
         self.assertEqual(_oracle.epochs[0].commits[accounts[6]].revealed_level,
                          _level_max)
-        self.assertEqual(len(_oracle.epochs[0].votes), _level_max)
-        self.assertEqual(_oracle.epochs[0].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[0].deposit_holder.amount,
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].deposit_account),
                          _deposit * 6)
         self.assertEqual(_oracle.epochs[0].reward_total, 0)
 
@@ -1047,10 +1039,10 @@ class OracleUnitTest(unittest.TestCase):
 
         self.assertEqual(_oracle.get_mode_level(), _mode_level)
 
-        coin_supply = _supply.amount
-        self.assertEqual(_oracle.advance_phase(_mint), _mint)
-        self.assertEqual(_supply.amount, coin_supply)
-        self.assertEqual(_oracle.epoch % 3, 2)
+        coin_supply = _coin.total_supply
+        self.assertEqual(_oracle.advance(_coin, _mint), _mint)
+        self.assertEqual(_coin.total_supply, coin_supply)
+        self.assertEqual(_oracle.epoch_timestamp % 3, 2)
         self.assertEqual(_oracle.get_mode_level(), _level_max)
         self.assertEqual(_oracle.epochs[0].phase, Phase.RECLAIM)
         self.assertEqual(len(_oracle.epochs[0].commits), 6)
@@ -1066,7 +1058,6 @@ class OracleUnitTest(unittest.TestCase):
                          _mode_level)
         self.assertEqual(_oracle.epochs[0].commits[accounts[6]].revealed_level,
                          _other_level)
-        self.assertEqual(len(_oracle.epochs[0].votes), _level_max)
         self.assertEqual(_oracle.epochs[0].votes[_mode_level].count, 4)
         self.assertEqual(_oracle.epochs[0].votes[_other_level].count, 2)
         for level in range(_level_max):
@@ -1087,59 +1078,64 @@ class OracleUnitTest(unittest.TestCase):
         else:
             reward_total = _mint + _deposit * 2
             deposit_total = _deposit * 4
-            self.assertEqual(_oracle.epochs[0].reward_holder.amount,
-                             reward_total)
-            self.assertEqual(_oracle.epochs[0].deposit_holder.amount,
-                             deposit_total)
+            self.assertEqual(
+                _coin.balance_of(_oracle.epochs[0].reward_account),
+                reward_total)
+            self.assertEqual(
+                _coin.balance_of(_oracle.epochs[0].deposit_account),
+                deposit_total)
 
         if self._is_in_reclaim_threshold(_other_level):
-            self.assertEqual(_oracle.reclaim(accounts[2], reclaim_holder),
+            balance = _coin.balance_of(accounts[2])
+            self.assertEqual(_oracle.reclaim(_coin, accounts[2]),
                              _deposit)
-            self.assertEqual(reclaim_holder.amount, _deposit)
-            _supply.burn(reclaim_holder, _deposit)
-            self.assertEqual(_oracle.reclaim(accounts[6], reclaim_holder),
+            self.assertEqual(_coin.balance_of(accounts[2]),
+                             balance + _deposit)
+            balance = _coin.balance_of(accounts[6])
+            self.assertEqual(_oracle.reclaim(_coin, accounts[6]),
                              _deposit)
-            self.assertEqual(reclaim_holder.amount, _deposit)
-            _supply.burn(reclaim_holder, _deposit)
+            self.assertEqual(_coin.balance_of(accounts[6]),
+                             balance + _deposit)
         else:
-            self.assertEqual(_oracle.reclaim(accounts[2], reclaim_holder), 0)
-            self.assertEqual(reclaim_holder.amount, 0)
-            self.assertEqual(_oracle.reclaim(accounts[6], reclaim_holder), 0)
-            self.assertEqual(reclaim_holder.amount, 0)
+            self.assertEqual(_oracle.reclaim(_coin, accounts[2]), 0)
+            self.assertEqual(_oracle.reclaim(_coin, accounts[6]), 0)
 
         reclaim_amount = _deposit + self._reward(reward_total, 4)
-        self.assertEqual(_oracle.reclaim(accounts[5], reclaim_holder),
+        balance = _coin.balance_of(accounts[5])
+        self.assertEqual(_oracle.reclaim(_coin, accounts[5]),
                          reclaim_amount)
-        self.assertEqual(reclaim_holder.amount, reclaim_amount)
-        _supply.burn(reclaim_holder, reclaim_amount)
-        self.assertEqual(_oracle.reclaim(accounts[4], reclaim_holder),
+        self.assertEqual(_coin.balance_of(accounts[5]),
+                         balance + reclaim_amount)
+        balance = _coin.balance_of(accounts[4])
+        self.assertEqual(_oracle.reclaim(_coin, accounts[4]),
                          reclaim_amount)
-        self.assertEqual(reclaim_holder.amount, reclaim_amount)
-        _supply.burn(reclaim_holder, reclaim_amount)
-        self.assertEqual(_oracle.reclaim(accounts[3], reclaim_holder),
+        self.assertEqual(_coin.balance_of(accounts[4]),
+                         balance + reclaim_amount)
+        balance = _coin.balance_of(accounts[3])
+        self.assertEqual(_oracle.reclaim(_coin, accounts[3]),
                          reclaim_amount)
-        self.assertEqual(reclaim_holder.amount, reclaim_amount)
-        _supply.burn(reclaim_holder, reclaim_amount)
-        self.assertEqual(_oracle.reclaim(accounts[1], reclaim_holder),
+        self.assertEqual(_coin.balance_of(accounts[3]),
+                         balance + reclaim_amount)
+        balance = _coin.balance_of(accounts[1])
+        self.assertEqual(_oracle.reclaim(_coin, accounts[1]),
                          reclaim_amount)
-        self.assertEqual(reclaim_holder.amount, reclaim_amount)
-        _supply.burn(reclaim_holder, reclaim_amount)
-        self.assertEqual(_oracle.reclaim(accounts[6], reclaim_holder), 0)
-        self.assertEqual(_oracle.reclaim(accounts[7], reclaim_holder), 0)
+        self.assertEqual(_coin.balance_of(accounts[1]),
+                         balance + reclaim_amount)
+        self.assertEqual(_oracle.reclaim(_coin, accounts[6]), 0)
+        self.assertEqual(_oracle.reclaim(_coin, accounts[7]), 0)
 
-        coin_supply = _supply.amount
-        self.assertEqual(_oracle.advance_phase(_mint),
+        coin_supply = _coin.total_supply
+        self.assertEqual(_oracle.advance(_coin, _mint),
                          reward_total - self._reward(reward_total, 4) * 4)
-        self.assertEqual(_supply.amount,
+        self.assertEqual(_coin.total_supply,
                          coin_supply + _mint - reward_total +
                          self._reward(reward_total, 4) * 4)
-        self.assertEqual(_oracle.epoch % 3, 0)
+        self.assertEqual(_oracle.epoch_timestamp % 3, 0)
         self.assertEqual(_oracle.get_mode_level(), _level_max)
         self.assertEqual(_oracle.epochs[0].phase, Phase.COMMIT)
         self.assertEqual(len(_oracle.epochs[0].commits), 6)
-        self.assertEqual(len(_oracle.epochs[0].votes), _level_max)
-        self.assertEqual(_oracle.epochs[0].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[0].deposit_holder.amount, 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].deposit_account), 0)
         self.assertEqual(_oracle.epochs[0].reward_total, 0)
 
         # 4 commits on the mode + 2 commits on the other level ->
@@ -1147,53 +1143,59 @@ class OracleUnitTest(unittest.TestCase):
         # no reclaim
         self.assertEqual(_oracle.get_mode_level(), _level_max)
 
-        _supply.mint(deposit_holder, _deposit)
+        _coin.mint(accounts[1], _deposit)
+        balance = _coin.balance_of(accounts[1])
         self.assertEqual(
-            _oracle.commit(accounts[1],
+            _oracle.commit(_coin, accounts[1],
                            Oracle.hash(accounts[1], _mode_level, 1111),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[2],
-                           Oracle.hash(accounts[2], _other_level, 2222),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[3],
-                           Oracle.hash(accounts[3], _mode_level, 3333),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[4],
-                           Oracle.hash(accounts[4], _mode_level, 4444),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[5],
-                           Oracle.hash(accounts[5], _mode_level, 5555),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[6],
-                           Oracle.hash(accounts[6], _other_level, 6666),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[1]), balance - _deposit)
 
-        coin_supply = _supply.amount
-        self.assertEqual(_oracle.advance_phase(_mint), _mint)
-        self.assertEqual(_supply.amount, coin_supply)
-        self.assertEqual(_oracle.epoch % 3, 1)
+        _coin.mint(accounts[2], _deposit)
+        balance = _coin.balance_of(accounts[2])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[2],
+                           Oracle.hash(accounts[2], _other_level, 2222),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[2]), balance - _deposit)
+
+        _coin.mint(accounts[3], _deposit)
+        balance = _coin.balance_of(accounts[3])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[3],
+                           Oracle.hash(accounts[3], _mode_level, 3333),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[3]), balance - _deposit)
+
+        _coin.mint(accounts[4], _deposit)
+        balance = _coin.balance_of(accounts[4])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[4],
+                           Oracle.hash(accounts[4], _mode_level, 4444),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[4]), balance - _deposit)
+
+        _coin.mint(accounts[5], _deposit)
+        balance = _coin.balance_of(accounts[5])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[5],
+                           Oracle.hash(accounts[5], _mode_level, 5555),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[5]), balance - _deposit)
+
+        _coin.mint(accounts[6], _deposit)
+        balance = _coin.balance_of(accounts[6])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[6],
+                           Oracle.hash(accounts[6], _other_level, 6666),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[6]), balance - _deposit)
+
+
+        coin_supply = _coin.total_supply
+        self.assertEqual(_oracle.advance(_coin, _mint), _mint)
+        self.assertEqual(_coin.total_supply, coin_supply)
+        self.assertEqual(_oracle.epoch_timestamp % 3, 1)
         self.assertEqual(_oracle.get_mode_level(), _level_max)
         self.assertEqual(_oracle.epochs[0].phase, Phase.REVEAL)
         self.assertEqual(len(_oracle.epochs[0].commits), 6)
@@ -1233,9 +1235,8 @@ class OracleUnitTest(unittest.TestCase):
                          _deposit)
         self.assertEqual(_oracle.epochs[0].commits[accounts[6]].revealed_level,
                          _level_max)
-        self.assertEqual(len(_oracle.epochs[0].votes), _level_max)
-        self.assertEqual(_oracle.epochs[0].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[0].deposit_holder.amount,
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].deposit_account),
                          _deposit * 6)
         self.assertEqual(_oracle.epochs[0].reward_total, 0)
 
@@ -1260,10 +1261,10 @@ class OracleUnitTest(unittest.TestCase):
 
         self.assertEqual(_oracle.get_mode_level(), _mode_level)
 
-        coin_supply = _supply.amount
-        self.assertEqual(_oracle.advance_phase(_mint), _mint)
-        self.assertEqual(_supply.amount, coin_supply)
-        self.assertEqual(_oracle.epoch % 3, 2)
+        coin_supply = _coin.total_supply
+        self.assertEqual(_oracle.advance(_coin, _mint), _mint)
+        self.assertEqual(_coin.total_supply, coin_supply)
+        self.assertEqual(_oracle.epoch_timestamp % 3, 2)
         self.assertEqual(_oracle.get_mode_level(), _level_max)
         self.assertEqual(_oracle.epochs[0].phase, Phase.RECLAIM)
         self.assertEqual(len(_oracle.epochs[0].commits), 6)
@@ -1279,7 +1280,6 @@ class OracleUnitTest(unittest.TestCase):
                          _mode_level)
         self.assertEqual(_oracle.epochs[0].commits[accounts[6]].revealed_level,
                          _other_level)
-        self.assertEqual(len(_oracle.epochs[0].votes), _level_max)
         self.assertEqual(_oracle.epochs[0].votes[_mode_level].count, 4)
         self.assertEqual(_oracle.epochs[0].votes[_other_level].count, 2)
         for level in range(_level_max):
@@ -1300,24 +1300,23 @@ class OracleUnitTest(unittest.TestCase):
         else:
             reward_total = _mint + _deposit * 2
             deposit_total = _deposit * 4
-            self.assertEqual(_oracle.epochs[0].reward_holder.amount,
+            self.assertEqual(_coin.balance_of(_oracle.epochs[0].reward_account),
                              reward_total)
-            self.assertEqual(_oracle.epochs[0].deposit_holder.amount,
+            self.assertEqual(_coin.balance_of(_oracle.epochs[0].deposit_account),
                              deposit_total)
 
-        self.assertEqual(_oracle.reclaim(accounts[7], reclaim_holder), 0)
+        self.assertEqual(_oracle.reclaim(_coin, accounts[7]), 0)
 
-        coin_supply = _supply.amount
-        self.assertEqual(_oracle.advance_phase(_mint), _mint + _deposit * 6)
-        self.assertEqual(_supply.amount,
+        coin_supply = _coin.total_supply
+        self.assertEqual(_oracle.advance(_coin, _mint), _mint + _deposit * 6)
+        self.assertEqual(_coin.total_supply,
                          coin_supply - _deposit * 6)
-        self.assertEqual(_oracle.epoch % 3, 0)
+        self.assertEqual(_oracle.epoch_timestamp % 3, 0)
         self.assertEqual(_oracle.get_mode_level(), _level_max)
         self.assertEqual(_oracle.epochs[0].phase, Phase.COMMIT)
         self.assertEqual(len(_oracle.epochs[0].commits), 6)
-        self.assertEqual(len(_oracle.epochs[0].votes), _level_max)
-        self.assertEqual(_oracle.epochs[0].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[0].deposit_holder.amount, 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].deposit_account), 0)
         self.assertEqual(_oracle.epochs[0].reward_total, 0)
 
         # 3 commits on the two modes ->
@@ -1327,53 +1326,59 @@ class OracleUnitTest(unittest.TestCase):
         real_other_level = max(_mode_level, _other_level)
         self.assertEqual(_oracle.get_mode_level(), _level_max)
 
-        _supply.mint(deposit_holder, _deposit)
+        _coin.mint(accounts[1], _deposit)
+        balance = _coin.balance_of(accounts[1])
         self.assertEqual(
-            _oracle.commit(accounts[1],
+            _oracle.commit(_coin, accounts[1],
                            Oracle.hash(accounts[1], real_mode_level, 1111),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[2],
-                           Oracle.hash(accounts[2], real_other_level, 2222),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[3],
-                           Oracle.hash(accounts[3], real_mode_level, 3333),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[4],
-                           Oracle.hash(accounts[4], real_other_level, 4444),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[5],
-                           Oracle.hash(accounts[5], real_mode_level, 5555),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[6],
-                           Oracle.hash(accounts[6], real_other_level, 6666),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[1]), balance - _deposit)
 
-        coin_supply = _supply.amount
-        self.assertEqual(_oracle.advance_phase(_mint), _mint)
-        self.assertEqual(_supply.amount, coin_supply)
-        self.assertEqual(_oracle.epoch % 3, 1)
+        _coin.mint(accounts[2], _deposit)
+        balance = _coin.balance_of(accounts[2])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[2],
+                           Oracle.hash(accounts[2], real_other_level, 2222),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[2]), balance - _deposit)
+
+        _coin.mint(accounts[3], _deposit)
+        balance = _coin.balance_of(accounts[3])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[3],
+                           Oracle.hash(accounts[3], real_mode_level, 3333),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[3]), balance - _deposit)
+
+        _coin.mint(accounts[4], _deposit)
+        balance = _coin.balance_of(accounts[4])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[4],
+                           Oracle.hash(accounts[4], real_other_level, 4444),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[4]), balance - _deposit)
+
+        _coin.mint(accounts[5], _deposit)
+        balance = _coin.balance_of(accounts[5])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[5],
+                           Oracle.hash(accounts[5], real_mode_level, 5555),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[5]), balance - _deposit)
+
+        _coin.mint(accounts[6], _deposit)
+        balance = _coin.balance_of(accounts[6])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[6],
+                           Oracle.hash(accounts[6], real_other_level, 6666),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[6]), balance - _deposit)
+
+
+        coin_supply = _coin.total_supply
+        self.assertEqual(_oracle.advance(_coin, _mint), _mint)
+        self.assertEqual(_coin.total_supply, coin_supply)
+        self.assertEqual(_oracle.epoch_timestamp % 3, 1)
         self.assertEqual(_oracle.get_mode_level(), _level_max)
         self.assertEqual(_oracle.epochs[0].phase, Phase.REVEAL)
         self.assertEqual(len(_oracle.epochs[0].commits), 6)
@@ -1413,9 +1418,8 @@ class OracleUnitTest(unittest.TestCase):
                          _deposit)
         self.assertEqual(_oracle.epochs[0].commits[accounts[6]].revealed_level,
                          _level_max)
-        self.assertEqual(len(_oracle.epochs[0].votes), _level_max)
-        self.assertEqual(_oracle.epochs[0].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[0].deposit_holder.amount,
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].deposit_account),
                          _deposit * 6)
         self.assertEqual(_oracle.epochs[0].reward_total, 0)
 
@@ -1440,10 +1444,10 @@ class OracleUnitTest(unittest.TestCase):
 
         self.assertEqual(_oracle.get_mode_level(), real_mode_level)
 
-        coin_supply = _supply.amount
-        self.assertEqual(_oracle.advance_phase(_mint), _mint)
-        self.assertEqual(_supply.amount, coin_supply)
-        self.assertEqual(_oracle.epoch % 3, 2)
+        coin_supply = _coin.total_supply
+        self.assertEqual(_oracle.advance(_coin, _mint), _mint)
+        self.assertEqual(_coin.total_supply, coin_supply)
+        self.assertEqual(_oracle.epoch_timestamp % 3, 2)
         self.assertEqual(_oracle.get_mode_level(), _level_max)
         self.assertEqual(_oracle.epochs[0].phase, Phase.RECLAIM)
         self.assertEqual(len(_oracle.epochs[0].commits), 6)
@@ -1459,7 +1463,6 @@ class OracleUnitTest(unittest.TestCase):
                          real_mode_level)
         self.assertEqual(_oracle.epochs[0].commits[accounts[6]].revealed_level,
                          real_other_level)
-        self.assertEqual(len(_oracle.epochs[0].votes), _level_max)
         self.assertEqual(_oracle.epochs[0].votes[_mode_level].count, 3)
         self.assertEqual(_oracle.epochs[0].votes[_other_level].count, 3)
         for level in range(_level_max):
@@ -1482,61 +1485,63 @@ class OracleUnitTest(unittest.TestCase):
         else:
             reward_total = _mint + _deposit * 3
             deposit_total = _deposit * 3
-            self.assertEqual(_oracle.epochs[0].reward_holder.amount,
+            self.assertEqual(_coin.balance_of(_oracle.epochs[0].reward_account),
                              reward_total)
-            self.assertEqual(_oracle.epochs[0].deposit_holder.amount,
+            self.assertEqual(_coin.balance_of(_oracle.epochs[0].deposit_account),
                              deposit_total)
 
         if (real_mode_level - _reclaim_threshold <= real_other_level and
             real_other_level <= real_mode_level + _reclaim_threshold):
-            self.assertEqual(_oracle.reclaim(accounts[2], reclaim_holder),
+            balance = _coin.balance_of(accounts[2])
+            self.assertEqual(_oracle.reclaim(_coin, accounts[2]),
                              _deposit)
-            self.assertEqual(reclaim_holder.amount, _deposit)
-            _supply.burn(reclaim_holder, _deposit)
-            self.assertEqual(_oracle.reclaim(accounts[4], reclaim_holder),
+            self.assertEqual(_coin.balance_of(accounts[2]),
+                             balance + _deposit)
+            balance = _coin.balance_of(accounts[4])
+            self.assertEqual(_oracle.reclaim(_coin, accounts[4]),
                              _deposit)
-            self.assertEqual(reclaim_holder.amount, _deposit)
-            _supply.burn(reclaim_holder, _deposit)
-            self.assertEqual(_oracle.reclaim(accounts[6], reclaim_holder),
+            self.assertEqual(_coin.balance_of(accounts[4]),
+                             balance + _deposit)
+            balance = _coin.balance_of(accounts[6])
+            self.assertEqual(_oracle.reclaim(_coin, accounts[6]),
                              _deposit)
-            self.assertEqual(reclaim_holder.amount, _deposit)
-            _supply.burn(reclaim_holder, _deposit)
+            self.assertEqual(_coin.balance_of(accounts[6]),
+                             balance + _deposit)
         else:
-            self.assertEqual(_oracle.reclaim(accounts[2], reclaim_holder), 0)
-            self.assertEqual(reclaim_holder.amount, 0)
-            self.assertEqual(_oracle.reclaim(accounts[4], reclaim_holder), 0)
-            self.assertEqual(reclaim_holder.amount, 0)
-            self.assertEqual(_oracle.reclaim(accounts[6], reclaim_holder), 0)
-            self.assertEqual(reclaim_holder.amount, 0)
+            self.assertEqual(_oracle.reclaim(_coin, accounts[2]), 0)
+            self.assertEqual(_oracle.reclaim(_coin, accounts[4]), 0)
+            self.assertEqual(_oracle.reclaim(_coin, accounts[6]), 0)
 
         reclaim_amount = _deposit + self._reward(reward_total, 3)
-        self.assertEqual(_oracle.reclaim(accounts[5], reclaim_holder),
+        balance = _coin.balance_of(accounts[5])
+        self.assertEqual(_oracle.reclaim(_coin, accounts[5]),
                          reclaim_amount)
-        self.assertEqual(reclaim_holder.amount, reclaim_amount)
-        _supply.burn(reclaim_holder, reclaim_amount)
-        self.assertEqual(_oracle.reclaim(accounts[3], reclaim_holder),
+        self.assertEqual(_coin.balance_of(accounts[5]),
+                         balance + reclaim_amount)
+        balance = _coin.balance_of(accounts[3])
+        self.assertEqual(_oracle.reclaim(_coin, accounts[3]),
                          reclaim_amount)
-        self.assertEqual(reclaim_holder.amount, reclaim_amount)
-        _supply.burn(reclaim_holder, reclaim_amount)
-        self.assertEqual(_oracle.reclaim(accounts[1], reclaim_holder),
+        self.assertEqual(_coin.balance_of(accounts[3]),
+                         balance + reclaim_amount)
+        balance = _coin.balance_of(accounts[1])
+        self.assertEqual(_oracle.reclaim(_coin, accounts[1]),
                          reclaim_amount)
-        self.assertEqual(reclaim_holder.amount, reclaim_amount)
-        _supply.burn(reclaim_holder, reclaim_amount)
-        self.assertEqual(_oracle.reclaim(accounts[6], reclaim_holder), 0)
-        self.assertEqual(_oracle.reclaim(accounts[7], reclaim_holder), 0)
+        self.assertEqual(_coin.balance_of(accounts[1]),
+                         balance + reclaim_amount)
+        self.assertEqual(_oracle.reclaim(_coin, accounts[6]), 0)
+        self.assertEqual(_oracle.reclaim(_coin, accounts[7]), 0)
 
-        coin_supply = _supply.amount
-        self.assertEqual(_oracle.advance_phase(_mint),
+        coin_supply = _coin.total_supply
+        self.assertEqual(_oracle.advance(_coin, _mint),
                          reward_total - self._reward(reward_total, 3) * 3)
-        self.assertEqual(_supply.amount, coin_supply + _mint -
+        self.assertEqual(_coin.total_supply, coin_supply + _mint -
                          reward_total + self._reward(reward_total, 3) * 3)
-        self.assertEqual(_oracle.epoch % 3, 0)
+        self.assertEqual(_oracle.epoch_timestamp % 3, 0)
         self.assertEqual(_oracle.get_mode_level(), _level_max)
         self.assertEqual(_oracle.epochs[0].phase, Phase.COMMIT)
         self.assertEqual(len(_oracle.epochs[0].commits), 6)
-        self.assertEqual(len(_oracle.epochs[0].votes), _level_max)
-        self.assertEqual(_oracle.epochs[0].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[0].deposit_holder.amount, 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].deposit_account), 0)
         self.assertEqual(_oracle.epochs[0].reward_total, 0)
 
         # 3 commits on the two modes ->
@@ -1546,53 +1551,59 @@ class OracleUnitTest(unittest.TestCase):
         real_other_level = max(_mode_level, _other_level)
         self.assertEqual(_oracle.get_mode_level(), _level_max)
 
-        _supply.mint(deposit_holder, _deposit)
+        _coin.mint(accounts[1], _deposit)
+        balance = _coin.balance_of(accounts[1])
         self.assertEqual(
-            _oracle.commit(accounts[1],
+            _oracle.commit(_coin, accounts[1],
                            Oracle.hash(accounts[1], real_mode_level, 1111),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[2],
-                           Oracle.hash(accounts[2], real_other_level, 2222),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[3],
-                           Oracle.hash(accounts[3], real_mode_level, 3333),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[4],
-                           Oracle.hash(accounts[4], real_other_level, 4444),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[5],
-                           Oracle.hash(accounts[5], real_mode_level, 5555),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[6],
-                           Oracle.hash(accounts[6], real_other_level, 6666),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[1]), balance - _deposit)
 
-        coin_supply = _supply.amount
-        self.assertEqual(_oracle.advance_phase(_mint), _mint)
-        self.assertEqual(_supply.amount, coin_supply)
-        self.assertEqual(_oracle.epoch % 3, 1)
+        _coin.mint(accounts[2], _deposit)
+        balance = _coin.balance_of(accounts[2])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[2],
+                           Oracle.hash(accounts[2], real_other_level, 2222),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[2]), balance - _deposit)
+
+        _coin.mint(accounts[3], _deposit)
+        balance = _coin.balance_of(accounts[3])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[3],
+                           Oracle.hash(accounts[3], real_mode_level, 3333),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[3]), balance - _deposit)
+
+        _coin.mint(accounts[4], _deposit)
+        balance = _coin.balance_of(accounts[4])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[4],
+                           Oracle.hash(accounts[4], real_other_level, 4444),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[4]), balance - _deposit)
+
+        _coin.mint(accounts[5], _deposit)
+        balance = _coin.balance_of(accounts[5])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[5],
+                           Oracle.hash(accounts[5], real_mode_level, 5555),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[5]), balance - _deposit)
+
+        _coin.mint(accounts[6], _deposit)
+        balance = _coin.balance_of(accounts[6])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[6],
+                           Oracle.hash(accounts[6], real_other_level, 6666),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[6]), balance - _deposit)
+
+
+        coin_supply = _coin.total_supply
+        self.assertEqual(_oracle.advance(_coin, _mint), _mint)
+        self.assertEqual(_coin.total_supply, coin_supply)
+        self.assertEqual(_oracle.epoch_timestamp % 3, 1)
         self.assertEqual(_oracle.get_mode_level(), _level_max)
         self.assertEqual(_oracle.epochs[0].phase, Phase.REVEAL)
         self.assertEqual(len(_oracle.epochs[0].commits), 6)
@@ -1632,9 +1643,8 @@ class OracleUnitTest(unittest.TestCase):
                          _deposit)
         self.assertEqual(_oracle.epochs[0].commits[accounts[6]].revealed_level,
                          _level_max)
-        self.assertEqual(len(_oracle.epochs[0].votes), _level_max)
-        self.assertEqual(_oracle.epochs[0].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[0].deposit_holder.amount,
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].deposit_account),
                          _deposit * 6)
         self.assertEqual(_oracle.epochs[0].reward_total, 0)
 
@@ -1660,10 +1670,10 @@ class OracleUnitTest(unittest.TestCase):
         self.assertEqual(_oracle.get_mode_level(),
                          min(real_mode_level, real_other_level))
 
-        coin_supply = _supply.amount
-        self.assertEqual(_oracle.advance_phase(_mint), _mint)
-        self.assertEqual(_supply.amount, coin_supply)
-        self.assertEqual(_oracle.epoch % 3, 2)
+        coin_supply = _coin.total_supply
+        self.assertEqual(_oracle.advance(_coin, _mint), _mint)
+        self.assertEqual(_coin.total_supply, coin_supply)
+        self.assertEqual(_oracle.epoch_timestamp % 3, 2)
         self.assertEqual(_oracle.get_mode_level(), _level_max)
         self.assertEqual(_oracle.epochs[0].phase, Phase.RECLAIM)
         self.assertEqual(len(_oracle.epochs[0].commits), 6)
@@ -1679,7 +1689,6 @@ class OracleUnitTest(unittest.TestCase):
                          real_mode_level)
         self.assertEqual(_oracle.epochs[0].commits[accounts[6]].revealed_level,
                          real_other_level)
-        self.assertEqual(len(_oracle.epochs[0].votes), _level_max)
         self.assertEqual(_oracle.epochs[0].votes[_mode_level].count, 3)
         self.assertEqual(_oracle.epochs[0].votes[_other_level].count, 3)
         for level in range(_level_max):
@@ -1702,24 +1711,23 @@ class OracleUnitTest(unittest.TestCase):
         else:
             reward_total = _mint + _deposit * 3
             deposit_total = _deposit * 3
-            self.assertEqual(_oracle.epochs[0].reward_holder.amount,
+            self.assertEqual(_coin.balance_of(_oracle.epochs[0].reward_account),
                              reward_total)
-            self.assertEqual(_oracle.epochs[0].deposit_holder.amount,
+            self.assertEqual(_coin.balance_of(_oracle.epochs[0].deposit_account),
                              deposit_total)
 
-        self.assertEqual(_oracle.reclaim(accounts[7], reclaim_holder), 0)
+        self.assertEqual(_oracle.reclaim(_coin, accounts[7]), 0)
 
-        coin_supply = _supply.amount
-        self.assertEqual(_oracle.advance_phase(_mint), _mint + _deposit * 6)
-        self.assertEqual(_supply.amount,
+        coin_supply = _coin.total_supply
+        self.assertEqual(_oracle.advance(_coin, _mint), _mint + _deposit * 6)
+        self.assertEqual(_coin.total_supply,
                          coin_supply - _deposit * 6)
-        self.assertEqual(_oracle.epoch % 3, 0)
+        self.assertEqual(_oracle.epoch_timestamp % 3, 0)
         self.assertEqual(_oracle.get_mode_level(), _level_max)
         self.assertEqual(_oracle.epochs[0].phase, Phase.COMMIT)
         self.assertEqual(len(_oracle.epochs[0].commits), 6)
-        self.assertEqual(len(_oracle.epochs[0].votes), _level_max)
-        self.assertEqual(_oracle.epochs[0].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[0].deposit_holder.amount, 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].deposit_account), 0)
         self.assertEqual(_oracle.epochs[0].reward_total, 0)
 
         # 4 commits on the mode + 2 commits on the other level ->
@@ -1727,53 +1735,59 @@ class OracleUnitTest(unittest.TestCase):
         # full reclaim
         self.assertEqual(_oracle.get_mode_level(), _level_max)
 
-        _supply.mint(deposit_holder, _deposit)
+        _coin.mint(accounts[1], _deposit)
+        balance = _coin.balance_of(accounts[1])
         self.assertEqual(
-            _oracle.commit(accounts[1],
+            _oracle.commit(_coin, accounts[1],
                            Oracle.hash(accounts[1], _mode_level, 1111),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[2],
-                           Oracle.hash(accounts[2], _other_level, 2222),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[3],
-                           Oracle.hash(accounts[3], _mode_level, 3333),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[4],
-                           Oracle.hash(accounts[4], _mode_level, 4444),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[5],
-                           Oracle.hash(accounts[5], _mode_level, 5555),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[6],
-                           Oracle.hash(accounts[6], _other_level, 6666),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[1]), balance - _deposit)
 
-        coin_supply = _supply.amount
-        self.assertEqual(_oracle.advance_phase(_mint), _mint)
-        self.assertEqual(_supply.amount, coin_supply)
-        self.assertEqual(_oracle.epoch % 3, 1)
+        _coin.mint(accounts[2], _deposit)
+        balance = _coin.balance_of(accounts[2])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[2],
+                           Oracle.hash(accounts[2], _other_level, 2222),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[2]), balance - _deposit)
+
+        _coin.mint(accounts[3], _deposit)
+        balance = _coin.balance_of(accounts[3])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[3],
+                           Oracle.hash(accounts[3], _mode_level, 3333),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[3]), balance - _deposit)
+
+        _coin.mint(accounts[4], _deposit)
+        balance = _coin.balance_of(accounts[4])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[4],
+                           Oracle.hash(accounts[4], _mode_level, 4444),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[4]), balance - _deposit)
+
+        _coin.mint(accounts[5], _deposit)
+        balance = _coin.balance_of(accounts[5])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[5],
+                           Oracle.hash(accounts[5], _mode_level, 5555),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[5]), balance - _deposit)
+
+        _coin.mint(accounts[6], _deposit)
+        balance = _coin.balance_of(accounts[6])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[6],
+                           Oracle.hash(accounts[6], _other_level, 6666),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[6]), balance - _deposit)
+
+
+        coin_supply = _coin.total_supply
+        self.assertEqual(_oracle.advance(_coin, _mint), _mint)
+        self.assertEqual(_coin.total_supply, coin_supply)
+        self.assertEqual(_oracle.epoch_timestamp % 3, 1)
         self.assertEqual(_oracle.get_mode_level(), _level_max)
         self.assertEqual(_oracle.epochs[0].phase, Phase.REVEAL)
         self.assertEqual(len(_oracle.epochs[0].commits), 6)
@@ -1813,9 +1827,8 @@ class OracleUnitTest(unittest.TestCase):
                          _deposit)
         self.assertEqual(_oracle.epochs[0].commits[accounts[6]].revealed_level,
                          _level_max)
-        self.assertEqual(len(_oracle.epochs[0].votes), _level_max)
-        self.assertEqual(_oracle.epochs[0].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[0].deposit_holder.amount,
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].deposit_account),
                          _deposit * 6)
         self.assertEqual(_oracle.epochs[0].reward_total, 0)
 
@@ -1844,10 +1857,10 @@ class OracleUnitTest(unittest.TestCase):
 
         self.assertEqual(_oracle.get_mode_level(), _mode_level)
 
-        coin_supply = _supply.amount
-        self.assertEqual(_oracle.advance_phase(_mint), _mint)
-        self.assertEqual(_supply.amount, coin_supply)
-        self.assertEqual(_oracle.epoch % 3, 2)
+        coin_supply = _coin.total_supply
+        self.assertEqual(_oracle.advance(_coin, _mint), _mint)
+        self.assertEqual(_coin.total_supply, coin_supply)
+        self.assertEqual(_oracle.epoch_timestamp % 3, 2)
         self.assertEqual(_oracle.get_mode_level(), _level_max)
         self.assertEqual(_oracle.epochs[0].phase, Phase.RECLAIM)
         self.assertEqual(len(_oracle.epochs[0].commits), 6)
@@ -1863,7 +1876,6 @@ class OracleUnitTest(unittest.TestCase):
                          _level_max)
         self.assertEqual(_oracle.epochs[0].commits[accounts[6]].revealed_level,
                          _level_max)
-        self.assertEqual(len(_oracle.epochs[0].votes), _level_max)
         self.assertEqual(_oracle.epochs[0].votes[_mode_level].count, 2)
         self.assertEqual(_oracle.epochs[0].votes[_other_level].count, 1)
         for level in range(_level_max):
@@ -1884,52 +1896,49 @@ class OracleUnitTest(unittest.TestCase):
         else:
             reward_total = _mint + _deposit * 4
             deposit_total = _deposit * 2
-            self.assertEqual(_oracle.epochs[0].reward_holder.amount,
+            self.assertEqual(_coin.balance_of(_oracle.epochs[0].reward_account),
                              reward_total)
-            self.assertEqual(_oracle.epochs[0].deposit_holder.amount,
+            self.assertEqual(_coin.balance_of(_oracle.epochs[0].deposit_account),
                              deposit_total)
 
         if self._is_in_reclaim_threshold(_other_level):
-            self.assertEqual(_oracle.reclaim(accounts[2], reclaim_holder),
+            balance = _coin.balance_of(accounts[2])
+            self.assertEqual(_oracle.reclaim(_coin, accounts[2]),
                              _deposit)
-            self.assertEqual(reclaim_holder.amount, _deposit)
-            _supply.burn(reclaim_holder, _deposit)
-            self.assertEqual(_oracle.reclaim(accounts[6], reclaim_holder), 0)
-            self.assertEqual(reclaim_holder.amount, 0)
+            self.assertEqual(_coin.balance_of(accounts[2]),
+                             balance + _deposit)
+            self.assertEqual(_oracle.reclaim(_coin, accounts[6]), 0)
         else:
-            self.assertEqual(_oracle.reclaim(accounts[2], reclaim_holder), 0)
-            self.assertEqual(reclaim_holder.amount, 0)
-            self.assertEqual(_oracle.reclaim(accounts[6], reclaim_holder), 0)
-            self.assertEqual(reclaim_holder.amount, 0)
+            self.assertEqual(_oracle.reclaim(_coin, accounts[2]), 0)
+            self.assertEqual(_oracle.reclaim(_coin, accounts[6]), 0)
 
         reclaim_amount = _deposit + self._reward(reward_total, 2)
-        self.assertEqual(_oracle.reclaim(accounts[5], reclaim_holder), 0)
-        self.assertEqual(reclaim_holder.amount, 0)
-        self.assertEqual(_oracle.reclaim(accounts[4], reclaim_holder), 0)
-        self.assertEqual(reclaim_holder.amount, 0)
-        self.assertEqual(_oracle.reclaim(accounts[3], reclaim_holder),
+        self.assertEqual(_oracle.reclaim(_coin, accounts[5]), 0)
+        self.assertEqual(_oracle.reclaim(_coin, accounts[4]), 0)
+        balance = _coin.balance_of(accounts[3])
+        self.assertEqual(_oracle.reclaim(_coin, accounts[3]),
                          reclaim_amount)
-        self.assertEqual(reclaim_holder.amount, reclaim_amount)
-        _supply.burn(reclaim_holder, reclaim_amount)
-        self.assertEqual(_oracle.reclaim(accounts[1], reclaim_holder),
+        self.assertEqual(_coin.balance_of(accounts[3]),
+                         balance + reclaim_amount)
+        balance = _coin.balance_of(accounts[1])
+        self.assertEqual(_oracle.reclaim(_coin, accounts[1]),
                          reclaim_amount)
-        self.assertEqual(reclaim_holder.amount, reclaim_amount)
-        _supply.burn(reclaim_holder, reclaim_amount)
-        self.assertEqual(_oracle.reclaim(accounts[6], reclaim_holder), 0)
-        self.assertEqual(_oracle.reclaim(accounts[7], reclaim_holder), 0)
+        self.assertEqual(_coin.balance_of(accounts[1]),
+                         balance + reclaim_amount)
+        self.assertEqual(_oracle.reclaim(_coin, accounts[6]), 0)
+        self.assertEqual(_oracle.reclaim(_coin, accounts[7]), 0)
 
-        coin_supply = _supply.amount
-        self.assertEqual(_oracle.advance_phase(_mint),
+        coin_supply = _coin.total_supply
+        self.assertEqual(_oracle.advance(_coin, _mint),
                          reward_total - self._reward(reward_total, 2) * 2)
-        self.assertEqual(_supply.amount, coin_supply + _mint -
+        self.assertEqual(_coin.total_supply, coin_supply + _mint -
                          reward_total + self._reward(reward_total, 2) * 2)
-        self.assertEqual(_oracle.epoch % 3, 0)
+        self.assertEqual(_oracle.epoch_timestamp % 3, 0)
         self.assertEqual(_oracle.get_mode_level(), _level_max)
         self.assertEqual(_oracle.epochs[0].phase, Phase.COMMIT)
         self.assertEqual(len(_oracle.epochs[0].commits), 6)
-        self.assertEqual(len(_oracle.epochs[0].votes), _level_max)
-        self.assertEqual(_oracle.epochs[0].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[0].deposit_holder.amount, 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].deposit_account), 0)
         self.assertEqual(_oracle.epochs[0].reward_total, 0)
 
         # 4 commits on the mode + 2 commits on the other level ->
@@ -1938,53 +1947,58 @@ class OracleUnitTest(unittest.TestCase):
 
         self.assertEqual(_oracle.get_mode_level(), _level_max)
 
-        _supply.mint(deposit_holder, _deposit)
+        _coin.mint(accounts[1], _deposit)
+        balance = _coin.balance_of(accounts[1])
         self.assertEqual(
-            _oracle.commit(accounts[1],
+            _oracle.commit(_coin, accounts[1],
                            Oracle.hash(accounts[1], _mode_level, 1111),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[2],
-                           Oracle.hash(accounts[2], _other_level, 2222),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[3],
-                           Oracle.hash(accounts[3], _mode_level, 3333),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[4],
-                           Oracle.hash(accounts[4], _mode_level, 4444),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[5],
-                           Oracle.hash(accounts[5], _mode_level, 5555),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
-        _supply.mint(deposit_holder, _deposit)
-        self.assertEqual(
-            _oracle.commit(accounts[6],
-                           Oracle.hash(accounts[6], _other_level, 6666),
-                           _deposit,
-                           deposit_holder), True)
-        self.assertEqual(deposit_holder.amount, 0)
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[1]), balance - _deposit)
 
-        coin_supply = _supply.amount
-        self.assertEqual(_oracle.advance_phase(_mint), _mint)
-        self.assertEqual(_supply.amount, coin_supply)
-        self.assertEqual(_oracle.epoch % 3, 1)
+        _coin.mint(accounts[2], _deposit)
+        balance = _coin.balance_of(accounts[2])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[2],
+                           Oracle.hash(accounts[2], _other_level, 2222),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[2]), balance - _deposit)
+
+        _coin.mint(accounts[3], _deposit)
+        balance = _coin.balance_of(accounts[3])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[3],
+                           Oracle.hash(accounts[3], _mode_level, 3333),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[3]), balance - _deposit)
+
+        _coin.mint(accounts[4], _deposit)
+        balance = _coin.balance_of(accounts[4])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[4],
+                           Oracle.hash(accounts[4], _mode_level, 4444),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[4]), balance - _deposit)
+
+        _coin.mint(accounts[5], _deposit)
+        balance = _coin.balance_of(accounts[5])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[5],
+                           Oracle.hash(accounts[5], _mode_level, 5555),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[5]), balance - _deposit)
+
+        _coin.mint(accounts[6], _deposit)
+        balance = _coin.balance_of(accounts[6])
+        self.assertEqual(
+            _oracle.commit(_coin, accounts[6],
+                           Oracle.hash(accounts[6], _other_level, 6666),
+                           _deposit), True)
+        self.assertEqual(_coin.balance_of(accounts[6]), balance - _deposit)
+
+        coin_supply = _coin.total_supply
+        self.assertEqual(_oracle.advance(_coin, _mint), _mint)
+        self.assertEqual(_coin.total_supply, coin_supply)
+        self.assertEqual(_oracle.epoch_timestamp % 3, 1)
         self.assertEqual(_oracle.get_mode_level(), _level_max)
         self.assertEqual(_oracle.epochs[0].phase, Phase.REVEAL)
         self.assertEqual(len(_oracle.epochs[0].commits), 6)
@@ -2024,9 +2038,8 @@ class OracleUnitTest(unittest.TestCase):
                          _deposit)
         self.assertEqual(_oracle.epochs[0].commits[accounts[6]].revealed_level,
                          _level_max)
-        self.assertEqual(len(_oracle.epochs[0].votes), _level_max)
-        self.assertEqual(_oracle.epochs[0].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[0].deposit_holder.amount,
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].deposit_account),
                          _deposit * 6)
         self.assertEqual(_oracle.epochs[0].reward_total, 0)
 
@@ -2049,10 +2062,10 @@ class OracleUnitTest(unittest.TestCase):
 
         self.assertEqual(_oracle.get_mode_level(), _mode_level)
 
-        coin_supply = _supply.amount
-        self.assertEqual(_oracle.advance_phase(_mint), _mint)
-        self.assertEqual(_supply.amount, coin_supply)
-        self.assertEqual(_oracle.epoch % 3, 2)
+        coin_supply = _coin.total_supply
+        self.assertEqual(_oracle.advance(_coin, _mint), _mint)
+        self.assertEqual(_coin.total_supply, coin_supply)
+        self.assertEqual(_oracle.epoch_timestamp % 3, 2)
         self.assertEqual(_oracle.get_mode_level(), _level_max)
         self.assertEqual(_oracle.epochs[0].phase, Phase.RECLAIM)
         self.assertEqual(len(_oracle.epochs[0].commits), 6)
@@ -2068,7 +2081,6 @@ class OracleUnitTest(unittest.TestCase):
                          _mode_level)
         self.assertEqual(_oracle.epochs[0].commits[accounts[6]].revealed_level,
                          _other_level)
-        self.assertEqual(len(_oracle.epochs[0].votes), _level_max)
         self.assertEqual(_oracle.epochs[0].votes[_mode_level].count, 2)
         self.assertEqual(_oracle.epochs[0].votes[_other_level].count, 1)
         for level in range(_level_max):
@@ -2089,40 +2101,44 @@ class OracleUnitTest(unittest.TestCase):
         else:
             reward_total = _mint + _deposit * 4
             deposit_total = _deposit * 2
-            self.assertEqual(_oracle.epochs[0].reward_holder.amount,
+            self.assertEqual(_coin.balance_of(_oracle.epochs[0].reward_account),
                              reward_total)
-            self.assertEqual(_oracle.epochs[0].deposit_holder.amount,
+            self.assertEqual(_coin.balance_of(_oracle.epochs[0].deposit_account),
                              deposit_total)
 
-        self.assertEqual(_oracle.reclaim(accounts[1], reclaim_holder), 0)
-        self.assertEqual(reclaim_holder.amount, 0)
-        self.assertEqual(_oracle.reclaim(accounts[2], reclaim_holder), 0)
-        self.assertEqual(reclaim_holder.amount, 0)
-        self.assertEqual(_oracle.reclaim(accounts[3], reclaim_holder), 0)
-        self.assertEqual(reclaim_holder.amount, 0)
-        self.assertEqual(_oracle.reclaim(accounts[7], reclaim_holder), 0)
+        self.assertEqual(_oracle.reclaim(_coin, accounts[1]), 0)
+        self.assertEqual(_oracle.reclaim(_coin, accounts[2]), 0)
+        self.assertEqual(_oracle.reclaim(_coin, accounts[3]), 0)
+        self.assertEqual(_oracle.reclaim(_coin, accounts[7]), 0)
 
-        coin_supply = _supply.amount
-        self.assertEqual(_oracle.advance_phase(_mint), _mint + _deposit * 6)
-        self.assertEqual(_supply.amount,
+        coin_supply = _coin.total_supply
+        self.assertEqual(_oracle.advance(_coin, _mint), _mint + _deposit * 6)
+        self.assertEqual(_coin.total_supply,
                          coin_supply - _deposit * 6)
-        self.assertEqual(_oracle.epoch % 3, 0)
+        self.assertEqual(_oracle.epoch_timestamp % 3, 0)
         self.assertEqual(_oracle.get_mode_level(), _level_max)
         self.assertEqual(_oracle.epochs[0].phase, Phase.COMMIT)
         self.assertEqual(len(_oracle.epochs[0].commits), 6)
-        self.assertEqual(len(_oracle.epochs[0].votes), _level_max)
-        self.assertEqual(_oracle.epochs[0].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[0].deposit_holder.amount, 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].deposit_account), 0)
         self.assertEqual(_oracle.epochs[0].reward_total, 0)
 
-        self.assertEqual(_oracle.advance_phase(0), _mint)
-        self.assertEqual(_oracle.advance_phase(0), 0)
-        self.assertEqual(_oracle.epochs[0].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[0].deposit_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[1].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[1].deposit_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[2].reward_holder.amount, 0)
-        self.assertEqual(_oracle.epochs[2].deposit_holder.amount, 0)
+        self.assertEqual(_oracle.advance(_coin, 0), _mint)
+        self.assertEqual(_oracle.advance(_coin, 0), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[0].deposit_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[1].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[1].deposit_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[2].reward_account), 0)
+        self.assertEqual(_coin.balance_of(_oracle.epochs[2].deposit_account), 0)
+
+        balance_total = (self.coin.balance_of(accounts[1]) +
+                         self.coin.balance_of(accounts[2]) +
+                         self.coin.balance_of(accounts[3]) +
+                         self.coin.balance_of(accounts[4]) +
+                         self.coin.balance_of(accounts[5]) +
+                         self.coin.balance_of(accounts[6]))
+        self.assertEqual(self.coin.total_supply, balance_total)
 
         # hash function
         self.assertNotEqual(Oracle.hash(accounts[1], 10, 1111), "")
@@ -2148,7 +2164,25 @@ class OracleUnitTest(unittest.TestCase):
 
 
 def main():
-    for level_max in [2, 3, 4, 5, 6, 11]:
+    level_max = 5
+    reclaim_threshold = 1
+    proportional_reward_rate = 80
+    mint = 100
+    deposit = 20
+    mode_level = 2
+    other_level = 0
+    test = OracleUnitTest(level_max,
+                          reclaim_threshold,
+                          proportional_reward_rate,
+                          mint,
+                          deposit,
+                          mode_level,
+                          other_level)
+    test.run()
+    test.teardown()
+
+
+    for level_max in [2, 3, 4, 5, 7]:
         for reclaim_threshold in range(0, level_max):
             for proportional_reward_rate in [0, 1, 20, 80, 99, 100]:
                 for mint in [0, 17, 50]:

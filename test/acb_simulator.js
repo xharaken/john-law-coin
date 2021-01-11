@@ -1,9 +1,13 @@
-const TokenSupply = artifacts.require("TokenSupply");
-const TokenHolder = artifacts.require("TokenHolder");
+const JohnLawCoin = artifacts.require("JohnLawCoin");
+const JohnLawBond = artifacts.require("JohnLawBond");
 const Oracle = artifacts.require("Oracle");
 const OracleForTesting = artifacts.require("OracleForTesting");
 const ACB = artifacts.require("ACB");
 const ACBForTesting = artifacts.require("ACBForTesting");
+const common = require("./common.js");
+const should_throw = common.should_throw;
+const mod = common.mod;
+const randint = common.randint;
 
 contract("ACBSimulator", function (accounts) {
   iteration = 10;
@@ -60,37 +64,34 @@ function parameterized_test(accounts,
   assert.isTrue(_voter_count <= accounts.length - 1);
 
   it(test_name, async function () {
-    _coin_transfer_max = 100000000;
     let _level_max = _level_to_exchange_rate.length;
 
+    let _oracle = await OracleForTesting.new(
+        {from: accounts[0], gas: 12000000});
+    common.print_contract_size(_oracle, "OracleForTesting");
+    await _oracle.initialize({from: accounts[0]});
     let _acb = await ACBForTesting.new({from: accounts[0], gas: 30000000});
-    await _acb.initialize({from: accounts[0]});
-    await _acb.override_constants(_bond_redemption_price,
+    common.print_contract_size(_acb, "ACBForTesting");
+    await _acb.initialize(_oracle.address, {from: accounts[0]});
+    await _oracle.transferOwnership(_acb.address, {from: accounts[0]});
+    await _oracle.overrideConstants(_level_max, _reclaim_threshold,
+                                     _proportional_reward_rate);
+    await _acb.overrideConstants(_bond_redemption_price,
                                   _bond_redemption_period,
                                   _phase_duration,
                                   _deposit_rate,
                                   _dumping_factor,
                                   _level_to_exchange_rate,
                                   _level_to_bond_price,
-                                  _coin_transfer_max,
-                                  {from: accounts[0]});
+                                 {from: accounts[0]});
 
-    let _oracle = await OracleForTesting.new(
-        {from: accounts[0], gas: 12000000});
-    await _oracle.initialize(await _acb.coin_supply_(),
-                            {from: accounts[0]});
-    await _oracle.override_constants(_level_max, _reclaim_threshold,
-                                     _proportional_reward_rate,
-                                     {from: accounts[0]});
-    await _oracle.transferOwnership(_acb.address, {from: accounts[0]});
-
-    await _acb.activate(_oracle.address, {from: accounts[0]});
+    let _coin = await JohnLawCoin.at(await _acb.coin_());
+    let _bond = await JohnLawBond.at(await _acb.bond_());
 
     let _lost_deposit = [0, 0, 0];
 
     let _voters = [];
     for (let i = 0; i < _voter_count; i++) {
-      await check_create_account({from: accounts[i + 1]});
       _voters.push({
         address: accounts[i + 1],
         committed: [false, false, false],
@@ -174,7 +175,7 @@ function parameterized_test(accounts,
         amount = 0;
       }
       _voters[i].balance = amount;
-      await _acb.coin_supply_mint(_voters[i].address, _voters[i].balance);
+      await _acb.coinMint(_voters[i].address, _voters[i].balance);
       assert.equal(await get_balance(_voters[i].address),
                    _voters[i].balance);
     }
@@ -190,8 +191,8 @@ function parameterized_test(accounts,
 
       let coin_supply1 = await get_coin_supply();
 
-      await _acb.set_timestamp(
-          (await _acb.get_timestamp()).toNumber() + _phase_duration);
+      await _acb.setTimestamp(
+          (await _acb.getTimestamp()).toNumber() + _phase_duration);
       let commit_observed = await vote(epoch);
       if (commit_observed == false) {
         continue;
@@ -318,7 +319,7 @@ function parameterized_test(accounts,
 
         let coin_supply = await get_coin_supply();
         let bond_supply = await get_bond_supply();
-        let redemption = (await _acb.get_timestamp()).toNumber() +
+        let redemption = (await _acb.getTimestamp()).toNumber() +
             _bond_redemption_period;
         if (redemption in voter.bonds) {
           voter.bonds[redemption] += count;
@@ -356,15 +357,10 @@ function parameterized_test(accounts,
           continue;
         }
 
-        assert.equal(await _acb.redeem_bonds.call(
-            [redemptions[0], 0], {from: voter.address}), 0);
-        assert.equal(await _acb.redeem_bonds.call(
-            [redemptions[0], redemptions[0]], {from: voter.address}), 0);
-
         let fast_redeem_count = 0;
         let redeem_count = 0;
         let bond_budget = (await _acb.bond_budget_()).toNumber();
-        let timestamp = (await _acb.get_timestamp()).toNumber();
+        let timestamp = (await _acb.getTimestamp()).toNumber();
         for (let redemption of redemptions) {
           assert.isTrue(redemption in voter.bonds);
           let count = voter.bonds[redemption];
@@ -707,34 +703,20 @@ function parameterized_test(accounts,
     }
 
     async function get_balance(address) {
-      let holder = await _acb.balances_(address);
-      assert.isTrue(holder != 0x0);
-      return (await (await TokenHolder.at(holder)).amount_()).toNumber();
+      return (await _coin.balanceOf(address)).toNumber();
     }
 
     async function get_bond(address, redemption) {
-      let holder = await _acb.get_bond_holder(address, redemption);
-      assert.isTrue(holder != 0x0);
-      return (await (await TokenHolder.at(holder)).amount_()).toNumber();
+      return (await _bond.balanceOf(address, redemption)).toNumber();
     }
 
     async function get_coin_supply() {
-      return (await (await TokenSupply.at(
-          await _acb.coin_supply_())).amount_()).toNumber();
+      return (await _coin.totalSupply()).toNumber();
     }
 
     async function get_bond_supply() {
-      return (await (await TokenSupply.at(
-          await _acb.bond_supply_())).amount_()).toNumber();
+      return (await _bond.totalSupply()).toNumber();
     }
-
-    function randint(a, b) {
-      assert.isTrue(a < b);
-      let random = Math.floor(Math.random() * (b - a - 1)) + a;
-      assert.isTrue(a <= random && random <= b);
-      return random;
-    }
-
   });
 
 }
@@ -744,8 +726,4 @@ function divide_or_zero(a, b) {
     return 0;
   }
   return Math.floor(a / b);
-}
-
-function mod(i, j) {
-  return (i % j) < 0 ? (i % j) + 0 + (j < 0 ? -j : j) : (i % j + 0);
 }

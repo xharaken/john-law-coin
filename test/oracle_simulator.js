@@ -1,7 +1,11 @@
-const TokenSupply = artifacts.require("TokenSupply");
-const TokenHolder = artifacts.require("TokenHolder");
+const JohnLawCoin = artifacts.require("JohnLawCoin");
+const JohnLawBond = artifacts.require("JohnLawBond");
 const Oracle = artifacts.require("Oracle");
 const OracleForTesting = artifacts.require("OracleForTesting");
+const common = require("./common.js");
+const should_throw = common.should_throw;
+const mod = common.mod;
+const randint = common.randint;
 
 contract("OracleSimulator", function (accounts) {
   level_max = 5;
@@ -32,12 +36,12 @@ function parameterized_test(accounts,
 
   it(test_name, async function () {
     let _prev_mint = 0;
-    let _supply = await TokenSupply.new();
+    let _coin = await JohnLawCoin.new();
     let _oracle = await OracleForTesting.new({gas: 12000000});
-    await _oracle.initialize(_supply.address);
-    await _oracle.override_constants(_level_max, _reclaim_threshold,
-                               _proportional_reward_rate);
-    await _supply.set_delegated_owner(_oracle.address);
+    await _oracle.initialize();
+    await _oracle.overrideConstants(_level_max, _reclaim_threshold,
+                                    _proportional_reward_rate);
+    common.print_contract_size(_oracle, "OracleForTesting");
 
     for (let iter = 0; iter < _iteration; iter++) {
       console.log(iter);
@@ -45,7 +49,6 @@ function parameterized_test(accounts,
       for (let i = 0; i < _voter_count; i++) {
         let voter = {
           address: accounts[i],
-          balance_holder: await TokenHolder.new(_supply.address),
           committed: false,
           deposit: 0,
           committed_level: 0,
@@ -67,29 +70,28 @@ function parameterized_test(accounts,
           voters[i].deposit = randint(0, 10);
           voters[i].committed_level = randint(0, _level_max);
           voters[i].committed_salt = randint(0, 10);
-          await _supply.mint(
-              voters[i].balance_holder.address, voters[i].deposit);
+          await _coin.mint(voters[i].address, voters[i].deposit);
           await check_commit(
               voters[i].address,
               await _oracle.hash(voters[i].address,
                                  voters[i].committed_level,
                                  voters[i].committed_salt),
-              voters[i].deposit, voters[i].balance_holder.address);
+              voters[i].deposit);
 
-          assert.equal(await voters[i].balance_holder.amount_(), 0);
+          assert.equal(await _coin.balanceOf(voters[i].address), 0);
           voters[i].committed_correctly = true;
 
           assert.equal(await _oracle.commit.call(
-              voters[i].address,
+              _coin.address, voters[i].address,
               await _oracle.hash(voters[i].address,
                                  voters[i].committed_level,
                                  voters[i].committed_salt),
-              0, voters[i].balance_holder.address), false);
+              0), false);
         }
       }
 
       let mint = randint(0, 20);
-      await check_advance_phase(mint, _prev_mint);
+      await check_advance(mint, _prev_mint);
       _prev_mint = mint;
 
       for (let i = 0; i < voters.length; i++) {
@@ -155,7 +157,7 @@ function parameterized_test(accounts,
         }
       }
 
-      assert.equal(await _oracle.get_mode_level(), mode_level);
+      assert.equal(await _oracle.getModeLevel(), mode_level);
 
       mint = randint(0, 20);
       let deposit_to_reclaim = 0;
@@ -173,7 +175,7 @@ function parameterized_test(accounts,
       assert.equal(deposit_to_reclaim + reward_total,
                    deposit_total + mint);
 
-      await check_advance_phase(mint, _prev_mint);
+      await check_advance(mint, _prev_mint);
       _prev_mint = mint;
 
       let reclaim_total = 0;
@@ -181,7 +183,7 @@ function parameterized_test(accounts,
         assert.equal(voters[i].address, accounts[i]);
         voters[i].reclaimed = (randint(0, 99) < 95);
         if (voters[i].reclaimed) {
-          assert.equal(await voters[i].balance_holder.amount_(), 0);
+          assert.equal(await _coin.balanceOf(voters[i].address), 0);
           let reclaim_amount = 0;
           let should_reclaim = false;
           if ((voters[i].revealed_correctly &&
@@ -209,39 +211,35 @@ function parameterized_test(accounts,
             should_reclaim = true;
           }
           if (should_reclaim) {
-            await check_reclaim(
-                voters[i].address, voters[i].balance_holder.address,
-                reclaim_amount);
+            await check_reclaim(voters[i].address, reclaim_amount);
           }
           assert.equal(await _oracle.reclaim.call(
-              voters[i].address, voters[i].balance_holder.address), 0);
+              _coin.address, voters[i].address), 0);
           reclaim_total += reclaim_amount;
-          assert.equal(await voters[i].balance_holder.amount_(),
+          assert.equal(await _coin.balanceOf(voters[i].address),
                        reclaim_amount);
-          await _supply.burn(voters[i].balance_holder.address,
-                             reclaim_amount);
+          await _coin.burn(voters[i].address, reclaim_amount);
         }
       }
 
       assert.equal(deposit_to_reclaim + reward_total, deposit_total + mint);
       let remainder = deposit_total + mint - reclaim_total;
       mint = randint(0, 20);
-      await check_advance_phase(mint, remainder);
+      await check_advance(mint, remainder);
       _prev_mint = mint;
     }
 
-    assert.equal(await _supply.amount_(), _prev_mint);
+    assert.equal(await _coin.totalSupply(), _prev_mint);
 
-    async function check_commit(account, committed_hash,
-                                deposit, balance_holder) {
+    async function check_commit(account, committed_hash, deposit) {
+      await _coin.transferOwnership(_oracle.address);
       let receipt =
-          await _oracle.commit(account, committed_hash,
-                               deposit, balance_holder);
+          await _oracle.commit(_coin.address, account, committed_hash, deposit);
+      await _oracle.revokeOwnership(_coin.address);
       let args = receipt.logs.filter(e => e.event == 'CommitEvent')[0].args;
       assert.equal(args[0], account);
       assert.equal(args[1], committed_hash);
       assert.equal(args[2], deposit);
-      assert.equal(args[3], balance_holder);
     }
 
     async function check_reveal(account, level, salt) {
@@ -252,28 +250,24 @@ function parameterized_test(accounts,
       assert.equal(args[2], salt);
     }
 
-    async function check_reclaim(account, reclaim_holder, reclaim_amount) {
-      let receipt = await _oracle.reclaim(account, reclaim_holder);
+    async function check_reclaim(account, reclaim_amount) {
+      await _coin.transferOwnership(_oracle.address);
+      let receipt = await _oracle.reclaim(_coin.address, account);
+      await _oracle.revokeOwnership(_coin.address);
       let args = receipt.logs.filter(e => e.event == 'ReclaimEvent')[0].args;
       assert.equal(args[0], account);
-      assert.equal(args[1], reclaim_holder);
-      assert.equal(args[2].toNumber(), reclaim_amount);
+      assert.equal(args[1].toNumber(), reclaim_amount);
     }
 
-    async function check_advance_phase(mint, burned) {
-      let receipt = await _oracle.advance_phase(mint);
+    async function check_advance(mint, burned) {
+      await _coin.transferOwnership(_oracle.address);
+      let receipt = await _oracle.advance(_coin.address, mint);
+      await _oracle.revokeOwnership(_coin.address);
       let args = receipt.logs.filter(
           e => e.event == 'AdvancePhaseEvent')[0].args;
       assert.isTrue(args[0] >= 3);
       assert.equal(args[1].toNumber(), mint);
       assert.equal(args[2].toNumber(), burned);
-    }
-
-    function randint(a, b) {
-      assert.isTrue(a < b);
-      let random = Math.floor(Math.random() * (b - a - 1)) + a;
-      assert.isTrue(a <= random && random <= b);
-      return random;
     }
 
   });
