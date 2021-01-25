@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.7.1 <0.9.0;
 
-import "./JLC.sol";
+import "./JohnLawCoin.sol";
 
 // A contract to test Oracle.
 contract OracleForTesting is Oracle {
@@ -38,7 +38,7 @@ contract ACBForTesting is ACB {
                               uint bond_redemption_period,
                               uint phase_duration,
                               uint deposit_rate,
-                              uint dumping_factor,
+                              uint damping_factor,
                               uint[] memory level_to_exchange_rate,
                               uint[] memory level_to_bond_price)
       public {
@@ -46,7 +46,7 @@ contract ACBForTesting is ACB {
     BOND_REDEMPTION_PERIOD = bond_redemption_period;
     PHASE_DURATION = phase_duration;
     DEPOSIT_RATE = deposit_rate;
-    DUMPING_FACTOR = dumping_factor;
+    DAMPING_FACTOR = damping_factor;
     LEVEL_TO_EXCHANGE_RATE = level_to_exchange_rate;
     LEVEL_TO_BOND_PRICE = level_to_bond_price;
 
@@ -59,7 +59,7 @@ contract ACBForTesting is ACB {
             "override_constants: 3");
     require(0 <= DEPOSIT_RATE && DEPOSIT_RATE <= 100,
             "override_constants: 4");
-    require(1 <= DUMPING_FACTOR && DUMPING_FACTOR <= 100,
+    require(1 <= DAMPING_FACTOR && DAMPING_FACTOR <= 100,
             "override_constants: 5");
     require(0 <= INITIAL_COIN_SUPPLY,
             "override_constants: 6");

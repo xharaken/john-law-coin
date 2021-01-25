@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from jlc import *
+from johnlawcoin import *
 import unittest
 
 class OracleUnitTest(unittest.TestCase):

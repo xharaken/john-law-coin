@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from jlc import *
+from johnlawcoin import *
 import unittest, random
 
 def divide_or_zero(a, b):
@@ -30,7 +30,7 @@ class ACBSimulator(unittest.TestCase):
                  phase_duration,
                  proportional_reward_rate,
                  deposit_rate,
-                 dumping_factor,
+                 damping_factor,
                  level_to_exchange_rate,
                  level_to_bond_price,
                  reclaim_threshold,
@@ -39,13 +39,13 @@ class ACBSimulator(unittest.TestCase):
         super().__init__()
 
         print('redemp_price=%d redemp_period=%d phase_dur=%d reward_rate=%d '
-              'deposit_rate=%d dumping=%d reclaim=%d voter=%d iter=%d' %
+              'deposit_rate=%d damping=%d reclaim=%d voter=%d iter=%d' %
               (bond_redemption_price,
                bond_redemption_period,
                phase_duration,
                proportional_reward_rate,
                deposit_rate,
-               dumping_factor,
+               damping_factor,
                reclaim_threshold,
                voter_count,
                iteration))
@@ -59,7 +59,7 @@ class ACBSimulator(unittest.TestCase):
             level_max, reclaim_threshold, proportional_reward_rate)
         self.acb.override_constants_for_testing(
             bond_redemption_price, bond_redemption_period,
-            phase_duration, deposit_rate, dumping_factor,
+            phase_duration, deposit_rate, damping_factor,
             level_to_exchange_rate, level_to_bond_price)
 
         self.lost_deposit = [0] * 3
@@ -412,7 +412,7 @@ class ACBSimulator(unittest.TestCase):
                         (ACB.LEVEL_TO_EXCHANGE_RATE[mode_level] -
                          1 * ACB.EXCHANGE_RATE_DIVISOR) /
                         ACB.EXCHANGE_RATE_DIVISOR)
-            delta = int(delta * ACB.DUMPING_FACTOR / 100)
+            delta = int(delta * ACB.DAMPING_FACTOR / 100)
 
         mint = 0
         redeemable_bonds = 0
@@ -605,7 +605,7 @@ def main():
             for phase_duration in [1, 2, 5, 7 * 24 * 60 * 60]:
                 for proportional_reward_rate in [0, 1, 80, 99, 100]:
                     for deposit_rate in [0, 1, 10, 99, 100]:
-                        for dumping_factor in [1, 30, 99, 100]:
+                        for damping_factor in [1, 30, 99, 100]:
                             p = bond_redemption_price
                             for (level_to_exchange_rate,
                                  level_to_bond_price) in [
@@ -627,7 +627,7 @@ def main():
                                             phase_duration,
                                             proportional_reward_rate,
                                             deposit_rate,
-                                            dumping_factor,
+                                            damping_factor,
                                             level_to_exchange_rate,
                                             level_to_bond_price,
                                             reclaim_threshold,

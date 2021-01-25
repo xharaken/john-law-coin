@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from jlc import *
+from johnlawcoin import *
 import unittest, random
 
 class ACBUnitTest(unittest.TestCase):
@@ -10,20 +10,20 @@ class ACBUnitTest(unittest.TestCase):
                  phase_duration,
                  proportional_reward_rate,
                  deposit_rate,
-                 dumping_factor,
+                 damping_factor,
                  level_to_exchange_rate,
                  level_to_bond_price,
                  reclaim_threshold):
         super().__init__()
 
         print('redemp_price=%d redemp_period=%d phase_dur=%d '
-              'reward_rate=%d deposit_rate=%d dumping=%d reclaim=%d' %
+              'reward_rate=%d deposit_rate=%d damping=%d reclaim=%d' %
               (bond_redemption_price,
                bond_redemption_period,
                phase_duration,
                proportional_reward_rate,
                deposit_rate,
-               dumping_factor,
+               damping_factor,
                reclaim_threshold))
         print('levels=', end='')
         print(level_to_exchange_rate)
@@ -38,7 +38,7 @@ class ACBUnitTest(unittest.TestCase):
             level_max, reclaim_threshold, proportional_reward_rate)
         self.acb.override_constants_for_testing(
             bond_redemption_price, bond_redemption_period,
-            phase_duration, deposit_rate, dumping_factor,
+            phase_duration, deposit_rate, damping_factor,
             level_to_exchange_rate, level_to_bond_price)
 
         for level in range(Oracle.LEVEL_MAX):
@@ -2502,7 +2502,7 @@ class ACBUnitTest(unittest.TestCase):
             bond_budget = 0
             delta = int(self.acb.coin.total_supply *
                         (ACB.LEVEL_TO_EXCHANGE_RATE[level - 2] - 10) / 10)
-            delta = int(delta * ACB.DUMPING_FACTOR / 100)
+            delta = int(delta * ACB.DAMPING_FACTOR / 100)
             if delta == 0:
                 mint = 0
                 issued_bonds = 0
@@ -2565,7 +2565,7 @@ class ACBUnitTest(unittest.TestCase):
 
     def mint_at_default_level(self):
         delta = int(self.acb.coin.total_supply * (11 - 10) / 10)
-        delta = int(delta * ACB.DUMPING_FACTOR / 100)
+        delta = int(delta * ACB.DAMPING_FACTOR / 100)
         mint = (int(delta / ACB.BOND_REDEMPTION_PRICE) *
                 ACB.BOND_REDEMPTION_PRICE)
         assert(delta > 0)
@@ -2585,7 +2585,7 @@ def main():
     phase_duration = 2
     proportional_reward_rate = 80
     deposit_rate = 10
-    dumping_factor = 30
+    damping_factor = 30
     reclaim_threshold = 1
     level_to_exchange_rate = [1, 11, 20]
     level_to_bond_price = [990, 997, 997]
@@ -2595,7 +2595,7 @@ def main():
         phase_duration,
         proportional_reward_rate,
         deposit_rate,
-        dumping_factor,
+        damping_factor,
         level_to_exchange_rate,
         level_to_bond_price,
         reclaim_threshold)
@@ -2607,7 +2607,7 @@ def main():
             for phase_duration in [1, 2, 5, 7 * 24 * 60 * 60]:
                 for proportional_reward_rate in [0, 1, 80, 99, 100]:
                     for deposit_rate in [0, 1, 10, 99, 100]:
-                        for dumping_factor in [1, 30, 99, 100]:
+                        for damping_factor in [1, 30, 99, 100]:
                             p = bond_redemption_price
                             for (level_to_exchange_rate,
                                  level_to_bond_price) in [
@@ -2628,7 +2628,7 @@ def main():
                                         phase_duration,
                                         proportional_reward_rate,
                                         deposit_rate,
-                                        dumping_factor,
+                                        damping_factor,
                                         level_to_exchange_rate,
                                         level_to_bond_price,
                                         reclaim_threshold)
