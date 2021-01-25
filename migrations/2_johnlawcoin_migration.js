@@ -12,8 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-const Migrations = artifacts.require("Migrations");
-
 module.exports = function (deployer) {
-  deployer.deploy(Migrations);
 };
