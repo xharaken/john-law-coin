@@ -604,7 +604,7 @@ def main():
         1000,
         45,
         7,
-        80,
+        90,
         10,
         10,
         [7, 8, 9, 10, 11, 12, 13],
@@ -616,11 +616,11 @@ def main():
     test.teardown()
 
     for bond_redemption_price in [3, 998, 1000]:
-        for bond_redemption_period in [1, 2, 5, 45 * 24 * 60 * 60]:
+        for bond_redemption_period in [1, 2, 5, 84 * 24 * 60 * 60]:
             for phase_duration in [1, 2, 5, 7 * 24 * 60 * 60]:
-                for proportional_reward_rate in [0, 1, 80, 99, 100]:
+                for proportional_reward_rate in [0, 1, 90, 99, 100]:
                     for deposit_rate in [0, 1, 10, 99, 100]:
-                        for damping_factor in [1, 30, 99, 100]:
+                        for damping_factor in [1, 10, 99, 100]:
                             p = bond_redemption_price
                             for (level_to_exchange_rate,
                                  level_to_bond_price) in [

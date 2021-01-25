@@ -2179,9 +2179,9 @@ class OracleUnitTest(unittest.TestCase):
 
 
 def main():
-    level_max = 5
+    level_max = 7
     reclaim_threshold = 1
-    proportional_reward_rate = 80
+    proportional_reward_rate = 90
     mint = 100
     deposit = 20
     mode_level = 2
@@ -2199,7 +2199,7 @@ def main():
 
     for level_max in [2, 3, 4, 5, 7]:
         for reclaim_threshold in range(0, level_max):
-            for proportional_reward_rate in [0, 1, 20, 80, 99, 100]:
+            for proportional_reward_rate in [0, 1, 20, 90, 99, 100]:
                 for mint in [0, 17, 50]:
                     for deposit in [0, 1, 23, 100]:
                         for mode_level in range(0, level_max):

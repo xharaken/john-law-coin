@@ -2598,9 +2598,9 @@ def main():
     bond_redemption_price = 1000
     bond_redemption_period = 10
     phase_duration = 2
-    proportional_reward_rate = 80
+    proportional_reward_rate = 90
     deposit_rate = 10
-    damping_factor = 30
+    damping_factor = 10
     reclaim_threshold = 1
     level_to_exchange_rate = [1, 11, 20]
     level_to_bond_price = [990, 997, 997]
@@ -2620,9 +2620,9 @@ def main():
     for bond_redemption_price in [3, 998, 1000]:
         for bond_redemption_period in [1, 2, 5, 45 * 24 * 60 * 60]:
             for phase_duration in [1, 2, 5, 7 * 24 * 60 * 60]:
-                for proportional_reward_rate in [0, 1, 80, 99, 100]:
+                for proportional_reward_rate in [0, 1, 90, 99, 100]:
                     for deposit_rate in [0, 1, 10, 99, 100]:
-                        for damping_factor in [1, 30, 99, 100]:
+                        for damping_factor in [1, 10, 99, 100]:
                             p = bond_redemption_price
                             for (level_to_exchange_rate,
                                  level_to_bond_price) in [

@@ -30,9 +30,48 @@ This project follows
 
 # How to build
 
+## Installation
+
+This project uses [Truffle](https://www.trufflesuite.com/truffle) and [Openzeppelin](https://openzeppelin.com/). You can install the packages as follows:
+
+```bash
 $ sudo apt-get install nodejs npm
 $ sudo npm install -g truffle
 $ sudo npm install  openzeppelin-solidity
 $ sudo npm install @openzeppelin/contracts-upgradeable
-$ sudo npm init -y
 $ sudo npm install -g ganache-cli
+$ sudo npm init -y
+```
+
+## Directory structure
+
+```
+john-law-coin/
+|--- contracts/    # Smart contracts.
+|    |---- JohnLawCoin.sol     # A smart contract of JohnLawCoin.sol.
+|    |---- JohnLawCoinTest.sol # A smart contract to test JohnLawCoin.sol.
+|    |---- Migrations.sol      # A smart contract to deploy JohnLawCoin.sol.
+|---- docs/        # A whitepaper and documentation.
+|---- migrations/  # Migration scripts to deploy the smart contracts.
+|---- test/        # Tests and simulators for JohnLawCoin.sol.
+|---- python/      # Tests and simulators for the JohnLawCoin algorithm written in Python (much faster than Truffle).
+|---- truffle-config.js # Truffle configuration file.
+```
+
+## Running tests
+
+Launch a private network in one console.
+
+```bash
+$ ganache-cli -l 1200000000 -a 15
+```
+
+Run `truffle test` in another console. Or you can specify a test like `truffle test test/coin_bond_unittest.js`.
+
+```bash
+$ truffle test
+```
+
+## Deploying JohnLawCoin.sol
+
+(will write soon)
