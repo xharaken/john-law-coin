@@ -1,4 +1,19 @@
 #!/usr/bin/env python3
+#
+# Copyright 2021 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import hashlib
 
 #-------------------------------------------------------------------------------
@@ -34,10 +49,10 @@ import hashlib
 #   size of the operation and not affected by the state of the smart contract.
 #
 # See the whitepaper for more details
-# (https://github.com/xharaken/johnlawcoin/blob/main/docs/whitepaper.pdf).
+# (https://github.com/xharaken/john-law-coin/blob/main/docs/whitepaper.pdf).
 #
 # If you have any questions, add comments to the GitHub issues
-# (https://github.com/xharaken/johnlawcoin).
+# (https://github.com/xharaken/john-law-coin).
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
