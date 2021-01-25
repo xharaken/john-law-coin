@@ -72,6 +72,6 @@ Run `truffle test` in another console. Or you can specify a test like `truffle t
 $ truffle test
 ```
 
-## Deploying JohnLawCoin.sol
+## Deploying smart contracts
 
 (will write soon)
