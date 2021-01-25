@@ -6,11 +6,11 @@ JohnLawCoin is a real-world experiment to verify the following assumption: It is
 
 If JohnLawCoin is successful and proves the assumption is correct, it will provide interesting insights for both non-fiat currencies and fiat currencies; i.e., 1) there is a way for non-fiat cryptocurrencies to stabilize their currency price without having any gatekeeper, and 2) there is a way for central banks of developing countries to implement a fixed exchange rate system without holding adequate USD reserves. This will upgrade human's understanding about money.
 
-See [the whitepaper](https://github.com/xharaken/john-law-coin/blob/main/docs/whitepaper.pdf) for more details. See [the smart contract](https://github.com/xharaken/john-law-coin/blob/main/contracts/JohnLawCoin.sol) for the implementation.
+See [the whitepaper](./docs/whitepaper.pdf) for more details. See [the smart contract](./contracts/JohnLawCoin.sol) for the implementation.
 
-This is not an officially supported Google product.
+Note: This is not an officially supported Google product.
 
-# How to get JohnLawCoin
+# How to use
 
 (will write soon)
 
