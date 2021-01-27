@@ -24,31 +24,20 @@ const mod = common.mod;
 const randint = common.randint;
 
 contract("ACBSimulator", function (accounts) {
-  iteration = 10;
-
-  bond_redemption_price = 1000;
-  bond_redemption_period = 45;
-  phase_duration = 7;
-  proportional_reward_rate = 80;
-  deposit_rate = 10;
-  dumping_factor = 10;
-  level_to_exchange_rate = [7, 8, 9, 10, 11, 12, 13];
-  level_to_bond_price = [970, 980, 990, 997, 997, 997, 997];
-  reclaim_threshold = 1;
-  voter_count = 10;
-
+  let args = common.custom_arguments();
+  assert.isTrue(args.length == 11);
   parameterized_test(accounts,
-                     bond_redemption_price,
-                     bond_redemption_period,
-                     phase_duration,
-                     proportional_reward_rate,
-                     deposit_rate,
-                     dumping_factor,
-                     level_to_exchange_rate,
-                     level_to_bond_price,
-                     reclaim_threshold,
-                     voter_count,
-                     iteration);
+                     args[0],
+                     args[1],
+                     args[2],
+                     args[3],
+                     args[4],
+                     args[5],
+                     args[6],
+                     args[7],
+                     args[8],
+                     args[9],
+                     args[10]);
 });
 
 function parameterized_test(accounts,
@@ -57,7 +46,7 @@ function parameterized_test(accounts,
                             _phase_duration,
                             _proportional_reward_rate,
                             _deposit_rate,
-                            _dumping_factor,
+                            _damping_factor,
                             _level_to_exchange_rate,
                             _level_to_bond_price,
                             _reclaim_threshold,
@@ -69,12 +58,13 @@ function parameterized_test(accounts,
       " phase_duration=" + _phase_duration +
       " reward_rate=" + _proportional_reward_rate +
       " deposit_rate=" + _deposit_rate +
-      " dumping_factor=" + _dumping_factor +
+      " damping_factor=" + _damping_factor +
       " level_to_exchange_rate=" + _level_to_exchange_rate +
       " level_to_bond_price=" + _level_to_bond_price +
       " reclaim=" + _reclaim_threshold +
       " voter=" + _voter_count +
       " iter=" + _iteration;
+  console.log(test_name);
   assert.isTrue(_voter_count <= accounts.length - 1);
 
   it(test_name, async function () {
@@ -94,7 +84,7 @@ function parameterized_test(accounts,
                                   _bond_redemption_period,
                                   _phase_duration,
                                   _deposit_rate,
-                                  _dumping_factor,
+                                  _damping_factor,
                                   _level_to_exchange_rate,
                                   _level_to_bond_price,
                                  {from: accounts[0]});
@@ -321,14 +311,14 @@ function parameterized_test(accounts,
           bond_price = _level_to_bond_price[oracle_level];
         }
         let count = Math.min(
-            bond_budget, Math.floor(0.3 * voter.balance / bond_price));
+            bond_budget, parseInt(0.3 * voter.balance / bond_price));
         if (count <= 0) {
           continue;
         }
 
-        assert.equal(await _acb.purchase_bonds.call(
+        assert.equal(await _acb.purchaseBonds.call(
             0, {from: voter.address}), 0);
-        assert.equal(await _acb.purchase_bonds.call(
+        assert.equal(await _acb.purchaseBonds.call(
             bond_budget + 1, {from: voter.address}), 0);
 
         let coin_supply = await get_coin_supply();
@@ -482,16 +472,16 @@ function parameterized_test(accounts,
       let bond_supply = await get_bond_supply();
       let delta = 0;
       if (mode_level != _level_max) {
-        delta = Math.floor(coin_supply *
+        delta = parseInt(coin_supply *
                            (_level_to_exchange_rate[mode_level] - 10) / 10);
-        delta = Math.floor(delta * _dumping_factor / 100);
+        delta = parseInt(delta * _damping_factor / 100);
       }
 
       let mint = 0;
       let redeemable_bonds = 0;
       let issued_bonds = 0;
       if (delta >= 0) {
-        let necessary_bonds = Math.floor(delta / _bond_redemption_price);
+        let necessary_bonds = parseInt(delta / _bond_redemption_price);
         if (necessary_bonds <= bond_supply) {
           redeemable_bonds = necessary_bonds;
         } else {
@@ -500,7 +490,7 @@ function parameterized_test(accounts,
         }
       } else {
         assert.isTrue(mode_level != _level_max);
-        issued_bonds = Math.floor(-delta / _level_to_bond_price[mode_level]);
+        issued_bonds = parseInt(-delta / _level_to_bond_price[mode_level]);
       }
 
       let target_level = randint(0, _level_max - 1);
@@ -539,7 +529,7 @@ function parameterized_test(accounts,
         let committed_hash = await _acb.hash(
             _voters[i].committed_level[current],
             _voters[i].committed_salt[current], {from: _voters[i].address});
-        _voters[i].deposit[current] = Math.floor(
+        _voters[i].deposit[current] = parseInt(
             _voters[i].balance * _deposit_rate / 100);
 
         _voters[i].revealed[prev] = true;
@@ -590,12 +580,12 @@ function parameterized_test(accounts,
             mode_level == _voters[i].revealed_level[prev_prev]) {
           let proportional_reward = 0;
           if (revealed_deposits[mode_level] > 0) {
-            proportional_reward = Math.floor(
+            proportional_reward = parseInt(
                 _proportional_reward_rate * reward_total *
                   _voters[i].deposit[prev_prev] /
                   (100 * revealed_deposits[mode_level]));
           }
-          let constant_reward = Math.floor(
+          let constant_reward = parseInt(
               (100 - _proportional_reward_rate) * reward_total /
                 (100 * revealed_counts[mode_level]));
           reward = proportional_reward + constant_reward;
@@ -697,7 +687,7 @@ function parameterized_test(accounts,
     }
 
     async function check_purchase_bonds(count, option, redemption) {
-      let receipt = await _acb.purchase_bonds(count, option);
+      let receipt = await _acb.purchaseBonds(count, option);
       let args =
           receipt.logs.filter(e => e.event == 'PurchaseBondsEvent')[0].args;
       assert.equal(args[0], option.from);
@@ -706,7 +696,7 @@ function parameterized_test(accounts,
     }
 
     async function check_redeem_bonds(redemptions, option, count_total) {
-      let receipt = await _acb.redeem_bonds(redemptions, option);
+      let receipt = await _acb.redeemBonds(redemptions, option);
       let args =
           receipt.logs.filter(e => e.event == 'RedeemBondsEvent')[0].args;
       assert.equal(args[0], option.from);
@@ -739,5 +729,5 @@ function divide_or_zero(a, b) {
   if (b == 0) {
     return 0;
   }
-  return Math.floor(a / b);
+  return parseInt(a / b);
 }

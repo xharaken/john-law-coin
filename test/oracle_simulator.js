@@ -22,16 +22,14 @@ const mod = common.mod;
 const randint = common.randint;
 
 contract("OracleSimulator", function (accounts) {
-  level_max = 5;
-  reclaim_threshold = 1;
-  proportional_reward_rate = 80;
-  voter_count = 10;
-  iteration = 100;
+  let args = common.custom_arguments();
+  assert.isTrue(args.length == 5);
   parameterized_test(accounts,
-                     level_max,
-                     reclaim_threshold,
-                     proportional_reward_rate,
-                     voter_count, iteration);
+                     args[0],
+                     args[1],
+                     args[2],
+                     args[3],
+                     args[4]);
 });
 
 function parameterized_test(accounts,
@@ -45,7 +43,7 @@ function parameterized_test(accounts,
       " prop=" + _proportional_reward_rate +
       " voter_count=" + _voter_count +
       " iteration=" + _iteration;
-
+  console.log(test_name);
   assert.isTrue(_voter_count <= accounts.length);
 
   it(test_name, async function () {
@@ -205,11 +203,11 @@ function parameterized_test(accounts,
             assert.notEqual(mode_level, _level_max);
             let proportional_reward = 0;
             if (deposits[mode_level] > 0) {
-              proportional_reward = Math.floor(
+              proportional_reward = parseInt(
                   (_proportional_reward_rate * reward_total *
                    voters[i].deposit) / (100 * deposits[mode_level]));
             }
-            let constant_reward = Math.floor(
+            let constant_reward = parseInt(
                 ((100 - _proportional_reward_rate) * reward_total) /
                   (100 * counts[mode_level]));
             reclaim_amount =

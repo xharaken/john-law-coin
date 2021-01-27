@@ -2604,6 +2604,7 @@ def main():
     reclaim_threshold = 1
     level_to_exchange_rate = [1, 11, 20]
     level_to_bond_price = [990, 997, 997]
+
     test = ACBUnitTest(
         bond_redemption_price,
         bond_redemption_period,
@@ -2616,6 +2617,7 @@ def main():
         reclaim_threshold)
     test.run()
     test.teardown()
+    exit()
 
     for bond_redemption_price in [3, 998, 1000]:
         for bond_redemption_period in [1, 2, 5, 45 * 24 * 60 * 60]:
@@ -2632,8 +2634,8 @@ def main():
                                       [max(1, p - 20), max(1, p - 10),
                                        p, p, p]),
                                      ([7, 8, 9, 10, 11, 12, 13],
-                                      [max(1, p - 20), max(1, p - 10),
-                                       max(1, p - 20), max(1, p - 10),
+                                      [max(1, p - 20), max(1, p - 20),
+                                       max(1, p - 10), max(1, p - 10),
                                        p, p, p])]:
                                 for reclaim_threshold in range(1, len(
                                     level_to_exchange_rate)):

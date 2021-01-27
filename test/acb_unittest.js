@@ -23,26 +23,18 @@ const should_throw = common.should_throw;
 const mod = common.mod;
 
 contract("ACBUnittest", function (accounts) {
-  bond_redemption_price = 1000;
-  bond_redemption_period = 10;
-  phase_duration = 2;
-  proportional_reward_rate = 80;
-  deposit_rate = 10;
-  dumping_factor = 30;
-  reclaim_threshold = 1;
-  level_to_exchange_rate = [1, 11, 20];
-  level_to_bond_price = [990, 997, 997];
-
+  let args = common.custom_arguments();
+  assert.isTrue(args.length == 9);
   parameterized_test(accounts,
-                     bond_redemption_price,
-                     bond_redemption_period,
-                     phase_duration,
-                     proportional_reward_rate,
-                     deposit_rate,
-                     dumping_factor,
-                     level_to_exchange_rate,
-                     level_to_bond_price,
-                     reclaim_threshold);
+                     args[0],
+                     args[1],
+                     args[2],
+                     args[3],
+                     args[4],
+                     args[5],
+                     args[6],
+                     args[7],
+                     args[8]);
 });
 
 function parameterized_test(accounts,
@@ -51,7 +43,7 @@ function parameterized_test(accounts,
                             _phase_duration,
                             _proportional_reward_rate,
                             _deposit_rate,
-                            _dumping_factor,
+                            _damping_factor,
                             _level_to_exchange_rate,
                             _level_to_bond_price,
                             _reclaim_threshold) {
@@ -61,10 +53,11 @@ function parameterized_test(accounts,
       " phase_duration=" + _phase_duration +
       " reward_rate=" + _proportional_reward_rate +
       " deposit_rate=" + _deposit_rate +
-      " dumping_factor=" + _dumping_factor +
+      " damping_factor=" + _damping_factor +
       " level_to_exchange_rate=" + _level_to_exchange_rate +
       " level_to_bond_price=" + _level_to_bond_price +
       " reclaim=" + _reclaim_threshold;
+  console.log(test_name);
 
   it(test_name, async function () {
     let _level_max = _level_to_exchange_rate.length;
@@ -83,7 +76,7 @@ function parameterized_test(accounts,
                                   _bond_redemption_period,
                                   _phase_duration,
                                   _deposit_rate,
-                                  _dumping_factor,
+                                  _damping_factor,
                                   _level_to_exchange_rate,
                                   _level_to_bond_price,
                                   {from: accounts[1]});
@@ -318,16 +311,16 @@ function parameterized_test(accounts,
           accounts[2], bond_price * 30, {from: accounts[1]});
       await _coin.transfer(
           accounts[3], bond_price * 50, {from: accounts[1]});
-      assert.equal(await _acb.purchase_bonds.call(1, {from: accounts[4]}), 0);
-      assert.equal(await _acb.purchase_bonds.call(1, {from: accounts[5]}), 0);
-      assert.equal(await _acb.purchase_bonds.call(0, {from: accounts[1]}), 0);
-      assert.equal(await _acb.purchase_bonds.call(81, {from: accounts[1]}), 0);
-      assert.equal(await _acb.purchase_bonds.call(0, {from: accounts[2]}), 0);
-      assert.equal(await _acb.purchase_bonds.call(81, {from: accounts[2]}), 0);
-      assert.equal(await _acb.purchase_bonds.call(31, {from: accounts[2]}), 0);
-      assert.equal(await _acb.purchase_bonds.call(0, {from: accounts[3]}), 0);
-      assert.equal(await _acb.purchase_bonds.call(81, {from: accounts[3]}), 0);
-      assert.equal(await _acb.purchase_bonds.call(51, {from: accounts[3]}), 0);
+      assert.equal(await _acb.purchaseBonds.call(1, {from: accounts[4]}), 0);
+      assert.equal(await _acb.purchaseBonds.call(1, {from: accounts[5]}), 0);
+      assert.equal(await _acb.purchaseBonds.call(0, {from: accounts[1]}), 0);
+      assert.equal(await _acb.purchaseBonds.call(81, {from: accounts[1]}), 0);
+      assert.equal(await _acb.purchaseBonds.call(0, {from: accounts[2]}), 0);
+      assert.equal(await _acb.purchaseBonds.call(81, {from: accounts[2]}), 0);
+      assert.equal(await _acb.purchaseBonds.call(31, {from: accounts[2]}), 0);
+      assert.equal(await _acb.purchaseBonds.call(0, {from: accounts[3]}), 0);
+      assert.equal(await _acb.purchaseBonds.call(81, {from: accounts[3]}), 0);
+      assert.equal(await _acb.purchaseBonds.call(51, {from: accounts[3]}), 0);
 
       await check_purchase_bonds(1, {from: accounts[2]}, t1);
       current = await get_current(sub_accounts, redemptions);
@@ -345,9 +338,9 @@ function parameterized_test(accounts,
       assert.equal(current.coin_supply,
                    coin_supply - bond_price * 11);
 
-      assert.equal(await _acb.purchase_bonds.call(
+      assert.equal(await _acb.purchaseBonds.call(
           70, {from: accounts[1]}), 0);
-      assert.equal(await _acb.purchase_bonds.call(
+      assert.equal(await _acb.purchaseBonds.call(
           70, {from: accounts[3]}), 0);
 
       await _acb.setTimestamp(
@@ -372,9 +365,9 @@ function parameterized_test(accounts,
       assert.equal(current.coin_supply,
                    coin_supply - bond_price * 22);
 
-      assert.equal(await _acb.purchase_bonds.call(
+      assert.equal(await _acb.purchaseBonds.call(
           59, {from: accounts[1]}), 0);
-      assert.equal(await _acb.purchase_bonds.call(
+      assert.equal(await _acb.purchaseBonds.call(
           59, {from: accounts[3]}), 0);
 
       await check_purchase_bonds(10, {from: accounts[1]}, t2);
@@ -391,7 +384,7 @@ function parameterized_test(accounts,
           (await _acb.getTimestamp()).toNumber() + _bond_redemption_period;
       redemptions = [t3];
 
-      assert.equal(await _acb.purchase_bonds.call(
+      assert.equal(await _acb.purchaseBonds.call(
           49, {from: accounts[3]}), 0);
       await check_purchase_bonds(48, {from: accounts[3]}, t3);
       current = await get_current(sub_accounts, redemptions);
@@ -403,7 +396,7 @@ function parameterized_test(accounts,
 
       await _coin.transfer(accounts[2], bond_price * 10, {from: accounts[1]});
       await _coin.transfer(accounts[3], bond_price * 10, {from: accounts[1]});
-      assert.equal(await _acb.purchase_bonds.call(
+      assert.equal(await _acb.purchaseBonds.call(
           1, {from: accounts[2]}), 0);
       current = await get_current(sub_accounts, redemptions);
       assert.equal(current.bond_supply, 80);
@@ -411,7 +404,7 @@ function parameterized_test(accounts,
       assert.equal(current.bonds[accounts[3]][t3], 48);
       assert.equal(current.coin_supply,
                    coin_supply - bond_price * 80);
-      assert.equal(await _acb.purchase_bonds.call(
+      assert.equal(await _acb.purchaseBonds.call(
           1, {from: accounts[3]}), 0);
       current = await get_current(sub_accounts, redemptions);
       assert.equal(current.bond_supply, 80);
@@ -440,9 +433,9 @@ function parameterized_test(accounts,
           (await _acb.getTimestamp()).toNumber() + _bond_redemption_period;
       redemptions = [t1, t2, t3, t4];
 
-      assert.equal(await _acb.redeem_bonds.call(
+      assert.equal(await _acb.redeemBonds.call(
           [t1], {from: accounts[4]}), 0);
-      assert.equal(await _acb.redeem_bonds.call(
+      assert.equal(await _acb.redeemBonds.call(
           [], {from: accounts[2]}), 0);
 
       current = await get_current(sub_accounts, redemptions);
@@ -473,7 +466,7 @@ function parameterized_test(accounts,
       assert.equal(current.coin_supply, coin_supply +
                    22 * _bond_redemption_price);
 
-      assert.equal(await _acb.redeem_bonds.call(
+      assert.equal(await _acb.redeemBonds.call(
           [t3], {from: accounts[2]}), 0);
       current = await get_current(sub_accounts, redemptions);
       assert.equal(current.bonds[accounts[2]][t1], 0);
@@ -487,7 +480,7 @@ function parameterized_test(accounts,
                    22 * _bond_redemption_price);
 
       balance = current.balances[accounts[3]];
-      assert.equal(await _acb.redeem_bonds.call(
+      assert.equal(await _acb.redeemBonds.call(
           [t2, t2, t1], {from: accounts[3]}), 0);
       current = await get_current(sub_accounts, redemptions);
       assert.equal(current.bonds[accounts[3]][t1], 0);
@@ -769,7 +762,7 @@ function parameterized_test(accounts,
 
     // 1 commit
     balance = current.balances[accounts[4]];
-    deposit_4[mod(now, 3)] = Math.floor(balance * _deposit_rate / 100);
+    deposit_4[mod(now, 3)] = parseInt(balance * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 1, {from: accounts[4]}),
                      _default_level, 1, {from: accounts[4]},
                      true, false, 0, false);
@@ -794,7 +787,7 @@ function parameterized_test(accounts,
         await _acb.getTimestamp()).toNumber() + _phase_duration);
 
     balance = current.balances[accounts[4]];
-    deposit_4[mod(now, 3)] = Math.floor(balance * _deposit_rate / 100);
+    deposit_4[mod(now, 3)] = parseInt(balance * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 2, {from: accounts[4]}),
                      _default_level, 1, {from: accounts[4]},
                      true, true, 0, true);
@@ -815,14 +808,14 @@ function parameterized_test(accounts,
     let mint = await _mint_at_default_level();
 
     balance = current.balances[accounts[4]];
-    reward = Math.floor((100 - _proportional_reward_rate) *
+    reward = parseInt((100 - _proportional_reward_rate) *
                         mint / 100);
     if (deposit_4[mod(now - 2, 3)] > 0) {
-      reward += Math.floor(_proportional_reward_rate *
+      reward += parseInt(_proportional_reward_rate *
                            mint / 100);
     }
     remainder[mod(now, 3)] = mint - reward;
-    deposit_4[mod(now, 3)] = Math.floor(balance * _deposit_rate / 100);
+    deposit_4[mod(now, 3)] = parseInt(balance * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 3, {from: accounts[4]}),
                      _default_level, 1, {from: accounts[4]},
                      true, false, deposit_4[mod(now - 2, 3)] + reward, true);
@@ -846,7 +839,7 @@ function parameterized_test(accounts,
     balance = current.balances[accounts[4]];
     coin_supply = current.coin_supply;
     remainder[mod(now, 3)] = deposit_4[mod(now - 2, 3)] + mint;
-    deposit_4[mod(now, 3)] = Math.floor(balance * _deposit_rate / 100);
+    deposit_4[mod(now, 3)] = parseInt(balance * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 4, {from: accounts[4]}),
                      _default_level, 3, {from: accounts[4]},
                      true, true, 0, true);
@@ -871,14 +864,14 @@ function parameterized_test(accounts,
 
     balance = current.balances[accounts[4]];
     coin_supply = current.coin_supply;
-    reward = Math.floor((100 - _proportional_reward_rate) *
+    reward = parseInt((100 - _proportional_reward_rate) *
                         mint / 100);
     if( deposit_4[mod(now - 2, 3)] > 0) {
-      reward += Math.floor(_proportional_reward_rate *
+      reward += parseInt(_proportional_reward_rate *
                            mint / 100);
     }
     remainder[mod(now, 3)] = mint - reward;
-    deposit_4[mod(now, 3)] = Math.floor(balance * _deposit_rate / 100);
+    deposit_4[mod(now, 3)] = parseInt(balance * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 5, {from: accounts[4]}),
                      _default_level, 4, {from: accounts[4]},
                      true, true, deposit_4[mod(now - 2, 3)] + reward, true);
@@ -904,14 +897,14 @@ function parameterized_test(accounts,
 
     balance = current.balances[accounts[4]];
     coin_supply = current.coin_supply;
-    reward = Math.floor((100 - _proportional_reward_rate) *
+    reward = parseInt((100 - _proportional_reward_rate) *
                         mint / 100);
     if (deposit_4[mod(now - 2, 3)] > 0) {
-      reward += Math.floor(_proportional_reward_rate *
+      reward += parseInt(_proportional_reward_rate *
                            await _mint_at_default_level() / 100);
     }
     remainder[mod(now, 3)] = mint - reward;
-    deposit_4[mod(now, 3)] = Math.floor(balance * _deposit_rate / 100);
+    deposit_4[mod(now, 3)] = parseInt(balance * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 6, {from: accounts[4]}),
                      _default_level, 5, {from: accounts[4]},
                      true, true, deposit_4[mod(now - 2, 3)] + reward, true);
@@ -939,14 +932,14 @@ function parameterized_test(accounts,
 
     balance = current.balances[accounts[4]];
     coin_supply = current.coin_supply;
-    reward = Math.floor((100 - _proportional_reward_rate) *
+    reward = parseInt((100 - _proportional_reward_rate) *
                         mint / 100);
     if (deposit_4[mod(now - 2, 3)] > 0) {
-      reward += Math.floor(_proportional_reward_rate *
+      reward += parseInt(_proportional_reward_rate *
                            mint / 100);
     }
     remainder[mod(now, 3)] = mint - reward;
-    deposit_4[mod(now, 3)] = Math.floor(balance * _deposit_rate / 100);
+    deposit_4[mod(now, 3)] = parseInt(balance * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 7, {from: accounts[4]}),
                      _default_level, 6, {from: accounts[4]},
                      true, true, deposit_4[mod(now - 2, 3)] + reward, true);
@@ -972,14 +965,14 @@ function parameterized_test(accounts,
 
     balance = current.balances[accounts[4]];
     coin_supply = current.coin_supply;
-    reward = Math.floor((100 - _proportional_reward_rate) *
+    reward = parseInt((100 - _proportional_reward_rate) *
                         mint / 100);
     if (deposit_4[mod(now - 2, 3)] > 0) {
-      reward += Math.floor(_proportional_reward_rate *
+      reward += parseInt(_proportional_reward_rate *
                            mint / 100);
     }
     remainder[mod(now, 3)] = mint - reward;
-    deposit_4[mod(now, 3)] = Math.floor(balance * _deposit_rate / 100);
+    deposit_4[mod(now, 3)] = parseInt(balance * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 8, {from: accounts[4]}),
                      _default_level, 6, {from: accounts[4]},
                      true, false, deposit_4[mod(now - 2, 3)] + reward, true);
@@ -1015,7 +1008,7 @@ function parameterized_test(accounts,
     coin_supply = current.coin_supply;
     remainder[mod(now, 3)] = deposit_4[mod(now - 2, 3)] + mint;
     balance_4 = current.balances[accounts[4]];
-    deposit_4[mod(now, 3)] = Math.floor(balance_4 * _deposit_rate / 100);
+    deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 1000, {from: accounts[4]}),
                      _default_level, 1000, {from: accounts[4]},
                      true, false, 0, true);
@@ -1024,7 +1017,7 @@ function parameterized_test(accounts,
     assert.equal(current.balances[accounts[4]],
                  balance_4 - deposit_4[mod(now, 3)]);
     balance_5 = current.balances[accounts[5]];
-    deposit_5[mod(now, 3)] = Math.floor(balance_5 * _deposit_rate / 100);
+    deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 1000, {from: accounts[5]}),
                      _default_level, 1000, {from: accounts[5]},
                      true, false, 0, false);
@@ -1032,7 +1025,7 @@ function parameterized_test(accounts,
     assert.equal(current.balances[accounts[5]],
                  balance_5 - deposit_5[mod(now, 3)]);
     balance_6 = current.balances[accounts[6]];
-    deposit_6[mod(now, 3)] = Math.floor(balance_6 * _deposit_rate / 100);
+    deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 1000, {from: accounts[6]}),
                      _default_level, 1000, {from: accounts[6]},
                      true, false, 0, false);
@@ -1051,7 +1044,7 @@ function parameterized_test(accounts,
     coin_supply = current.coin_supply;
     remainder[mod(now, 3)] = deposit_4[mod(now - 2, 3)] + mint;
     balance_4 = current.balances[accounts[4]];
-    deposit_4[mod(now, 3)] = Math.floor(balance_4 * _deposit_rate / 100);
+    deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 1, {from: accounts[4]}),
                      _default_level, 0, {from: accounts[4]},
                      true, false, 0, true);
@@ -1060,7 +1053,7 @@ function parameterized_test(accounts,
     assert.equal(current.balances[accounts[4]],
                  balance_4 - deposit_4[mod(now, 3)]);
     balance_5 = current.balances[accounts[5]];
-    deposit_5[mod(now, 3)] = Math.floor(balance_5 * _deposit_rate / 100);
+    deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 1, {from: accounts[5]}),
                      _default_level, 0, {from: accounts[5]},
                      true, false, 0, false);
@@ -1068,7 +1061,7 @@ function parameterized_test(accounts,
     assert.equal(current.balances[accounts[5]],
                  balance_5 - deposit_5[mod(now, 3)]);
     balance_6 = current.balances[accounts[6]];
-    deposit_6[mod(now, 3)] = Math.floor(balance_6 * _deposit_rate / 100);
+    deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 1, {from: accounts[6]}),
                      _default_level, 0, {from: accounts[6]},
                      true, false, 0, false);
@@ -1089,7 +1082,7 @@ function parameterized_test(accounts,
                               deposit_5[mod(now - 2, 3)] +
                               deposit_6[mod(now - 2, 3)] + mint);
     balance_4 = current.balances[accounts[4]];
-    deposit_4[mod(now, 3)] = Math.floor(balance_4 * _deposit_rate / 100);
+    deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 2, {from: accounts[4]}),
                      _default_level, 1, {from: accounts[4]},
                      true, true, 0, true);
@@ -1098,7 +1091,7 @@ function parameterized_test(accounts,
     assert.equal(current.balances[accounts[4]],
                  balance_4 - deposit_4[mod(now, 3)]);
     balance_5 = current.balances[accounts[5]];
-    deposit_5[mod(now, 3)] = Math.floor(balance_5 * _deposit_rate / 100);
+    deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 2, {from: accounts[5]}),
                      _default_level, 1, {from: accounts[5]},
                      true, true, 0, false);
@@ -1106,7 +1099,7 @@ function parameterized_test(accounts,
     assert.equal(current.balances[accounts[5]],
                  balance_5 - deposit_5[mod(now, 3)]);
     balance_6 = current.balances[accounts[6]];
-    deposit_6[mod(now, 3)] = Math.floor(balance_6 * _deposit_rate / 100);
+    deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 2, {from: accounts[6]}),
                      _default_level, 1, {from: accounts[6]},
                      true, true, 0, false);
@@ -1124,26 +1117,26 @@ function parameterized_test(accounts,
 
     coin_supply = current.coin_supply;
     reward_total = 0 + mint;
-    constant_reward = Math.floor((100 - _proportional_reward_rate) *
+    constant_reward = parseInt((100 - _proportional_reward_rate) *
                                  reward_total / (3 * 100));
     reward_4 = reward_5 = reward_6 = 0;
     deposit_total = (deposit_4[mod(now - 2, 3)] + deposit_5[mod(now - 2, 3)] +
                      deposit_6[mod(now - 2, 3)]);
     if (deposit_total > 0) {
-      reward_4 = Math.floor(_proportional_reward_rate *
+      reward_4 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_4[mod(now - 2, 3)] /
                             (deposit_total * 100));
-      reward_5 = Math.floor(_proportional_reward_rate *
+      reward_5 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_5[mod(now - 2, 3)] /
                             (deposit_total * 100));
-      reward_6 = Math.floor(_proportional_reward_rate *
+      reward_6 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_6[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
     remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
-    deposit_4[mod(now, 3)] = Math.floor(balance_4 * _deposit_rate / 100);
+    deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 3, {from: accounts[4]}),
                      _default_level, 2, {from: accounts[4]},
                      true, true, deposit_4[mod(now - 2, 3)] + reward_4 +
@@ -1155,7 +1148,7 @@ function parameterized_test(accounts,
                  deposit_4[mod(now - 2, 3)] +
                  reward_4 + constant_reward);
     balance_5 = current.balances[accounts[5]];
-    deposit_5[mod(now, 3)] = Math.floor(balance_5 * _deposit_rate / 100);
+    deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 3, {from: accounts[5]}),
                      _default_level, 2, {from: accounts[5]},
                      true, true, deposit_5[mod(now - 2, 3)] +
@@ -1166,7 +1159,7 @@ function parameterized_test(accounts,
                  deposit_5[mod(now - 2, 3)] +
                  reward_5 + constant_reward);
     balance_6 = current.balances[accounts[6]];
-    deposit_6[mod(now, 3)] = Math.floor(balance_6 * _deposit_rate / 100);
+    deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 3, {from: accounts[6]}),
                      _default_level, 2, {from: accounts[6]},
                      true, true, deposit_6[mod(now - 2, 3)] +
@@ -1187,26 +1180,26 @@ function parameterized_test(accounts,
 
     coin_supply = current.coin_supply;
     reward_total = 0 + mint;
-    constant_reward = Math.floor((100 - _proportional_reward_rate) *
+    constant_reward = parseInt((100 - _proportional_reward_rate) *
                                  reward_total / (3 * 100));
     reward_4 = reward_5 = reward_6 = 0;
     deposit_total = (deposit_4[mod(now - 2, 3)] + deposit_5[mod(now - 2, 3)] +
                      deposit_6[mod(now - 2, 3)]);
     if (deposit_total > 0) {
-      reward_4 = Math.floor(_proportional_reward_rate *
+      reward_4 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_4[mod(now - 2, 3)] /
                             (deposit_total * 100));
-      reward_5 = Math.floor(_proportional_reward_rate *
+      reward_5 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_5[mod(now - 2, 3)] /
                             (deposit_total * 100));
-      reward_6 = Math.floor(_proportional_reward_rate *
+      reward_6 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_6[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
     remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
-    deposit_4[mod(now, 3)] = Math.floor(balance_4 * _deposit_rate / 100);
+    deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 4, {from: accounts[4]}),
                      _default_level, 3, {from: accounts[4]},
                      true, true, deposit_4[mod(now - 2, 3)] +
@@ -1218,7 +1211,7 @@ function parameterized_test(accounts,
                  deposit_4[mod(now - 2, 3)] +
                  reward_4 + constant_reward);
     balance_5 = current.balances[accounts[5]];
-    deposit_5[mod(now, 3)] = Math.floor(balance_5 * _deposit_rate / 100);
+    deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 4, {from: accounts[5]}),
                      _default_level, 3, {from: accounts[5]},
                      true, true, deposit_5[mod(now - 2, 3)] +
@@ -1229,7 +1222,7 @@ function parameterized_test(accounts,
                  deposit_5[mod(now - 2, 3)] +
                  reward_5 + constant_reward);
     balance_6 = current.balances[accounts[6]];
-    deposit_6[mod(now, 3)] = Math.floor(balance_6 * _deposit_rate / 100);
+    deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 4, {from: accounts[6]}),
                      _default_level, 3, {from: accounts[6]},
                      true, true, deposit_6[mod(now - 2, 3)] +
@@ -1254,26 +1247,26 @@ function parameterized_test(accounts,
 
     coin_supply = current.coin_supply;
     reward_total = 0 + mint;
-    constant_reward = Math.floor((100 - _proportional_reward_rate) *
+    constant_reward = parseInt((100 - _proportional_reward_rate) *
                                  reward_total / (3 * 100));
     reward_4 = reward_5 = reward_6 = 0;
     deposit_total = (deposit_4[mod(now - 2, 3)] + deposit_5[mod(now - 2, 3)] +
                      deposit_6[mod(now - 2, 3)]);
     if (deposit_total > 0) {
-      reward_4 = Math.floor(_proportional_reward_rate *
+      reward_4 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_4[mod(now - 2, 3)] /
                             (deposit_total * 100));
-      reward_5 = Math.floor(_proportional_reward_rate *
+      reward_5 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_5[mod(now - 2, 3)] /
                             (deposit_total * 100));
-      reward_6 = Math.floor(_proportional_reward_rate *
+      reward_6 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_6[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
     remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
-    deposit_4[mod(now, 3)] = Math.floor(balance_4 * _deposit_rate / 100);
+    deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 5, {from: accounts[4]}),
                      _default_level, 4, {from: accounts[4]},
                      true, true, deposit_4[mod(now - 2, 3)] +
@@ -1285,7 +1278,7 @@ function parameterized_test(accounts,
                  deposit_4[mod(now - 2, 3)] +
                  reward_4 + constant_reward);
     balance_5 = current.balances[accounts[5]];
-    deposit_5[mod(now, 3)] = Math.floor(balance_5 * _deposit_rate / 100);
+    deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 5, {from: accounts[5]}),
                      _default_level, 4, {from: accounts[5]},
                      true, true, deposit_5[mod(now - 2, 3)] +
@@ -1296,7 +1289,7 @@ function parameterized_test(accounts,
                  deposit_5[mod(now - 2, 3)] +
                  reward_5 + constant_reward);
     balance_6 = current.balances[accounts[6]];
-    deposit_6[mod(now, 3)] = Math.floor(balance_6 * _deposit_rate / 100);
+    deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 5, {from: accounts[6]}),
                      _default_level, 4, {from: accounts[6]},
                      true, true, deposit_6[mod(now - 2, 3)] +
@@ -1320,26 +1313,26 @@ function parameterized_test(accounts,
 
     coin_supply = current.coin_supply;
     reward_total = 0 + mint;
-    constant_reward = Math.floor((100 - _proportional_reward_rate) *
+    constant_reward = parseInt((100 - _proportional_reward_rate) *
                                  reward_total / (3 * 100));
     reward_4 = reward_5 = reward_6 = 0;
     deposit_total = (deposit_4[mod(now - 2, 3)] + deposit_5[mod(now - 2, 3)] +
                      deposit_6[mod(now - 2, 3)]);
     if (deposit_total > 0) {
-      reward_4 = Math.floor(_proportional_reward_rate *
+      reward_4 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_4[mod(now - 2, 3)] /
                             (deposit_total * 100));
-      reward_5 = Math.floor(_proportional_reward_rate *
+      reward_5 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_5[mod(now - 2, 3)] /
                             (deposit_total * 100));
-      reward_6 = Math.floor(_proportional_reward_rate *
+      reward_6 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_6[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
     remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
-    deposit_4[mod(now, 3)] = Math.floor(balance_4 * _deposit_rate / 100);
+    deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 6, {from: accounts[4]}),
                      _default_level, 5, {from: accounts[4]},
                      true, true, deposit_4[mod(now - 2, 3)] +
@@ -1351,7 +1344,7 @@ function parameterized_test(accounts,
                  deposit_4[mod(now - 2, 3)] +
                  reward_4 + constant_reward);
     balance_5 = current.balances[accounts[5]];
-    deposit_5[mod(now, 3)] = Math.floor(balance_5 * _deposit_rate / 100);
+    deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 6, {from: accounts[5]}),
                      _default_level, 5, {from: accounts[5]},
                      true, true, deposit_5[mod(now - 2, 3)] +
@@ -1362,7 +1355,7 @@ function parameterized_test(accounts,
                  deposit_5[mod(now - 2, 3)] +
                  reward_5 + constant_reward);
     balance_6 = current.balances[accounts[6]];
-    deposit_6[mod(now, 3)] = Math.floor(balance_6 * _deposit_rate / 100);
+    deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 6, {from: accounts[6]}),
                      _default_level, 5, {from: accounts[6]},
                      true, true, deposit_6[mod(now - 2, 3)] +
@@ -1383,7 +1376,7 @@ function parameterized_test(accounts,
 
     coin_supply = current.coin_supply;
     reward_total = 0 + mint;
-    constant_reward = Math.floor((100 - _proportional_reward_rate) *
+    constant_reward = parseInt((100 - _proportional_reward_rate) *
                                  reward_total / (3 * 100));
     reward_4 = 0;
     reward_5 = 0;
@@ -1391,7 +1384,7 @@ function parameterized_test(accounts,
     remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
-    deposit_4[mod(now, 3)] = Math.floor(balance_4 * _deposit_rate / 100);
+    deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 7, {from: accounts[4]}),
                      _default_level, 6, {from: accounts[4]},
                      true, true, deposit_4[mod(now - 2, 3)] +
@@ -1403,7 +1396,7 @@ function parameterized_test(accounts,
                  deposit_4[mod(now - 2, 3)] +
                  reward_4 + constant_reward);
     balance_5 = current.balances[accounts[5]];
-    deposit_5[mod(now, 3)] = Math.floor(balance_5 * _deposit_rate / 100);
+    deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 7, {from: accounts[5]}),
                      _default_level, 6, {from: accounts[5]},
                      true, true, deposit_5[mod(now - 2, 3)] +
@@ -1414,7 +1407,7 @@ function parameterized_test(accounts,
                  deposit_5[mod(now - 2, 3)] +
                  reward_5 + constant_reward);
     balance_6 = current.balances[accounts[6]];
-    deposit_6[mod(now, 3)] = Math.floor(balance_6 * _deposit_rate / 100);
+    deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 7, {from: accounts[6]}),
                      _default_level, 5, {from: accounts[6]},
                      true, false, deposit_6[mod(now - 2, 3)] +
@@ -1435,22 +1428,22 @@ function parameterized_test(accounts,
 
     coin_supply = current.coin_supply;
     reward_total = deposit_6[mod(now - 2, 3)] + mint;
-    constant_reward = Math.floor((100 - _proportional_reward_rate) *
+    constant_reward = parseInt((100 - _proportional_reward_rate) *
                                  reward_total / (2 * 100));
     reward_4 = reward_5 = reward_6 = 0;
     deposit_total = (deposit_4[mod(now - 2, 3)] + deposit_5[mod(now - 2, 3)]);
     if (deposit_total > 0) {
-      reward_4 = Math.floor(_proportional_reward_rate *
+      reward_4 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_4[mod(now - 2, 3)] /
                             (deposit_total * 100));
-      reward_5 = Math.floor(_proportional_reward_rate *
+      reward_5 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_5[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
     remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 2);
     balance_4 = current.balances[accounts[4]];
-    deposit_4[mod(now, 3)] = Math.floor(balance_4 * _deposit_rate / 100);
+    deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 8, {from: accounts[4]}),
                      _default_level, 6, {from: accounts[4]},
                      true, false, deposit_4[mod(now - 2, 3)] +
@@ -1462,7 +1455,7 @@ function parameterized_test(accounts,
                  deposit_4[mod(now - 2, 3)] +
                  reward_4 + constant_reward);
     balance_5 = current.balances[accounts[5]];
-    deposit_5[mod(now, 3)] = Math.floor(balance_5 * _deposit_rate / 100);
+    deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 8, {from: accounts[5]}),
                      _default_level, 6, {from: accounts[5]},
                      true, false, deposit_5[mod(now - 2, 3)] +
@@ -1473,7 +1466,7 @@ function parameterized_test(accounts,
                  deposit_5[mod(now - 2, 3)] +
                  reward_5 + constant_reward);
     balance_6 = current.balances[accounts[6]];
-    deposit_6[mod(now, 3)] = Math.floor(balance_6 * _deposit_rate / 100);
+    deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 8, {from: accounts[6]}),
                      _default_level, 7, {from: accounts[6]},
                      true, true, 0, false);
@@ -1493,19 +1486,19 @@ function parameterized_test(accounts,
     coin_supply = current.coin_supply;
     reward_total = (deposit_4[mod(now - 2, 3)] + deposit_5[mod(now - 2, 3)] +
                     mint);
-    constant_reward = Math.floor((100 - _proportional_reward_rate) *
+    constant_reward = parseInt((100 - _proportional_reward_rate) *
                                  reward_total / (1 * 100));
     reward_4 = 0;
     reward_5 = 0;
     reward_6 = 0;
     if (deposit_6[mod(now - 2, 3)] > 0) {
-      reward_6 = Math.floor(_proportional_reward_rate *
+      reward_6 = parseInt(_proportional_reward_rate *
                             reward_total / 100);
     }
     remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 1);
     balance_4 = current.balances[accounts[4]];
-    deposit_4[mod(now, 3)] = Math.floor(balance_4 * _deposit_rate / 100);
+    deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 9, {from: accounts[4]}),
                      _default_level, 0, {from: accounts[4]},
                      true, false, 0, true);
@@ -1514,7 +1507,7 @@ function parameterized_test(accounts,
     assert.equal(current.balances[accounts[4]],
                  balance_4 - deposit_4[mod(now, 3)]);
     balance_5 = current.balances[accounts[5]];
-    deposit_5[mod(now, 3)] = Math.floor(balance_5 * _deposit_rate / 100);
+    deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 9, {from: accounts[5]}),
                      _default_level, 0, {from: accounts[5]},
                      true, false, 0, false);
@@ -1522,7 +1515,7 @@ function parameterized_test(accounts,
     assert.equal(current.balances[accounts[5]],
                  balance_5 - deposit_5[mod(now, 3)]);
     balance_6 = current.balances[accounts[6]];
-    deposit_6[mod(now, 3)] = Math.floor(balance_6 * _deposit_rate / 100);
+    deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 9, {from: accounts[6]}),
                      _default_level, 0, {from: accounts[6]},
                      true, false, deposit_6[mod(now - 2, 3)] +
@@ -1550,7 +1543,7 @@ function parameterized_test(accounts,
     reward_6 = 0;
     remainder[mod(now, 3)] = reward_total;
     balance_4 = current.balances[accounts[4]];
-    deposit_4[mod(now, 3)] = Math.floor(balance_4 * _deposit_rate / 100);
+    deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 10, {from: accounts[4]}),
                      _default_level, 9, {from: accounts[4]},
                      true, true, 0, true);
@@ -1559,7 +1552,7 @@ function parameterized_test(accounts,
     assert.equal(current.balances[accounts[4]],
                  balance_4 - deposit_4[mod(now, 3)]);
     balance_5 = current.balances[accounts[5]];
-    deposit_5[mod(now, 3)] = Math.floor(balance_5 * _deposit_rate / 100);
+    deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 10, {from: accounts[5]}),
                      _default_level, 9, {from: accounts[5]},
                      true, true, 0, false);
@@ -1567,7 +1560,7 @@ function parameterized_test(accounts,
     assert.equal(current.balances[accounts[5]],
                  balance_5 - deposit_5[mod(now, 3)]);
     balance_6 = current.balances[accounts[6]];
-    deposit_6[mod(now, 3)] = Math.floor(balance_6 * _deposit_rate / 100);
+    deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 10, {from: accounts[6]}),
                      _default_level, 9, {from: accounts[6]},
                      true, true, 0, false);
@@ -1585,23 +1578,23 @@ function parameterized_test(accounts,
 
     coin_supply = current.coin_supply;
     reward_total = 0 + mint;
-    constant_reward = Math.floor((100 - _proportional_reward_rate) *
+    constant_reward = parseInt((100 - _proportional_reward_rate) *
                                  reward_total / (3 * 100));
     reward_4 = reward_5 = reward_6 = 0;
     deposit_total = (deposit_4[mod(now - 2, 3)] + deposit_5[mod(now - 2, 3)] +
                      deposit_6[mod(now - 2, 3)]);
     if (deposit_total > 0) {
-      reward_5 = Math.floor(_proportional_reward_rate *
+      reward_5 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_5[mod(now - 2, 3)] /
                             (deposit_total * 100));
-      reward_6 = Math.floor(_proportional_reward_rate *
+      reward_6 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_6[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
     remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 2 + deposit_4[mod(now - 2, 3)]);
     balance_5 = current.balances[accounts[5]];
-    deposit_5[mod(now, 3)] = Math.floor(balance_5 * _deposit_rate / 100);
+    deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 11, {from: accounts[5]}),
                      _default_level, 10, {from: accounts[5]},
                      true, true, deposit_5[mod(now - 2, 3)] +
@@ -1613,7 +1606,7 @@ function parameterized_test(accounts,
                  deposit_5[mod(now - 2, 3)] +
                  reward_5 + constant_reward);
     balance_6 = current.balances[accounts[6]];
-    deposit_6[mod(now, 3)] = Math.floor(balance_6 * _deposit_rate / 100);
+    deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 11, {from: accounts[6]}),
                      _default_level, 10, {from: accounts[6]},
                      true, true, deposit_6[mod(now - 2, 3)] +
@@ -1634,19 +1627,19 @@ function parameterized_test(accounts,
 
     coin_supply = current.coin_supply;
     reward_total = deposit_4[mod(now - 2, 3)] + mint;
-    constant_reward = Math.floor((100 - _proportional_reward_rate) *
+    constant_reward = parseInt((100 - _proportional_reward_rate) *
                                  reward_total / (2 * 100));
     reward_4 = reward_5 = reward_6 = 0;
     deposit_total = (deposit_5[mod(now - 2, 3)] + deposit_6[mod(now - 2, 3)]);
     if (deposit_total > 0) {
-      reward_6 = Math.floor(_proportional_reward_rate *
+      reward_6 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_6[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
     remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward + deposit_5[mod(now - 2, 3)]);
     balance_6 = current.balances[accounts[6]];
-    deposit_6[mod(now, 3)] = Math.floor(balance_6 * _deposit_rate / 100);
+    deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 12, {from: accounts[6]}),
                      _default_level, 11, {from: accounts[6]},
                      true, true, deposit_6[mod(now - 2, 3)] +
@@ -1669,14 +1662,14 @@ function parameterized_test(accounts,
     current = await get_current([accounts[1]], []);
     coin_supply = current.coin_supply;
     reward_total = deposit_5[mod(now - 2, 3)] + mint;
-    constant_reward = Math.floor((100 - _proportional_reward_rate) *
+    constant_reward = parseInt((100 - _proportional_reward_rate) *
                                  reward_total / (1 * 100));
     reward_4 = 0;
     reward_5 = 0;
     reward_6 = 0;
     remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 0 + deposit_6[mod(now - 2, 3)]);
-    deposit13 = Math.floor(
+    deposit13 = parseInt(
         current.balances[accounts[1]] * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 1000, {from: accounts[1]}),
                      _default_level, 1000, {from: accounts[1]},
@@ -1695,7 +1688,7 @@ function parameterized_test(accounts,
     current = await get_current([accounts[1]], []);
     coin_supply = current.coin_supply;
     remainder[mod(now, 3)] = deposit_6[mod(now - 2, 3)] + mint;
-    deposit14 = Math.floor(
+    deposit14 = parseInt(
         current.balances[accounts[1]] * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 1000, {from: accounts[1]}),
                      _default_level, 1000, {from: accounts[1]},
@@ -1728,7 +1721,7 @@ function parameterized_test(accounts,
     reward_6 = 0;
     remainder[mod(now, 3)] = reward_total;
     balance_4 = current.balances[accounts[4]];
-    deposit_4[mod(now, 3)] = Math.floor(balance_4 * _deposit_rate / 100);
+    deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(0, 1, {from: accounts[4]}),
                      _default_level, 0, {from: accounts[4]},
                      true, false, 0, true);
@@ -1737,7 +1730,7 @@ function parameterized_test(accounts,
     assert.equal(current.balances[accounts[4]],
                  balance_4 - deposit_4[mod(now, 3)]);
     balance_5 = current.balances[accounts[5]];
-    deposit_5[mod(now, 3)] = Math.floor(balance_5 * _deposit_rate / 100);
+    deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 1, {from: accounts[5]}),
                      _default_level, 0, {from: accounts[5]},
                      true, false, 0, false);
@@ -1745,7 +1738,7 @@ function parameterized_test(accounts,
     assert.equal(current.balances[accounts[5]],
                  balance_5 - deposit_5[mod(now, 3)]);
     balance_6 = current.balances[accounts[6]];
-    deposit_6[mod(now, 3)] = Math.floor(balance_6 * _deposit_rate / 100);
+    deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 1, {from: accounts[6]}),
                      _default_level, 0, {from: accounts[6]},
                      true, false, 0, false);
@@ -1769,7 +1762,7 @@ function parameterized_test(accounts,
     reward_6 = 0;
     remainder[mod(now, 3)] = reward_total;
     balance_4 = current.balances[accounts[4]];
-    deposit_4[mod(now, 3)] = Math.floor(balance_4 * _deposit_rate / 100);
+    deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 2, {from: accounts[4]}),
                      0, 1, {from: accounts[4]},
                      true, true, 0, true);
@@ -1778,7 +1771,7 @@ function parameterized_test(accounts,
     assert.equal(current.balances[accounts[4]],
                  balance_4 - deposit_4[mod(now, 3)]);
     balance_5 = current.balances[accounts[5]];
-    deposit_5[mod(now, 3)] = Math.floor(balance_5 * _deposit_rate / 100);
+    deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 2, {from: accounts[5]}),
                      _default_level, 1, {from: accounts[5]},
                      true, true, 0, false);
@@ -1786,7 +1779,7 @@ function parameterized_test(accounts,
     assert.equal(current.balances[accounts[5]],
                  balance_5 - deposit_5[mod(now, 3)]);
     balance_6 = current.balances[accounts[6]];
-    deposit_6[mod(now, 3)] = Math.floor(balance_6 * _deposit_rate / 100);
+    deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 2, {from: accounts[6]}),
                      _default_level, 1, {from: accounts[6]},
                      true, true, 0, false);
@@ -1811,22 +1804,22 @@ function parameterized_test(accounts,
     }
     reward_total = (deposit_4[mod(now - 2, 3)] - reclaim_4 +
                     mint);
-    constant_reward = Math.floor((100 - _proportional_reward_rate) *
+    constant_reward = parseInt((100 - _proportional_reward_rate) *
                                  reward_total / (2 * 100));
     reward_4 = reward_5 = reward_6 = 0;
     deposit_total = (deposit_5[mod(now - 2, 3)] + deposit_6[mod(now - 2, 3)]);
     if (deposit_total > 0) {
-      reward_5 = Math.floor(_proportional_reward_rate *
+      reward_5 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_5[mod(now - 2, 3)] /
                             (deposit_total * 100));
-      reward_6 = Math.floor(_proportional_reward_rate *
+      reward_6 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_6[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
     remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 2);
     balance_4 = current.balances[accounts[4]];
-    deposit_4[mod(now, 3)] = Math.floor(balance_4 * _deposit_rate / 100);
+    deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 3, {from: accounts[4]}),
                      _default_level, 2, {from: accounts[4]},
                      true, true, reclaim_4, true);
@@ -1835,7 +1828,7 @@ function parameterized_test(accounts,
     assert.equal(current.balances[accounts[4]],
                  balance_4 - deposit_4[mod(now, 3)] + reclaim_4);
     balance_5 = current.balances[accounts[5]];
-    deposit_5[mod(now, 3)] = Math.floor(balance_5 * _deposit_rate / 100);
+    deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 3, {from: accounts[5]}),
                      _default_level, 2, {from: accounts[5]},
                      true, true, deposit_5[mod(now - 2, 3)] +
@@ -1846,7 +1839,7 @@ function parameterized_test(accounts,
                  deposit_5[mod(now - 2, 3)] +
                  reward_5 + constant_reward);
     balance_6 = current.balances[accounts[6]];
-    deposit_6[mod(now, 3)] = Math.floor(balance_6 * _deposit_rate / 100);
+    deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 3, {from: accounts[6]}),
                      _default_level, 2, {from: accounts[6]},
                      true, true, deposit_6[mod(now - 2, 3)] +
@@ -1864,6 +1857,7 @@ function parameterized_test(accounts,
     tmp_deposit_rate = _deposit_rate;
     if (_deposit_rate == 0) {
       _deposit_rate = 1;
+      _acb.setDepositRate(_deposit_rate);
     }
 
     now = mod(now + 1, 3);
@@ -1879,26 +1873,26 @@ function parameterized_test(accounts,
 
     coin_supply = current.coin_supply;
     reward_total = 0 + mint;
-    constant_reward = Math.floor((100 - _proportional_reward_rate) *
+    constant_reward = parseInt((100 - _proportional_reward_rate) *
                                  reward_total / (3 * 100));
     reward_4 = reward_5 = reward_6 = 0;
     deposit_total = (deposit_4[mod(now - 2, 3)] + deposit_5[mod(now - 2, 3)] +
                      deposit_6[mod(now - 2, 3)]);
     if (deposit_total > 0) {
-      reward_4 = Math.floor(_proportional_reward_rate *
+      reward_4 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_4[mod(now - 2, 3)] /
                             (deposit_total * 100));
-      reward_5 = Math.floor(_proportional_reward_rate *
+      reward_5 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_5[mod(now - 2, 3)] /
                             (deposit_total * 100));
-      reward_6 = Math.floor(_proportional_reward_rate *
+      reward_6 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_6[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
     remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
-    deposit_4[mod(now, 3)] = Math.floor(balance_4 * _deposit_rate / 100);
+    deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(0, 4, {from: accounts[4]}),
                      _default_level, 3, {from: accounts[4]},
                      true, true, deposit_4[mod(now - 2, 3)] +
@@ -1910,7 +1904,7 @@ function parameterized_test(accounts,
                  deposit_4[mod(now - 2, 3)] +
                  reward_4 + constant_reward);
     balance_5 = current.balances[accounts[5]];
-    deposit_5[mod(now, 3)] = Math.floor(balance_5 * _deposit_rate / 100);
+    deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(0, 4, {from: accounts[5]}),
                      _default_level, 3, {from: accounts[5]},
                      true, true, deposit_5[mod(now - 2, 3)] +
@@ -1921,7 +1915,7 @@ function parameterized_test(accounts,
                  deposit_5[mod(now - 2, 3)] +
                  reward_5 + constant_reward);
     balance_6 = current.balances[accounts[6]];
-    deposit_6[mod(now, 3)] = Math.floor(balance_6 * _deposit_rate / 100);
+    deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 4, {from: accounts[6]}),
                      _default_level, 3, {from: accounts[6]},
                      true, true, deposit_6[mod(now - 2, 3)] +
@@ -1936,6 +1930,7 @@ function parameterized_test(accounts,
                  remainder[mod(now - 1, 3)]);
 
     _deposit_rate = tmp_deposit_rate;
+    _acb.setDepositRate(_deposit_rate);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
@@ -1944,26 +1939,26 @@ function parameterized_test(accounts,
 
     coin_supply = current.coin_supply;
     reward_total = 0 + mint;
-    constant_reward = Math.floor((100 - _proportional_reward_rate) *
+    constant_reward = parseInt((100 - _proportional_reward_rate) *
                                  reward_total / (3 * 100));
     reward_4 = reward_5 = reward_6 = 0;
     deposit_total = (deposit_4[mod(now - 2, 3)] + deposit_5[mod(now - 2, 3)] +
                      deposit_6[mod(now - 2, 3)]);
     if (deposit_total > 0) {
-      reward_4 = Math.floor(_proportional_reward_rate *
+      reward_4 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_4[mod(now - 2, 3)] /
                             (deposit_total * 100));
-      reward_5 = Math.floor(_proportional_reward_rate *
+      reward_5 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_5[mod(now - 2, 3)] /
                             (deposit_total * 100));
-      reward_6 = Math.floor(_proportional_reward_rate *
+      reward_6 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_6[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
     remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
-    deposit_4[mod(now, 3)] = Math.floor(balance_4 * _deposit_rate / 100);
+    deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 5, {from: accounts[4]}),
                      0, 4, {from: accounts[4]},
                      true, true, deposit_4[mod(now - 2, 3)] +
@@ -1975,7 +1970,7 @@ function parameterized_test(accounts,
                  deposit_4[mod(now - 2, 3)] +
                  reward_4 + constant_reward);
     balance_5 = current.balances[accounts[5]];
-    deposit_5[mod(now, 3)] = Math.floor(balance_5 * _deposit_rate / 100);
+    deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash( _default_level, 5, {from: accounts[5]}),
                      0, 4, {from: accounts[5]},
                      true, true, deposit_5[mod(now - 2, 3)] +
@@ -1986,7 +1981,7 @@ function parameterized_test(accounts,
                  deposit_5[mod(now - 2, 3)] +
                  reward_5 + constant_reward);
     balance_6 = current.balances[accounts[6]];
-    deposit_6[mod(now, 3)] = Math.floor(balance_6 * _deposit_rate / 100);
+    deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 5, {from: accounts[6]}),
                      _default_level, 4, {from: accounts[6]},
                      true, true, deposit_6[mod(now - 2, 3)] +
@@ -2016,19 +2011,19 @@ function parameterized_test(accounts,
     reward_total = (deposit_4[mod(now - 2, 3)] - reclaim_4 +
                     deposit_5[mod(now - 2, 3)] - reclaim_5 +
                     mint);
-    constant_reward = Math.floor((100 - _proportional_reward_rate) *
+    constant_reward = parseInt((100 - _proportional_reward_rate) *
                                  reward_total / (1 * 100));
     reward_4 = reward_5 = reward_6 = 0;
     deposit_total =  deposit_6[mod(now - 2, 3)];
     if (deposit_total > 0) {
-      reward_6 = Math.floor(_proportional_reward_rate *
+      reward_6 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_6[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
     remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 1);
     balance_4 = current.balances[accounts[4]];
-    deposit_4[mod(now, 3)] = Math.floor(balance_4 * _deposit_rate / 100);
+    deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 6, {from: accounts[4]}),
                      _default_level, 5, {from: accounts[4]},
                      true, true, reclaim_4, true);
@@ -2037,7 +2032,7 @@ function parameterized_test(accounts,
     assert.equal(current.balances[accounts[4]],
                  balance_4 - deposit_4[mod(now, 3)] + reclaim_4);
     balance_5 = current.balances[accounts[5]];
-    deposit_5[mod(now, 3)] = Math.floor(balance_5 * _deposit_rate / 100);
+    deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 6, {from: accounts[5]}),
                      _default_level, 5, {from: accounts[5]},
                      true, true, reclaim_5, false);
@@ -2045,7 +2040,7 @@ function parameterized_test(accounts,
     assert.equal(current.balances[accounts[5]],
                  balance_5 - deposit_5[mod(now, 3)] + reclaim_5);
     balance_6 = current.balances[accounts[6]];
-    deposit_6[mod(now, 3)] = Math.floor(balance_6 * _deposit_rate / 100);
+    deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 6, {from: accounts[6]}),
                      _default_level, 5, {from: accounts[6]},
                      true, true, deposit_6[mod(now - 2, 3)] +
@@ -2073,26 +2068,26 @@ function parameterized_test(accounts,
 
     coin_supply = current.coin_supply;
     reward_total = 0 + mint;
-    constant_reward = Math.floor((100 - _proportional_reward_rate) *
+    constant_reward = parseInt((100 - _proportional_reward_rate) *
                                  reward_total / (3 * 100));
     reward_4 = reward_5 = reward_6 = 0;
     deposit_total = (deposit_4[mod(now - 2, 3)] + deposit_5[mod(now - 2, 3)] +
                      deposit_6[mod(now - 2, 3)]);
     if (deposit_total > 0) {
-      reward_4 = Math.floor(_proportional_reward_rate *
+      reward_4 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_4[mod(now - 2, 3)] /
                             (deposit_total * 100));
-      reward_5 = Math.floor(_proportional_reward_rate *
+      reward_5 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_5[mod(now - 2, 3)] /
                             (deposit_total * 100));
-      reward_6 = Math.floor(_proportional_reward_rate *
+      reward_6 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_6[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
     remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
-    deposit_4[mod(now, 3)] = Math.floor(balance_4 * _deposit_rate / 100);
+    deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 7, {from: accounts[4]}),
                      _default_level, 6, {from: accounts[4]},
                      true, true, deposit_4[mod(now - 2, 3)] +
@@ -2104,7 +2099,7 @@ function parameterized_test(accounts,
                  deposit_4[mod(now - 2, 3)] +
                  reward_4 + constant_reward);
     balance_5 = current.balances[accounts[5]];
-    deposit_5[mod(now, 3)] = Math.floor(balance_5 * _deposit_rate / 100);
+    deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 7, {from: accounts[5]}),
                      _default_level, 6, {from: accounts[5]},
                      true, true, deposit_5[mod(now - 2, 3)] +
@@ -2115,7 +2110,7 @@ function parameterized_test(accounts,
                  deposit_5[mod(now - 2, 3)] +
                  reward_5 + constant_reward);
     balance_6 = current.balances[accounts[6]];
-    deposit_6[mod(now, 3)] = Math.floor(balance_6 * _deposit_rate / 100);
+    deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_level_max - 1, 7, {from: accounts[6]}),
                      _default_level, 6, {from: accounts[6]},
                      true, true, deposit_6[mod(now - 2, 3)] +
@@ -2136,26 +2131,26 @@ function parameterized_test(accounts,
 
     coin_supply = current.coin_supply;
     reward_total = 0 + mint;
-    constant_reward = Math.floor((100 - _proportional_reward_rate) *
+    constant_reward = parseInt((100 - _proportional_reward_rate) *
                                  reward_total / (3 * 100));
     reward_4 = reward_5 = reward_6 = 0;
     deposit_total = (deposit_4[mod(now - 2, 3)] + deposit_5[mod(now - 2, 3)] +
                      deposit_6[mod(now - 2, 3)]);
     if (deposit_total > 0) {
-      reward_4 = Math.floor(_proportional_reward_rate *
+      reward_4 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_4[mod(now - 2, 3)] /
                             (deposit_total * 100));
-      reward_5 = Math.floor(_proportional_reward_rate *
+      reward_5 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_5[mod(now - 2, 3)] /
                             (deposit_total * 100));
-      reward_6 = Math.floor(_proportional_reward_rate *
+      reward_6 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_6[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
     remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
-    deposit_4[mod(now, 3)] = Math.floor(balance_4 * _deposit_rate / 100);
+    deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 8, {from: accounts[4]}),
                      _default_level, 7, {from: accounts[4]},
                      true, true, deposit_4[mod(now - 2, 3)] +
@@ -2167,7 +2162,7 @@ function parameterized_test(accounts,
                  deposit_4[mod(now - 2, 3)] +
                  reward_4 + constant_reward);
     balance_5 = current.balances[accounts[5]];
-    deposit_5[mod(now, 3)] = Math.floor(balance_5 * _deposit_rate / 100);
+    deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 8, {from: accounts[5]}),
                      _default_level, 7, {from: accounts[5]},
                      true, true, deposit_5[mod(now - 2, 3)] +
@@ -2178,7 +2173,7 @@ function parameterized_test(accounts,
                  deposit_5[mod(now - 2, 3)] +
                  reward_5 + constant_reward);
     balance_6 = current.balances[accounts[6]];
-    deposit_6[mod(now, 3)] = Math.floor(balance_6 * _deposit_rate / 100);
+    deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 8, {from: accounts[6]}),
                      _level_max - 1, 7, {from: accounts[6]},
                      true, true, deposit_6[mod(now - 2, 3)] +
@@ -2206,22 +2201,22 @@ function parameterized_test(accounts,
     }
     reward_total = (deposit_6[mod(now - 2, 3)] - reclaim_6 +
                     mint);
-    constant_reward = Math.floor((100 - _proportional_reward_rate) *
+    constant_reward = parseInt((100 - _proportional_reward_rate) *
                                  reward_total / (2 * 100));
     reward_4 = reward_5 = reward_6 = 0;
     deposit_total = deposit_4[mod(now - 2, 3)] + deposit_5[mod(now - 2, 3)];
     if (deposit_total > 0) {
-      reward_4 = Math.floor(_proportional_reward_rate *
+      reward_4 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_4[mod(now - 2, 3)] /
                             (deposit_total * 100));
-      reward_5 = Math.floor(_proportional_reward_rate *
+      reward_5 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_5[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
     remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 2);
     balance_4 = current.balances[accounts[4]];
-    deposit_4[mod(now, 3)] = Math.floor(balance_4 * _deposit_rate / 100);
+    deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 9, {from: accounts[4]}),
                      _default_level, 8, {from: accounts[4]},
                      true, true, deposit_4[mod(now - 2, 3)] +
@@ -2233,7 +2228,7 @@ function parameterized_test(accounts,
                  deposit_4[mod(now - 2, 3)] +
                  reward_4 + constant_reward);
     balance_5 = current.balances[accounts[5]];
-    deposit_5[mod(now, 3)] = Math.floor(balance_5 * _deposit_rate / 100);
+    deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 9, {from: accounts[5]}),
                      _default_level, 8, {from: accounts[5]},
                      true, true, deposit_5[mod(now - 2, 3)] +
@@ -2244,7 +2239,7 @@ function parameterized_test(accounts,
                  deposit_5[mod(now - 2, 3)] +
                  reward_5 + constant_reward);
     balance_6 = current.balances[accounts[6]];
-    deposit_6[mod(now, 3)] = Math.floor(balance_6 * _deposit_rate / 100);
+    deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 9, {from: accounts[6]}),
                      _default_level, 8, {from: accounts[6]},
                      true, true, reclaim_6, false);
@@ -2259,6 +2254,7 @@ function parameterized_test(accounts,
     tmp_deposit_rate = _deposit_rate;
     if (_deposit_rate == 0) {
       _deposit_rate = 1;
+      _acb.setDepositRate(_deposit_rate);
     }
 
     now = mod(now + 1, 3);
@@ -2274,26 +2270,26 @@ function parameterized_test(accounts,
 
     coin_supply = current.coin_supply;
     reward_total = 0 + mint;
-    constant_reward = Math.floor((100 - _proportional_reward_rate) *
+    constant_reward = parseInt((100 - _proportional_reward_rate) *
                                  reward_total / (3 * 100));
     reward_4 = reward_5 = reward_6 = 0;
     deposit_total = (deposit_4[mod(now - 2, 3)] + deposit_5[mod(now - 2, 3)] +
                      deposit_6[mod(now - 2, 3)]);
     if (deposit_total > 0) {
-      reward_4 = Math.floor(_proportional_reward_rate *
+      reward_4 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_4[mod(now - 2, 3)] /
                             (deposit_total * 100));
-      reward_5 = Math.floor(_proportional_reward_rate *
+      reward_5 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_5[mod(now - 2, 3)] /
                             (deposit_total * 100));
-      reward_6 = Math.floor(_proportional_reward_rate *
+      reward_6 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_6[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
     remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
-    deposit_4[mod(now, 3)] = Math.floor(balance_4 * _deposit_rate / 100);
+    deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 10, {from: accounts[4]}),
                      _default_level, 9, {from: accounts[4]},
                      true, true, deposit_4[mod(now - 2, 3)] +
@@ -2305,7 +2301,7 @@ function parameterized_test(accounts,
                  deposit_4[mod(now - 2, 3)] +
                  reward_4 + constant_reward);
     balance_5 = current.balances[accounts[5]];
-    deposit_5[mod(now, 3)] = Math.floor(balance_5 * _deposit_rate / 100);
+    deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_level_max - 1, 10, {from: accounts[5]}),
                      _default_level, 9, {from: accounts[5]},
                      true, true, deposit_5[mod(now - 2, 3)] +
@@ -2316,7 +2312,7 @@ function parameterized_test(accounts,
                  deposit_5[mod(now - 2, 3)] +
                  reward_5 + constant_reward);
     balance_6 = current.balances[accounts[6]];
-    deposit_6[mod(now, 3)] = Math.floor(balance_6 * _deposit_rate / 100);
+    deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_level_max - 1, 10, {from: accounts[6]}),
                      _default_level, 9, {from: accounts[6]},
                      true, true, deposit_6[mod(now - 2, 3)] +
@@ -2331,6 +2327,7 @@ function parameterized_test(accounts,
                  remainder[mod(now - 1, 3)]);
 
     _deposit_rate = tmp_deposit_rate;
+    _acb.setDepositRate(_deposit_rate);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
@@ -2339,26 +2336,26 @@ function parameterized_test(accounts,
 
     coin_supply = current.coin_supply;
     reward_total = 0 + mint;
-    constant_reward = Math.floor((100 - _proportional_reward_rate) *
+    constant_reward = parseInt((100 - _proportional_reward_rate) *
                                  reward_total / (3 * 100));
     reward_4 = reward_5 = reward_6 = 0;
     deposit_total = (deposit_4[mod(now - 2, 3)] + deposit_5[mod(now - 2, 3)] +
                      deposit_6[mod(now - 2, 3)]);
     if (deposit_total > 0) {
-      reward_4 = Math.floor(_proportional_reward_rate *
+      reward_4 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_4[mod(now - 2, 3)] /
                             (deposit_total * 100));
-      reward_5 = Math.floor(_proportional_reward_rate *
+      reward_5 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_5[mod(now - 2, 3)] /
                             (deposit_total * 100));
-      reward_6 = Math.floor(_proportional_reward_rate *
+      reward_6 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_6[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
     remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
-    deposit_4[mod(now, 3)] = Math.floor(balance_4 * _deposit_rate / 100);
+    deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 11, {from: accounts[4]}),
                      _default_level, 10, {from: accounts[4]},
                      true, true, deposit_4[mod(now - 2, 3)] +
@@ -2370,7 +2367,7 @@ function parameterized_test(accounts,
                  deposit_4[mod(now - 2, 3)] +
                  reward_4 + constant_reward);
     balance_5 = current.balances[accounts[5]];
-    deposit_5[mod(now, 3)] = Math.floor(balance_5 * _deposit_rate / 100);
+    deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 11, {from: accounts[5]}),
                      _level_max - 1, 10, {from: accounts[5]},
                      true, true, deposit_5[mod(now - 2, 3)] +
@@ -2381,7 +2378,7 @@ function parameterized_test(accounts,
                  deposit_5[mod(now - 2, 3)] +
                  reward_5 + constant_reward);
     balance_6 = current.balances[accounts[6]];
-    deposit_6[mod(now, 3)] = Math.floor(balance_6 * _deposit_rate / 100);
+    deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 11, {from: accounts[6]}),
                      _level_max - 1, 10, {from: accounts[6]},
                      true, true, deposit_6[mod(now - 2, 3)] +
@@ -2411,19 +2408,19 @@ function parameterized_test(accounts,
     reward_total = (deposit_5[mod(now - 2, 3)] - reclaim_5 +
                     deposit_6[mod(now - 2, 3)] - reclaim_6 +
                     mint);
-    constant_reward = Math.floor((100 - _proportional_reward_rate) *
+    constant_reward = parseInt((100 - _proportional_reward_rate) *
                                  reward_total / (1 * 100));
     reward_4 = reward_5 = reward_6 = 0;
     deposit_total = deposit_4[mod(now - 2, 3)];
     if (deposit_total > 0) {
-      reward_4 = Math.floor(_proportional_reward_rate *
+      reward_4 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_4[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
     remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 1);
     balance_4 = current.balances[accounts[4]];
-    deposit_4[mod(now, 3)] = Math.floor(balance_4 * _deposit_rate / 100);
+    deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 12, {from: accounts[4]}),
                      _default_level, 11, {from: accounts[4]},
                      true, true, deposit_4[mod(now - 2, 3)] +
@@ -2435,7 +2432,7 @@ function parameterized_test(accounts,
                  deposit_4[mod(now - 2, 3)] +
                  reward_4 + constant_reward);
     balance_5 = current.balances[accounts[5]];
-    deposit_5[mod(now, 3)] = Math.floor(balance_5 * _deposit_rate / 100);
+    deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 12, {from: accounts[5]}),
                      _default_level, 11, {from: accounts[5]},
                      true, true, reclaim_5, false);
@@ -2443,7 +2440,7 @@ function parameterized_test(accounts,
     assert.equal(current.balances[accounts[5]],
                  balance_5 - deposit_5[mod(now, 3)] + reclaim_5);
     balance_6 = current.balances[accounts[6]];
-    deposit_6[mod(now, 3)] = Math.floor(balance_6 * _deposit_rate / 100);
+    deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 12, {from: accounts[6]}),
                      _default_level, 11, {from: accounts[6]},
                      true, true, reclaim_6, false);
@@ -2468,26 +2465,26 @@ function parameterized_test(accounts,
 
     coin_supply = current.coin_supply;
     reward_total = 0 + mint;
-    constant_reward = Math.floor((100 - _proportional_reward_rate) *
+    constant_reward = parseInt((100 - _proportional_reward_rate) *
                                  reward_total / (3 * 100));
     reward_4 = reward_5 = reward_6 = 0;
     deposit_total = (deposit_4[mod(now - 2, 3)] + deposit_5[mod(now - 2, 3)] +
                      deposit_6[mod(now - 2, 3)]);
     if (deposit_total > 0) {
-      reward_4 = Math.floor(_proportional_reward_rate *
+      reward_4 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_4[mod(now - 2, 3)] /
                             (deposit_total * 100));
-      reward_5 = Math.floor(_proportional_reward_rate *
+      reward_5 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_5[mod(now - 2, 3)] /
                             (deposit_total * 100));
-      reward_6 = Math.floor(_proportional_reward_rate *
+      reward_6 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_6[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
     remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
-    deposit_4[mod(now, 3)] = Math.floor(balance_4 * _deposit_rate / 100);
+    deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_level_max - 1, 13, {from: accounts[4]}),
                      _default_level, 12, {from: accounts[4]},
                      true, true, deposit_4[mod(now - 2, 3)] +
@@ -2499,7 +2496,7 @@ function parameterized_test(accounts,
                  deposit_4[mod(now - 2, 3)] +
                  reward_4 + constant_reward);
     balance_5 = current.balances[accounts[5]];
-    deposit_5[mod(now, 3)] = Math.floor(balance_5 * _deposit_rate / 100);
+    deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 13, {from: accounts[5]}),
                      _default_level, 12, {from: accounts[5]},
                      true, true, deposit_5[mod(now - 2, 3)] +
@@ -2510,7 +2507,7 @@ function parameterized_test(accounts,
                  deposit_5[mod(now - 2, 3)] +
                  reward_5 + constant_reward);
     balance_6 = current.balances[accounts[6]];
-    deposit_6[mod(now, 3)] = Math.floor(balance_6 * _deposit_rate / 100);
+    deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 13, {from: accounts[6]}),
                      _default_level, 12, {from: accounts[6]},
                      true, true, deposit_6[mod(now - 2, 3)] +
@@ -2531,26 +2528,26 @@ function parameterized_test(accounts,
 
     coin_supply = current.coin_supply;
     reward_total = 0 + mint;
-    constant_reward = Math.floor((100 - _proportional_reward_rate) *
+    constant_reward = parseInt((100 - _proportional_reward_rate) *
                                  reward_total / (3 * 100));
     reward_4 = reward_5 = reward_6 = 0;
     deposit_total = (deposit_4[mod(now - 2, 3)] + deposit_5[mod(now - 2, 3)] +
                      deposit_6[mod(now - 2, 3)]);
     if (deposit_total > 0) {
-      reward_4 = Math.floor(_proportional_reward_rate *
+      reward_4 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_4[mod(now - 2, 3)] /
                             (deposit_total * 100));
-      reward_5 = Math.floor(_proportional_reward_rate *
+      reward_5 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_5[mod(now - 2, 3)] /
                             (deposit_total * 100));
-      reward_6 = Math.floor(_proportional_reward_rate *
+      reward_6 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_6[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
     remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
-    deposit_4[mod(now, 3)] = Math.floor(balance_4 * _deposit_rate / 100);
+    deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 14, {from: accounts[4]}),
                      _level_max - 1, 13, {from: accounts[4]},
                      true, true, deposit_4[mod(now - 2, 3)] +
@@ -2562,7 +2559,7 @@ function parameterized_test(accounts,
                  deposit_4[mod(now - 2, 3)] +
                  reward_4 + constant_reward);
     balance_5 = current.balances[accounts[5]];
-    deposit_5[mod(now, 3)] = Math.floor(balance_5 * _deposit_rate / 100)
+    deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100)
     await check_vote(await _acb.hash(_default_level, 14, {from: accounts[5]}),
                      _default_level, 13, {from: accounts[5]},
                      true, true, deposit_5[mod(now - 2, 3)] +
@@ -2573,7 +2570,7 @@ function parameterized_test(accounts,
                  deposit_5[mod(now - 2, 3)] +
                  reward_5 + constant_reward);
     balance_6 = current.balances[accounts[6]];
-    deposit_6[mod(now, 3)] = Math.floor(balance_6 * _deposit_rate / 100);
+    deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 14, {from: accounts[6]}),
                      _default_level, 13, {from: accounts[6]},
                      true, true, deposit_6[mod(now - 2, 3)] +
@@ -2601,22 +2598,22 @@ function parameterized_test(accounts,
     }
     reward_total = (deposit_4[mod(now - 2, 3)] - reclaim_4 +
                     mint);
-    constant_reward = Math.floor((100 - _proportional_reward_rate) *
+    constant_reward = parseInt((100 - _proportional_reward_rate) *
                                  reward_total / (2 * 100));
     reward_4 = reward_5 = reward_6 = 0;
     deposit_total = (deposit_5[mod(now - 2, 3)] + deposit_6[mod(now - 2, 3)]);
     if (deposit_total > 0) {
-      reward_5 = Math.floor(_proportional_reward_rate *
+      reward_5 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_5[mod(now - 2, 3)] /
                             (deposit_total * 100));
-      reward_6 = Math.floor(_proportional_reward_rate *
+      reward_6 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_6[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
     remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 2);
     balance_4 = current.balances[accounts[4]];
-    deposit_4[mod(now, 3)] = Math.floor(balance_4 * _deposit_rate / 100);
+    deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 15, {from: accounts[4]}),
                      _default_level, 14, {from: accounts[4]},
                      true, true, reclaim_4, true);
@@ -2625,7 +2622,7 @@ function parameterized_test(accounts,
     assert.equal(current.balances[accounts[4]],
                  balance_4 - deposit_4[mod(now, 3)] + reclaim_4);
     balance_5 = current.balances[accounts[5]];
-    deposit_5[mod(now, 3)] = Math.floor(balance_5 * _deposit_rate / 100);
+    deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 15, {from: accounts[5]}),
                      _default_level, 14, {from: accounts[5]},
                      true, true, deposit_5[mod(now - 2, 3)] +
@@ -2636,7 +2633,7 @@ function parameterized_test(accounts,
                  deposit_5[mod(now - 2, 3)] +
                  reward_5 + constant_reward);
     balance_6 = current.balances[accounts[6]];
-    deposit_6[mod(now, 3)] = Math.floor(balance_6 * _deposit_rate / 100);
+    deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 15, {from: accounts[6]}),
                      _default_level, 14, {from: accounts[6]},
                      true, true, deposit_6[mod(now - 2, 3)] +
@@ -2660,13 +2657,13 @@ function parameterized_test(accounts,
 
     coin_supply = current.coin_supply;
     reward_total = 0 + mint;
-    constant_reward = Math.floor((100 - _proportional_reward_rate) *
+    constant_reward = parseInt((100 - _proportional_reward_rate) *
                                  reward_total / (3 * 100));
     reward_4 = reward_5 = reward_6 = 0;
     deposit_total = (deposit_4[mod(now - 2, 3)] + deposit_5[mod(now - 2, 3)] +
                      deposit_6[mod(now - 2, 3)]);
     if (deposit_total > 0) {
-      reward_4 = Math.floor(_proportional_reward_rate *
+      reward_4 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_4[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
@@ -2674,7 +2671,7 @@ function parameterized_test(accounts,
                               constant_reward * 1 + deposit_5[mod(now - 2, 3)] +
                               deposit_6[mod(now - 2, 3)]);
     balance_4 = current.balances[accounts[4]];
-    deposit_4[mod(now, 3)] = Math.floor(balance_4 * _deposit_rate / 100);
+    deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(0, 4444, {from: accounts[4]}),
                      _default_level, 15, {from: accounts[4]},
                      true, true, deposit_4[mod(now - 2, 3)] +
@@ -2697,19 +2694,19 @@ function parameterized_test(accounts,
     coin_supply = current.coin_supply;
     reward_total = (deposit_5[mod(now - 2, 3)] + deposit_6[mod(now - 2, 3)] +
                     mint);
-    constant_reward = Math.floor((100 - _proportional_reward_rate) *
+    constant_reward = parseInt((100 - _proportional_reward_rate) *
                                  reward_total / (1 * 100));
     reward_4 = reward_5 = reward_6 = 0;
     deposit_total = deposit_4[mod(now - 2, 3)];
     if (deposit_total > 0) {
-      reward_4 = Math.floor(_proportional_reward_rate *
+      reward_4 = parseInt(_proportional_reward_rate *
                             reward_total * deposit_4[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
     remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 1);
     balance_4 = current.balances[accounts[4]];
-    deposit_4[mod(now, 3)] = Math.floor(balance_4 * _deposit_rate / 100);
+    deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(1, 4444, {from: accounts[4]}),
                      0, 4444, {from: accounts[4]},
                      true, true, deposit_4[mod(now - 2, 3)] +
@@ -2727,7 +2724,7 @@ function parameterized_test(accounts,
     assert.equal(current.bond_supply, 0);
     assert.equal(current.bond_budget, 0);
     await check_controlSupply(
-        -level_to_bond_price[current.oracle_level] * 2, 2, 0);
+        -_level_to_bond_price[current.oracle_level] * 2, 2, 0);
     current = await get_current(sub_accounts, []);
     assert.equal(current.bond_supply, 0);
     assert.equal(current.bond_budget, 2);
@@ -2745,15 +2742,15 @@ function parameterized_test(accounts,
       assert.equal(current.bond_supply, 2);
       mint = 0;
       bond_budget = 0;
-      delta = Math.floor(current.coin_supply *
+      delta = parseInt(current.coin_supply *
                          (_level_to_exchange_rate[level - 2] - 10) / 10);
-      delta = Math.floor(delta * _dumping_factor / 100);
+      delta = parseInt(delta * _damping_factor / 100);
       if (delta == 0) {
         mint = 0;
         issued_bonds = 0;
         redeemable_bonds = 0;
       } else if (delta > 0) {
-        necessary_bonds = Math.floor(delta / _bond_redemption_price);
+        necessary_bonds = parseInt(delta / _bond_redemption_price);
         if (necessary_bonds >= 2) {
           mint = (necessary_bonds - 2) * _bond_redemption_price;
           bond_budget = -2;
@@ -2763,23 +2760,23 @@ function parameterized_test(accounts,
         }
       } else {
         mint = 0;
-        bond_budget = Math.floor(-delta / _level_to_bond_price[level - 2]);
+        bond_budget = parseInt(-delta / _level_to_bond_price[level - 2]);
       }
 
       coin_supply = current.coin_supply;
       reward_total = mint;
-      constant_reward = Math.floor((100 - _proportional_reward_rate) *
+      constant_reward = parseInt((100 - _proportional_reward_rate) *
                                    reward_total / (1 * 100));
       reward_4 = 0;
       deposit_total = deposit_4[mod(now - 2, 3)];
       if (deposit_total > 0) {
-        reward_4 = Math.floor(_proportional_reward_rate *
+        reward_4 = parseInt(_proportional_reward_rate *
                               reward_total * deposit_4[mod(now - 2, 3)] /
                               (deposit_total * 100));
       }
       remainder[mod(now, 3)] = (reward_total - reward_4 - constant_reward * 1);
       balance_4 = current.balances[accounts[4]];
-      deposit_4[mod(now, 3)] = Math.floor(balance_4 * _deposit_rate / 100);
+      deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
       await check_vote(await _acb.hash(level, 4444, {from: accounts[4]}),
                        level - 1, 4444, {from: accounts[4]},
                        true,
@@ -2903,11 +2900,11 @@ function parameterized_test(accounts,
     }, "Pausable");
 
     await should_throw(async () => {
-      await _acb.purchase_bonds(1, {from: accounts[1]});
+      await _acb.purchaseBonds(1, {from: accounts[1]});
     }, "Pausable");
 
     await should_throw(async () => {
-      await _acb.redeem_bonds([t12], {from: accounts[1]});
+      await _acb.redeemBonds([t12], {from: accounts[1]});
     }, "Pausable");
 
     await should_throw(async () => {
@@ -2922,9 +2919,9 @@ function parameterized_test(accounts,
 
     async function _mint_at_default_level() {
       let current = await get_current([], []);
-      let delta = Math.floor(current.coin_supply * (11 - 10) / 10);
-      delta = Math.floor(delta * _dumping_factor / 100);
-      let mint = (Math.floor(delta / _bond_redemption_price) *
+      let delta = parseInt(current.coin_supply * (11 - 10) / 10);
+      delta = parseInt(delta * _damping_factor / 100);
+      let mint = (parseInt(delta / _bond_redemption_price) *
                   _bond_redemption_price);
       assert(delta > 0);
       assert.equal(current.bond_supply, 0);
@@ -2949,7 +2946,7 @@ function parameterized_test(accounts,
     }
 
     async function check_purchase_bonds(count, option, redemption) {
-      let receipt = await _acb.purchase_bonds(count, option);
+      let receipt = await _acb.purchaseBonds(count, option);
       let args =
           receipt.logs.filter(e => e.event == 'PurchaseBondsEvent')[0].args;
       assert.equal(args[0], option.from);
@@ -2958,7 +2955,7 @@ function parameterized_test(accounts,
     }
 
     async function check_redeem_bonds(redemptions, option, count_total) {
-      let receipt = await _acb.redeem_bonds(redemptions, option);
+      let receipt = await _acb.redeemBonds(redemptions, option);
       let args =
           receipt.logs.filter(e => e.event == 'RedeemBondsEvent')[0].args;
       assert.equal(args[0], option.from);

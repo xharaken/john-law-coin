@@ -106,6 +106,11 @@ contract ACBForTesting is ACB {
     oracle_level_ = oracle_level;
   }
 
+  function setDepositRate(uint deposit_rate)
+      public {
+    DEPOSIT_RATE = deposit_rate;
+  }
+
   function coinMint(address account, uint amount)
       public {
     coin_.mint(account, amount);

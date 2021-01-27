@@ -630,12 +630,12 @@ def main():
                                       [max(1, p - 20), max(1, p - 10),
                                        p, p, p]),
                                      ([7, 8, 9, 10, 11, 12, 13],
-                                      [max(1, p - 20), max(1, p - 10),
-                                       max(1, p - 20), max(1, p - 10),
+                                      [max(1, p - 20), max(1, p - 20),
+                                       max(1, p - 10), max(1, p - 10),
                                        p, p, p])]:
                                 for reclaim_threshold in range(1, len(
                                     level_to_exchange_rate)):
-                                    for voter_count in [1, 10, 200]:
+                                    for voter_count in [0, 1, 10, 200]:
                                         test = ACBSimulator(
                                             bond_redemption_price,
                                             bond_redemption_period,

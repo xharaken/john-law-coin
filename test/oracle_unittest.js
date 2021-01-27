@@ -21,21 +21,16 @@ const should_throw = common.should_throw;
 const mod = common.mod;
 
 contract("OracleUnittest", function (accounts) {
-  level_max = 5;
-  reclaim_threshold = 1;
-  proportional_reward_rate = 80;
-  mint = 100;
-  deposit = 20;
-  mode_level = 2;
-  other_level = 0;
+  let args = common.custom_arguments();
+  assert.isTrue(args.length == 7);
   parameterized_test(accounts,
-                     level_max,
-                     reclaim_threshold,
-                     proportional_reward_rate,
-                     mint,
-                     deposit,
-                     mode_level,
-                     other_level);
+                     args[0],
+                     args[1],
+                     args[2],
+                     args[3],
+                     args[4],
+                     args[5],
+                     args[6]);
 });
 
 function parameterized_test(accounts,
@@ -51,6 +46,7 @@ function parameterized_test(accounts,
       " prop=" + _proportional_reward_rate +
       " mint=" + _mint + " deposit=" + _deposit +
       " mode_level=" + _mode_level + " other_level=" + _other_level;
+  console.log(test_name);
 
   it(test_name, async function () {
     assert.isTrue(_mint >= 0);
@@ -68,7 +64,7 @@ function parameterized_test(accounts,
 
     let current = await get_current([accounts[2]]);
     for (let i = 0; i < 3; i++) {
-      assert.isTrue(current.epochs[i].votes.length >= level_max);
+      assert.isTrue(current.epochs[i].votes.length >= _level_max);
     }
     assert.equal(current.epochs[0].phase, Oracle.Phase.COMMIT);
     assert.equal(current.epochs[1].phase, Oracle.Phase.RECLAIM);
@@ -2172,10 +2168,10 @@ function parameterized_test(accounts,
     function _reward(reward_total, count) {
       let proportional_reward = 0;
       if (_deposit > 0) {
-        proportional_reward = Math.floor(
+        proportional_reward = parseInt(
             (_proportional_reward_rate * reward_total) / (100 * count));
       }
-      constant_reward = Math.floor(
+      constant_reward = parseInt(
           ((100 - _proportional_reward_rate) * reward_total) /
             (100 * count));
       return proportional_reward + constant_reward;

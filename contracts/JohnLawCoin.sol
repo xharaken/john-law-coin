@@ -1053,7 +1053,7 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
   // ----------------
   // The redemption timestamp of the purchased bonds if it succeeds. 0
   // otherwise.
-  function purchase_bonds(uint count)
+  function purchaseBonds(uint count)
       public whenNotPaused returns (uint) {
     address sender = msg.sender;
     
@@ -1104,7 +1104,7 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
   // Returns
   // ----------------
   // The number of successfully redeemed bonds.
-  function redeem_bonds(uint[] memory redemptions)
+  function redeemBonds(uint[] memory redemptions)
       public whenNotPaused returns (uint) {
     address sender = msg.sender;
     
