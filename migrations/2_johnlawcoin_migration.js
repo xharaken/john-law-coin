@@ -12,5 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+const Oracle = artifacts.require("Oracle");
+const ACB = artifacts.require("ACB");
+
 module.exports = function (deployer) {
+  deployer.deploy(Oracle);
 };

@@ -111,7 +111,7 @@ A voter deposits $D$\% of their coin balance. The voter commits hash(\textit{qua
 The voter reveals \textit{quantized exchange rate} and \textit{salt}.
 \end{tabular}\\\hline
 3. Reclaim phase & \begin{tabular}{p{22em}}
-Voters who voted for the ``truth'' exchange rate and its around can reclaim the coins they deposited in the commit phase. In addition, voters who voted for the ``truth'' exchange rate can get a reward.
+Voters who voted for the ``truth'' exchange rate and its surroundings can reclaim the coins they deposited in the commit phase. In addition, voters who voted for the ``truth'' exchange rate can get a reward.
 \end{tabular}\\\hline
 \end{tabular}
 \label{table0}
@@ -128,7 +128,7 @@ In the reveal phase, the voter reveals the \textit{quantized exchange rate} and 
 
 \subsubsection{Reclaim phase}
 
-In the reclaim phase, the voters who voted for the ``truth'' exchange rate and its around can reclaim the coins they deposited in the commit phase. For example, if the ``truth'' exchange rate is 1.1, the voters who voted for 1.0, 1.1 and 1.2 can reclaim the coins they deposited. Other voters lose the coins they deposited.
+In the reclaim phase, the voters who voted for the ``truth'' exchange rate and its surroundings can reclaim the coins they deposited in the commit phase. For example, if the ``truth'' exchange rate is 1.1, the voters who voted for 1.0, 1.1 and 1.2 can reclaim the coins they deposited. Other voters lose the coins they deposited.
 
 In addition, the ``winner'' voters who voted for the ``truth'' exchange rate can get a reward. The source of the reward is the coins lost by the other voters and the coins the ACB decided to mint to expand the total coin supply (explained below). $C$\% of the reward is evenly distributed to the ``winner'' voters. The rest of the reward is distributed to the ``winner'' voters in proportion to the coins they deposited.\footnote{You may think $C$ can be 0 (i.e., all of the reward is distributed to the ``winner'' voters in proportion to the coins they deposited). However, it is important to set a positive value to $C$ to bootstrap the system. Initially, all voters except the genesis account have 0 coins. If $C$ is 0, the voters do not have any incentive to contribute to the oracle because they can get no reward by doing so (even worse, they lose the transaction fee for Ethereum). $C$ needs to be a positive value to bootstrap the system.}\footnote{$C$ should be set to a small value. If $C$ is large, it will work as an incentive to create many dummy accounts. This may happen with a small $C$ to some extent but it will not have a terrible impact to the system. The ACB's ability of controlling the total coin supply and adjusting the currency price is not affected by how many accounts are created in the system.}
 
@@ -299,13 +299,15 @@ The bonds are implemented as non-transferable tokens. Bondholders can buy and re
 \caption{The quantized exchange rates supported by the oracle.}\vspace{2ex}
 \begin{tabular}{rrrrr}\hline
 \multicolumn{1}{c}{$E$} & \multicolumn{1}{c}{$B_{\mathrm{issue}}$} & \multicolumn{1}{c}{$B_{\mathrm{redemp}}$} & \multicolumn{1}{c}{$T$} & \multicolumn{1}{c}{$R$}\\\hline
-1 coin = 0.7 USD & 970 coins & 1000 coins & 12 weeks & 14.1\%\\
-1 coin = 0.8 USD & 980 coins & 1000 coins & 12 weeks & 9.16\%\\
+1 coin = 0.6 USD & 950 coins & 1000 coins & 12 weeks & 25.0\%\\
+1 coin = 0.7 USD & 965 coins & 1000 coins & 12 weeks & 16.7\%\\
+1 coin = 0.8 USD & 978 coins & 1000 coins & 12 weeks & 10.1\%\\
 1 coin = 0.9 USD & 990 coins & 1000 coins & 12 weeks & 4.46\%\\
 1 coin = 1.0 USD & 997 coins & 1000 coins & 12 weeks & 1.31\%\\
 1 coin = 1.1 USD & 997 coins & 1000 coins & 12 weeks & 1.31\%\\
 1 coin = 1.2 USD & 997 coins & 1000 coins & 12 weeks & 1.31\%\\
-1 coin = 1.3 USD & 997 coins & 1000 coins & 12 weeks & 1.31\%\\\hline
+1 coin = 1.3 USD & 997 coins & 1000 coins & 12 weeks & 1.31\%\\
+1 coin = 1.4 USD & 997 coins & 1000 coins & 12 weeks & 1.31\%\\\hline
 \end{tabular}
 \label{table1}
 \end{center}
@@ -319,7 +321,7 @@ Table \ref{table1} shows the quantized exchange rates supported by the oracle.\f
 \begin{tabular}{p{26em}|p{10em}}\hline
 $D$ (A voter needs to deposit $D$\% of their coin balance to the oracle.) & 10\%\\\hline
 $C$ (The oracle evenly distributes $C$\% of the reward to the voters who voted for the ``truth'' exchange rate. The rest of the reward is distributed to the voters in proportion to the coins they deposited.) & 10\%\\\hline
-Voters who voted for the ``truth'' exchange rate and its around can reclaim the coins they deposited. What is the threshold? & 0.1 (For example, if the ``truth'' exchange rate is 1.1, voters who voted for 1.0, 1.1 and 1.2 can reclaim the coins they deposited)\\\hline
+Voters who voted for the ``truth'' exchange rate and its surroundings can reclaim the coins they deposited. What is the threshold? & 0.1 (For example, if the ``truth'' exchange rate is 1.1, voters who voted for 1.0, 1.1 and 1.2 can reclaim the coins they deposited)\\\hline
 The ACB obtains the exchange rate from the oracle and adjusts the total coin supply every period. What is the duration of the period? & 1 week\\\hline
 $k$ (A damping factor to avoid minting or burning too many coins in one period.) & 10\%\\\hline
 Initial coin supply & 2100000 coins\\\hline
@@ -328,7 +330,7 @@ Initial coin supply & 2100000 coins\\\hline
 \end{center}
 \end{table}
 
-Table \ref{table2} shows other constant values. The initial coin supply is minted in the genesis account (created by the author of the smart contract). It is important to give a substantial amount of coins to the genesis account so that the genesis account can have power to determine the exchange rate until the ecosystem stabilizes. When real-world currency exchangers appear and the oracle gets a sufficient number of honest voters to agree on the real-world exchange rate consistently, the genesis account can lose its power by decreasing the coin balance, moving the oracle to a fully decentralized system.\footnote{Until a real-world currency exchanger appears, the genesis account will keep voting for the exchange rate of 1.1 and other voters are expected to follow. This means that the total coin supply will increase gradually in the bootstrap phase. Once a real-world currency exchanger appears, the genesis account will use the real-world exchange rate and other voters are expected to follow. When the oracle gets a sufficient number of honest voters to agree on the real-world exchange rate, the genesis account will decrease the coin balance and lose the power.} This mechanism is mandatory to bootstrap the ecosystem and stabilize the exchange rate successfully.
+Table \ref{table2} shows other constant values.\footnote{With these values, the maximum increase of the total coin supply per week is $k(1.4 - 1.0)=4$\%.} The initial coin supply is minted in the genesis account (created by the author of the smart contract). It is important to give a substantial amount of coins to the genesis account so that the genesis account can have power to determine the exchange rate until the ecosystem stabilizes. When real-world currency exchangers appear and the oracle gets a sufficient number of honest voters to agree on the real-world exchange rate consistently, the genesis account can lose its power by decreasing the coin balance, moving the oracle to a fully decentralized system.\footnote{Until a real-world currency exchanger appears, the genesis account will keep voting for the exchange rate of 1.1 and other voters are expected to follow. This means that the total coin supply will increase gradually in the bootstrap phase. Once a real-world currency exchanger appears, the genesis account will use the real-world exchange rate and other voters are expected to follow. When the oracle gets a sufficient number of honest voters to agree on the real-world exchange rate, the genesis account will decrease the coin balance and lose the power.} This mechanism is mandatory to bootstrap the ecosystem and stabilize the exchange rate successfully.
 
 \subsection{APIs}
 

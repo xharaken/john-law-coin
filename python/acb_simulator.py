@@ -64,8 +64,10 @@ class ACBSimulator(unittest.TestCase):
                reclaim_threshold,
                voter_count,
                iteration))
-        print('levels=', end='')
+        print('exchange_rate=', end='')
         print(level_to_exchange_rate)
+        print('bond_price=', end='')
+        print(level_to_bond_price)
 
         self.oracle = Oracle()
         self.acb = ACB(0x1000, self.oracle)
@@ -230,7 +232,8 @@ class ACBSimulator(unittest.TestCase):
         print('epoch=%d reveal_hit=%d/%d=%d%% reclaim_hit=%d/%d=%d%% '
               'purchase_hit=%d/%d=%d%% redeem_hit=%d/%d=%d%% '
               'redemptions=%d/%d=%d%% fast_redeem=%d/%d=%d%% '
-              'supply=%d/%d/%d coin_supply=%d mint=%d lost=%d bond_supply=%d' %
+              'supply=%d/%d/%d coin_supply=%d%% mint=%d lost=%d bond_supply=%d'
+              %
               (epoch,
                self.metrics.total_reveal_hit,
                self.metrics.total_reveal_hit + self.metrics.total_reveal_miss,
@@ -261,7 +264,7 @@ class ACBSimulator(unittest.TestCase):
                self.metrics.supply_increased,
                self.metrics.supply_nochange,
                self.metrics.supply_decreased,
-               acb.coin.total_supply - initial_coin_supply,
+               acb.coin.total_supply / initial_coin_supply * 100,
                self.metrics.total_mint,
                self.metrics.total_lost,
                acb.bond.total_supply
@@ -602,25 +605,25 @@ def main():
 
     test = ACBSimulator(
         1000,
-        45,
-        7,
+        12,
+        1,
         90,
         10,
         10,
-        [7, 8, 9, 10, 11, 12, 13],
-        [970, 980, 990, 997, 997, 997, 997],
+        [6, 7, 8, 9, 10, 11, 12, 13, 14],
+        [950, 965, 978, 990, 997, 997, 997, 997, 997],
         1,
         200,
         iteration)
     test.run()
     test.teardown()
 
-    for bond_redemption_price in [3, 998, 1000]:
-        for bond_redemption_period in [1, 2, 5, 84 * 24 * 60 * 60]:
-            for phase_duration in [1, 2, 5, 7 * 24 * 60 * 60]:
-                for proportional_reward_rate in [0, 1, 90, 99, 100]:
-                    for deposit_rate in [0, 1, 10, 99, 100]:
-                        for damping_factor in [1, 10, 99, 100]:
+    for bond_redemption_price in [3, 1000]:
+        for bond_redemption_period in [1, 84 * 24 * 60 * 60]:
+            for phase_duration in [1, 7 * 24 * 60 * 60]:
+                for proportional_reward_rate in [0, 90, 100]:
+                    for deposit_rate in [0, 10, 100]:
+                        for damping_factor in [10, 100]:
                             p = bond_redemption_price
                             for (level_to_exchange_rate,
                                  level_to_bond_price) in [
@@ -629,13 +632,14 @@ def main():
                                      ([0, 1, 10, 11, 12],
                                       [max(1, p - 20), max(1, p - 10),
                                        p, p, p]),
-                                     ([7, 8, 9, 10, 11, 12, 13],
-                                      [max(1, p - 20), max(1, p - 20),
+                                     ([6, 7, 8, 9, 10, 11, 12, 13, 14],
+                                      [max(1, p - 30),
+                                       max(1, p - 20), max(1, p - 20),
                                        max(1, p - 10), max(1, p - 10),
-                                       p, p, p])]:
-                                for reclaim_threshold in range(1, len(
-                                    level_to_exchange_rate)):
-                                    for voter_count in [0, 1, 10, 200]:
+                                       p, p, p, p])]:
+                                for reclaim_threshold in [0, 1, len(
+                                    level_to_exchange_rate) - 1]:
+                                    for voter_count in [1, 200]:
                                         test = ACBSimulator(
                                             bond_redemption_price,
                                             bond_redemption_period,

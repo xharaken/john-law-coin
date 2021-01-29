@@ -31,17 +31,17 @@ import common
 
 common.reset_network(11)
 command = ("truffle test acb_unittest.js " +
-           "'1000 45 7 80 10 10 [7, 8, 9, 10, 11, 12, 13] " +
-           "[970, 980, 990, 997, 997, 997, 997] 1 10 10'")
+           "'1000 84 7 90 10 10 [6, 7, 8, 9, 10, 11, 12, 13, 14] " +
+           "[950, 965, 978, 990, 997, 997, 997, 997, 997] 1 40 10'")
 common.run_test(command)
 
 iteration = 100
-for bond_redemption_price in [3, 998, 1000]:
-    for bond_redemption_period in [1, 2, 5, 84 * 24 * 60 * 60]:
-        for phase_duration in [1, 2, 5, 7 * 24 * 60 * 60]:
-            for proportional_reward_rate in [0, 1, 90, 99, 100]:
-                for deposit_rate in [0, 1, 10, 99, 100]:
-                    for damping_factor in [1, 10, 99, 100]:
+for bond_redemption_price in [1000]:
+    for bond_redemption_period in [1, 84 * 24 * 60 * 60]:
+        for phase_duration in [1, 7 * 24 * 60 * 60]:
+            for proportional_reward_rate in [0, 90, 100]:
+                for deposit_rate in [0, 10, 100]:
+                    for damping_factor in [10, 100]:
                         p = bond_redemption_price
                         for (level_to_exchange_rate,
                              level_to_bond_price) in [
@@ -50,13 +50,14 @@ for bond_redemption_price in [3, 998, 1000]:
                                  ([0, 1, 10, 11, 12],
                                   [max(1, p - 20), max(1, p - 10),
                                    p, p, p]),
-                                 ([7, 8, 9, 10, 11, 12, 13],
-                                  [max(1, p - 20), max(1, p - 20),
+                                 ([6, 7, 8, 9, 10, 11, 12, 13, 14],
+                                  [max(1, p - 30),
+                                   max(1, p - 20), max(1, p - 20),
                                    max(1, p - 10), max(1, p - 10),
                                    p, p, p])]:
-                            for reclaim_threshold in range(1, len(
-                                level_to_exchange_rate)):
-                                for voter_count in [0, 1, 20]:
+                            for reclaim_threshold in [1, len(
+                                level_to_exchange_rate) - 1]:
+                                for voter_count in [40]:
                                     command = (
                                         "truffle test acb_simulator.js '" +
                                         str(bond_redemption_price) + " " +

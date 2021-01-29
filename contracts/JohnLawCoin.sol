@@ -348,7 +348,7 @@ contract Oracle is OwnableUpgradeable {
     // ----------------
     
     // The number of the oracle levels.
-    LEVEL_MAX = 7;
+    LEVEL_MAX = 9;
     
     // If the "truth" level is 4 and RECLAIM_THRESHOLD is 1, the voters who
     // voted for 3, 4 and 5 can reclaim their deposited coins. Other voters
@@ -831,17 +831,19 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
     //  | oracle level | exchange rate    | bond price              |
     //  |              |                  | (annual interest rate)  |
     //  -------------------------------------------------------------
-    //  | 0            | 1 coin = 0.7 USD | 970 coins (14.1%)       |
-    //  | 1            | 1 coin = 0.8 USD | 980 coins (9.16%)       |
-    //  | 2            | 1 coin = 0.9 USD | 990 coins (4.46%)       |
-    //  | 3            | 1 coin = 1.0 USD | 997 coins (1.31%)       |
-    //  | 4            | 1 coin = 1.1 USD | 997 coins (1.31%)       |
-    //  | 5            | 1 coin = 1.2 USD | 997 coins (1.31%)       |
-    //  | 6            | 1 coin = 1.3 USD | 997 coins (1.31%)       |
+    //  | 0            | 1 coin = 0.6 USD | 950 coins (25.0%)       |
+    //  | 1            | 1 coin = 0.7 USD | 965 coins (16.7%)       |
+    //  | 2            | 1 coin = 0.8 USD | 978 coins (10.1%)       |
+    //  | 3            | 1 coin = 0.9 USD | 990 coins (4.46%)       |
+    //  | 4            | 1 coin = 1.0 USD | 997 coins (1.31%)       |
+    //  | 5            | 1 coin = 1.1 USD | 997 coins (1.31%)       |
+    //  | 6            | 1 coin = 1.2 USD | 997 coins (1.31%)       |
+    //  | 7            | 1 coin = 1.3 USD | 997 coins (1.31%)       |
+    //  | 8            | 1 coin = 1.4 USD | 997 coins (1.31%)       |
     //  -------------------------------------------------------------
     //
     // In the bootstrap phase in which no currency exchanger supports JLC <=>
-    // USD conversions, voters are expected to vote for the oracle level 4
+    // USD conversions, voters are expected to vote for the oracle level 5
     // (i.e., 1 coin = 1.1 USD). This helps increase the total coin supply
     // gradually in the bootstrap phase and incentivize early adopters. Once
     // currency exchangers support the conversions, voters are expected to vote
@@ -852,12 +854,12 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
     // by EXCHANGE_RATE_DIVISOR. For example, 11 corresponds to the exchange
     // rate of 1.1. This translation is needed to avoid using decimal numbers in
     // the smart contract.
-    LEVEL_TO_EXCHANGE_RATE = [7, 8, 9, 10, 11, 12, 13];
+    LEVEL_TO_EXCHANGE_RATE = [6, 7, 8, 9, 10, 11, 12, 13, 14];
     EXCHANGE_RATE_DIVISOR = 10;
 
     // LEVEL_TO_BOND_PRICE is the mapping from the oracle levels to the
     // bond prices.
-    LEVEL_TO_BOND_PRICE = [970, 980, 990, 997, 997, 997, 997];
+    LEVEL_TO_BOND_PRICE = [950, 965, 978, 990, 997, 997, 997, 997, 997];
 
     // The bond redemption price and the redemption period.
     BOND_REDEMPTION_PRICE = 1000; // One bond is redeemed for 1000 USD.
@@ -885,7 +887,7 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
     // coin balance. This mechanism is mandatory to stabilize the exchange rate
     // and bootstrap the ecosystem successfully.
     //
-    // Specifically, the genesis account votes for the oracle level 4 until
+    // Specifically, the genesis account votes for the oracle level 5 until
     // real-world currency exchangers appear. Once real-world currency
     // exchangers appear, the genesis account votes for the oracle level
     // corresponding to the real-world exchange rate. Other voters are

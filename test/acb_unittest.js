@@ -63,10 +63,10 @@ function parameterized_test(accounts,
     let _level_max = _level_to_exchange_rate.length;
 
     let _oracle = await OracleForTesting.new(
-        {from: accounts[1], gas: 12000000});
+        {from: accounts[1]});
     common.print_contract_size(_oracle, "OracleForTesting");
     await _oracle.initialize({from: accounts[1]});
-    let _acb = await ACBForTesting.new({from: accounts[1], gas: 30000000});
+    let _acb = await ACBForTesting.new({from: accounts[1]});
     common.print_contract_size(_acb, "ACBForTesting");
     await _acb.initialize(_oracle.address, {from: accounts[1]});
     await _oracle.transferOwnership(_acb.address, {from: accounts[1]});

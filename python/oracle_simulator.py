@@ -220,10 +220,10 @@ class OracleSimulator(unittest.TestCase):
 
 def main():
     iteration = 1000
-    for level_max in [2, 3, 4, 5, 7, 11]:
+    for level_max in [2, 3, 4, 9]:
         for reclaim_threshold in range(0, level_max):
-            for proportional_reward_rate in [0, 1, 20, 90, 99, 100]:
-                for voter_count in [0, 1, 10, 100]:
+            for proportional_reward_rate in [0, 1, 90, 100]:
+                for voter_count in [0, 1, 100]:
                     test = OracleSimulator(level_max,
                                            reclaim_threshold,
                                            proportional_reward_rate,

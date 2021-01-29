@@ -29,13 +29,13 @@ common.reset_network(8)
 command = "truffle test oracle_unittest.js '5 1 90 20 100 2 0'"
 common.run_test(command)
 
-for level_max in [2, 3, 4, 5, 7]:
+for level_max in [2, 4, 9]:
     for reclaim_threshold in range(0, level_max):
-        for proportional_reward_rate in [0, 1, 90, 99, 100]:
+        for proportional_reward_rate in [0, 90, 100]:
             for mint in [0, 50]:
-                for deposit in [0, 1, 100]:
+                for deposit in [0, 100]:
                     for mode_level in range(0, level_max):
-                        for other_level in range(0, level_max):
+                        for other_level in [0, level_max / 2, level_max - 1]:
                             if other_level == mode_level:
                                 continue
                             command = (

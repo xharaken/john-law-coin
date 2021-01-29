@@ -56,7 +56,7 @@ function parameterized_test(accounts,
     assert.isTrue(_mode_level != _other_level);
 
     let _coin = await JohnLawCoin.new();
-    let _oracle = await OracleForTesting.new({gas: 12000000});
+    let _oracle = await OracleForTesting.new();
     await _oracle.initialize();
     await _oracle.overrideConstants(_level_max, _reclaim_threshold,
                                      _proportional_reward_rate);
@@ -1050,10 +1050,10 @@ function parameterized_test(accounts,
     if (_is_in_reclaim_threshold(_other_level)) {
       balance = await balance_of(accounts[2]);
       await check_reclaim(  accounts[2], _deposit);
-      assert.equal(await balance_of(accounts[2], balance + _deposit));
+      assert.equal(await balance_of(accounts[2]), balance + _deposit);
       balance = await balance_of(accounts[6]);
       await check_reclaim(  accounts[6], _deposit);
-      assert.equal(await balance_of(accounts[6], balance + _deposit));
+      assert.equal(await balance_of(accounts[6]), balance + _deposit);
     } else {
       assert.equal(await _oracle.reclaim.call(_coin.address, accounts[2]), 0);
       assert.equal(await _oracle.reclaim.call(_coin.address, accounts[6]), 0);
@@ -1825,7 +1825,7 @@ function parameterized_test(accounts,
     if (_is_in_reclaim_threshold(_other_level)) {
       balance = await balance_of(accounts[2]);
       await check_reclaim(  accounts[2], _deposit);
-      assert.equal(await balance_of(accounts[2], balance + _deposit));
+      assert.equal(await balance_of(accounts[2]), balance + _deposit);
       assert.equal(await _oracle.reclaim.call(_coin.address, accounts[6]), 0);
     } else {
       assert.equal(await _oracle.reclaim.call(_coin.address, accounts[2]), 0);
@@ -2081,7 +2081,7 @@ function parameterized_test(accounts,
     }, "Ownable");
 
     _coin = await JohnLawCoin.new({from: accounts[2]});
-    _oracle = await OracleForTesting.new({from: accounts[2], gas: 12000000});
+    _oracle = await OracleForTesting.new({from: accounts[2]});
     await _oracle.initialize({from: accounts[2]});
     await _oracle.overrideConstants(_level_max, _reclaim_threshold,
                                     _proportional_reward_rate,

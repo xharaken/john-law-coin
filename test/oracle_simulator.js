@@ -49,7 +49,7 @@ function parameterized_test(accounts,
   it(test_name, async function () {
     let _prev_mint = 0;
     let _coin = await JohnLawCoin.new();
-    let _oracle = await OracleForTesting.new({gas: 12000000});
+    let _oracle = await OracleForTesting.new();
     await _oracle.initialize();
     await _oracle.overrideConstants(_level_max, _reclaim_threshold,
                                     _proportional_reward_rate);
