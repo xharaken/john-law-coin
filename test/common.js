@@ -39,9 +39,11 @@ exports.mod = (i, j) => {
 exports.print_contract_size = (instance, name) => {
   let bytecode = instance.constructor._json.bytecode;
   let deployed = instance.constructor._json.deployedBytecode;
-  let sizeOfB  = bytecode.length / 2;
-  let sizeOfD  = deployed.length / 2;
-  console.log(name + ": bytecode=" + sizeOfB + " deployed=" + sizeOfD);
+  let bytecode_size  = bytecode.length / 2;
+  let deployed_size  = deployed.length / 2;
+  console.log(name + ": bytecode=" + bytecode_size +
+              " deployed=" + deployed_size);
+  return bytecode_size;
 };
 
 exports.randint = (a, b) => {

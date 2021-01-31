@@ -24,227 +24,7 @@ import "openzeppelin-solidity/contracts/math/SignedSafeMath.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20Pausable.sol";
 import "openzeppelin-solidity/contracts/utils/SafeCast.sol";
 
-//------------------------------------------------------------------------------
-// [Overview]
-//
-// JohnLawCoin is a stable coin realized by an Algorithmic Central Bank (ACB).
-// The system is fully decentralized and there is truly no gatekeeper.
-//
-// JohnLawCoin is a real-world experiment to verify the following assumption:
-//
-// - It is possible to stabilize the coin price with fully algorithmically
-//   defined monetary policies without holding any collateral.
-//
-// If JohnLawCoin is successful and proves the assumption is correct, it will
-// provide interesting insights for both non-fiat currencies and fiat
-// currencies; i.e., 1) there is a way for non-fiat cryptocurrencies to
-// stabilize their currency price without having any gatekeeper, and 2) there
-// is a way for central banks of developing countries to implement a fixed
-// exchange rate system without holding adequate USD reserves. This will
-// upgrade human's understanding about money.
-//
-// JohnLawCoin has the following important properties:
-//
-// - There is truly no gatekeeper. The ACB is fully automated and no one
-//   (including the author of the smart contract) has the privileges of
-//   influencing the monetary policies of the ACB. This can be verified by the
-//   fact that the smart contract has no operations that need privileged
-//   permissions.
-// - The smart contract is self-contained. There are no dependencies on other
-//   smart contracts and external services.
-// - All operations are guaranteed to terminate in the time complexity of O(1).
-//   The time complexity of each operation is determined solely by the input
-//   size of the operation and not affected by the state of the smart contract.
-//
-// See the whitepaper for more details
-// (https://github.com/xharaken/john-law-coin/blob/main/docs/whitepaper.pdf).
-//
-// If you have any questions, add comments to the GitHub issues
-// (https://github.com/xharaken/john-law-coin).
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-// [JohnLawCoin contract]
-//
-// JohnLawCoin is implemented as ERC20 tokens.
-//
-// Permission: Only the ACB and its oracle can mint, burn and transfer the
-// coins. Only the ACB can pause and unpause the contract. Coin holders can
-// transfer their coins using ERC20's APIs.
-//------------------------------------------------------------------------------
-contract JohnLawCoin is ERC20Pausable, Ownable {
-  string public constant NAME = "JohnLawCoin";
-  string public constant SYMBOL = "JLC";
-
-  // Constructor.
-  //
-  // Parameters
-  // ----------------
-  // None.
-  constructor()
-      ERC20(NAME, SYMBOL) {
-  }
-
-  // Mint coins to one account. Only the ACB and its oracle can call this
-  // method.
-  //
-  // Parameters
-  // ----------------
-  // |account|: The account to which the coins are minted.
-  // |amount|: The amount to be minted.
-  //
-  // Returns
-  // ----------------
-  // None.
-  function mint(address account, uint256 amount)
-      public onlyOwner {
-    _mint(account, amount);
-  }
-
-  // Burn coins from one account. Only the ACB and its oracle can call this
-  // method.
-  //
-  // Parameters
-  // ----------------
-  // |account|: The account from which the coins are burned.
-  // |amount|: The amount to be burned.
-  //
-  // Returns
-  // ----------------
-  // None.
-  function burn(address account, uint256 amount)
-      public onlyOwner {
-    _burn(account, amount);
-  }
-
-  // Move coins from one account to another account. Only the ACB and its
-  // oracle can call this method. Coin holders should use ERC20's transfer
-  // method instead.
-  //
-  // Parameters
-  // ----------------
-  // |sender|: The sender account.
-  // |receiver|: The receiver account.
-  // |amount|: The amount to be moved.
-  //
-  // Returns
-  // ----------------
-  // None.
-  function move(address sender, address receiver, uint256 amount)
-      public onlyOwner {
-    _transfer(sender, receiver, amount);
-  }
-
-  // Pause the contract. Only the ACB can call this method.
-  //
-  // Parameters
-  // ----------------
-  // None.
-  //
-  // Returns
-  // ----------------
-  // None.
-  function pause()
-      public onlyOwner {
-    _pause();
-  }
-  
-  // Unpause the contract. Only the ACB can call this method.
-  //
-  // Parameters
-  // ----------------
-  // None.
-  //
-  // Returns
-  // ----------------
-  // None.
-  function unpause()
-      public onlyOwner {
-    _unpause();
-  }
-}
-
-//------------------------------------------------------------------------------
-// [JohnLawBond contract]
-//
-// JohnLawBond is an implementation of the bonds to control the total coin
-// supply. The bonds are not transferable.
-//
-// Permission: Only the ACB can mint and burn the bonds. 
-//------------------------------------------------------------------------------
-contract JohnLawBond is Ownable {
-  using SafeMath for uint;
-
-  // Bonds are specified by a pair of the user account and the redemption
-  // timestamp. _balances[account][redemption] stores the balance of the bonds
-  // held by the account with the redemption timestamp.
-  mapping (address => mapping (uint => uint)) private _balances;
-  
-  // The total bond supply.
-  uint private _totalSupply;
-
-  // Events.
-  event MintEvent(address, uint, uint256);
-  event BurnEvent(address, uint, uint256);
-
-  // Constructor.
-  //
-  // Parameters
-  // ----------------
-  // None.
-  constructor() {
-    _totalSupply = 0;
-  }
-  
-  // Mint bonds to one account. Only the ACB can call this method.
-  //
-  // Parameters
-  // ----------------
-  // |account|: The account to which the bonds are minted.
-  // |redemption|: The redemption timestamp of the bonds.
-  // |amount|: The amount to be minted.
-  //
-  // Returns
-  // ----------------
-  // None.
-  function mint(address account, uint redemption, uint256 amount)
-      public onlyOwner {
-    _balances[account][redemption] = _balances[account][redemption].add(amount);
-    _totalSupply = _totalSupply.add(amount);
-    emit MintEvent(account, redemption, amount);
-  }
-
-  // Burn bonds from one account. Only the ACB can call this method.
-  //
-  // Parameters
-  // ----------------
-  // |account|: The account from which the bonds are burned.
-  // |redemption|: The redemption timestamp of the bonds.
-  // |amount|: The amount to be burned.
-  //
-  // Returns
-  // ----------------
-  // None.
-  function burn(address account, uint redemption, uint256 amount)
-      public onlyOwner {
-    _balances[account][redemption] = _balances[account][redemption].sub(amount);
-    _totalSupply = _totalSupply.sub(amount);
-    emit BurnEvent(account, redemption, amount);
-  }
-
-  // Public getter: Return the balance of the bonds held by the |account| with
-  // the |redemption| timestamp.
-  function balanceOf(address account, uint redemption)
-      public view returns (uint) {
-    return _balances[account][redemption];
-  }
-
-  // Public getter: Return the total bond supply.
-  function totalSupply()
-      public view returns (uint) {
-    return _totalSupply;
-  }
-}
+import "./JohnLawCoin_v2.sol";
 
 //------------------------------------------------------------------------------
 // [Oracle contract]
@@ -256,10 +36,10 @@ contract JohnLawBond is Ownable {
 // Permission: Except public getters, only the ACB can call the methods of the
 // oracle.
 //------------------------------------------------------------------------------
-contract Oracle is OwnableUpgradeable {
+contract Oracle_v3 is OwnableUpgradeable {
   using SafeMath for uint;
   uint constant internal UINT_MAX = 2 ** 256 - 1;
-  
+
   // Constants. The values are defined in initialize(). The values never
   // change during the contract execution but use 'internal' (instead of
   // 'constant') because tests want to override the values.
@@ -286,8 +66,13 @@ contract Oracle is OwnableUpgradeable {
     // The timestamp when this commit entry is created.
     uint epoch_timestamp;
 
+    bytes32 committed_hash_v2;
+    uint deposit_v2;
+    uint revealed_level_v2;
+    uint epoch_timestamp_v2;
+    
     // Reserved for future use.
-    uint[10] __reserved;
+    uint[6] __reserved;
   }
 
   // Vote is a struct to count votes in each oracle level.
@@ -307,8 +92,13 @@ contract Oracle is OwnableUpgradeable {
     // receive a reward.
     bool should_reward;
 
+    bool should_reclaim_v2;
+    bool should_reward_v2;
+    uint deposit_v2;
+    uint count_v2;
+    
     // Reserved for future use.
-    uint[10] __reserved;
+    uint[8] __reserved;
   }
 
   // Epoch is a struct to keep track of states in the commit-reveal-reclaim
@@ -330,19 +120,48 @@ contract Oracle is OwnableUpgradeable {
     // The current phase of this Epoch.
     Phase phase;
 
+    address deposit_account_v2;
+    address reward_account_v2;
+    uint reward_total_v2;
+    Phase phase_v2;
+    
     // Reserved for future use.
-    uint[20] __reserved;
+    uint[17] __reserved;
   }
 
   // Attributes. See the comment in initialize().
   Epoch[3] public epochs_;
   uint public epoch_timestamp_;
 
+  uint public epoch_timestamp_v2_;
+  
   // Events.
   event CommitEvent(address indexed, bytes32, uint);
   event RevealEvent(address indexed, uint, uint);
   event ReclaimEvent(address indexed, uint);
   event AdvancePhaseEvent(uint indexed, uint, uint);
+
+  function upgrade()
+      public onlyOwner {
+    epoch_timestamp_ = epoch_timestamp_v2_;
+    for (uint epoch_index = 0; epoch_index < 3; epoch_index++) {
+      epochs_[epoch_index].deposit_account =
+          epochs_[epoch_index].deposit_account_v2;
+      epochs_[epoch_index].reward_account =
+          epochs_[epoch_index].reward_account_v2;
+      epochs_[epoch_index].reward_total =
+          epochs_[epoch_index].reward_total_v2;
+      epochs_[epoch_index].phase =
+          epochs_[epoch_index].phase_v2;
+      for (uint level = 0; level < epochs_[epoch_index].votes.length; level++) {
+        Vote storage vote = epochs_[epoch_index].votes[level];
+        vote.should_reclaim = vote.should_reclaim_v2;
+        vote.should_reward = vote.should_reward_v2;
+        vote.deposit = vote.deposit_v2;
+        vote.count = vote.count_v2;
+      }
+    }
+  }
 
   // Initializer.
   //
@@ -381,9 +200,9 @@ contract Oracle is OwnableUpgradeable {
     for (uint epoch_index = 0; epoch_index < 3; epoch_index++) {
       for (uint level = 0; level < LEVEL_MAX; level++) {
         epochs_[epoch_index].votes.push(
-            Vote(0, 0, false, false,
+            Vote(0, 0, false, false, false, false, 0, 0,
                  [UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX,
-                  UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX]));
+                  UINT_MAX, UINT_MAX, UINT_MAX]));
       }
       epochs_[epoch_index].deposit_account =
           address(uint160(uint(keccak256(abi.encode(
@@ -434,8 +253,8 @@ contract Oracle is OwnableUpgradeable {
     // Create a commit entry.
     epoch.commits[sender] = Commit(
         committed_hash, deposit, LEVEL_MAX, Phase.COMMIT, epoch_timestamp_,
-        [UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX,
-         UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX]);
+        committed_hash, deposit, LEVEL_MAX, epoch_timestamp_,
+        [UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX]);
     require(epoch.commits[sender].phase == Phase.COMMIT, "commit: 2");
 
     // Move the deposited coins to the deposit account.
@@ -485,7 +304,8 @@ contract Oracle is OwnableUpgradeable {
 
     // Count up votes and the deposited coins.
     epoch.votes[revealed_level].deposit =
-        epoch.votes[revealed_level].deposit.add(epoch.commits[sender].deposit);
+        epoch.votes[revealed_level].deposit.add(
+            epoch.commits[sender].deposit);
     epoch.votes[revealed_level].count =
         epoch.votes[revealed_level].count.add(1);
     emit RevealEvent(sender, revealed_level, revealed_salt);
@@ -641,7 +461,8 @@ contract Oracle is OwnableUpgradeable {
     uint burned = (coin.balanceOf(epoch.deposit_account))
                   .add(coin.balanceOf(epoch.reward_account));
     // Burn the remaining deposited coins.
-    coin.burn(epoch.deposit_account, coin.balanceOf(epoch.deposit_account));
+    coin.burn(epoch.deposit_account, coin.balanceOf(
+        epoch.deposit_account));
     // Burn the remaining reward.
     coin.burn(epoch.reward_account, coin.balanceOf(epoch.reward_account));
 
@@ -651,9 +472,9 @@ contract Oracle is OwnableUpgradeable {
     // |epoch_timestamp_| ensures the stale commit entries are not used.
     for (uint level = 0; level < LEVEL_MAX; level++) {
       epoch.votes[level] =
-          Vote(0, 0, false, false,
+          Vote(0, 0, false, false, false, false, 0, 0,
                [UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX,
-                UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX]);
+                UINT_MAX, UINT_MAX, UINT_MAX]);
     }
     require(coin.balanceOf(epoch.deposit_account) == 0, "advance: 8");
     require(coin.balanceOf(epoch.reward_account) == 0, "advance: 9");
@@ -728,7 +549,8 @@ contract Oracle is OwnableUpgradeable {
     require(0 <= level && level < epochs_[epoch_index].votes.length,
             "get_vote: 2");
     Vote memory vote = epochs_[epoch_index].votes[level];
-    return (vote.deposit, vote.count, vote.should_reclaim, vote.should_reward);
+    return (vote.deposit, vote.count, vote.should_reclaim,
+            vote.should_reward);
   }
 
   // Public getter: Return the Commit struct at |epoch_index| and |account|.
@@ -791,7 +613,7 @@ contract Oracle is OwnableUpgradeable {
 // the genesis account. This is needed for the genesis account to upgrade the
 // smart contract and fix bugs in a development phase.
 //------------------------------------------------------------------------------
-contract ACB is OwnableUpgradeable, PausableUpgradeable {
+contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
   using SafeMath for uint;
   using SignedSafeMath for int;
   using SafeCast for uint;
@@ -822,6 +644,15 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
   // a restriction of @openzeppelin/truffle-upgrades.
   uint internal timestamp_for_testing_;
 
+  JohnLawCoin public coin_v2_;
+  JohnLawBond public bond_v2_;
+  int public bond_budget_v2_;
+  Oracle_v2 public oracle_v2_;
+  uint public oracle_level_v2_;
+  uint public current_phase_start_v2_;
+
+  Oracle_v3 public oracle_v3_;
+  
   // Events.
   event CreateAccountEvent(address indexed);
   event VoteEvent(address indexed, bytes32, uint, uint,
@@ -829,6 +660,17 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
   event PurchaseBondsEvent(address indexed, uint, uint);
   event RedeemBondsEvent(address indexed, uint[], uint);
   event ControlSupplyEvent(int, int, uint);
+
+  function upgrade(Oracle_v3 oracle)
+      public onlyOwner {
+    coin_ = coin_v2_;
+    bond_ = bond_v2_;
+    // bond_budget_ = bond_budget_v2_;
+    oracle_v3_ = oracle;
+    // oracle_level_ = oracle_level_v2_;
+    current_phase_start_ = current_phase_start_v2_;
+    oracle_v3_.upgrade();
+  }
 
   // Initializer.
   //
@@ -998,13 +840,14 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
   //  - boolean: Whether the reveal succeeded or not.
   //  - uint: The total amount of the reclaimed coins and the reward.
   //  - boolean: Whether this vote resulted in a phase update.
-  function vote(bytes32 committed_hash, uint revealed_level, uint revealed_salt)
+  function vote(bytes32 committed_hash, uint revealed_level,
+                uint revealed_salt)
       public whenNotPaused returns (bool, bool, uint, bool) {
     address sender = msg.sender;
 
     // Temporarily transfer the ownership of the JohnLawCoin contract to the
     // oracle.
-    coin_.transferOwnership(address(oracle_));
+    coin_.transferOwnership(address(oracle_v3_));
     
     bool phase_updated = false;
     if (getTimestamp() >= current_phase_start_.add(PHASE_DURATION)) {
@@ -1013,9 +856,9 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
       current_phase_start_ = getTimestamp();
       
       uint mint = 0;
-      oracle_level_ = oracle_.getModeLevel();
-      if (oracle_level_ != oracle_.getLevelMax()) {
-        require(0 <= oracle_level_ && oracle_level_ < oracle_.getLevelMax(),
+      oracle_level_ = oracle_v3_.getModeLevel();
+      if (oracle_level_ != oracle_v3_.getLevelMax()) {
+        require(0 <= oracle_level_ && oracle_level_ < oracle_v3_.getLevelMax(),
                 "vote: 1");
         // Translate the mode level to the exchange rate.
         uint exchange_rate = LEVEL_TO_EXCHANGE_RATE[oracle_level_];
@@ -1041,25 +884,26 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
 
       // Advance to the next phase. Provide the |mint| coins to the oracle
       // as a reward.
-      oracle_.advance(coin_, mint);
+      oracle_v3_.advance(coin_, mint);
     }
 
     // Commit.
     //
     // The voter needs to deposit the DEPOSIT_RATE percentage of their coin
     // balance.
-    bool commit_result = oracle_.commit(
+    bool commit_result = oracle_v3_.commit(
         coin_, sender, committed_hash,
         coin_.balanceOf(sender).mul(DEPOSIT_RATE).div(100));
     
     // Reveal.
-    bool reveal_result = oracle_.reveal(sender, revealed_level, revealed_salt);
+    bool reveal_result = oracle_v3_.reveal(
+        sender, revealed_level, revealed_salt);
     
     // Reclaim.
-    uint reclaim_amount = oracle_.reclaim(coin_, sender);
+    uint reclaim_amount = oracle_v3_.reclaim(coin_, sender);
 
     // Revoke the ownership of the JohnLawCoin contract from the oracle.
-    oracle_.revokeOwnership(coin_);
+    oracle_v3_.revokeOwnership(coin_);
     
     emit VoteEvent(sender, committed_hash, revealed_level, revealed_salt,
                    commit_result, reveal_result, reclaim_amount, phase_updated);
@@ -1088,8 +932,8 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
       return 0;
     }
 
-    uint bond_price = LEVEL_TO_BOND_PRICE[oracle_.getLevelMax() - 1];
-    if (0 <= oracle_level_ && oracle_level_ < oracle_.getLevelMax()) {
+    uint bond_price = LEVEL_TO_BOND_PRICE[oracle_v3_.getLevelMax() - 1];
+    if (0 <= oracle_level_ && oracle_level_ < oracle_v3_.getLevelMax()) {
       bond_price = LEVEL_TO_BOND_PRICE[oracle_level_];
     }
     uint amount = bond_price.mul(count);
@@ -1193,7 +1037,7 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
       }
       require(bond_budget_ <= 0, "_controlSupply: 1");
     } else {
-      require(0 <= oracle_level_ && oracle_level_ < oracle_.getLevelMax(),
+      require(0 <= oracle_level_ && oracle_level_ < oracle_v3_.getLevelMax(),
               "_controlSupply: 2");
       // Issue new bonds to decrease the total coin supply.
       bond_budget_ = -delta.div(LEVEL_TO_BOND_PRICE[oracle_level_].toInt256());
@@ -1220,7 +1064,7 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
   function hash(uint level, uint salt)
       public view returns (bytes32) {
     address sender = msg.sender;
-    return oracle_.hash(sender, level, salt);
+    return oracle_v3_.hash(sender, level, salt);
   }
   
   // Return the current timestamp in seconds.

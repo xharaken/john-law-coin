@@ -62,10 +62,12 @@ function parameterized_test(accounts,
   it(test_name, async function () {
     let _level_max = _level_to_exchange_rate.length;
 
+    // Cannot use deployProxy because {from: ...} is not supported.
     let _oracle = await OracleForTesting.new(
         {from: accounts[1]});
     common.print_contract_size(_oracle, "OracleForTesting");
     await _oracle.initialize({from: accounts[1]});
+    // Cannot use deployProxy because {from: ...} is not supported.
     let _acb = await ACBForTesting.new({from: accounts[1]});
     common.print_contract_size(_acb, "ACBForTesting");
     await _acb.initialize(_oracle.address, {from: accounts[1]});
@@ -2817,6 +2819,22 @@ function parameterized_test(accounts,
     await should_throw(async () => {
       await _acb._controlSupply(0);
     }, "not a function");
+
+    await should_throw(async () => {
+      await _acb.pause();
+    }, "Ownable");
+
+    await should_throw(async () => {
+      await _acb.pause({from: accounts[2]});
+    }, "Ownable");
+
+    await should_throw(async () => {
+      await _acb.unpause();
+    }, "Pausable");
+
+    await should_throw(async () => {
+      await _acb.unpause({from: accounts[2]});
+    }, "Pausable");
 
     await should_throw(async () => {
       await _coin.mint(accounts[1], 1, {from: accounts[1]});

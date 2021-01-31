@@ -47,10 +47,12 @@ $ sudo npm init -y
 
 ```
 john-law-coin/
+|
 |--- contracts/    # Smart contracts.
 |    |---- JohnLawCoin.sol     # A smart contract of JohnLawCoin.sol.
-|    |---- JohnLawCoinTest.sol # A smart contract to test JohnLawCoin.sol.
 |    |---- Migrations.sol      # A smart contract to deploy JohnLawCoin.sol.
+|    |---- test/               # Smart contracts for testing.
+|
 |---- docs/        # A whitepaper and documentation.
 |---- migrations/  # Migration scripts to deploy the smart contracts.
 |---- test/        # Tests and simulators for JohnLawCoin.sol.
@@ -63,7 +65,7 @@ john-law-coin/
 Launch a private network in one console.
 
 ```bash
-$ ganache-cli -l 1200000000 -a 15
+$ ganache-cli -l 1200000000 -a 10
 ```
 
 Run `truffle test` in another console. Or you can specify a test like `truffle test test/coin_bond_unittest.js`.

@@ -12,12 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+const { deployProxy, upgradeProxy } =
+      require('@openzeppelin/truffle-upgrades');
+
 const JohnLawCoin = artifacts.require("JohnLawCoin");
 const JohnLawBond = artifacts.require("JohnLawBond");
 const Oracle = artifacts.require("Oracle");
 const OracleForTesting = artifacts.require("OracleForTesting");
 const ACB = artifacts.require("ACB");
 const ACBForTesting = artifacts.require("ACBForTesting");
+const Oracle_v2 = artifacts.require("Oracle_v2");
+const OracleForTesting_v2 = artifacts.require("OracleForTesting_v2");
+const ACB_v2 = artifacts.require("ACB_v2");
+const ACBForTesting_v2 = artifacts.require("ACBForTesting_v2");
+const Oracle_v3 = artifacts.require("Oracle_v3");
+const OracleForTesting_v3 = artifacts.require("OracleForTesting_v3");
+const ACB_v3 = artifacts.require("ACB_v3");
+const ACBForTesting_v3 = artifacts.require("ACBForTesting_v3");
+
 const common = require("./common.js");
 const should_throw = common.should_throw;
 const mod = common.mod;
@@ -25,7 +37,7 @@ const randint = common.randint;
 
 contract("ACBSimulator", function (accounts) {
   let args = common.custom_arguments();
-  assert.isTrue(args.length == 11);
+  assert.isTrue(args.length == 12);
   parameterized_test(accounts,
                      args[0],
                      args[1],
@@ -37,7 +49,8 @@ contract("ACBSimulator", function (accounts) {
                      args[7],
                      args[8],
                      args[9],
-                     args[10]);
+                     args[10],
+                     args[11]);
 });
 
 function parameterized_test(accounts,
@@ -51,7 +64,8 @@ function parameterized_test(accounts,
                             _level_to_bond_price,
                             _reclaim_threshold,
                             _voter_count,
-                            _iteration) {
+                            _iteration,
+                            _should_upgrade) {
   let test_name = "ACB parameters:" +
       " bond_redemp_price=" + _bond_redemption_price +
       " bond_redemp_period=" + _bond_redemption_period +
@@ -63,21 +77,21 @@ function parameterized_test(accounts,
       " level_to_bond_price=" + _level_to_bond_price +
       " reclaim=" + _reclaim_threshold +
       " voter=" + _voter_count +
-      " iter=" + _iteration;
+      " iter=" + _iteration +
+      " should_upgrade=" + _should_upgrade;
   console.log(test_name);
   assert.isTrue(_voter_count <= accounts.length - 1);
 
   it(test_name, async function () {
     let _level_max = _level_to_exchange_rate.length;
 
-    let _oracle = await OracleForTesting.new(
-        {from: accounts[0]});
+    let _oracle = await deployProxy(
+        OracleForTesting, [], {unsafeAllowCustomTypes: true});
     common.print_contract_size(_oracle, "OracleForTesting");
-    await _oracle.initialize({from: accounts[0]});
-    let _acb = await ACBForTesting.new({from: accounts[0]});
+    let _acb = await deployProxy(
+        ACBForTesting, [_oracle.address], {unsafeAllowCustomTypes: true});
     common.print_contract_size(_acb, "ACBForTesting");
-    await _acb.initialize(_oracle.address, {from: accounts[0]});
-    await _oracle.transferOwnership(_acb.address, {from: accounts[0]});
+    await _oracle.transferOwnership(_acb.address);
     await _oracle.overrideConstants(_level_max, _reclaim_threshold,
                                      _proportional_reward_rate);
     await _acb.overrideConstants(_bond_redemption_price,
@@ -191,6 +205,8 @@ function parameterized_test(accounts,
         break;
       }
 
+      await upgrade_contract_if_needed(epoch);
+
       _metrics.reset_local();
 
       let coin_supply1 = await get_coin_supply();
@@ -203,6 +219,7 @@ function parameterized_test(accounts,
       }
 
       epoch += 1;
+
       let coin_supply2 = await get_coin_supply();
       let bond_supply = await get_bond_supply();
       let bond_budget = (await _acb.bond_budget_()).toNumber();
@@ -288,8 +305,8 @@ function parameterized_test(accounts,
                     "/" + _metrics.supply_nochange +
                     "/" + _metrics.supply_decreased +
                     " coin_supply=" +
-                    ((await get_coin_supply()) - initial_coin_supply) +
-                    " mint=" + _metrics.total_mint +
+                    ((await get_coin_supply()) / initial_coin_supply * 100) +
+                    "% mint=" + _metrics.total_mint +
                     " lost=" + _metrics.total_lost +
                     " bond_supply=" + await get_bond_supply()
                    );
@@ -652,6 +669,31 @@ function parameterized_test(accounts,
 
       _lost_deposit[mod(epoch, 3)] =  deposit_total + mint - reclaimed_total;
       return commit_observed;
+    }
+
+    async function upgrade_contract_if_needed(epoch) {
+      if (!_should_upgrade) {
+        return;
+      }
+      if (epoch == 10) {
+        _oracle = await upgradeProxy(
+            _oracle.address, OracleForTesting_v2,
+            {unsafeAllowCustomTypes: true});
+        common.print_contract_size(_oracle, "OracleForTesting_v2");
+        _acb = await upgradeProxy(
+            _acb.address, ACBForTesting_v2, {unsafeAllowCustomTypes: true});
+        common.print_contract_size(_acb, "ACBForTesting_v2");
+        await _acb.upgrade(_oracle.address);
+      } else if (epoch == 20) {
+        _oracle = await upgradeProxy(
+            _oracle.address, OracleForTesting_v3,
+            {unsafeAllowCustomTypes: true});
+        common.print_contract_size(_oracle, "OracleForTesting_v3");
+        _acb = await upgradeProxy(
+            _acb.address, ACBForTesting_v3, {unsafeAllowCustomTypes: true});
+        common.print_contract_size(_acb, "ACBForTesting_v3");
+        await _acb.upgrade(_oracle.address);
+      }
     }
 
     async function check_create_account(option) {

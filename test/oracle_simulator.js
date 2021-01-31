@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+const { deployProxy } = require('@openzeppelin/truffle-upgrades');
 const JohnLawCoin = artifacts.require("JohnLawCoin");
 const JohnLawBond = artifacts.require("JohnLawBond");
 const Oracle = artifacts.require("Oracle");
@@ -49,8 +50,8 @@ function parameterized_test(accounts,
   it(test_name, async function () {
     let _prev_mint = 0;
     let _coin = await JohnLawCoin.new();
-    let _oracle = await OracleForTesting.new();
-    await _oracle.initialize();
+    let _oracle = await deployProxy(
+        OracleForTesting, [], {unsafeAllowCustomTypes: true});
     await _oracle.overrideConstants(_level_max, _reclaim_threshold,
                                     _proportional_reward_rate);
     common.print_contract_size(_oracle, "OracleForTesting");

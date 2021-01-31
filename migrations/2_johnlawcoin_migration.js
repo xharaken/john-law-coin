@@ -12,9 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+const { deployProxy } = require('@openzeppelin/truffle-upgrades');
 const Oracle = artifacts.require("Oracle");
 const ACB = artifacts.require("ACB");
 
-module.exports = function (deployer) {
-  deployer.deploy(Oracle);
+module.exports = async function (deployer) {
+  let oracle = await deployProxy(
+      Oracle, [],
+      {deployer: deployer, unsafeAllowCustomTypes: true});
+  let acb = await deployProxy(
+      ACB, [oracle.address],
+      {deployer: deployer, unsafeAllowCustomTypes: true});
 };

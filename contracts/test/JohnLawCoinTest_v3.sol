@@ -16,14 +16,14 @@
 
 pragma solidity >=0.7.1 <0.9.0;
 
-import "./JohnLawCoin.sol";
+import "./JohnLawCoin_v3.sol";
 
 // A contract to test Oracle.
-contract OracleForTesting is Oracle {
+contract OracleForTesting_v3 is Oracle_v3 {
 
   function overrideConstants(uint level_max,
-                              uint reclaim_threshold,
-                              uint proportional_reward_rate)
+                             uint reclaim_threshold,
+                             uint proportional_reward_rate)
       public {
     LEVEL_MAX = level_max;
     RECLAIM_THRESHOLD = reclaim_threshold;
@@ -39,23 +39,24 @@ contract OracleForTesting is Oracle {
 
     for (uint i = 0; i < 3; i++) {
       for (uint level = epochs_[i].votes.length; level < LEVEL_MAX; level++) {
-        epochs_[i].votes.push(Vote(0, 0, false, false));
+        epochs_[i].votes.push(
+            Vote(0, 0, false, false, false, false, 0, 0,
+                 [UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX,
+                  UINT_MAX, UINT_MAX, UINT_MAX]));
       }
     }
   }
 }
 
 // A contract to test ACB.
-contract ACBForTesting is ACB {
-  uint private timestamp_;
-
+contract ACBForTesting_v3 is ACB_v3 {
   function overrideConstants(uint bond_redemption_price,
-                              uint bond_redemption_period,
-                              uint phase_duration,
-                              uint deposit_rate,
-                              uint damping_factor,
-                              uint[] memory level_to_exchange_rate,
-                              uint[] memory level_to_bond_price)
+                             uint bond_redemption_period,
+                             uint phase_duration,
+                             uint deposit_rate,
+                             uint damping_factor,
+                             uint[] memory level_to_exchange_rate,
+                             uint[] memory level_to_bond_price)
       public {
     BOND_REDEMPTION_PRICE = bond_redemption_price;
     BOND_REDEMPTION_PERIOD = bond_redemption_period;
@@ -92,13 +93,13 @@ contract ACBForTesting is ACB {
 
   function getTimestamp()
       public override view returns (uint) {
-    return timestamp_;
+    return timestamp_for_testing_;
   }
 
   function setTimestamp(uint timestamp)
       public {
-    require(timestamp > timestamp_, "setTimestamp: 1");
-    timestamp_ = timestamp;
+    require(timestamp > timestamp_for_testing_, "setTimestamp: 1");
+    timestamp_for_testing_ = timestamp;
   }
 
   function setOracleLevel(uint oracle_level)
