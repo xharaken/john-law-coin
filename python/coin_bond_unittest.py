@@ -2,7 +2,7 @@
 #
 # Copyright 2021 Google LLC
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Licensed under the Apache License, Version 2.0 (the "License")
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -145,38 +145,51 @@ class CoinBondUnitTest(unittest.TestCase):
 
         # balance_of
         self.assertEqual(bond.balance_of(accounts[1], 1111), 0)
+        self.check_redemption_timestamps(bond, accounts[1], [])
 
         # mint
         bond.mint(accounts[1], 1111, 1)
         self.assertEqual(bond.total_supply, 1)
         self.assertEqual(bond.balance_of(accounts[1], 1111), 1)
+        self.check_redemption_timestamps(bond, accounts[1], [1111])
+
+        with self.assertRaises(Exception):
+            bond.get_redemption_timestamp_owned_by(account, 1)
 
         bond.mint(accounts[1], 1111, 2)
         self.assertEqual(bond.total_supply, 3)
         self.assertEqual(bond.balance_of(accounts[1], 1111), 3)
+        self.check_redemption_timestamps(bond, accounts[1], [1111])
 
         bond.mint(accounts[1], 2222, 2)
         self.assertEqual(bond.total_supply, 5)
         self.assertEqual(bond.balance_of(accounts[1], 1111), 3)
         self.assertEqual(bond.balance_of(accounts[1], 2222), 2)
+        self.check_redemption_timestamps(bond, accounts[1], [1111, 2222])
 
         bond.mint(accounts[2], 2222, 5)
         self.assertEqual(bond.total_supply, 10)
         self.assertEqual(bond.balance_of(accounts[1], 1111), 3)
         self.assertEqual(bond.balance_of(accounts[1], 2222), 2)
         self.assertEqual(bond.balance_of(accounts[2], 2222), 5)
+        self.check_redemption_timestamps(bond, accounts[1], [1111, 2222])
+        self.check_redemption_timestamps(bond, accounts[2], [2222])
 
         bond.burn(accounts[3], 1111, 0)
         self.assertEqual(bond.total_supply, 10)
         self.assertEqual(bond.balance_of(accounts[1], 1111), 3)
         self.assertEqual(bond.balance_of(accounts[1], 2222), 2)
         self.assertEqual(bond.balance_of(accounts[2], 2222), 5)
+        self.check_redemption_timestamps(bond, accounts[1], [1111, 2222])
+        self.check_redemption_timestamps(bond, accounts[2], [2222])
 
         bond.burn(accounts[2], 1111, 0)
         self.assertEqual(bond.total_supply, 10)
         self.assertEqual(bond.balance_of(accounts[1], 1111), 3)
         self.assertEqual(bond.balance_of(accounts[1], 2222), 2)
         self.assertEqual(bond.balance_of(accounts[2], 2222), 5)
+        self.check_redemption_timestamps(bond, accounts[1], [1111, 2222])
+        self.check_redemption_timestamps(bond, accounts[2], [2222])
 
         # burn
         with self.assertRaises(Exception):
@@ -196,30 +209,52 @@ class CoinBondUnitTest(unittest.TestCase):
         self.assertEqual(bond.balance_of(accounts[1], 1111), 3)
         self.assertEqual(bond.balance_of(accounts[1], 2222), 2)
         self.assertEqual(bond.balance_of(accounts[2], 2222), 0)
+        self.check_redemption_timestamps(bond, accounts[1], [1111, 2222])
+        self.check_redemption_timestamps(bond, accounts[2], [])
 
         bond.burn(accounts[1], 2222, 1)
         self.assertEqual(bond.total_supply, 4)
         self.assertEqual(bond.balance_of(accounts[1], 1111), 3)
         self.assertEqual(bond.balance_of(accounts[1], 2222), 1)
         self.assertEqual(bond.balance_of(accounts[2], 2222), 0)
+        self.check_redemption_timestamps(bond, accounts[1], [1111, 2222])
+        self.check_redemption_timestamps(bond, accounts[2], [])
 
         bond.burn(accounts[1], 2222, 1)
         self.assertEqual(bond.total_supply, 3)
         self.assertEqual(bond.balance_of(accounts[1], 1111), 3)
         self.assertEqual(bond.balance_of(accounts[1], 2222), 0)
         self.assertEqual(bond.balance_of(accounts[2], 2222), 0)
+        self.check_redemption_timestamps(bond, accounts[1], [1111])
+        self.check_redemption_timestamps(bond, accounts[2], [])
 
         bond.burn(accounts[1], 1111, 3)
         self.assertEqual(bond.total_supply, 0)
         self.assertEqual(bond.balance_of(accounts[1], 1111), 0)
         self.assertEqual(bond.balance_of(accounts[1], 2222), 0)
         self.assertEqual(bond.balance_of(accounts[2], 2222), 0)
+        self.check_redemption_timestamps(bond, accounts[1], [])
+        self.check_redemption_timestamps(bond, accounts[2], [])
 
         bond.burn(accounts[1], 1111, 0)
         self.assertEqual(bond.total_supply, 0)
         self.assertEqual(bond.balance_of(accounts[1], 1111), 0)
         self.assertEqual(bond.balance_of(accounts[1], 2222), 0)
         self.assertEqual(bond.balance_of(accounts[2], 2222), 0)
+        self.check_redemption_timestamps(bond, accounts[1], [])
+        self.check_redemption_timestamps(bond, accounts[2], [])
+
+    def check_redemption_timestamps(self, bond, account, expected):
+        count = bond.number_of_redemption_timestamps_owned_by(account)
+        self.assertEqual(count, len(expected))
+
+        with self.assertRaises(Exception):
+            bond.get_redemption_timestamp_owned_by(account, count)
+
+        for index in range(count):
+            self.assertTrue(
+                bond.get_redemption_timestamp_owned_by(account, index)
+                in expected)
 
 
 def main():

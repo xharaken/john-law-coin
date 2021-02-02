@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+/ SPDX-License-Identifier: Apache-2.0
 //
 // Copyright 2021 Google LLC
 //
@@ -22,6 +22,7 @@ import "openzeppelin-solidity/contracts/access/Ownable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/math/SignedSafeMath.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20Pausable.sol";
+import "openzeppelin-solidity/contracts/utils/EnumerableSet.sol";
 import "openzeppelin-solidity/contracts/utils/SafeCast.sol";
 
 //------------------------------------------------------------------------------
@@ -77,10 +78,6 @@ contract JohnLawCoin is ERC20Pausable, Ownable {
   string public constant SYMBOL = "JLC";
 
   // Constructor.
-  //
-  // Parameters
-  // ----------------
-  // None.
   constructor()
       ERC20(NAME, SYMBOL) {
   }
@@ -96,7 +93,7 @@ contract JohnLawCoin is ERC20Pausable, Ownable {
   // Returns
   // ----------------
   // None.
-  function mint(address account, uint256 amount)
+  function mint(address account, uint amount)
       public onlyOwner {
     _mint(account, amount);
   }
@@ -112,7 +109,7 @@ contract JohnLawCoin is ERC20Pausable, Ownable {
   // Returns
   // ----------------
   // None.
-  function burn(address account, uint256 amount)
+  function burn(address account, uint amount)
       public onlyOwner {
     _burn(account, amount);
   }
@@ -130,34 +127,18 @@ contract JohnLawCoin is ERC20Pausable, Ownable {
   // Returns
   // ----------------
   // None.
-  function move(address sender, address receiver, uint256 amount)
+  function move(address sender, address receiver, uint amount)
       public onlyOwner {
     _transfer(sender, receiver, amount);
   }
 
   // Pause the contract. Only the ACB can call this method.
-  //
-  // Parameters
-  // ----------------
-  // None.
-  //
-  // Returns
-  // ----------------
-  // None.
   function pause()
       public onlyOwner {
     _pause();
   }
   
   // Unpause the contract. Only the ACB can call this method.
-  //
-  // Parameters
-  // ----------------
-  // None.
-  //
-  // Returns
-  // ----------------
-  // None.
   function unpause()
       public onlyOwner {
     _unpause();
@@ -174,24 +155,24 @@ contract JohnLawCoin is ERC20Pausable, Ownable {
 //------------------------------------------------------------------------------
 contract JohnLawBond is Ownable {
   using SafeMath for uint;
+  using EnumerableSet for EnumerableSet.UintSet;
 
-  // Bonds are specified by a pair of the user account and the redemption
-  // timestamp. _balances[account][redemption] stores the balance of the bonds
-  // held by the account with the redemption timestamp.
-  mapping (address => mapping (uint => uint)) private _balances;
+  // A mapping from a user account to the redemption timestamps of the bonds
+  // owned by the user.
+  mapping (address => EnumerableSet.UintSet) private _redemption_timestamps;
   
+  // _balances[account][redemption_timestamp] stores the balance of the bonds
+  // that is owned by the |account| and has the |redemption_timestamp|.
+  mapping (address => mapping (uint => uint)) private _balances;
+
   // The total bond supply.
   uint private _totalSupply;
 
   // Events.
-  event MintEvent(address, uint, uint256);
-  event BurnEvent(address, uint, uint256);
+  event MintEvent(address indexed, uint, uint);
+  event BurnEvent(address indexed, uint, uint);
 
   // Constructor.
-  //
-  // Parameters
-  // ----------------
-  // None.
   constructor() {
     _totalSupply = 0;
   }
@@ -201,17 +182,21 @@ contract JohnLawBond is Ownable {
   // Parameters
   // ----------------
   // |account|: The account to which the bonds are minted.
-  // |redemption|: The redemption timestamp of the bonds.
+  // |redemption_timestamp|: The redemption timestamp of the bonds.
   // |amount|: The amount to be minted.
   //
   // Returns
   // ----------------
   // None.
-  function mint(address account, uint redemption, uint256 amount)
+  function mint(address account, uint redemption_timestamp, uint amount)
       public onlyOwner {
-    _balances[account][redemption] = _balances[account][redemption].add(amount);
+    _balances[account][redemption_timestamp] =
+        _balances[account][redemption_timestamp].add(amount);
     _totalSupply = _totalSupply.add(amount);
-    emit MintEvent(account, redemption, amount);
+    if (_balances[account][redemption_timestamp] > 0) {
+      _redemption_timestamps[account].add(redemption_timestamp);
+    }
+    emit MintEvent(account, redemption_timestamp, amount);
   }
 
   // Burn bonds from one account. Only the ACB can call this method.
@@ -219,24 +204,43 @@ contract JohnLawBond is Ownable {
   // Parameters
   // ----------------
   // |account|: The account from which the bonds are burned.
-  // |redemption|: The redemption timestamp of the bonds.
+  // |redemption_timestamp|: The redemption timestamp of the bonds.
   // |amount|: The amount to be burned.
   //
   // Returns
   // ----------------
   // None.
-  function burn(address account, uint redemption, uint256 amount)
+  function burn(address account, uint redemption_timestamp, uint amount)
       public onlyOwner {
-    _balances[account][redemption] = _balances[account][redemption].sub(amount);
+    _balances[account][redemption_timestamp] =
+        _balances[account][redemption_timestamp].sub(amount);
     _totalSupply = _totalSupply.sub(amount);
-    emit BurnEvent(account, redemption, amount);
+    if (_balances[account][redemption_timestamp] == 0) {
+      _redemption_timestamps[account].remove(redemption_timestamp);
+    }
+    emit BurnEvent(account, redemption_timestamp, amount);
   }
 
-  // Public getter: Return the balance of the bonds held by the |account| with
-  // the |redemption| timestamp.
-  function balanceOf(address account, uint redemption)
+  // Public getter: Return the number of redemption timestamps of the bonds
+  // owned by the |account|.
+  function numberOfRedemptionTimestampsOwnedBy(address account)
       public view returns (uint) {
-    return _balances[account][redemption];
+    return _redemption_timestamps[account].length();
+  }
+
+  // Public getter: Return the |index|-th redemption timestamp of the bonds
+  // owned by the |account|. |index| must be smaller than the value returned by
+  // numberOfRedemptionTimestampsOwnedBy(account).
+  function getRedemptionTimestampOwnedBy(address account, uint index)
+      public view returns (uint) {
+    return _redemption_timestamps[account].at(index);
+  }
+
+  // Public getter: Return the balance of the bonds that is owned by the
+  // |account| and has the |redemption_timestamp|.
+  function balanceOf(address account, uint redemption_timestamp)
+      public view returns (uint) {
+    return _balances[account][redemption_timestamp];
   }
 
   // Public getter: Return the total bond supply.
@@ -345,10 +349,6 @@ contract Oracle is OwnableUpgradeable {
   event AdvancePhaseEvent(uint indexed, uint, uint);
 
   // Initializer.
-  //
-  // Parameters
-  // ----------------
-  // None.
   function initialize()
       public initializer {
     __Ownable_init();
@@ -724,9 +724,9 @@ contract Oracle is OwnableUpgradeable {
   // Public getter: Return the Vote struct at |epoch_index| and |level|.
   function getVote(uint epoch_index, uint level)
       public view returns (uint, uint, bool, bool) {
-    require(0 <= epoch_index && epoch_index <= 2, "get_vote: 1");
+    require(0 <= epoch_index && epoch_index <= 2, "getVote: 1");
     require(0 <= level && level < epochs_[epoch_index].votes.length,
-            "get_vote: 2");
+            "getVote: 2");
     Vote memory vote = epochs_[epoch_index].votes[level];
     return (vote.deposit, vote.count, vote.should_reclaim, vote.should_reward);
   }
@@ -734,7 +734,7 @@ contract Oracle is OwnableUpgradeable {
   // Public getter: Return the Commit struct at |epoch_index| and |account|.
   function getCommit(uint epoch_index, address account)
       public view returns (bytes32, uint, uint, Phase, uint) {
-    require(0 <= epoch_index && epoch_index <= 2, "get_commit: 1");
+    require(0 <= epoch_index && epoch_index <= 2, "getCommit: 1");
     Commit memory entry = epochs_[epoch_index].commits[account];
     return (entry.committed_hash, entry.deposit, entry.revealed_level,
             entry.phase, entry.epoch_timestamp);
@@ -743,7 +743,7 @@ contract Oracle is OwnableUpgradeable {
   // Public getter: Return the Epoch struct at |epoch_index|.
   function getEpoch(uint epoch_index)
       public view returns (address, address, uint, Phase) {
-    require(0 <= epoch_index && epoch_index <= 2, "get_epoch: 1");
+    require(0 <= epoch_index && epoch_index <= 2, "getEpoch: 1");
     return (epochs_[epoch_index].deposit_account,
             epochs_[epoch_index].reward_account,
             epochs_[epoch_index].reward_total,
@@ -820,10 +820,9 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
 
   // Used only in testing. This cannot be put in a derived contract due to
   // a restriction of @openzeppelin/truffle-upgrades.
-  uint internal timestamp_for_testing_;
+  uint internal _timestamp_for_testing;
 
   // Events.
-  event CreateAccountEvent(address indexed);
   event VoteEvent(address indexed, bytes32, uint, uint,
                   bool, bool, uint, bool);
   event PurchaseBondsEvent(address indexed, uint, uint);
@@ -863,6 +862,12 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
     //  | 8            | 1 coin = 1.4 USD | 997 coins (1.31%)       |
     //  -------------------------------------------------------------
     //
+    // Voters are expected to look up the current exchange rate using
+    // real-world currency exchangers and vote for the oracle level that
+    // corresponds to the exchange rate. Strictly speaking, the current
+    // exchange rate is defined as the exchange rate at the point when the
+    // current phase started (i.e., current_phase_start_).
+    //
     // In the bootstrap phase in which no currency exchanger supports JLC <=>
     // USD conversions, voters are expected to vote for the oracle level 5
     // (i.e., 1 coin = 1.1 USD). This helps increase the total coin supply
@@ -888,7 +893,7 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
 
     // The duration of the oracle phase. The ACB adjusts the total coin supply
     // once per phase. Voters can vote once per phase.
-    PHASE_DURATION = 7 * 24 * 60 * 60; // 1 week.
+    PHASE_DURATION = 60; // 1 week.
 
     // The percentage of the coin balance the voter needs to deposit.
     DEPOSIT_RATE = 10; // 10%.
@@ -952,14 +957,6 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
   }
 
   // Pause the ACB in emergency cases.
-  //
-  // Parameters
-  // ----------------
-  // None.
-  //
-  // Returns
-  // ----------------
-  // None.
   function pause()
       public whenNotPaused onlyOwner {
     _pause();
@@ -967,14 +964,6 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
   }
 
   // Unpause the ACB.
-  //
-  // Parameters
-  // ----------------
-  // None.
-  //
-  // Returns
-  // ----------------
-  // None.
   function unpause()
       public whenPaused onlyOwner {
     _unpause();
@@ -1099,43 +1088,43 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
     }
 
     // Set the redemption timestamp of the bonds.
-    uint redemption = getTimestamp().add(BOND_REDEMPTION_PERIOD);
+    uint redemption_timestamp = getTimestamp().add(BOND_REDEMPTION_PERIOD);
 
     // Issue new bonds
-    bond_.mint(sender, redemption, count);
+    bond_.mint(sender, redemption_timestamp, count);
     bond_budget_ = bond_budget_.sub(count.toInt256());
-    require(bond_budget_ >= 0, "purchase_bonds: 2");
+    require(bond_budget_ >= 0, "purchaseBonds: 1");
     require((bond_.totalSupply().toInt256()).add(bond_budget_) >= 0,
-            "purchase_bonds: 3");
-    require(bond_.balanceOf(sender, redemption) > 0,
-            "purchase_bonds: 4");
+            "purchaseBonds: 2");
+    require(bond_.balanceOf(sender, redemption_timestamp) > 0,
+            "purchaseBonds: 3");
 
     // Burn the corresponding coins.
     coin_.burn(sender, amount);
 
-    emit PurchaseBondsEvent(sender, count, redemption);
-    return redemption;
+    emit PurchaseBondsEvent(sender, count, redemption_timestamp);
+    return redemption_timestamp;
   }
   
   // Redeem bonds.
   //
   // Parameters
   // ----------------
-  // |redemptions|: A list of bonds the user wants to redeem. Bonds are
-  // identified by their redemption timestamps.
+  // |redemption_timestmaps|: A list of bonds the user wants to redeem. Bonds
+  // are identified by their redemption timestamps.
   //
   // Returns
   // ----------------
   // The number of successfully redeemed bonds.
-  function redeemBonds(uint[] memory redemptions)
+  function redeemBonds(uint[] memory redemption_timestamps)
       public whenNotPaused returns (uint) {
     address sender = msg.sender;
     
     uint count_total = 0;
-    for (uint i = 0; i < redemptions.length; i++) {
-      uint redemption = redemptions[i];
-      uint count = bond_.balanceOf(sender, redemption);
-      if (redemption > getTimestamp()) {
+    for (uint i = 0; i < redemption_timestamps.length; i++) {
+      uint redemption_timestamp = redemption_timestamps[i];
+      uint count = bond_.balanceOf(sender, redemption_timestamp);
+      if (redemption_timestamp > getTimestamp()) {
         // If the bonds have not yet hit their redemption timestamp, the ACB
         // accepts the redemption as long as |bond_budget_| is negative.
         if (bond_budget_ >= 0) {
@@ -1152,12 +1141,12 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
 
       // Burn the redeemed bonds.
       bond_budget_ = bond_budget_.add(count.toInt256());
-      bond_.burn(sender, redemption, count);
+      bond_.burn(sender, redemption_timestamp, count);
       count_total = count_total.add(count);
     }
     require((bond_.totalSupply().toInt256()).add(bond_budget_) >= 0,
-            "redeem_bonds: 4");
-    emit RedeemBondsEvent(sender, redemptions, count_total);
+            "redeemBonds: 1");
+    emit RedeemBondsEvent(sender, redemption_timestamps, count_total);
     return count_total;
   }
 
@@ -1206,7 +1195,7 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
     return mint;
   }
 
-  // Calculate the hash to be committed to the oracle. Voters are expected to
+  // Calculate a hash to be committed to the oracle. Voters are expected to
   // call this function to create the hash.
   //
   // Parameters
@@ -1223,15 +1212,7 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
     return oracle_.hash(sender, level, salt);
   }
   
-  // Return the current timestamp in seconds.
-  //
-  // Parameters
-  // ----------------
-  // None.
-  //
-  // Returns
-  // ----------------
-  // The current timestamp in seconds.
+  // Public getter: Return the current timestamp in seconds.
   function getTimestamp()
       public virtual view returns (uint) {
     // block.timestamp is better than block.number because the granularity of

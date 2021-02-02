@@ -354,9 +354,17 @@ class ACBSimulator(unittest.TestCase):
                 acb.redeem_bonds(voter.address, redemptions), redeem_count)
             self.assertEqual(acb.bond_budget, bond_budget)
             self.assertEqual(acb.coin.balance_of(voter.address), voter.balance)
-            for redemption in voter.bonds:
+
+            bond_count = acb.bond.number_of_redemption_timestamps_owned_by(
+                voter.address)
+            self.assertEqual(len(voter.bonds), bond_count)
+            for index in range(bond_count):
+                redemption = acb.bond.get_redemption_timestamp_owned_by(
+                    voter.address, index)
+                self.assertTrue(redemption in voter.bonds)
                 self.assertEqual(acb.bond.balance_of(voter.address, redemption),
                                  voter.bonds[redemption])
+
             self.assertEqual(acb.bond.total_supply,
                              bond_supply - redeem_count)
             self.assertEqual(acb.coin.total_supply,

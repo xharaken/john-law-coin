@@ -23,4 +23,5 @@ module.exports = async function (deployer) {
   let acb = await deployProxy(
       ACB, [oracle.address],
       {deployer: deployer, unsafeAllowCustomTypes: true});
+  await oracle.transferOwnership(acb.address);
 };

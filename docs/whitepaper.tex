@@ -111,7 +111,7 @@ A voter deposits $D$\% of their coin balance. The voter commits hash(\textit{qua
 The voter reveals \textit{quantized exchange rate} and \textit{salt}.
 \end{tabular}\\\hline
 3. Reclaim phase & \begin{tabular}{p{22em}}
-Voters who voted for the ``truth'' exchange rate and its surroundings can reclaim the coins they deposited in the commit phase. In addition, voters who voted for the ``truth'' exchange rate can get a reward.
+Voters who voted for the ``truth'' exchange rate or its surroundings can reclaim the coins they deposited in the commit phase. In addition, voters who voted for the ``truth'' exchange rate can get a reward.
 \end{tabular}\\\hline
 \end{tabular}
 \label{table0}
@@ -128,7 +128,7 @@ In the reveal phase, the voter reveals the \textit{quantized exchange rate} and 
 
 \subsubsection{Reclaim phase}
 
-In the reclaim phase, the voters who voted for the ``truth'' exchange rate and its surroundings can reclaim the coins they deposited in the commit phase. For example, if the ``truth'' exchange rate is 1.1, the voters who voted for 1.0, 1.1 and 1.2 can reclaim the coins they deposited. Other voters lose the coins they deposited.
+In the reclaim phase, the voters who voted for the ``truth'' exchange rate or its surroundings can reclaim the coins they deposited in the commit phase. For example, if the ``truth'' exchange rate is 1.1, the voters who voted for 1.0, 1.1 and 1.2 can reclaim the coins they deposited. Other voters lose the coins they deposited.
 
 In addition, the ``winner'' voters who voted for the ``truth'' exchange rate can get a reward. The source of the reward is the coins lost by the other voters and the coins the ACB decided to mint to expand the total coin supply (explained below). $C$\% of the reward is evenly distributed to the ``winner'' voters. The rest of the reward is distributed to the ``winner'' voters in proportion to the coins they deposited.\footnote{You may think $C$ can be 0 (i.e., all of the reward is distributed to the ``winner'' voters in proportion to the coins they deposited). However, it is important to set a positive value to $C$ to bootstrap the system. Initially, all voters except the genesis account have 0 coins. If $C$ is 0, the voters do not have any incentive to contribute to the oracle because they can get no reward by doing so (even worse, they lose the transaction fee for Ethereum). $C$ needs to be a positive value to bootstrap the system.}\footnote{$C$ should be set to a small value. If $C$ is large, it will work as an incentive to create many dummy accounts. This may happen with a small $C$ to some extent but it will not have a terrible impact to the system. The ACB's ability of controlling the total coin supply and adjusting the currency price is not affected by how many accounts are created in the system.}
 
@@ -288,7 +288,7 @@ JohnLawCoin is implemented as a smart contract on Ethereum.\footnote{The impleme
 
 \subsection{Coins and bonds}
 
-The coins are implemented as ERC20 tokens~\cite{erc20token}. There are only two ways to get the coins; i.e., ask someone to transfer coins to your account (e.g., by purchasing JohnLawCoin at an external currency exchanger) or contribute to the oracle and get the reward. It is worth noting that the ACB does not have the ability to exchange ETH with the coins. This is an intentional design because defining the conversion rate between fluctuating ETH and JohnLawCoin contradicts the goal of stabilizing the JohnLawCoin / USD exchange rate.
+The coins are implemented as ERC20 tokens~\cite{erc20token}. There are only three ways to get the coins; 1) ask someone to transfer coins to your account (e.g., by purchasing JohnLawCoin at an external currency exchanger), 2) contribute to the oracle and get the reward and 3) get an interest rate by holding bonds. It is worth noting that the ACB does not have the ability to exchange ETH with the coins. This is an intentional design because defining the conversion rate between fluctuating ETH and JohnLawCoin contradicts the goal of stabilizing the JohnLawCoin / USD exchange rate.
 
 The bonds are implemented as non-transferable tokens. Bondholders can buy and redeem the bonds at the ACB but cannot transfer the bonds to others.\footnote{ If the bonds are transferable, that produces a strange situation. If the bonds are transferable, no users will hold the coins because they cannot get any interest by holding the coins whereas they can get an interest by holding the bonds. For the bonds to work as a mechanism to adjust the total coin supply, their liquidity needs to be restricted.}\footnote{This is only saying that the bonds are not transferable at the layer of the ACB. An open market to exchange bonds may emerge.}
 
@@ -321,7 +321,7 @@ Table \ref{table1} shows the quantized exchange rates supported by the oracle.\f
 \begin{tabular}{p{26em}|p{10em}}\hline
 $D$ (A voter needs to deposit $D$\% of their coin balance to the oracle.) & 10\%\\\hline
 $C$ (The oracle evenly distributes $C$\% of the reward to the voters who voted for the ``truth'' exchange rate. The rest of the reward is distributed to the voters in proportion to the coins they deposited.) & 10\%\\\hline
-Voters who voted for the ``truth'' exchange rate and its surroundings can reclaim the coins they deposited. What is the threshold? & 0.1 (For example, if the ``truth'' exchange rate is 1.1, voters who voted for 1.0, 1.1 and 1.2 can reclaim the coins they deposited)\\\hline
+Voters who voted for the ``truth'' exchange rate or its surroundings can reclaim the coins they deposited. What is the threshold? & 0.1 (For example, if the ``truth'' exchange rate is 1.1, voters who voted for 1.0, 1.1 and 1.2 can reclaim the coins they deposited)\\\hline
 The ACB obtains the exchange rate from the oracle and adjusts the total coin supply every period. What is the duration of the period? & 1 week\\\hline
 $k$ (A damping factor to avoid minting or burning too many coins in one period.) & 10\%\\\hline
 Initial coin supply & 2100000 coins\\\hline
@@ -341,8 +341,8 @@ In contrast with all the complex mechanisms explained so far, the APIs exposed b
 The message sender votes on the oracle. With this function, the message sender can commit a vote to the current phase, reveal their vote in the prior phase, and reclaim their deposited coins and get a reward for their vote in the next prior phase at the same time. \textit{committed\_hash} is the hash committed to the current phase. \textit{revleaed\_exchange\_rate} and \textit{revealed\_salt} reveal the quantized exchange rate and the salt for their vote in the prior phase. The reclaimed coins and the reward in the next prior phase are sent to the message sender's coin balance. The function returns a tuple of three values: 1) whether the commit succeeded or not, 2) whether the reveal succeeded or not and 3) the amount of the reclaimed coins and the reward. One message sender can make one vote per period (i.e., 1 week).
 \item{\textbf{function purchaseBonds(\textit{count})}}\\
 The message sender purchases \textit{count} bonds from the ACB. The function returns the redemption timestamp of the purchased bonds (i.e., the current timestamp $+T$).
-\item{\textbf{function redeemBonds(\textit{redemptions})}}\\
-The message sender redeems bonds. \textit{redemptions} is a list of redemption timestamps that specify the bonds. The function returns the number of bonds that are successfully redeemed.
+\item{\textbf{function redeemBonds(\textit{redemption\_timestamps})}}\\
+The message sender redeems bonds. \textit{redemption\_timestamps} is a list of redemption timestamps that specify the bonds. The function returns the number of bonds that are successfully redeemed.
 \end{description}
 
 As a result of calling these APIs, the message sender's coin balance and bond balance may change. The Coin contract exposes ERC20 token APIs. The message sender can query their coin balance and the total coin supply, and transfer their coins to others. The Bond contract only exposes APIs to query their bond balance and the total bond supply because bonds are not transferable.

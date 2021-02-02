@@ -164,10 +164,6 @@ contract Oracle_v3 is OwnableUpgradeable {
   }
 
   // Initializer.
-  //
-  // Parameters
-  // ----------------
-  // None.
   function initialize()
       public initializer {
     __Ownable_init();
@@ -545,9 +541,9 @@ contract Oracle_v3 is OwnableUpgradeable {
   // Public getter: Return the Vote struct at |epoch_index| and |level|.
   function getVote(uint epoch_index, uint level)
       public view returns (uint, uint, bool, bool) {
-    require(0 <= epoch_index && epoch_index <= 2, "get_vote: 1");
+    require(0 <= epoch_index && epoch_index <= 2, "getVote: 1");
     require(0 <= level && level < epochs_[epoch_index].votes.length,
-            "get_vote: 2");
+            "getVote: 2");
     Vote memory vote = epochs_[epoch_index].votes[level];
     return (vote.deposit, vote.count, vote.should_reclaim,
             vote.should_reward);
@@ -556,7 +552,7 @@ contract Oracle_v3 is OwnableUpgradeable {
   // Public getter: Return the Commit struct at |epoch_index| and |account|.
   function getCommit(uint epoch_index, address account)
       public view returns (bytes32, uint, uint, Phase, uint) {
-    require(0 <= epoch_index && epoch_index <= 2, "get_commit: 1");
+    require(0 <= epoch_index && epoch_index <= 2, "getCommit: 1");
     Commit memory entry = epochs_[epoch_index].commits[account];
     return (entry.committed_hash, entry.deposit, entry.revealed_level,
             entry.phase, entry.epoch_timestamp);
@@ -565,7 +561,7 @@ contract Oracle_v3 is OwnableUpgradeable {
   // Public getter: Return the Epoch struct at |epoch_index|.
   function getEpoch(uint epoch_index)
       public view returns (address, address, uint, Phase) {
-    require(0 <= epoch_index && epoch_index <= 2, "get_epoch: 1");
+    require(0 <= epoch_index && epoch_index <= 2, "getEpoch: 1");
     return (epochs_[epoch_index].deposit_account,
             epochs_[epoch_index].reward_account,
             epochs_[epoch_index].reward_total,
@@ -642,7 +638,7 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
 
   // Used only in testing. This cannot be put in a derived contract due to
   // a restriction of @openzeppelin/truffle-upgrades.
-  uint internal timestamp_for_testing_;
+  uint internal _timestamp_for_testing;
 
   JohnLawCoin public coin_v2_;
   JohnLawBond public bond_v2_;
@@ -654,7 +650,6 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
   Oracle_v3 public oracle_v3_;
   
   // Events.
-  event CreateAccountEvent(address indexed);
   event VoteEvent(address indexed, bytes32, uint, uint,
                   bool, bool, uint, bool);
   event PurchaseBondsEvent(address indexed, uint, uint);
@@ -704,6 +699,12 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
     //  | 7            | 1 coin = 1.3 USD | 997 coins (1.31%)       |
     //  | 8            | 1 coin = 1.4 USD | 997 coins (1.31%)       |
     //  -------------------------------------------------------------
+    //
+    // Voters are expected to look up the current exchange rate using
+    // real-world currency exchangers and vote for the oracle level that
+    // corresponds to the exchange rate. Strictly speaking, the current
+    // exchange rate is defined as the exchange rate at the point when the
+    // current phase started (i.e., current_phase_start_).
     //
     // In the bootstrap phase in which no currency exchanger supports JLC <=>
     // USD conversions, voters are expected to vote for the oracle level 5
@@ -794,14 +795,6 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
   }
 
   // Pause the ACB in emergency cases.
-  //
-  // Parameters
-  // ----------------
-  // None.
-  //
-  // Returns
-  // ----------------
-  // None.
   function pause()
       public whenNotPaused onlyOwner {
     _pause();
@@ -809,14 +802,6 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
   }
 
   // Unpause the ACB.
-  //
-  // Parameters
-  // ----------------
-  // None.
-  //
-  // Returns
-  // ----------------
-  // None.
   function unpause()
       public whenPaused onlyOwner {
     _unpause();
@@ -948,11 +933,10 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
     // Issue new bonds
     bond_.mint(sender, redemption, count);
     bond_budget_ = bond_budget_.sub(count.toInt256());
-    require(bond_budget_ >= 0, "purchase_bonds: 2");
+    require(bond_budget_ >= 0, "purchaseBonds: 1");
     require((bond_.totalSupply().toInt256()).add(bond_budget_) >= 0,
-            "purchase_bonds: 3");
-    require(bond_.balanceOf(sender, redemption) > 0,
-            "purchase_bonds: 4");
+            "purchaseBonds: 2");
+    require(bond_.balanceOf(sender, redemption) > 0, "purchaseBonds: 3");
 
     // Burn the corresponding coins.
     coin_.burn(sender, amount);
@@ -1000,7 +984,7 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
       count_total = count_total.add(count);
     }
     require((bond_.totalSupply().toInt256()).add(bond_budget_) >= 0,
-            "redeem_bonds: 4");
+            "redeemBonds: 1");
     emit RedeemBondsEvent(sender, redemptions, count_total);
     return count_total;
   }
@@ -1050,7 +1034,7 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
     return mint;
   }
 
-  // Calculate the hash to be committed to the oracle. Voters are expected to
+  // Calculate a hash to be committed to the oracle. Voters are expected to
   // call this function to create the hash.
   //
   // Parameters
@@ -1068,14 +1052,6 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
   }
   
   // Return the current timestamp in seconds.
-  //
-  // Parameters
-  // ----------------
-  // None.
-  //
-  // Returns
-  // ----------------
-  // The current timestamp in seconds.
   function getTimestamp()
       public virtual view returns (uint) {
     // block.timestamp is better than block.number because the granularity of

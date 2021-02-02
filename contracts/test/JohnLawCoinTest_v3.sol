@@ -93,13 +93,13 @@ contract ACBForTesting_v3 is ACB_v3 {
 
   function getTimestamp()
       public override view returns (uint) {
-    return timestamp_for_testing_;
+    return _timestamp_for_testing;
   }
 
   function setTimestamp(uint timestamp)
       public {
-    require(timestamp > timestamp_for_testing_, "setTimestamp: 1");
-    timestamp_for_testing_ = timestamp;
+    require(timestamp > _timestamp_for_testing, "setTimestamp: 1");
+    _timestamp_for_testing = timestamp;
   }
 
   function setOracleLevel(uint oracle_level)

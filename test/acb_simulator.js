@@ -409,10 +409,18 @@ function parameterized_test(accounts,
         assert.equal(await _acb.bond_budget_(), bond_budget);
         assert.equal(await get_balance(voter.address),
                      voter.balance);
-        for (let redemption in voter.bonds) {
+
+        let bond_count =
+            await _bond.numberOfRedemptionTimestampsOwnedBy(voter.address);
+        assert.equal(Object.keys(voter.bonds).length, bond_count);
+        for (let index = 0; index < bond_count; index++) {
+          let redemption = (await _bond.getRedemptionTimestampOwnedBy(
+              voter.address, index)).toNumber();
+          assert.isTrue(redemption in voter.bonds);
           assert.equal(await get_bond(voter.address, redemption),
-                       voter.bonds[redemption]);
+                       voter.bonds[redemption])
         }
+
         assert.equal(await get_bond_supply(), bond_supply - redeem_count);
         assert.equal(await get_coin_supply(),
                      coin_supply + _bond_redemption_price * redeem_count);

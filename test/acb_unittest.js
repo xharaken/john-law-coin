@@ -329,6 +329,7 @@ function parameterized_test(accounts,
       assert.equal(current.bond_supply, 1);
       assert.equal(current.bond_budget, 79);
       assert.equal(current.bonds[accounts[2]][t1], 1);
+      check_redemption_timestamps(current, accounts[2], [t1]);
       assert.equal(current.coin_supply,
                    coin_supply - bond_price * 1);
 
@@ -337,6 +338,7 @@ function parameterized_test(accounts,
       assert.equal(current.bond_supply, 11);
       assert.equal(current.bond_budget, 69);
       assert.equal(current.bonds[accounts[2]][t1], 11);
+      check_redemption_timestamps(current, accounts[2], [t1]);
       assert.equal(current.coin_supply,
                    coin_supply - bond_price * 11);
 
@@ -356,6 +358,7 @@ function parameterized_test(accounts,
       assert.equal(current.bond_supply, 12);
       assert.equal(current.bond_budget, 68);
       assert.equal(current.bonds[accounts[2]][t2], 1);
+      check_redemption_timestamps(current, accounts[2], [t1, t2]);
       assert.equal(current.coin_supply,
                    coin_supply - bond_price * 12);
 
@@ -364,6 +367,7 @@ function parameterized_test(accounts,
       assert.equal(current.bond_supply, 22);
       assert.equal(current.bond_budget, 58);
       assert.equal(current.bonds[accounts[2]][t2], 11);
+      check_redemption_timestamps(current, accounts[2], [t1, t2]);
       assert.equal(current.coin_supply,
                    coin_supply - bond_price * 22);
 
@@ -377,6 +381,7 @@ function parameterized_test(accounts,
       assert.equal(current.bond_supply, 32);
       assert.equal(current.bond_budget, 48);
       assert.equal(current.bonds[accounts[1]][t2], 10);
+      check_redemption_timestamps(current, accounts[1], [t2]);
       assert.equal(current.coin_supply,
                    coin_supply - bond_price * 32);
 
@@ -393,6 +398,7 @@ function parameterized_test(accounts,
       assert.equal(current.bond_supply, 80);
       assert.equal(current.bond_budget, 0);
       assert.equal(current.bonds[accounts[3]][t3], 48);
+      check_redemption_timestamps(current, accounts[3], [t3]);
       assert.equal(current.coin_supply,
                    coin_supply - bond_price * 80);
 
@@ -404,6 +410,7 @@ function parameterized_test(accounts,
       assert.equal(current.bond_supply, 80);
       assert.equal(current.bond_budget, 0);
       assert.equal(current.bonds[accounts[3]][t3], 48);
+      check_redemption_timestamps(current, accounts[3], [t3]);
       assert.equal(current.coin_supply,
                    coin_supply - bond_price * 80);
       assert.equal(await _acb.purchaseBonds.call(
@@ -412,6 +419,7 @@ function parameterized_test(accounts,
       assert.equal(current.bond_supply, 80);
       assert.equal(current.bond_budget, 0);
       assert.equal(current.bonds[accounts[3]][t3], 48);
+      check_redemption_timestamps(current, accounts[3], [t3]);
       assert.equal(current.coin_supply,
                    coin_supply - bond_price * 80);
 
@@ -428,6 +436,9 @@ function parameterized_test(accounts,
       assert.equal(current.bonds[accounts[1]][t2], 10);
       assert.equal(current.bonds[accounts[2]][t2], 11);
       assert.equal(current.bonds[accounts[3]][t3], 48);
+      check_redemption_timestamps(current, accounts[1], [t2]);
+      check_redemption_timestamps(current, accounts[2], [t1, t2]);
+      check_redemption_timestamps(current, accounts[3], [t3]);
 
       await _acb.setTimestamp(
           (await _acb.getTimestamp()).toNumber() + _bond_redemption_period);
@@ -450,6 +461,7 @@ function parameterized_test(accounts,
       assert.equal(current.bonds[accounts[2]][t1], 0);
       assert.equal(current.bonds[accounts[2]][t2], 11);
       assert.equal(current.bonds[accounts[2]][t3], 0);
+      check_redemption_timestamps(current, accounts[2], [t2]);
       assert.equal(current.balances[accounts[2]],
                    balance + 11 * _bond_redemption_price);
       assert.equal(current.bond_budget, 11);
@@ -461,6 +473,7 @@ function parameterized_test(accounts,
       current = await get_current(sub_accounts, redemptions);
       assert.equal(current.bonds[accounts[2]][t1], 0);
       assert.equal(current.bonds[accounts[2]][t2], 0);
+      check_redemption_timestamps(current, accounts[2], []);
       assert.equal(current.balances[accounts[2]],
                    balance + 22 * _bond_redemption_price);
       assert.equal(current.bond_budget, 22);
@@ -474,6 +487,7 @@ function parameterized_test(accounts,
       assert.equal(current.bonds[accounts[2]][t1], 0);
       assert.equal(current.bonds[accounts[2]][t2], 0);
       assert.equal(current.bonds[accounts[2]][t3], 0);
+      check_redemption_timestamps(current, accounts[2], []);
       assert.equal(current.balances[accounts[2]],
                    balance + 22 * _bond_redemption_price);
       assert.equal(current.bond_budget, 22);
@@ -488,6 +502,7 @@ function parameterized_test(accounts,
       assert.equal(current.bonds[accounts[3]][t1], 0);
       assert.equal(current.bonds[accounts[3]][t2], 0);
       assert.equal(current.bonds[accounts[3]][t3], 48);
+      check_redemption_timestamps(current, accounts[3], [t3]);
       assert.equal(current.balances[accounts[3]], balance);
       assert.equal(current.bond_budget, 22);
       assert.equal(current.bond_supply, bond_supply - 22);
@@ -499,6 +514,7 @@ function parameterized_test(accounts,
       assert.equal(current.bonds[accounts[3]][t1], 0);
       assert.equal(current.bonds[accounts[3]][t2], 0);
       assert.equal(current.bonds[accounts[3]][t3], 0);
+      check_redemption_timestamps(current, accounts[3], []);
       assert.equal(current.balances[accounts[3]],
                    balance + 48 * _bond_redemption_price);
       assert.equal(current.bond_budget, 70);
@@ -510,6 +526,7 @@ function parameterized_test(accounts,
       await check_redeem_bonds([t2], {from: accounts[1]}, 10);
       current = await get_current(sub_accounts, redemptions);
       assert.equal(current.bonds[accounts[1]][t2], 0);
+      check_redemption_timestamps(current, accounts[1], []);
       assert.equal(current.balances[accounts[1]],
                    balance + 10 * _bond_redemption_price);
       assert.equal(current.bond_budget, 80);
@@ -568,6 +585,7 @@ function parameterized_test(accounts,
       assert.equal(current.bonds[accounts[2]][t6], 20);
       assert.equal(current.bonds[accounts[2]][t7], 20);
       assert.equal(current.bonds[accounts[2]][t8], 20);
+      check_redemption_timestamps(current, accounts[2], [t6, t7, t8]);
       assert.equal(current.coin_supply,
                    coin_supply + 40 * _bond_redemption_price);
       assert.equal(current.bond_supply, bond_supply - 40);
@@ -580,6 +598,7 @@ function parameterized_test(accounts,
       assert.equal(current.bonds[accounts[2]][t6], 20);
       assert.equal(current.bonds[accounts[2]][t7], 20);
       assert.equal(current.bonds[accounts[2]][t8], 20);
+      check_redemption_timestamps(current, accounts[2], [t6, t7, t8]);
       assert.equal(current.coin_supply, coin_supply);
       assert.equal(current.bond_supply, bond_supply);
       assert.equal(current.bond_budget, 40);
@@ -595,6 +614,7 @@ function parameterized_test(accounts,
       assert.equal(current.bonds[accounts[2]][t6], 15);
       assert.equal(current.bonds[accounts[2]][t7], 20);
       assert.equal(current.bonds[accounts[2]][t8], 20);
+      check_redemption_timestamps(current, accounts[2], [t6, t7, t8]);
       assert.equal(current.coin_supply,
                    coin_supply + 5 * _bond_redemption_price);
       assert.equal(current.bond_supply, bond_supply - 5);
@@ -612,6 +632,7 @@ function parameterized_test(accounts,
       assert.equal(current.bonds[accounts[2]][t6], 15);
       assert.equal(current.bonds[accounts[2]][t7], 20);
       assert.equal(current.bonds[accounts[2]][t8], 15);
+      check_redemption_timestamps(current, accounts[2], [t6, t7, t8]);
       assert.equal(current.coin_supply,
                    coin_supply + 5 * _bond_redemption_price);
       assert.equal(current.bond_supply, bond_supply - 5);
@@ -629,6 +650,7 @@ function parameterized_test(accounts,
       assert.equal(current.bonds[accounts[2]][t6], 15);
       assert.equal(current.bonds[accounts[2]][t7], 15);
       assert.equal(current.bonds[accounts[2]][t8], 15);
+      check_redemption_timestamps(current, accounts[2], [t6, t7, t8]);
       assert.equal(current.coin_supply,
                    coin_supply + 5 * _bond_redemption_price);
       assert.equal(current.bond_supply, bond_supply - 5);
@@ -654,6 +676,7 @@ function parameterized_test(accounts,
       assert.equal(current.bonds[accounts[2]][t6], 0);
       assert.equal(current.bonds[accounts[2]][t7], 15);
       assert.equal(current.bonds[accounts[2]][t8], 10);
+      check_redemption_timestamps(current, accounts[2], [t7, t8]);
       assert.equal(current.coin_supply,
                    coin_supply + 20 * _bond_redemption_price);
       assert.equal(current.bond_supply, bond_supply - 20);
@@ -678,6 +701,7 @@ function parameterized_test(accounts,
       assert.equal(current.bonds[accounts[2]][t6], 0);
       assert.equal(current.bonds[accounts[2]][t7], 14);
       assert.equal(current.bonds[accounts[2]][t8], 10);
+      check_redemption_timestamps(current, accounts[2], [t7, t8]);
       assert.equal(current.coin_supply,
                    coin_supply + 1 * _bond_redemption_price);
       assert.equal(current.bond_supply, bond_supply - 1);
@@ -698,6 +722,7 @@ function parameterized_test(accounts,
       assert.equal(current.bonds[accounts[2]][t6], 0);
       assert.equal(current.bonds[accounts[2]][t7], 0);
       assert.equal(current.bonds[accounts[2]][t8], 8);
+      check_redemption_timestamps(current, accounts[2], [t8]);
       assert.equal(current.coin_supply,
                    coin_supply + 16 * _bond_redemption_price);
       assert.equal(current.bond_supply, bond_supply - 16);
@@ -714,6 +739,7 @@ function parameterized_test(accounts,
       assert.equal(current.bonds[accounts[2]][t6], 0);
       assert.equal(current.bonds[accounts[2]][t7], 0);
       assert.equal(current.bonds[accounts[2]][t8], 7);
+      check_redemption_timestamps(current, accounts[2], [t8]);
       assert.equal(current.coin_supply,
                    coin_supply + 1 * _bond_redemption_price);
       assert.equal(current.bond_supply, bond_supply - 1);
@@ -730,6 +756,7 @@ function parameterized_test(accounts,
       assert.equal(current.bonds[accounts[2]][t6], 0);
       assert.equal(current.bonds[accounts[2]][t7], 0);
       assert.equal(current.bonds[accounts[2]][t8], 0);
+      check_redemption_timestamps(current, accounts[2], []);
       assert.equal(current.coin_supply,
                    coin_supply + 7 * _bond_redemption_price);
       assert.equal(current.bond_supply, bond_supply - 7);
@@ -2934,6 +2961,13 @@ function parameterized_test(accounts,
       await _acb.unpause({from: accounts[1]});
     }, "Pausable");
 
+    function check_redemption_timestamps(current, account, expected) {
+      let actual = current.redemption_timestamps[account];
+      assert.equal(actual.length, expected.length);
+      for (let index = 0; index < actual.length; index++) {
+        assert.isTrue(expected.includes(actual[index]));
+      }
+    }
 
     async function _mint_at_default_level() {
       let current = await get_current([], []);
@@ -3002,6 +3036,7 @@ function parameterized_test(accounts,
       acb.bond_supply = (await bond.totalSupply()).toNumber();
       acb.balances = {};
       acb.bonds = {};
+      acb.redemption_timestamps = {};
       for (let i = 0; i < accounts.length; i++) {
         acb.balances[accounts[i]] =
             (await coin.balanceOf(accounts[i])).toNumber();
@@ -3009,6 +3044,16 @@ function parameterized_test(accounts,
         for (let j = 0; j < redemptions.length; j++) {
           acb.bonds[accounts[i]][redemptions[j]] =
               (await bond.balanceOf(accounts[i], redemptions[j])).toNumber();
+        }
+        acb.redemption_timestamps[accounts[i]] = [];
+        let bond_count =
+            (await bond.numberOfRedemptionTimestampsOwnedBy(
+                accounts[i])).toNumber();
+        for (let index = 0; index < bond_count; index++) {
+          let redemption = (
+              await bond.getRedemptionTimestampOwnedBy(
+                  accounts[i], index)).toNumber();
+          acb.redemption_timestamps[accounts[i]].push(redemption);
         }
       }
       return acb;

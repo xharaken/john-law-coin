@@ -28,13 +28,15 @@ information on using pull requests.
 This project follows
 [Google's Open Source Community Guidelines](https://opensource.google/conduct/).
 
-# How to build
+# How to build and deploy locally
 
 ## Installation
 
-This project uses [Truffle](https://www.trufflesuite.com/truffle) and [Openzeppelin](https://openzeppelin.com/). You can install the packages as follows:
+This project uses [Truffle](https://www.trufflesuite.com/truffle) and [Openzeppelin](https://openzeppelin.com/). You can install necessary packages as follows:
 
 ```bash
+$ git clone https://github.com/xharaken/john-law-coin/
+$ cd john-law-coin
 $ sudo apt-get install nodejs npm
 $ sudo npm install -g truffle
 $ sudo npm install  openzeppelin-solidity
@@ -48,32 +50,43 @@ $ sudo npm init -y
 ```
 john-law-coin/
 |
-|--- contracts/    # Smart contracts.
-|    |---- JohnLawCoin.sol     # A smart contract of JohnLawCoin.sol.
-|    |---- Migrations.sol      # A smart contract to deploy JohnLawCoin.sol.
-|    |---- test/               # Smart contracts for testing.
+|---- contracts/        # Smart contracts.
+|     |---- JohnLawCoin.sol     # The smart contract of JohnLawCoin.
+|     |---- Migrations.sol      # A smart contract to deploy JohnLawCoin.sol.
+|     |---- test/               # Smart contracts for testing.
 |
-|---- docs/        # A whitepaper and documentation.
-|---- migrations/  # Migration scripts to deploy the smart contracts.
-|---- test/        # Tests and simulators for JohnLawCoin.sol.
-|---- python/      # Tests and simulators for the JohnLawCoin algorithm written in Python (much faster than Truffle).
+|---- wallet/           # The wallet implementation.
+|---- docs/             # The whitepaper and documentation.
+|---- migrations/       # Migration scripts to deploy the smart contracts.
+|---- test/             # Tests and simulators for JohnLawCoin.sol.
+|---- python/           # Tests and simulators for the JohnLawCoin algorithm written in Python (much faster than Truffle).
 |---- truffle-config.js # Truffle configuration file.
 ```
 
 ## Running tests
 
+```bash
+$ ./test/run_coin_bond_unittest.py  # Run unittests for the JohnLawCoin contract and the JohnLawBond contract.
+$ ./test/run_oracle_unittest.py  # Run unittests for the Oracle contract.
+$ ./test/run_acb_unittest.py  # Run unittests for the ACB contract.
+$ ./test/run_oracle_simulator.py  # Run a simulator for the Oracle contract.
+$ ./test/run_acb_simulator.py  # Run a simulator for the ACB contract.
+$ ./test/run_acb_upgrade.py  # Run upgrade tests for the Oracle contract and the ACB contract.
+```
+
+## Deploying smart contracts on a private network.
+
 Launch a private network in one console.
 
 ```bash
-$ ganache-cli -l 1200000000 -a 10
+$ ganache-cli -l 1200000000
 ```
 
-Run `truffle test` in another console. Or you can specify a test like `truffle test test/coin_bond_unittest.js`.
+Deploy the smart contracts.
 
 ```bash
-$ truffle test
+$ truffle migrate
 ```
 
-## Deploying smart contracts
+Then you can interact with the contracts using `truffle console`. See [this page](./HowToUseConsole.md) to learn more.
 
-(will write soon)

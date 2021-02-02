@@ -8,9 +8,31 @@ If JohnLawCoin is successful and proves the assumption is correct, it will provi
 
 See [the whitepaper](./docs/whitepaper.pdf) for more details. See [the smart contract](./contracts/JohnLawCoin.sol) for the implementation.
 
-Note: This is not an officially supported Google product.
+# Three steps to start
 
-# How to use
+## Step 1
 
-(will write soon)
+Install [MetaMask](https://metamask.io/). This enables you to connect to Ethereum's blockchain from your browser. MetaMask supports Chrome, Firefox, Opera and Brave.
+
+## Step 2
+
+Open a wallet from your browser and enjoy! See [this page](./HowToUseWallet.md) to learn how to use the wallet.
+
+*[Note: If you are interested in connecting to the smart contracts directly without using the wallet, see [this page](./HowToUseConsole.md).]*
+
+## Step 3
+
+Follow [@johnlawcoin on Twitter](https://twitter.com/johnlawcoin) to get updatesabout JohnLawCoin.
+
+# How to contribute
+
+If you want to contribute to grow the ecosystem of JohnLawCoin (thanks!), please do the following:
+
+* Socialize JohnLawCoin with your friends using SNS, blog posts and media.
+* Vote on the oracle every week (then you can get a reward).
+* Purchase bonds issued by the ACB if any (then you can get the interest rate).
+
+If you have any questions / feedback, create a GitHub issue or talk to [@johnlawcoin on Twitter](https://twitter.com/johnlawcoin).
+
+***[Note: This is not an officially supported Google product.]***
 

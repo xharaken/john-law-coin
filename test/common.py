@@ -39,3 +39,4 @@ def run_test(command):
     print(command, file=sys.stderr)
     subprocess.run(command, shell=True)
     sys.stdout.flush()
+    kill_ganache()
