@@ -34,7 +34,7 @@ This project follows
 
 This project uses [Truffle](https://www.trufflesuite.com/truffle) and [Openzeppelin](https://openzeppelin.com/). You can install necessary packages as follows:
 
-```bash
+```
 $ git clone https://github.com/xharaken/john-law-coin/
 $ cd john-law-coin
 $ sudo apt-get install nodejs npm
@@ -65,7 +65,7 @@ john-law-coin/
 
 ## Running tests
 
-```bash
+```
 $ ./test/run_coin_bond_unittest.py  # Run unittests for the JohnLawCoin contract and the JohnLawBond contract.
 $ ./test/run_oracle_unittest.py  # Run unittests for the Oracle contract.
 $ ./test/run_acb_unittest.py  # Run unittests for the ACB contract.
@@ -78,13 +78,13 @@ $ ./test/run_acb_upgrade.py  # Run upgrade tests for the Oracle contract and the
 
 Launch a private network in one console.
 
-```bash
+```
 $ ganache-cli -l 1200000000
 ```
 
 Deploy the smart contracts.
 
-```bash
+```
 $ truffle migrate
 ```
 

@@ -14,7 +14,7 @@ This means that you have only three ways to get coins; [A] get the coins from so
 
 The JohnLawCoin contract is implemented as [ERC20 tokens](https://ethereum.org/en/developers/docs/standards/tokens/erc-20/). You can store and transfer your coins using ERC20-compatible wallets or directly using ERC20 token APIs:
 
-```bash
+```
 truffle> acb = await ACB.at(<<the address of the ACB contract>>)  # Get the ACB contract.
 truffle> coin = await JohnLawCoin.at(await acb.coin_())  # Get the JohnLawCoin contract.
 truffle> (await coin.balanceOf(<<your address>>)).toNumber()  # Print your coin balance.
@@ -50,7 +50,7 @@ You can call `vote()` only once a week. You are expected to look up the current 
 
 Strictly speaking, the current exchange rate means the exchange rate at the point when the current week started. You can get the timestamp by calling `acb.current_phase_start_()`:
 
-```bash
+```
 truffle> (await acb.current_phase_start_()).toNumber()
 1612274145
 ```
@@ -59,7 +59,7 @@ If no currency exchangers exist (this is the case in a bootstrap phase), you are
  
 Once you get the oracle level to vote, you need to create a hash of it. If you want to vote for the oracle level 5, you can create a hash as follows:
 
-```bash
+```
 truffle> hash = await acb.hash(5, 1234)
 ```
 
@@ -67,7 +67,7 @@ The first parameter is the oracle level. The second parameter is a salt to keep 
 
 Then you call `vote()` with the hash:
 
-```bash
+```
 truffle> tx = await acb.vote(hash, 4, 1111)  # Vote on the oracle
 ```
 
@@ -75,7 +75,7 @@ The first parameter is the hash to be voted this week. The second parameter is t
 
 Let's look at the transaction receipt:
 
-```bash
+```
 truffle> tx.receipt.logs.filter(e => e.event == 'VoteEvent')[0].args
 Result {
   '0': '0x089062a669c3cCcC24D1AF1992E5Bd65A094d582',
@@ -108,7 +108,7 @@ Result {
 
 As a result, your coin balance increases by 25710 coins:
 
-```bash
+```
 truffle> (await coin.balanceOf(<<your address>>)).toNumber()
 25810
 ```
@@ -121,14 +121,14 @@ The ACB decreases the total coin supply by issuing bonds when the oracle level i
 
 You can query the ACB's bond budget as follows:
 
-```bash
+```
 truffle> (await acb.bond_budget_()).toNumber()
 21  # The ACB can issue 21 bonds.
 ```
 
 If the ACB's bond budget is positive, it indicates the number of bonds the ACB can issue. You can purchase the bonds as follows:
 
-```bash
+```
 truffle> tx = await acb.purchaseBonds(2)  # Purchase 2 bonds.
 truffle> tx.receipt.logs.filter(e => e.event == "PurchaseBondsEvent")[0].args
 Result {
@@ -157,7 +157,7 @@ The parameter of `purchaseBonds()` is the number of bonds you want to purchase. 
 
 You can query the bonds you own:
 
-```bash
+```
 truffle> bond = await JohnLawBond.at(await acb.bond_()) # Get the JohnLawBond contract.
 truffle> (await bond.balanceOf(<<your address>>, 1619526266)).toNumber()
 2  # You have 2 bonds whose redemption timestamp is 1619526266.
@@ -167,7 +167,7 @@ truffle> (await acb.getTimestamp()).toNumber() # Print the current timestamp.
 
 You can iterate the redemption timestamps of all the bonds you own:
 
-```bash
+```
 truffle> acb.purchaseBonds(10)  # Purchase 10 more bonds
 truffle> await bond.numberOfRedemptionTimestampsOwnedBy(<<your address>>)).toNumber()
 2
@@ -183,7 +183,7 @@ truffle> (await bond.balanceOf(<<your address>>, 1619528123)).toNumber()
 
 If the ACB's bond budget is negative, it indicates the number of bonds the ACB can redeem regardless of their redemption timestamps (so you are incentivized to redeem as many bonds as possible when the ACB's bond budget is negative). You can redeem your bonds as follows:
 
-```bash
+```
 truffle> (await acb.bond_budget_()).toNumber()
 -14  # The ACB can redeem 14 bonds.
 truffle> tx = await acb.redeemBonds([1619526266, 1619528123])  # Redeem bonds whose timestamps are 1619526266 or 1619528123.
