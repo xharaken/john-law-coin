@@ -572,6 +572,7 @@ class ACBSimulator(unittest.TestCase):
 
             self.assertEqual(acb.coin.balance_of(voters[i].address),
                              voters[i].balance)
+            self.assertEqual(acb.current_phase_start, acb.get_timestamp())
 
             if reveal_result:
                 self.metrics.reveal_hit += 1

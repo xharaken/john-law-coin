@@ -639,6 +639,8 @@ function parameterized_test(accounts,
 
         assert.equal(await get_balance(_voters[i].address),
                      _voters[i].balance);
+        assert.equal((await _acb.current_phase_start_()).toNumber(),
+                     (await _acb.getTimestamp()).toNumber())
 
         if (reveal_result) {
           _metrics.reveal_hit += 1;

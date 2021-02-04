@@ -788,6 +788,8 @@ function parameterized_test(accounts,
     await check_vote(await _acb.hash(_default_level, 7777, {from: accounts[7]}),
                      _default_level, 7777, {from: accounts[7]},
                      true, false, 0, 0, true);
+    current = await get_current(sub_accounts, []);
+    assert.equal(current.current_phase_start, await _acb.getTimestamp());
 
     // 1 commit
     balance = current.balances[accounts[4]];
@@ -796,6 +798,7 @@ function parameterized_test(accounts,
                      _default_level, 1, {from: accounts[4]},
                      true, false, 0, 0, false);
     current = await get_current(sub_accounts, []);
+    assert.equal(current.current_phase_start, await _acb.getTimestamp());
     assert.equal(current.oracle_level, _level_max);
     assert.equal(current.balances[accounts[4]],
                  balance - deposit_4[mod(now, 3)]);
@@ -804,11 +807,13 @@ function parameterized_test(accounts,
                      _default_level, 1, {from: accounts[4]},
                      false, false, 0, 0, false);
     current = await get_current(sub_accounts, []);
+    assert.equal(current.current_phase_start, await _acb.getTimestamp());
     assert.equal(current.balances[accounts[4]], balance);
     await check_vote(await _acb.hash(_default_level, 1, {from: accounts[4]}),
                      _default_level, 1, {from: accounts[4]},
                      false, false, 0, 0, false);
     current = await get_current(sub_accounts, []);
+    assert.equal(current.current_phase_start, await _acb.getTimestamp());
     assert.equal(current.balances[accounts[4]], balance);
 
     now = mod(now + 1, 3);
@@ -817,10 +822,14 @@ function parameterized_test(accounts,
 
     balance = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = parseInt(balance * _deposit_rate / 100);
+    current = await get_current(sub_accounts, []);
+    assert.equal(current.current_phase_start,
+                 await _acb.getTimestamp() - _phase_duration);
     await check_vote(await _acb.hash(_default_level, 2, {from: accounts[4]}),
                      _default_level, 1, {from: accounts[4]},
                      true, true, 0, 0, true);
     current = await get_current(sub_accounts, []);
+    assert.equal(current.current_phase_start, await _acb.getTimestamp());
     assert.equal(current.oracle_level, _level_max);
     assert.equal(current.balances[accounts[4]],
                  balance - deposit_4[mod(now, 3)]);
@@ -829,6 +838,7 @@ function parameterized_test(accounts,
                      _default_level, 1, {from: accounts[4]},
                      false, false, 0, 0, false);
     current = await get_current(sub_accounts, []);
+    assert.equal(current.current_phase_start, await _acb.getTimestamp());
     assert.equal(current.balances[accounts[4]], balance);
 
     now = mod(now + 1, 3);
@@ -845,10 +855,14 @@ function parameterized_test(accounts,
     }
     remainder[mod(now, 3)] = mint - reward;
     deposit_4[mod(now, 3)] = parseInt(balance * _deposit_rate / 100);
+    current = await get_current(sub_accounts, []);
+    assert.equal(current.current_phase_start,
+                 await _acb.getTimestamp() - _phase_duration);
     await check_vote(await _acb.hash(_default_level, 3, {from: accounts[4]}),
                      _default_level, 1, {from: accounts[4]},
                      true, false, deposit_4[mod(now - 2, 3)], reward, true);
     current = await get_current(sub_accounts, []);
+    assert.equal(current.current_phase_start, await _acb.getTimestamp());
     assert.equal(current.oracle_level, _default_level);
     assert.equal(current.balances[accounts[4]],
                  balance - deposit_4[mod(now, 3)] +
@@ -858,6 +872,7 @@ function parameterized_test(accounts,
                      _default_level, 1, {from: accounts[4]},
                      false, false, 0, 0, false);
     current = await get_current(sub_accounts, []);
+    assert.equal(current.current_phase_start, await _acb.getTimestamp());
     assert.equal(current.balances[accounts[4]], balance);
 
     now = mod(now + 1, 3);
@@ -3032,6 +3047,7 @@ function parameterized_test(accounts,
       let acb = {};
       acb.bond_budget = (await _acb.bond_budget_()).toNumber();
       acb.oracle_level = (await _acb.oracle_level_()).toNumber();
+      acb.current_phase_start = (await _acb.current_phase_start_()).toNumber();
       let coin = await JohnLawCoin.at(await _acb.coin_());
       let bond = await JohnLawBond.at(await _acb.bond_());
       acb.coin_supply =(await coin.totalSupply()).toNumber();

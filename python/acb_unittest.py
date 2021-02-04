@@ -661,6 +661,7 @@ class ACBUnitTest(unittest.TestCase):
             accounts[4], Oracle.hash(
                 accounts[4], self.default_level, 1),
             self.default_level, 1), (True, False, 0, 0, False))
+        self.assertEqual(acb.current_phase_start, acb.get_timestamp())
         self.assertEqual(acb.oracle_level, Oracle.LEVEL_MAX)
         self.assertEqual(acb.coin.balance_of(accounts[4]),
                          balance - deposit_4[now])
@@ -669,11 +670,13 @@ class ACBUnitTest(unittest.TestCase):
             accounts[4], Oracle.hash(
                 accounts[4], self.default_level, 1),
             self.default_level, 1), (False, False, 0, 0, False))
+        self.assertEqual(acb.current_phase_start, acb.get_timestamp())
         self.assertEqual(acb.coin.balance_of(accounts[4]), balance)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.hash(
                 accounts[4], self.default_level, 1),
             self.default_level, 1), (False, False, 0, 0, False))
+        self.assertEqual(acb.current_phase_start, acb.get_timestamp())
         self.assertEqual(acb.coin.balance_of(accounts[4]), balance)
 
         now = (now + 1) % 3
@@ -681,10 +684,13 @@ class ACBUnitTest(unittest.TestCase):
 
         balance = acb.coin.balance_of(accounts[4])
         deposit_4[now] = int(balance * ACB.DEPOSIT_RATE / 100)
+        self.assertEqual(acb.current_phase_start,
+                         acb.get_timestamp() - ACB.PHASE_DURATION)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.hash(
                 accounts[4], self.default_level, 2),
             self.default_level, 1), (True, True, 0, 0, True))
+        self.assertEqual(acb.current_phase_start, acb.get_timestamp())
         self.assertEqual(acb.oracle_level, Oracle.LEVEL_MAX)
         self.assertEqual(acb.coin.balance_of(accounts[4]),
                          balance - deposit_4[now])
@@ -693,6 +699,7 @@ class ACBUnitTest(unittest.TestCase):
             accounts[4], Oracle.hash(
                 accounts[4], self.default_level, 2),
             self.default_level, 1), (False, False, 0, 0, False))
+        self.assertEqual(acb.current_phase_start, acb.get_timestamp())
         self.assertEqual(acb.coin.balance_of(accounts[4]), balance)
 
         now = (now + 1) % 3
@@ -707,11 +714,14 @@ class ACBUnitTest(unittest.TestCase):
                           mint / 100)
         remainder[now] = mint - reward
         deposit_4[now] = int(balance * ACB.DEPOSIT_RATE / 100)
+        self.assertEqual(acb.current_phase_start,
+                         acb.get_timestamp() - ACB.PHASE_DURATION)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.hash(
                 accounts[4], self.default_level, 3),
             self.default_level, 1),
                          (True, False, deposit_4[(now - 2) % 3], reward, True))
+        self.assertEqual(acb.current_phase_start, acb.get_timestamp())
         self.assertEqual(acb.oracle_level, self.default_level)
         self.assertEqual(acb.coin.balance_of(accounts[4]),
                          balance - deposit_4[now] +
@@ -721,6 +731,7 @@ class ACBUnitTest(unittest.TestCase):
             accounts[4], Oracle.hash(
                 accounts[4], self.default_level, 3),
             self.default_level, 1), (False, False, 0, 0, False))
+        self.assertEqual(acb.current_phase_start, acb.get_timestamp())
         self.assertEqual(acb.coin.balance_of(accounts[4]), balance)
 
         now = (now + 1) % 3
