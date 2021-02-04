@@ -448,35 +448,38 @@ class Oracle:
     #
     # Returns
     # ----------------
-    # The amount of reclaimed coins.
+    # A tuple of two values:
+    #  - uint: The amount of reclaimed coins. This becomes a positive number
+    #    when the voter is eligible to reclaim their deposited coins.
+    #  - uint: The amount of reward. This becomes a positive number when the
+    #    voter voted for the "truth" oracle level.
     def reclaim(self, coin, sender):
         epoch = self.epochs[(self.epoch_timestamp - 2) % 3]
         assert(epoch.phase == Phase.RECLAIM)
         if (sender not in epoch.commits or
             epoch.commits[sender].epoch_timestamp != self.epoch_timestamp - 2):
             # The corresponding commit was not found.
-            return 0
+            return (0, 0)
         # One voter can reclaim only once per epoch.
         if epoch.commits[sender].phase != Phase.REVEAL:
-            return 0
+            return (0, 0)
 
         epoch.commits[sender].phase = Phase.RECLAIM
         deposit = epoch.commits[sender].deposit
         revealed_level = epoch.commits[sender].revealed_level
         if revealed_level == Oracle.LEVEL_MAX:
-            return 0
+            return (0, 0)
         assert(0 <= revealed_level and revealed_level < Oracle.LEVEL_MAX)
 
         if not epoch.votes[revealed_level].should_reclaim:
-            return 0
+            return (0, 0)
 
-        reclaim_amount = 0
         assert(epoch.votes[revealed_level].should_reclaim)
         assert(epoch.votes[revealed_level].count > 0)
         # Reclaim the deposited coins.
         coin.move(epoch.deposit_account, sender, deposit)
-        reclaim_amount += deposit
 
+        reward = 0
         if epoch.votes[revealed_level].should_reward:
             assert(epoch.votes[revealed_level].count > 0)
             # The voter who voted for the "truth" level can receive the reward.
@@ -489,21 +492,16 @@ class Oracle:
             # The rest of the reward is distributed to the voters evenly. This
             # incentivizes more voters (including new voters) to join the
             # oracle.
-            proportional_reward = 0
             if epoch.votes[revealed_level].deposit > 0:
-                proportional_reward = int(
+                reward += int(
                     Oracle.PROPORTIONAL_REWARD_RATE *
                     epoch.reward_total * deposit /
                     (100 * epoch.votes[revealed_level].deposit))
-            assert(proportional_reward >= 0)
-            constant_reward = int(
+            reward += int(
                 ((100 - Oracle.PROPORTIONAL_REWARD_RATE) * epoch.reward_total) /
                 (100 * epoch.votes[revealed_level].count))
-            assert(constant_reward >= 0)
-            coin.move(epoch.reward_account, sender,
-                      proportional_reward + constant_reward)
-            reclaim_amount += proportional_reward + constant_reward
-        return reclaim_amount
+            coin.move(epoch.reward_account, sender, reward)
+        return (deposit, reward)
 
     # Advance to the next phase. COMMIT => REVEAL, REVEAL => RECLAIM,
     # RECLAIM => COMMIT.
@@ -511,8 +509,7 @@ class Oracle:
     # Parameters
     # ----------------
     # |coin|: JohnLawCoin.
-    # |mint|: The amount of the coins minted for the reward in the reclaim
-    # phase.
+    # |mint|: The amount of coins provided for the reward in the reclaim phase.
     #
     # Returns
     # ----------------
@@ -833,10 +830,11 @@ class ACB:
     #
     # Returns
     # ----------------
-    # A tuple of four values.
+    # A tuple of five values:
     #  - boolean: Whether the commit succeeded or not.
     #  - boolean: Whether the reveal succeeded or not.
-    #  - uint: The total amount of the reclaimed coins and the reward.
+    #  - uint: The amount of the reclaimed coins.
+    #  - uint: The amount of the reward.
     #  - boolean: Whether this vote resulted in a phase update.
     def vote(self, sender, committed_hash, revealed_level, revealed_salt):
         phase_updated = False
@@ -889,10 +887,9 @@ class ACB:
             sender, revealed_level, revealed_salt)
 
         # Reclaim.
-        reclaim_amount = self.oracle.reclaim(self.coin, sender)
-        assert(reclaim_amount >= 0)
+        (reclaimed, reward) = self.oracle.reclaim(self.coin, sender)
 
-        return (commit_result, reveal_result, reclaim_amount, phase_updated)
+        return (commit_result, reveal_result, reclaimed, reward, phase_updated)
 
     # Purchase bonds.
     #

@@ -32,6 +32,18 @@ exports.should_throw = async (callback, match) => {
   }
 };
 
+exports.array_equal = (a, b) => {
+  if (a.length != b.length) {
+    return false;
+  }
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) {
+      return false;
+    }
+  }
+  return true;
+};
+
 exports.mod = (i, j) => {
   return (i % j) < 0 ? (i % j) + 0 + (j < 0 ? -j : j) : (i % j + 0);
 };

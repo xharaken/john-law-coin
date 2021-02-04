@@ -138,7 +138,7 @@ contract Oracle_v3 is OwnableUpgradeable {
   // Events.
   event CommitEvent(address indexed, bytes32, uint);
   event RevealEvent(address indexed, uint, uint);
-  event ReclaimEvent(address indexed, uint);
+  event ReclaimEvent(address indexed, uint, uint);
   event AdvancePhaseEvent(uint indexed, uint, uint);
 
   function upgrade()
@@ -319,36 +319,35 @@ contract Oracle_v3 is OwnableUpgradeable {
   // ----------------
   // The total amount of the reclaimed coins and the reward.
   function reclaim(JohnLawCoin coin, address sender)
-      public onlyOwner returns (uint) {
+      public onlyOwner returns (uint, uint) {
     Epoch storage epoch = epochs_[(epoch_timestamp_.sub(2)).mod(3)];
     require(epoch.phase == Phase.RECLAIM, "reclaim: 1");
     if (epoch.commits[sender].epoch_timestamp != epoch_timestamp_.sub(2)){
       // The corresponding commit was not found.
-      return 0;
+      return (0, 0);
     }
     // One voter can reclaim only once per epoch.
     if (epoch.commits[sender].phase != Phase.REVEAL) {
-      return 0;
+      return (0, 0);
     }
 
     epoch.commits[sender].phase = Phase.RECLAIM;
     uint deposit = epoch.commits[sender].deposit;
     uint revealed_level = epoch.commits[sender].revealed_level;
     if (revealed_level == LEVEL_MAX) {
-      return 0;
+      return (0, 0);
     }
     require(0 <= revealed_level && revealed_level < LEVEL_MAX, "reclaim: 2");
 
     if (!epoch.votes[revealed_level].should_reclaim) {
-      return 0;
+      return (0, 0);
     }
 
-    uint reclaim_amount = 0;
     require(epoch.votes[revealed_level].count > 0, "reclaim: 3");
     // Reclaim the deposited coins.
     coin.move(epoch.deposit_account, sender, deposit);
-    reclaim_amount = reclaim_amount.add(deposit);
 
+    uint reward = 0;
     if (epoch.votes[revealed_level].should_reward) {
       // The voter who voted for the "truth" level can receive the reward.
       //
@@ -359,24 +358,18 @@ contract Oracle_v3 is OwnableUpgradeable {
       //
       // The rest of the reward is distributed to the voters evenly. This
       // incentivizes more voters (including new voters) to join the oracle.
-      uint proportional_reward = 0;
       if (epoch.votes[revealed_level].deposit > 0) {
-        proportional_reward =
-            (uint(PROPORTIONAL_REWARD_RATE).mul(epoch.reward_total)
-                 .mul(deposit))
-                .div((uint(100).mul(epoch.votes[revealed_level].deposit)));
+        reward += (uint(PROPORTIONAL_REWARD_RATE).mul(epoch.reward_total)
+                       .mul(deposit))
+                  .div((uint(100).mul(epoch.votes[revealed_level].deposit)));
       }
-      uint constant_reward =
-          ((uint(100).sub(PROPORTIONAL_REWARD_RATE)).mul(epoch.reward_total))
-          .div(uint(100).mul(epoch.votes[revealed_level].count));
-      coin.move(epoch.reward_account,
-                     sender,
-                     proportional_reward.add(constant_reward));
-      reclaim_amount = reclaim_amount.add(proportional_reward)
-                       .add(constant_reward);
+      reward += ((uint(100).sub(PROPORTIONAL_REWARD_RATE))
+                     .mul(epoch.reward_total))
+                .div(uint(100).mul(epoch.votes[revealed_level].count));
+      coin.move(epoch.reward_account, sender, reward);
     }
-    emit ReclaimEvent(sender, reclaim_amount);
-    return reclaim_amount;
+    emit ReclaimEvent(sender, deposit, reward);
+    return (deposit, reward);
   }
 
   // Advance to the next phase. COMMIT => REVEAL, REVEAL => RECLAIM,
@@ -385,7 +378,7 @@ contract Oracle_v3 is OwnableUpgradeable {
   // Parameters
   // ----------------
   // |coin|: The JohnLawCoin contract.
-  // |mint|: The amount of the coins minted for the reward in the reclaim phase.
+  // |mint|: The amount of coins provided for the reward in the reclaim phase.
   //
   // Returns
   // ----------------
@@ -628,6 +621,10 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
   uint internal DAMPING_FACTOR;
   uint internal INITIAL_COIN_SUPPLY;
 
+  // Used only in testing. This cannot be put in a derived contract due to
+  // a restriction of @openzeppelin/truffle-upgrades.
+  uint internal _timestamp_for_testing;
+
   // Attributes. See the comment in initialize().
   JohnLawCoin public coin_;
   JohnLawBond public bond_;
@@ -635,10 +632,6 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
   Oracle public oracle_;
   uint public oracle_level_;
   uint public current_phase_start_;
-
-  // Used only in testing. This cannot be put in a derived contract due to
-  // a restriction of @openzeppelin/truffle-upgrades.
-  uint internal _timestamp_for_testing;
 
   JohnLawCoin public coin_v2_;
   JohnLawBond public bond_v2_;
@@ -651,7 +644,7 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
   
   // Events.
   event VoteEvent(address indexed, bytes32, uint, uint,
-                  bool, bool, uint, bool);
+                  bool, bool, uint, uint, bool);
   event PurchaseBondsEvent(address indexed, uint, uint);
   event RedeemBondsEvent(address indexed, uint[], uint);
   event ControlSupplyEvent(int, int, uint);
@@ -827,7 +820,7 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
   //  - boolean: Whether this vote resulted in a phase update.
   function vote(bytes32 committed_hash, uint revealed_level,
                 uint revealed_salt)
-      public whenNotPaused returns (bool, bool, uint, bool) {
+      public whenNotPaused returns (bool, bool, uint, uint, bool) {
     address sender = msg.sender;
 
     // Temporarily transfer the ownership of the JohnLawCoin contract to the
@@ -885,14 +878,15 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
         sender, revealed_level, revealed_salt);
     
     // Reclaim.
-    uint reclaim_amount = oracle_v3_.reclaim(coin_, sender);
+    (uint reclaimed, uint reward) = oracle_v3_.reclaim(coin_, sender);
 
     // Revoke the ownership of the JohnLawCoin contract from the oracle.
     oracle_v3_.revokeOwnership(coin_);
     
-    emit VoteEvent(sender, committed_hash, revealed_level, revealed_salt,
-                   commit_result, reveal_result, reclaim_amount, phase_updated);
-    return (commit_result, reveal_result, reclaim_amount, phase_updated);
+    emit VoteEvent(
+        sender, committed_hash, revealed_level, revealed_salt,
+        commit_result, reveal_result, reclaimed, reward, phase_updated);
+    return (commit_result, reveal_result, reclaimed, reward, phase_updated);
   }
 
   // Purchase bonds.

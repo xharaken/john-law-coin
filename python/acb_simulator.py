@@ -563,12 +563,12 @@ class ACBSimulator(unittest.TestCase):
                                       voters[i].revealed_level[prev],
                                       voters[i].revealed_salt[prev]),
                              (True, reveal_result,
-                              reclaimed_deposit + reward, not commit_observed))
+                              reclaimed_deposit, reward, not commit_observed))
             self.assertEqual(acb.vote(voters[i].address,
                                       committed_hash,
                                       voters[i].revealed_level[prev],
                                       voters[i].revealed_salt[prev]),
-                             (False, False, 0, False))
+                             (False, False, 0, 0, False))
 
             self.assertEqual(acb.coin.balance_of(voters[i].address),
                              voters[i].balance)

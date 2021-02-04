@@ -29,7 +29,7 @@ common.run_test(command)
 
 iteration = 40
 for level_max in [2, 4, 9]:
-    for reclaim_threshold in [0, 1, level_max / 2, level_max - 1]:
+    for reclaim_threshold in [0, 1, int(level_max / 2), level_max - 1]:
         for proportional_reward_rate in [0, 90, 100]:
             for voter_count in [1, 20]:
                 command = (

@@ -197,22 +197,21 @@ function parameterized_test(accounts,
         voters[i].reclaimed = (randint(0, 99) < 95);
         if (voters[i].reclaimed) {
           assert.equal(await _coin.balanceOf(voters[i].address), 0);
-          let reclaim_amount = 0;
+          let reclaimed = 0;
+          let reward = 0;
           let should_reclaim = false;
           if ((voters[i].revealed_correctly &&
                voters[i].revealed_level == mode_level)) {
             assert.notEqual(mode_level, _level_max);
-            let proportional_reward = 0;
             if (deposits[mode_level] > 0) {
-              proportional_reward = parseInt(
+              reward += parseInt(
                   (_proportional_reward_rate * reward_total *
                    voters[i].deposit) / (100 * deposits[mode_level]));
             }
-            let constant_reward = parseInt(
+            reward += parseInt(
                 ((100 - _proportional_reward_rate) * reward_total) /
                   (100 * counts[mode_level]));
-            reclaim_amount =
-                voters[i].deposit + proportional_reward + constant_reward;
+            reclaimed = voters[i].deposit
             should_reclaim = true;
           } else if (voters[i].revealed_correctly &&
                      mode_level - _reclaim_threshold <=
@@ -220,18 +219,18 @@ function parameterized_test(accounts,
                      voters[i].revealed_level <=
                      mode_level + _reclaim_threshold) {
             assert.notEqual(mode_level, _level_max);
-            reclaim_amount = voters[i].deposit;
+            reclaimed = voters[i].deposit;
             should_reclaim = true;
           }
           if (should_reclaim) {
-            await check_reclaim(voters[i].address, reclaim_amount);
+            await check_reclaim(voters[i].address, reclaimed, reward);
           }
-          assert.equal(await _oracle.reclaim.call(
-              _coin.address, voters[i].address), 0);
-          reclaim_total += reclaim_amount;
+          common.array_equal(await _oracle.reclaim.call(
+              _coin.address, voters[i].address), [0, 0]);
+          reclaim_total += reclaimed + reward;
           assert.equal(await _coin.balanceOf(voters[i].address),
-                       reclaim_amount);
-          await _coin.burn(voters[i].address, reclaim_amount);
+                       reclaimed + reward);
+          await _coin.burn(voters[i].address, reclaimed + reward);
         }
       }
 
@@ -263,13 +262,14 @@ function parameterized_test(accounts,
       assert.equal(args[2], salt);
     }
 
-    async function check_reclaim(account, reclaim_amount) {
+    async function check_reclaim(account, reclaimed, reward) {
       await _coin.transferOwnership(_oracle.address);
       let receipt = await _oracle.reclaim(_coin.address, account);
       await _oracle.revokeOwnership(_coin.address);
       let args = receipt.logs.filter(e => e.event == 'ReclaimEvent')[0].args;
       assert.equal(args[0], account);
-      assert.equal(args[1].toNumber(), reclaim_amount);
+      assert.equal(args[1].toNumber(), reclaimed);
+      assert.equal(args[2].toNumber(), reward);
     }
 
     async function check_advance(mint, burned) {

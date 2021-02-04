@@ -173,41 +173,39 @@ class OracleSimulator(unittest.TestCase):
             voters[i].reclaimed = (random.randint(0, 99) < 95)
             if voters[i].reclaimed:
                 self.assertEqual(self.coin.balance_of(voters[i].address), 0)
-                reclaim_amount = 0
+                reward = 0
+                reclaimed = 0
                 if (voters[i].revealed_correctly and
                     voters[i].revealed_level == mode_level):
                     self.assertNotEqual(mode_level, Oracle.LEVEL_MAX)
-                    proportional_reward = 0
                     if deposits[mode_level] > 0:
-                        proportional_reward = int(
+                        reward += int(
                             (Oracle.PROPORTIONAL_REWARD_RATE * reward_total *
                              voters[i].deposit) /
                             (100 * deposits[mode_level]))
-                    constant_reward = int(
+                    reward += int(
                         ((100 - Oracle.PROPORTIONAL_REWARD_RATE)
                          * reward_total) /
                         (100 * counts[mode_level]))
-                    reclaim_amount = (voters[i].deposit +
-                                      proportional_reward +
-                                      constant_reward)
+                    reclaimed = voters[i].deposit
                 elif (voters[i].revealed_correctly and
                       mode_level - Oracle.RECLAIM_THRESHOLD <=
                       voters[i].revealed_level and
                       voters[i].revealed_level <=
                       mode_level + Oracle.RECLAIM_THRESHOLD):
                     self.assertNotEqual(mode_level, Oracle.LEVEL_MAX)
-                    reclaim_amount = voters[i].deposit
+                    reclaimed = voters[i].deposit
                 self.assertEqual(self.oracle.reclaim(
-                    self.coin, voters[i].address), reclaim_amount)
-                reclaim_total += reclaim_amount
+                    self.coin, voters[i].address), (reclaimed, reward))
+                reclaim_total += reclaimed + reward
                 self.assertEqual(self.coin.balance_of(voters[i].address),
-                                 reclaim_amount)
-                self.coin.burn(voters[i].address, reclaim_amount)
+                                 reclaimed + reward)
+                self.coin.burn(voters[i].address, reclaimed + reward)
 
                 self.assertEqual(
-                    self.oracle.reclaim(self.coin, voters[i].address), 0)
+                    self.oracle.reclaim(self.coin, voters[i].address), (0, 0))
                 self.assertEqual(self.oracle.reclaim(
-                    self.coin, -voters[i].address), 0)
+                    self.coin, -voters[i].address), (0, 0))
 
         self.assertEqual(deposit_to_reclaim + reward_total,
                          deposit_total + mint)

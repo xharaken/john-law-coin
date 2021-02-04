@@ -118,8 +118,8 @@ class OracleUnitTest(unittest.TestCase):
         self.assertEqual(_coin.balance_of(_oracle.epochs[2].deposit_account), 0)
         self.assertEqual(_oracle.epochs[2].reward_total, 0)
 
-        self.assertEqual(_oracle.reclaim(_coin, accounts[1]), 0)
-        self.assertEqual(_oracle.reclaim(_coin, accounts[1]), 0)
+        self.assertEqual(_oracle.reclaim(_coin, accounts[1]), (0, 0))
+        self.assertEqual(_oracle.reclaim(_coin, accounts[1]), (0, 0))
 
         coin_supply = _coin.total_supply
         self.assertEqual(_oracle.advance(_coin, _mint), _mint)
@@ -257,11 +257,11 @@ class OracleUnitTest(unittest.TestCase):
         reclaim_amount = _deposit + self._reward(_mint, 1)
         balance = _coin.balance_of(accounts[1])
         self.assertEqual(_oracle.reclaim(_coin, accounts[1]),
-                         reclaim_amount)
+                         (_deposit, self._reward(_mint, 1)))
         self.assertEqual(_coin.balance_of(accounts[1]),
                          balance + reclaim_amount)
-        self.assertEqual(_oracle.reclaim(_coin, accounts[1]), 0)
-        self.assertEqual(_oracle.reclaim(_coin, accounts[2]), 0)
+        self.assertEqual(_oracle.reclaim(_coin, accounts[1]), (0, 0))
+        self.assertEqual(_oracle.reclaim(_coin, accounts[2]), (0, 0))
 
         coin_supply = _coin.total_supply
         self.assertEqual(_oracle.advance(_coin, _mint),
@@ -393,7 +393,7 @@ class OracleUnitTest(unittest.TestCase):
         reclaim_amount = _deposit + self._reward(_mint, 1)
         balance = _coin.balance_of(accounts[1])
         self.assertEqual(_oracle.reclaim(_coin, accounts[1]),
-                         reclaim_amount)
+                         (_deposit, self._reward(_mint, 1)))
         self.assertEqual(_coin.balance_of(accounts[1]),
                          balance + reclaim_amount)
 
@@ -463,7 +463,7 @@ class OracleUnitTest(unittest.TestCase):
         reclaim_amount = _deposit + self._reward(_mint, 1)
         balance = _coin.balance_of(accounts[1])
         self.assertEqual(_oracle.reclaim(_coin, accounts[1]),
-                         reclaim_amount)
+                         (_deposit, self._reward(_mint, 1)))
         self.assertEqual(_coin.balance_of(accounts[1]),
                          balance + reclaim_amount)
 
@@ -517,7 +517,7 @@ class OracleUnitTest(unittest.TestCase):
         reclaim_amount = _deposit + self._reward(_mint, 1)
         balance = _coin.balance_of(accounts[1])
         self.assertEqual(_oracle.reclaim(_coin, accounts[1]),
-                         reclaim_amount)
+                         (_deposit, self._reward(_mint, 1)))
         self.assertEqual(_coin.balance_of(accounts[1]),
                          balance + reclaim_amount)
 
@@ -713,36 +713,36 @@ class OracleUnitTest(unittest.TestCase):
         reclaim_amount = _deposit + self._reward(_mint, 6)
         balance = _coin.balance_of(accounts[6])
         self.assertEqual(_oracle.reclaim(_coin, accounts[6]),
-                         reclaim_amount)
+                         (_deposit, self._reward(_mint, 6)))
         self.assertEqual(_coin.balance_of(accounts[6]),
                          balance + reclaim_amount)
         balance = _coin.balance_of(accounts[5])
         self.assertEqual(_oracle.reclaim(_coin, accounts[5]),
-                         reclaim_amount)
+                         (_deposit, self._reward(_mint, 6)))
         self.assertEqual(_coin.balance_of(accounts[5]),
                          balance + reclaim_amount)
         balance = _coin.balance_of(accounts[4])
         self.assertEqual(_oracle.reclaim(_coin, accounts[4]),
-                         reclaim_amount)
+                         (_deposit, self._reward(_mint, 6)))
         self.assertEqual(_coin.balance_of(accounts[4]),
                          balance + reclaim_amount)
         balance = _coin.balance_of(accounts[3])
         self.assertEqual(_oracle.reclaim(_coin, accounts[3]),
-                         reclaim_amount)
+                         (_deposit, self._reward(_mint, 6)))
         self.assertEqual(_coin.balance_of(accounts[3]),
                          balance + reclaim_amount)
         balance = _coin.balance_of(accounts[2])
         self.assertEqual(_oracle.reclaim(_coin, accounts[2]),
-                         reclaim_amount)
+                         (_deposit, self._reward(_mint, 6)))
         self.assertEqual(_coin.balance_of(accounts[2]),
                          balance + reclaim_amount)
         balance = _coin.balance_of(accounts[1])
         self.assertEqual(_oracle.reclaim(_coin, accounts[1]),
-                         reclaim_amount)
+                         (_deposit, self._reward(_mint, 6)))
         self.assertEqual(_coin.balance_of(accounts[1]),
                          balance + reclaim_amount)
-        self.assertEqual(_oracle.reclaim(_coin, accounts[6]), 0)
-        self.assertEqual(_oracle.reclaim(_coin, accounts[7]), 0)
+        self.assertEqual(_oracle.reclaim(_coin, accounts[6]), (0, 0))
+        self.assertEqual(_oracle.reclaim(_coin, accounts[7]), (0, 0))
 
         coin_supply = _coin.total_supply
         self.assertEqual(_oracle.advance(_coin, _mint),
@@ -916,7 +916,7 @@ class OracleUnitTest(unittest.TestCase):
                          _deposit * 6)
         self.assertEqual(_oracle.epochs[0].reward_total, _mint)
 
-        self.assertEqual(_oracle.reclaim(_coin, accounts[7]), 0)
+        self.assertEqual(_oracle.reclaim(_coin, accounts[7]), (0, 0))
 
         coin_supply = _coin.total_supply
         self.assertEqual(_oracle.advance(_coin, _mint),
@@ -1103,41 +1103,41 @@ class OracleUnitTest(unittest.TestCase):
         if self._is_in_reclaim_threshold(_other_level):
             balance = _coin.balance_of(accounts[2])
             self.assertEqual(_oracle.reclaim(_coin, accounts[2]),
-                             _deposit)
+                             (_deposit, 0))
             self.assertEqual(_coin.balance_of(accounts[2]),
                              balance + _deposit)
             balance = _coin.balance_of(accounts[6])
             self.assertEqual(_oracle.reclaim(_coin, accounts[6]),
-                             _deposit)
+                             (_deposit, 0))
             self.assertEqual(_coin.balance_of(accounts[6]),
                              balance + _deposit)
         else:
-            self.assertEqual(_oracle.reclaim(_coin, accounts[2]), 0)
-            self.assertEqual(_oracle.reclaim(_coin, accounts[6]), 0)
+            self.assertEqual(_oracle.reclaim(_coin, accounts[2]), (0, 0))
+            self.assertEqual(_oracle.reclaim(_coin, accounts[6]), (0, 0))
 
         reclaim_amount = _deposit + self._reward(reward_total, 4)
         balance = _coin.balance_of(accounts[5])
         self.assertEqual(_oracle.reclaim(_coin, accounts[5]),
-                         reclaim_amount)
+                         (_deposit, self._reward(reward_total, 4)))
         self.assertEqual(_coin.balance_of(accounts[5]),
                          balance + reclaim_amount)
         balance = _coin.balance_of(accounts[4])
         self.assertEqual(_oracle.reclaim(_coin, accounts[4]),
-                         reclaim_amount)
+                         (_deposit, self._reward(reward_total, 4)))
         self.assertEqual(_coin.balance_of(accounts[4]),
                          balance + reclaim_amount)
         balance = _coin.balance_of(accounts[3])
         self.assertEqual(_oracle.reclaim(_coin, accounts[3]),
-                         reclaim_amount)
+                         (_deposit, self._reward(reward_total, 4)))
         self.assertEqual(_coin.balance_of(accounts[3]),
                          balance + reclaim_amount)
         balance = _coin.balance_of(accounts[1])
         self.assertEqual(_oracle.reclaim(_coin, accounts[1]),
-                         reclaim_amount)
+                         (_deposit, self._reward(reward_total, 4)))
         self.assertEqual(_coin.balance_of(accounts[1]),
                          balance + reclaim_amount)
-        self.assertEqual(_oracle.reclaim(_coin, accounts[6]), 0)
-        self.assertEqual(_oracle.reclaim(_coin, accounts[7]), 0)
+        self.assertEqual(_oracle.reclaim(_coin, accounts[6]), (0, 0))
+        self.assertEqual(_oracle.reclaim(_coin, accounts[7]), (0, 0))
 
         coin_supply = _coin.total_supply
         self.assertEqual(_oracle.advance(_coin, _mint),
@@ -1320,7 +1320,7 @@ class OracleUnitTest(unittest.TestCase):
             self.assertEqual(_coin.balance_of(_oracle.epochs[0].deposit_account),
                              deposit_total)
 
-        self.assertEqual(_oracle.reclaim(_coin, accounts[7]), 0)
+        self.assertEqual(_oracle.reclaim(_coin, accounts[7]), (0, 0))
 
         coin_supply = _coin.total_supply
         self.assertEqual(_oracle.advance(_coin, _mint), _mint + _deposit * 6)
@@ -1509,42 +1509,42 @@ class OracleUnitTest(unittest.TestCase):
             real_other_level <= real_mode_level + _reclaim_threshold):
             balance = _coin.balance_of(accounts[2])
             self.assertEqual(_oracle.reclaim(_coin, accounts[2]),
-                             _deposit)
+                             (_deposit, 0))
             self.assertEqual(_coin.balance_of(accounts[2]),
                              balance + _deposit)
             balance = _coin.balance_of(accounts[4])
             self.assertEqual(_oracle.reclaim(_coin, accounts[4]),
-                             _deposit)
+                             (_deposit, 0))
             self.assertEqual(_coin.balance_of(accounts[4]),
                              balance + _deposit)
             balance = _coin.balance_of(accounts[6])
             self.assertEqual(_oracle.reclaim(_coin, accounts[6]),
-                             _deposit)
+                             (_deposit, 0))
             self.assertEqual(_coin.balance_of(accounts[6]),
                              balance + _deposit)
         else:
-            self.assertEqual(_oracle.reclaim(_coin, accounts[2]), 0)
-            self.assertEqual(_oracle.reclaim(_coin, accounts[4]), 0)
-            self.assertEqual(_oracle.reclaim(_coin, accounts[6]), 0)
+            self.assertEqual(_oracle.reclaim(_coin, accounts[2]), (0, 0))
+            self.assertEqual(_oracle.reclaim(_coin, accounts[4]), (0, 0))
+            self.assertEqual(_oracle.reclaim(_coin, accounts[6]), (0, 0))
 
         reclaim_amount = _deposit + self._reward(reward_total, 3)
         balance = _coin.balance_of(accounts[5])
         self.assertEqual(_oracle.reclaim(_coin, accounts[5]),
-                         reclaim_amount)
+                         (_deposit, self._reward(reward_total, 3)))
         self.assertEqual(_coin.balance_of(accounts[5]),
                          balance + reclaim_amount)
         balance = _coin.balance_of(accounts[3])
         self.assertEqual(_oracle.reclaim(_coin, accounts[3]),
-                         reclaim_amount)
+                         (_deposit, self._reward(reward_total, 3)))
         self.assertEqual(_coin.balance_of(accounts[3]),
                          balance + reclaim_amount)
         balance = _coin.balance_of(accounts[1])
         self.assertEqual(_oracle.reclaim(_coin, accounts[1]),
-                         reclaim_amount)
+                         (_deposit, self._reward(reward_total, 3)))
         self.assertEqual(_coin.balance_of(accounts[1]),
                          balance + reclaim_amount)
-        self.assertEqual(_oracle.reclaim(_coin, accounts[6]), 0)
-        self.assertEqual(_oracle.reclaim(_coin, accounts[7]), 0)
+        self.assertEqual(_oracle.reclaim(_coin, accounts[6]), (0, 0))
+        self.assertEqual(_oracle.reclaim(_coin, accounts[7]), (0, 0))
 
         coin_supply = _coin.total_supply
         self.assertEqual(_oracle.advance(_coin, _mint),
@@ -1731,7 +1731,7 @@ class OracleUnitTest(unittest.TestCase):
             self.assertEqual(_coin.balance_of(_oracle.epochs[0].deposit_account),
                              deposit_total)
 
-        self.assertEqual(_oracle.reclaim(_coin, accounts[7]), 0)
+        self.assertEqual(_oracle.reclaim(_coin, accounts[7]), (0, 0))
 
         coin_supply = _coin.total_supply
         self.assertEqual(_oracle.advance(_coin, _mint), _mint + _deposit * 6)
@@ -1919,29 +1919,29 @@ class OracleUnitTest(unittest.TestCase):
         if self._is_in_reclaim_threshold(_other_level):
             balance = _coin.balance_of(accounts[2])
             self.assertEqual(_oracle.reclaim(_coin, accounts[2]),
-                             _deposit)
+                             (_deposit, 0))
             self.assertEqual(_coin.balance_of(accounts[2]),
                              balance + _deposit)
-            self.assertEqual(_oracle.reclaim(_coin, accounts[6]), 0)
+            self.assertEqual(_oracle.reclaim(_coin, accounts[6]), (0, 0))
         else:
-            self.assertEqual(_oracle.reclaim(_coin, accounts[2]), 0)
-            self.assertEqual(_oracle.reclaim(_coin, accounts[6]), 0)
+            self.assertEqual(_oracle.reclaim(_coin, accounts[2]), (0, 0))
+            self.assertEqual(_oracle.reclaim(_coin, accounts[6]), (0, 0))
 
         reclaim_amount = _deposit + self._reward(reward_total, 2)
-        self.assertEqual(_oracle.reclaim(_coin, accounts[5]), 0)
-        self.assertEqual(_oracle.reclaim(_coin, accounts[4]), 0)
+        self.assertEqual(_oracle.reclaim(_coin, accounts[5]), (0, 0))
+        self.assertEqual(_oracle.reclaim(_coin, accounts[4]), (0, 0))
         balance = _coin.balance_of(accounts[3])
         self.assertEqual(_oracle.reclaim(_coin, accounts[3]),
-                         reclaim_amount)
+                         (_deposit, self._reward(reward_total, 2)))
         self.assertEqual(_coin.balance_of(accounts[3]),
                          balance + reclaim_amount)
         balance = _coin.balance_of(accounts[1])
         self.assertEqual(_oracle.reclaim(_coin, accounts[1]),
-                         reclaim_amount)
+                         (_deposit, self._reward(reward_total, 2)))
         self.assertEqual(_coin.balance_of(accounts[1]),
                          balance + reclaim_amount)
-        self.assertEqual(_oracle.reclaim(_coin, accounts[6]), 0)
-        self.assertEqual(_oracle.reclaim(_coin, accounts[7]), 0)
+        self.assertEqual(_oracle.reclaim(_coin, accounts[6]), (0, 0))
+        self.assertEqual(_oracle.reclaim(_coin, accounts[7]), (0, 0))
 
         coin_supply = _coin.total_supply
         self.assertEqual(_oracle.advance(_coin, _mint),
@@ -2121,10 +2121,10 @@ class OracleUnitTest(unittest.TestCase):
             self.assertEqual(_coin.balance_of(_oracle.epochs[0].deposit_account),
                              deposit_total)
 
-        self.assertEqual(_oracle.reclaim(_coin, accounts[1]), 0)
-        self.assertEqual(_oracle.reclaim(_coin, accounts[2]), 0)
-        self.assertEqual(_oracle.reclaim(_coin, accounts[3]), 0)
-        self.assertEqual(_oracle.reclaim(_coin, accounts[7]), 0)
+        self.assertEqual(_oracle.reclaim(_coin, accounts[1]), (0, 0))
+        self.assertEqual(_oracle.reclaim(_coin, accounts[2]), (0, 0))
+        self.assertEqual(_oracle.reclaim(_coin, accounts[3]), (0, 0))
+        self.assertEqual(_oracle.reclaim(_coin, accounts[7]), (0, 0))
 
         coin_supply = _coin.total_supply
         self.assertEqual(_oracle.advance(_coin, _mint), _mint + _deposit * 6)

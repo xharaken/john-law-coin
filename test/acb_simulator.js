@@ -626,7 +626,7 @@ function parameterized_test(accounts,
                          _voters[i].revealed_salt[prev],
                          {from: _voters[i].address},
                          true, reveal_result,
-                         reclaimed_deposit + reward, !commit_observed);
+                         reclaimed_deposit, reward, !commit_observed);
 
         let ret = await _acb.vote.call(committed_hash,
                                        _voters[i].revealed_level[prev],
@@ -714,7 +714,7 @@ function parameterized_test(accounts,
 
     async function check_vote(
         committed_hash, revealed_level, revealed_salt, option,
-        commit_result, reveal_result, reclaim_amount, phase_updated) {
+        commit_result, reveal_result, reclaimed, reward, phase_updated) {
       let receipt = await _acb.vote(
           committed_hash, revealed_level, revealed_salt, option);
       let args = receipt.logs.filter(e => e.event == 'VoteEvent')[0].args;
@@ -724,8 +724,9 @@ function parameterized_test(accounts,
       assert.equal(args[3], revealed_salt);
       assert.equal(args[4], commit_result);
       assert.equal(args[5], reveal_result);
-      assert.equal(args[6], reclaim_amount);
-      assert.equal(args[7], phase_updated);
+      assert.equal(args[6], reclaimed);
+      assert.equal(args[7], reward);
+      assert.equal(args[8], phase_updated);
     }
 
     async function check_transfer(receiver, amount, option) {

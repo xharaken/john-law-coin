@@ -35,7 +35,8 @@ for level_max in [2, 4, 9]:
             for mint in [0, 50]:
                 for deposit in [0, 100]:
                     for mode_level in range(0, level_max):
-                        for other_level in [0, level_max / 2, level_max - 1]:
+                        for other_level in [0, int(level_max / 2),
+                                            level_max - 1]:
                             if other_level == mode_level:
                                 continue
                             command = (

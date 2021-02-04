@@ -19,6 +19,7 @@ const Oracle = artifacts.require("Oracle");
 const OracleForTesting = artifacts.require("OracleForTesting");
 const common = require("./common.js");
 const should_throw = common.should_throw;
+const array_equal = common.array_equal;
 const mod = common.mod;
 
 contract("OracleUnittest", function (accounts) {
@@ -132,8 +133,8 @@ function parameterized_test(accounts,
     assert.equal(current.epochs[2].deposit_balance, 0);
     assert.equal(current.epochs[2].reward_total, 0);
 
-    assert.equal(await _oracle.reclaim.call(_coin.address, accounts[1]), 0);
-    assert.equal(await _oracle.reclaim.call(_coin.address, accounts[1]), 0);
+    array_equal(await _oracle.reclaim.call(_coin.address, accounts[1]), [0, 0]);
+    array_equal(await _oracle.reclaim.call(_coin.address, accounts[1]), [0, 0]);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
     await check_advance(_mint, _mint);
@@ -266,10 +267,10 @@ function parameterized_test(accounts,
 
     reclaim_amount = _deposit + _reward(_mint, 1);
     balance = await balance_of(accounts[1]);
-    await check_reclaim(accounts[1], reclaim_amount);
+    await check_reclaim(accounts[1], _deposit, _reward(_mint, 1));
     assert.equal(await balance_of(accounts[1]), balance + reclaim_amount);
-    assert.equal(await _oracle.reclaim.call(_coin.address, accounts[1]), 0);
-    assert.equal(await _oracle.reclaim.call(_coin.address, accounts[2]), 0);
+    array_equal(await _oracle.reclaim.call(_coin.address, accounts[1]), [0, 0]);
+    array_equal(await _oracle.reclaim.call(_coin.address, accounts[2]), [0, 0]);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
     await check_advance(_mint,
@@ -398,7 +399,7 @@ function parameterized_test(accounts,
 
     reclaim_amount = _deposit + _reward(_mint, 1);
     balance = await balance_of(accounts[1]);
-    await check_reclaim(accounts[1], reclaim_amount);
+    await check_reclaim(accounts[1], _deposit, _reward(_mint, 1));
     assert.equal(await balance_of(accounts[1]), balance + reclaim_amount);
 
     await check_reveal(accounts[1], _mode_level, 1111);
@@ -465,7 +466,7 @@ function parameterized_test(accounts,
 
     reclaim_amount = _deposit + _reward(_mint, 1);
     balance = await balance_of(accounts[1]);
-    await check_reclaim(accounts[1], reclaim_amount);
+    await check_reclaim(accounts[1], _deposit, _reward(_mint, 1));
     assert.equal(await balance_of(accounts[1]), balance + reclaim_amount);
 
     await check_reveal(accounts[1], _mode_level, 1111);
@@ -518,7 +519,7 @@ function parameterized_test(accounts,
 
     reclaim_amount = _deposit + _reward(_mint, 1);
     balance = await balance_of(accounts[1]);
-    await check_reclaim(accounts[1], reclaim_amount);
+    await check_reclaim(accounts[1], _deposit, _reward(_mint, 1));
     assert.equal(await balance_of(accounts[1]), balance + reclaim_amount);
 
     assert.equal(await _oracle.getModeLevel(), _level_max);
@@ -700,25 +701,25 @@ function parameterized_test(accounts,
 
     reclaim_amount = _deposit + _reward(_mint, 6);
     balance = await balance_of(accounts[6]);
-    await check_reclaim(accounts[6], reclaim_amount);
+    await check_reclaim(accounts[6], _deposit, _reward(_mint, 6));
     assert.equal(await balance_of(accounts[6]), balance + reclaim_amount);
     balance = await balance_of(accounts[5]);
-    await check_reclaim(accounts[5], reclaim_amount);
+    await check_reclaim(accounts[5], _deposit, _reward(_mint, 6));
     assert.equal(await balance_of(accounts[5]), balance + reclaim_amount);
     balance = await balance_of(accounts[4]);
-    await check_reclaim(accounts[4], reclaim_amount);
+    await check_reclaim(accounts[4], _deposit, _reward(_mint, 6));
     assert.equal(await balance_of(accounts[4]), balance + reclaim_amount);
     balance = await balance_of(accounts[3]);
-    await check_reclaim(accounts[3], reclaim_amount);
+    await check_reclaim(accounts[3], _deposit, _reward(_mint, 6));
     assert.equal(await balance_of(accounts[3]), balance + reclaim_amount);
     balance = await balance_of(accounts[2]);
-    await check_reclaim(accounts[2], reclaim_amount);
+    await check_reclaim(accounts[2], _deposit, _reward(_mint, 6));
     assert.equal(await balance_of(accounts[2]), balance + reclaim_amount);
     balance = await balance_of(accounts[1]);
-    await check_reclaim(accounts[1], reclaim_amount);
+    await check_reclaim(accounts[1], _deposit, _reward(_mint, 6));
     assert.equal(await balance_of(accounts[1]), balance + reclaim_amount);
-    assert.equal(await _oracle.reclaim.call(_coin.address, accounts[6]), 0);
-    assert.equal(await _oracle.reclaim.call(_coin.address, accounts[7]), 0);
+    array_equal(await _oracle.reclaim.call(_coin.address, accounts[6]), [0, 0]);
+    array_equal(await _oracle.reclaim.call(_coin.address, accounts[7]), [0, 0]);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
     await check_advance(_mint,
@@ -879,7 +880,7 @@ function parameterized_test(accounts,
                  _deposit * 6);
     assert.equal(current.epochs[0].reward_total, _mint);
 
-    assert.equal(await _oracle.reclaim.call(_coin.address, accounts[7]), 0);
+    array_equal(await _oracle.reclaim.call(_coin.address, accounts[7]), [0, 0]);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
     await check_advance(_mint,
@@ -1050,31 +1051,33 @@ function parameterized_test(accounts,
     }
     if (_is_in_reclaim_threshold(_other_level)) {
       balance = await balance_of(accounts[2]);
-      await check_reclaim(  accounts[2], _deposit);
+      await check_reclaim(  accounts[2], _deposit, 0);
       assert.equal(await balance_of(accounts[2]), balance + _deposit);
       balance = await balance_of(accounts[6]);
-      await check_reclaim(  accounts[6], _deposit);
+      await check_reclaim(  accounts[6], _deposit, 0);
       assert.equal(await balance_of(accounts[6]), balance + _deposit);
     } else {
-      assert.equal(await _oracle.reclaim.call(_coin.address, accounts[2]), 0);
-      assert.equal(await _oracle.reclaim.call(_coin.address, accounts[6]), 0);
+      array_equal(await _oracle.reclaim.call(
+          _coin.address, accounts[2]), [0, 0]);
+      array_equal(await _oracle.reclaim.call(
+          _coin.address, accounts[6]), [0, 0]);
     }
 
     reclaim_amount = _deposit + _reward(reward_total, 4);
     balance = await balance_of(accounts[5]);
-    await check_reclaim(accounts[5], reclaim_amount);
+    await check_reclaim(accounts[5], _deposit, _reward(reward_total, 4));
     assert.equal(await balance_of(accounts[5]), balance + reclaim_amount);
     balance = await balance_of(accounts[4]);
-    await check_reclaim(accounts[4], reclaim_amount);
+    await check_reclaim(accounts[4], _deposit, _reward(reward_total, 4));
     assert.equal(await balance_of(accounts[4]), balance + reclaim_amount);
     balance = await balance_of(accounts[3]);
-    await check_reclaim(accounts[3], reclaim_amount);
+    await check_reclaim(accounts[3], _deposit, _reward(reward_total, 4));
     assert.equal(await balance_of(accounts[3]), balance + reclaim_amount);
     balance = await balance_of(accounts[1]);
-    await check_reclaim(accounts[1], reclaim_amount);
+    await check_reclaim(accounts[1], _deposit, _reward(reward_total, 4));
     assert.equal(await balance_of(accounts[1]), balance + reclaim_amount);
-    assert.equal(await _oracle.reclaim.call(_coin.address, accounts[6]), 0);
-    assert.equal(await _oracle.reclaim.call(_coin.address, accounts[7]), 0);
+    array_equal(await _oracle.reclaim.call(_coin.address, accounts[6]), [0, 0]);
+    array_equal(await _oracle.reclaim.call(_coin.address, accounts[7]), [0, 0]);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
     await check_advance(_mint,
@@ -1245,7 +1248,7 @@ function parameterized_test(accounts,
                    deposit_total);
     }
 
-    assert.equal(await _oracle.reclaim.call(_coin.address, accounts[7]), 0);
+    array_equal(await _oracle.reclaim.call(_coin.address, accounts[7]), [0, 0]);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
     await check_advance(_mint,
@@ -1434,31 +1437,34 @@ function parameterized_test(accounts,
     if (real_mode_level - _reclaim_threshold <= real_other_level &&
         real_other_level <= real_mode_level + _reclaim_threshold) {
       balance = await balance_of(accounts[2]);
-      await check_reclaim(  accounts[2], _deposit);
+      await check_reclaim(  accounts[2], _deposit, 0);
       assert.equal(await balance_of(accounts[2], balance + _deposit));
       balance = await balance_of(accounts[4]);
-      await check_reclaim(  accounts[4], _deposit);
+      await check_reclaim(  accounts[4], _deposit, 0);
       assert.equal(await balance_of(accounts[4], balance + _deposit));
       balance = await balance_of(accounts[6]);
-      await check_reclaim(  accounts[6], _deposit);
+      await check_reclaim(  accounts[6], _deposit, 0);
       assert.equal(await balance_of(accounts[6], balance + _deposit));
     } else {
-      assert.equal(await _oracle.reclaim.call(_coin.address, accounts[2]), 0);
-      assert.equal(await _oracle.reclaim.call(_coin.address, accounts[4]), 0);
-      assert.equal(await _oracle.reclaim.call(_coin.address, accounts[6]), 0);
+      array_equal(await _oracle.reclaim.call(_coin.address, accounts[2]),
+                  [0, 0]);
+      array_equal(await _oracle.reclaim.call(_coin.address, accounts[4]),
+                  [0, 0]);
+      array_equal(await _oracle.reclaim.call(_coin.address, accounts[6]),
+                  [0, 0]);
     }
     reclaim_amount = _deposit + _reward(reward_total, 3);
     balance = await balance_of(accounts[5]);
-    await check_reclaim(accounts[5], reclaim_amount);
+    await check_reclaim(accounts[5], _deposit, _reward(reward_total, 3));
     assert.equal(await balance_of(accounts[5]), balance + reclaim_amount);
     balance = await balance_of(accounts[3]);
-    await check_reclaim(accounts[3], reclaim_amount);
+    await check_reclaim(accounts[3], _deposit, _reward(reward_total, 3));
     assert.equal(await balance_of(accounts[3]), balance + reclaim_amount);
     balance = await balance_of(accounts[1]);
-    await check_reclaim(accounts[1], reclaim_amount);
+    await check_reclaim(accounts[1], _deposit, _reward(reward_total, 3));
     assert.equal(await balance_of(accounts[1]), balance + reclaim_amount);
-    assert.equal(await _oracle.reclaim.call(_coin.address, accounts[6]), 0);
-    assert.equal(await _oracle.reclaim.call(_coin.address, accounts[7]), 0);
+    array_equal(await _oracle.reclaim.call(_coin.address, accounts[6]), [0, 0]);
+    array_equal(await _oracle.reclaim.call(_coin.address, accounts[7]), [0, 0]);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
     await check_advance(_mint,
@@ -1644,7 +1650,7 @@ function parameterized_test(accounts,
                    deposit_total);
     }
 
-    assert.equal(await _oracle.reclaim.call(_coin.address, accounts[7]), 0);
+    array_equal(await _oracle.reclaim.call(_coin.address, accounts[7]), [0, 0]);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
     await check_advance(_mint,
@@ -1825,25 +1831,28 @@ function parameterized_test(accounts,
 
     if (_is_in_reclaim_threshold(_other_level)) {
       balance = await balance_of(accounts[2]);
-      await check_reclaim(  accounts[2], _deposit);
+      await check_reclaim(  accounts[2], _deposit, 0);
       assert.equal(await balance_of(accounts[2]), balance + _deposit);
-      assert.equal(await _oracle.reclaim.call(_coin.address, accounts[6]), 0);
+      array_equal(await _oracle.reclaim.call(_coin.address, accounts[6]),
+                  [0, 0]);
     } else {
-      assert.equal(await _oracle.reclaim.call(_coin.address, accounts[2]), 0);
-      assert.equal(await _oracle.reclaim.call(_coin.address, accounts[6]), 0);
+      array_equal(await _oracle.reclaim.call(_coin.address, accounts[2]),
+                  [0, 0]);
+      array_equal(await _oracle.reclaim.call(_coin.address, accounts[6]),
+                  [0, 0]);
     }
 
     reclaim_amount = _deposit + _reward(reward_total, 2);
-    assert.equal(await _oracle.reclaim.call(_coin.address, accounts[5]), 0);
-    assert.equal(await _oracle.reclaim.call(_coin.address, accounts[4]), 0);
+    array_equal(await _oracle.reclaim.call(_coin.address, accounts[5]), [0, 0]);
+    array_equal(await _oracle.reclaim.call(_coin.address, accounts[4]), [0, 0]);
     balance = await balance_of(accounts[3]);
-    await check_reclaim(accounts[3], reclaim_amount);
+    await check_reclaim(accounts[3], _deposit, _reward(reward_total, 2));
     assert.equal(await balance_of(accounts[3]), balance + reclaim_amount);
     balance = await balance_of(accounts[1]);
-    await check_reclaim(accounts[1], reclaim_amount);
+    await check_reclaim(accounts[1], _deposit, _reward(reward_total, 2));
     assert.equal(await balance_of(accounts[1]), balance + reclaim_amount);
-    assert.equal(await _oracle.reclaim.call(_coin.address, accounts[6]), 0);
-    assert.equal(await _oracle.reclaim.call(_coin.address, accounts[7]), 0);
+    array_equal(await _oracle.reclaim.call(_coin.address, accounts[6]), [0, 0]);
+    array_equal(await _oracle.reclaim.call(_coin.address, accounts[7]), [0, 0]);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
     await check_advance(_mint,
@@ -2015,10 +2024,10 @@ function parameterized_test(accounts,
                    deposit_total);
     }
 
-    assert.equal(await _oracle.reclaim.call(_coin.address, accounts[1]), 0);
-    assert.equal(await _oracle.reclaim.call(_coin.address, accounts[2]), 0);
-    assert.equal(await _oracle.reclaim.call(_coin.address, accounts[3]), 0);
-    assert.equal(await _oracle.reclaim.call(_coin.address, accounts[7]), 0);
+    array_equal(await _oracle.reclaim.call(_coin.address, accounts[1]), [0, 0]);
+    array_equal(await _oracle.reclaim.call(_coin.address, accounts[2]), [0, 0]);
+    array_equal(await _oracle.reclaim.call(_coin.address, accounts[3]), [0, 0]);
+    array_equal(await _oracle.reclaim.call(_coin.address, accounts[7]), [0, 0]);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
     await check_advance(_mint,
@@ -2198,13 +2207,14 @@ function parameterized_test(accounts,
       assert.equal(args[2], salt);
     }
 
-    async function check_reclaim(account, reclaim_amount) {
+    async function check_reclaim(account, reclaimed, reward) {
       await _coin.transferOwnership(_oracle.address);
       let receipt = await _oracle.reclaim(_coin.address, account);
       await _oracle.revokeOwnership(_coin.address);
       let args = receipt.logs.filter(e => e.event == 'ReclaimEvent')[0].args;
       assert.equal(args[0], account);
-      assert.equal(args[1], reclaim_amount);
+      assert.equal(args[1], reclaimed);
+      assert.equal(args[2], reward);
     }
 
     async function check_advance(mint, burned) {
