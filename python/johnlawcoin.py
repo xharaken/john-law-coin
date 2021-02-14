@@ -141,10 +141,14 @@ class JohnLawBond:
         # bonds owned by the user.
         self.redemption_timestamps = {}
 
-        # balances[account][redemption_timestamp] stores the balance of the
+        # A mapping from a user account to the number of bonds owned by the
+        # account.
+        self.number_of_bonds = {}
+
+        # bonds[account][redemption_timestamp] stores the number of the
         # bonds that is owned by the |account| and has the
         # |redemption_timestamp|.
-        self.balances = {}
+        self.bonds = {}
 
         # The total bond supply.
         self.total_supply = 0
@@ -162,16 +166,18 @@ class JohnLawBond:
     # None.
     def mint(self, account, redemption_timestamp, amount):
         assert(amount >= 0)
-        if account not in self.balances:
-            self.balances[account] = {}
-        if redemption_timestamp not in self.balances[account]:
-            self.balances[account][redemption_timestamp] = 0
-        self.balances[account][redemption_timestamp] += amount
+        if account not in self.bonds:
+            self.bonds[account] = {}
+            self.number_of_bonds[account] = 0
+        if redemption_timestamp not in self.bonds[account]:
+            self.bonds[account][redemption_timestamp] = 0
+        self.bonds[account][redemption_timestamp] += amount
         self.total_supply += amount
+        self.number_of_bonds[account] += amount
 
         if account not in self.redemption_timestamps:
             self.redemption_timestamps[account] = {}
-        if (self.balances[account][redemption_timestamp] > 0 and
+        if (self.bonds[account][redemption_timestamp] > 0 and
             redemption_timestamp not in self.redemption_timestamps[account]):
             self.redemption_timestamps[account][redemption_timestamp] = True
 
@@ -188,20 +194,28 @@ class JohnLawBond:
     # None.
     def burn(self, account, redemption_timestamp, amount):
         assert(amount >= 0)
-        if account not in self.balances:
-            self.balances[account] = {}
-        if redemption_timestamp not in self.balances[account]:
-            self.balances[account][redemption_timestamp] = 0
-        assert(self.balances[account][redemption_timestamp] >= amount)
-        self.balances[account][redemption_timestamp] -= amount
+        if account not in self.bonds:
+            self.bonds[account] = {}
+            self.number_of_bonds[account] = 0
+        if redemption_timestamp not in self.bonds[account]:
+            self.bonds[account][redemption_timestamp] = 0
+        assert(self.bonds[account][redemption_timestamp] >= amount)
+        self.bonds[account][redemption_timestamp] -= amount
         assert(self.total_supply >= amount)
         self.total_supply -= amount
+        self.number_of_bonds[account] -= amount
 
         if account not in self.redemption_timestamps:
             self.redemption_timestamps[account] = {}
-        if (self.balances[account][redemption_timestamp] == 0 and
+        if (self.bonds[account][redemption_timestamp] == 0 and
             redemption_timestamp in self.redemption_timestamps[account]):
             del self.redemption_timestamps[account][redemption_timestamp]
+
+    # Return the number of bonds owned by the |account|.
+    def number_of_bonds_owned_by(self, account):
+        if account not in self.number_of_bonds:
+            return 0
+        return self.number_of_bonds[account]
 
     # Return the number of redemption timestamps of the bonds owned by the
     # |account|.
@@ -220,11 +234,11 @@ class JohnLawBond:
 
     # Return the bond balance.
     def balance_of(self, account, redemption_timestamp):
-        if account not in self.balances:
+        if account not in self.bonds:
             return 0
-        if redemption_timestamp not in self.balances[account]:
+        if redemption_timestamp not in self.bonds[account]:
             return 0
-        return self.balances[account][redemption_timestamp]
+        return self.bonds[account][redemption_timestamp]
 
 
 #-------------------------------------------------------------------------------

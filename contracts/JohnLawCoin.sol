@@ -160,10 +160,13 @@ contract JohnLawBond is Ownable {
   // A mapping from a user account to the redemption timestamps of the bonds
   // owned by the user.
   mapping (address => EnumerableSet.UintSet) private _redemption_timestamps;
+
+  // A mapping from a user account to the number of bonds owned by the account.
+  mapping (address => uint) private _number_of_bonds;
   
-  // _balances[account][redemption_timestamp] stores the balance of the bonds
+  // _bonds[account][redemption_timestamp] stores the number of the bonds
   // that is owned by the |account| and has the |redemption_timestamp|.
-  mapping (address => mapping (uint => uint)) private _balances;
+  mapping (address => mapping (uint => uint)) private _bonds;
 
   // The total bond supply.
   uint private _totalSupply;
@@ -190,10 +193,11 @@ contract JohnLawBond is Ownable {
   // None.
   function mint(address account, uint redemption_timestamp, uint amount)
       public onlyOwner {
-    _balances[account][redemption_timestamp] =
-        _balances[account][redemption_timestamp].add(amount);
+    _bonds[account][redemption_timestamp] =
+        _bonds[account][redemption_timestamp].add(amount);
     _totalSupply = _totalSupply.add(amount);
-    if (_balances[account][redemption_timestamp] > 0) {
+    _number_of_bonds[account] = _number_of_bonds[account].add(amount);
+    if (_bonds[account][redemption_timestamp] > 0) {
       _redemption_timestamps[account].add(redemption_timestamp);
     }
     emit MintEvent(account, redemption_timestamp, amount);
@@ -212,13 +216,20 @@ contract JohnLawBond is Ownable {
   // None.
   function burn(address account, uint redemption_timestamp, uint amount)
       public onlyOwner {
-    _balances[account][redemption_timestamp] =
-        _balances[account][redemption_timestamp].sub(amount);
+    _bonds[account][redemption_timestamp] =
+        _bonds[account][redemption_timestamp].sub(amount);
     _totalSupply = _totalSupply.sub(amount);
-    if (_balances[account][redemption_timestamp] == 0) {
+    _number_of_bonds[account] = _number_of_bonds[account].sub(amount);
+    if (_bonds[account][redemption_timestamp] == 0) {
       _redemption_timestamps[account].remove(redemption_timestamp);
     }
     emit BurnEvent(account, redemption_timestamp, amount);
+  }
+
+  // Public getter: Return the number of bonds owned by the |account|.
+  function numberOfBondsOwnedBy(address account)
+      public view returns (uint) {
+    return _number_of_bonds[account];
   }
 
   // Public getter: Return the number of redemption timestamps of the bonds
@@ -236,11 +247,11 @@ contract JohnLawBond is Ownable {
     return _redemption_timestamps[account].at(index);
   }
 
-  // Public getter: Return the balance of the bonds that is owned by the
+  // Public getter: Return the number of the bonds that is owned by the
   // |account| and has the |redemption_timestamp|.
   function balanceOf(address account, uint redemption_timestamp)
       public view returns (uint) {
-    return _balances[account][redemption_timestamp];
+    return _bonds[account][redemption_timestamp];
   }
 
   // Public getter: Return the total bond supply.

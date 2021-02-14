@@ -349,6 +349,9 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.bond.balance_of(accounts[1], t2), 10)
         self.assertEqual(acb.bond.balance_of(accounts[2], t2), 11)
         self.assertEqual(acb.bond.balance_of(accounts[3], t3), 48)
+        self.assertEqual(acb.bond.number_of_bonds_owned_by(accounts[1]), 10);
+        self.assertEqual(acb.bond.number_of_bonds_owned_by(accounts[2]), 22);
+        self.assertEqual(acb.bond.number_of_bonds_owned_by(accounts[3]), 48);
         self.check_redemption_timestamps(acb.bond, accounts[1], [t2])
         self.check_redemption_timestamps(acb.bond, accounts[2], [t1, t2])
         self.check_redemption_timestamps(acb.bond, accounts[3], [t3])
@@ -425,6 +428,9 @@ class ACBUnitTest(unittest.TestCase):
         balance = acb.coin.balance_of(accounts[1])
         self.assertEqual(acb.redeem_bonds(accounts[1], [t2]), 10)
         self.assertEqual(acb.bond.balance_of(accounts[1], t2), 0)
+        self.assertEqual(acb.bond.number_of_bonds_owned_by(accounts[1]), 0);
+        self.assertEqual(acb.bond.number_of_bonds_owned_by(accounts[2]), 0);
+        self.assertEqual(acb.bond.number_of_bonds_owned_by(accounts[3]), 0);
         self.check_redemption_timestamps(acb.bond, accounts[1], [])
         self.assertEqual(acb.coin.balance_of(accounts[1]),
                          balance + 10 * ACB.BOND_REDEMPTION_PRICE)
@@ -469,6 +475,9 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.bond.balance_of(accounts[2], t6), 20)
         self.assertEqual(acb.bond.balance_of(accounts[2], t7), 20)
         self.assertEqual(acb.bond.balance_of(accounts[2], t8), 20)
+        self.assertEqual(acb.bond.number_of_bonds_owned_by(accounts[1]), 0);
+        self.assertEqual(acb.bond.number_of_bonds_owned_by(accounts[2]), 60);
+        self.assertEqual(acb.bond.number_of_bonds_owned_by(accounts[3]), 0);
         self.check_redemption_timestamps(acb.bond, accounts[2], [t6, t7, t8])
         self.assertEqual(acb.coin.total_supply,
                          coin_supply + 40 * ACB.BOND_REDEMPTION_PRICE)
@@ -624,6 +633,9 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.bond.balance_of(accounts[2], t6), 0)
         self.assertEqual(acb.bond.balance_of(accounts[2], t7), 0)
         self.assertEqual(acb.bond.balance_of(accounts[2], t8), 0)
+        self.assertEqual(acb.bond.number_of_bonds_owned_by(accounts[1]), 0);
+        self.assertEqual(acb.bond.number_of_bonds_owned_by(accounts[2]), 0);
+        self.assertEqual(acb.bond.number_of_bonds_owned_by(accounts[3]), 0);
         self.check_redemption_timestamps(acb.bond, accounts[2], [])
         self.assertEqual(acb.coin.total_supply,
                          coin_supply + 7 * ACB.BOND_REDEMPTION_PRICE)

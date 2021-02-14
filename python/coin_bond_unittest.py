@@ -145,12 +145,14 @@ class CoinBondUnitTest(unittest.TestCase):
 
         # balance_of
         self.assertEqual(bond.balance_of(accounts[1], 1111), 0)
+        self.assertEqual(bond.number_of_bonds_owned_by(accounts[1]), 0)
         self.check_redemption_timestamps(bond, accounts[1], [])
 
         # mint
         bond.mint(accounts[1], 1111, 1)
         self.assertEqual(bond.total_supply, 1)
         self.assertEqual(bond.balance_of(accounts[1], 1111), 1)
+        self.assertEqual(bond.number_of_bonds_owned_by(accounts[1]), 1)
         self.check_redemption_timestamps(bond, accounts[1], [1111])
 
         with self.assertRaises(Exception):
@@ -159,12 +161,14 @@ class CoinBondUnitTest(unittest.TestCase):
         bond.mint(accounts[1], 1111, 2)
         self.assertEqual(bond.total_supply, 3)
         self.assertEqual(bond.balance_of(accounts[1], 1111), 3)
+        self.assertEqual(bond.number_of_bonds_owned_by(accounts[1]), 3)
         self.check_redemption_timestamps(bond, accounts[1], [1111])
 
         bond.mint(accounts[1], 2222, 2)
         self.assertEqual(bond.total_supply, 5)
         self.assertEqual(bond.balance_of(accounts[1], 1111), 3)
         self.assertEqual(bond.balance_of(accounts[1], 2222), 2)
+        self.assertEqual(bond.number_of_bonds_owned_by(accounts[1]), 5)
         self.check_redemption_timestamps(bond, accounts[1], [1111, 2222])
 
         bond.mint(accounts[2], 2222, 5)
@@ -172,6 +176,8 @@ class CoinBondUnitTest(unittest.TestCase):
         self.assertEqual(bond.balance_of(accounts[1], 1111), 3)
         self.assertEqual(bond.balance_of(accounts[1], 2222), 2)
         self.assertEqual(bond.balance_of(accounts[2], 2222), 5)
+        self.assertEqual(bond.number_of_bonds_owned_by(accounts[1]), 5)
+        self.assertEqual(bond.number_of_bonds_owned_by(accounts[2]), 5)
         self.check_redemption_timestamps(bond, accounts[1], [1111, 2222])
         self.check_redemption_timestamps(bond, accounts[2], [2222])
 
@@ -180,6 +186,8 @@ class CoinBondUnitTest(unittest.TestCase):
         self.assertEqual(bond.balance_of(accounts[1], 1111), 3)
         self.assertEqual(bond.balance_of(accounts[1], 2222), 2)
         self.assertEqual(bond.balance_of(accounts[2], 2222), 5)
+        self.assertEqual(bond.number_of_bonds_owned_by(accounts[1]), 5)
+        self.assertEqual(bond.number_of_bonds_owned_by(accounts[2]), 5)
         self.check_redemption_timestamps(bond, accounts[1], [1111, 2222])
         self.check_redemption_timestamps(bond, accounts[2], [2222])
 
@@ -188,6 +196,8 @@ class CoinBondUnitTest(unittest.TestCase):
         self.assertEqual(bond.balance_of(accounts[1], 1111), 3)
         self.assertEqual(bond.balance_of(accounts[1], 2222), 2)
         self.assertEqual(bond.balance_of(accounts[2], 2222), 5)
+        self.assertEqual(bond.number_of_bonds_owned_by(accounts[1]), 5)
+        self.assertEqual(bond.number_of_bonds_owned_by(accounts[2]), 5)
         self.check_redemption_timestamps(bond, accounts[1], [1111, 2222])
         self.check_redemption_timestamps(bond, accounts[2], [2222])
 
@@ -209,6 +219,8 @@ class CoinBondUnitTest(unittest.TestCase):
         self.assertEqual(bond.balance_of(accounts[1], 1111), 3)
         self.assertEqual(bond.balance_of(accounts[1], 2222), 2)
         self.assertEqual(bond.balance_of(accounts[2], 2222), 0)
+        self.assertEqual(bond.number_of_bonds_owned_by(accounts[1]), 5)
+        self.assertEqual(bond.number_of_bonds_owned_by(accounts[2]), 0)
         self.check_redemption_timestamps(bond, accounts[1], [1111, 2222])
         self.check_redemption_timestamps(bond, accounts[2], [])
 
@@ -217,6 +229,8 @@ class CoinBondUnitTest(unittest.TestCase):
         self.assertEqual(bond.balance_of(accounts[1], 1111), 3)
         self.assertEqual(bond.balance_of(accounts[1], 2222), 1)
         self.assertEqual(bond.balance_of(accounts[2], 2222), 0)
+        self.assertEqual(bond.number_of_bonds_owned_by(accounts[1]), 4)
+        self.assertEqual(bond.number_of_bonds_owned_by(accounts[2]), 0)
         self.check_redemption_timestamps(bond, accounts[1], [1111, 2222])
         self.check_redemption_timestamps(bond, accounts[2], [])
 
@@ -225,6 +239,8 @@ class CoinBondUnitTest(unittest.TestCase):
         self.assertEqual(bond.balance_of(accounts[1], 1111), 3)
         self.assertEqual(bond.balance_of(accounts[1], 2222), 0)
         self.assertEqual(bond.balance_of(accounts[2], 2222), 0)
+        self.assertEqual(bond.number_of_bonds_owned_by(accounts[1]), 3)
+        self.assertEqual(bond.number_of_bonds_owned_by(accounts[2]), 0)
         self.check_redemption_timestamps(bond, accounts[1], [1111])
         self.check_redemption_timestamps(bond, accounts[2], [])
 
@@ -233,6 +249,8 @@ class CoinBondUnitTest(unittest.TestCase):
         self.assertEqual(bond.balance_of(accounts[1], 1111), 0)
         self.assertEqual(bond.balance_of(accounts[1], 2222), 0)
         self.assertEqual(bond.balance_of(accounts[2], 2222), 0)
+        self.assertEqual(bond.number_of_bonds_owned_by(accounts[1]), 0)
+        self.assertEqual(bond.number_of_bonds_owned_by(accounts[2]), 0)
         self.check_redemption_timestamps(bond, accounts[1], [])
         self.check_redemption_timestamps(bond, accounts[2], [])
 
@@ -241,6 +259,8 @@ class CoinBondUnitTest(unittest.TestCase):
         self.assertEqual(bond.balance_of(accounts[1], 1111), 0)
         self.assertEqual(bond.balance_of(accounts[1], 2222), 0)
         self.assertEqual(bond.balance_of(accounts[2], 2222), 0)
+        self.assertEqual(bond.number_of_bonds_owned_by(accounts[1]), 0)
+        self.assertEqual(bond.number_of_bonds_owned_by(accounts[2]), 0)
         self.check_redemption_timestamps(bond, accounts[1], [])
         self.check_redemption_timestamps(bond, accounts[2], [])
 

@@ -27,4 +27,7 @@ module.exports = async function (deployer) {
       {deployer: deployer, unsafeAllowCustomTypes: true});
   await oracle.transferOwnership(acb.address);
   await logging.transferOwnership(acb.address);
+  console.log("ACB address: ", acb.address);
+  console.log("Oracle address: ", oracle.address);
+  console.log("Logging address: ", logging.address);
 };

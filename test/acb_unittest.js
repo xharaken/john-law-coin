@@ -441,6 +441,9 @@ function parameterized_test(accounts,
       assert.equal(current.bonds[accounts[1]][t2], 10);
       assert.equal(current.bonds[accounts[2]][t2], 11);
       assert.equal(current.bonds[accounts[3]][t3], 48);
+      assert.equal(await bond.numberOfBondsOwnedBy(accounts[1]), 10);
+      assert.equal(await bond.numberOfBondsOwnedBy(accounts[2]), 22);
+      assert.equal(await bond.numberOfBondsOwnedBy(accounts[3]), 48);
       check_redemption_timestamps(current, accounts[1], [t2]);
       check_redemption_timestamps(current, accounts[2], [t1, t2]);
       check_redemption_timestamps(current, accounts[3], [t3]);
@@ -531,6 +534,9 @@ function parameterized_test(accounts,
       await check_redeem_bonds([t2], {from: accounts[1]}, 10);
       current = await get_current(sub_accounts, redemptions);
       assert.equal(current.bonds[accounts[1]][t2], 0);
+      assert.equal(await bond.numberOfBondsOwnedBy(accounts[1]), 0);
+      assert.equal(await bond.numberOfBondsOwnedBy(accounts[2]), 0);
+      assert.equal(await bond.numberOfBondsOwnedBy(accounts[3]), 0);
       check_redemption_timestamps(current, accounts[1], []);
       assert.equal(current.balances[accounts[1]],
                    balance + 10 * _bond_redemption_price);
@@ -590,6 +596,9 @@ function parameterized_test(accounts,
       assert.equal(current.bonds[accounts[2]][t6], 20);
       assert.equal(current.bonds[accounts[2]][t7], 20);
       assert.equal(current.bonds[accounts[2]][t8], 20);
+      assert.equal(await bond.numberOfBondsOwnedBy(accounts[1]), 0);
+      assert.equal(await bond.numberOfBondsOwnedBy(accounts[2]), 60);
+      assert.equal(await bond.numberOfBondsOwnedBy(accounts[3]), 0);
       check_redemption_timestamps(current, accounts[2], [t6, t7, t8]);
       assert.equal(current.coin_supply,
                    coin_supply + 40 * _bond_redemption_price);
@@ -761,6 +770,9 @@ function parameterized_test(accounts,
       assert.equal(current.bonds[accounts[2]][t6], 0);
       assert.equal(current.bonds[accounts[2]][t7], 0);
       assert.equal(current.bonds[accounts[2]][t8], 0);
+      assert.equal(await bond.numberOfBondsOwnedBy(accounts[1]), 0);
+      assert.equal(await bond.numberOfBondsOwnedBy(accounts[2]), 0);
+      assert.equal(await bond.numberOfBondsOwnedBy(accounts[3]), 0);
       check_redemption_timestamps(current, accounts[2], []);
       assert.equal(current.coin_supply,
                    coin_supply + 7 * _bond_redemption_price);
