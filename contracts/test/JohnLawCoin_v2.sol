@@ -1036,8 +1036,8 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
     coin_v2_.unpause();
   }
 
-  // A struct to pack local variables and avoid a stack-too-deep error of
-  // Solidity.
+  // A struct to pack local variables. This is needed to avoid a stack-too-deep
+  // error of Solidity.
   struct VoteResult {
     bool phase_updated;
     bool reveal_result;
@@ -1083,10 +1083,10 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
     coin_v2_.transferOwnership(address(oracle_v2_));
     
     result.phase_updated = false;
-    if (getTimestamp() >= current_phase_start_v2_.add(PHASE_DURATION)) {
+    if (getTimestamp() >= current_phase_start_.add(PHASE_DURATION)) {
       // Start a new phase.
       result.phase_updated = true;
-      current_phase_start_v2_ = getTimestamp();
+      current_phase_start_ = getTimestamp();
       
       uint mint = 0;
       int delta = 0;

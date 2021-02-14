@@ -1161,8 +1161,8 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
     coin_.unpause();
   }
 
-  // A struct to pack local variables and avoid a stack-too-deep error of
-  // Solidity.
+  // A struct to pack local variables. This is needed to avoid a stack-too-deep
+  // error of Solidity.
   struct VoteResult {
     bool phase_updated;
     bool reveal_result;

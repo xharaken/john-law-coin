@@ -811,8 +811,8 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
     coin_.unpause();
   }
 
-  // A struct to pack local variables and avoid a stack-too-deep error of
-  // Solidity.
+  // A struct to pack local variables. This is needed to avoid a stack-too-deep
+  // error of Solidity.
   struct VoteResult {
     bool phase_updated;
     bool reveal_result;
@@ -886,7 +886,11 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
 
       // Advance to the next phase. Provide the |mint| coins to the oracle
       // as a reward.
-      oracle_v3_.advance(coin_, mint);
+      uint burned = oracle_v3_.advance(coin_, mint);
+      
+      logging_v2_.phaseUpdated(current_phase_start_, bond_budget_, delta,
+                               oracle_level_, mint, burned,
+                               coin_.totalSupply(), bond_.totalSupply());
     }
 
     // Commit.
@@ -911,6 +915,8 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
     // Revoke the ownership of the JohnLawCoin contract from the oracle.
     oracle_v3_.revokeOwnership(coin_);
     
+    logging_v2_.voted(result.commit_result, result.reveal_result,
+                      result.deposited, result.reclaimed, result.rewarded);
     emit VoteEvent(
         msg.sender, committed_hash, revealed_level, revealed_salt,
         result.commit_result, result.reveal_result, result.deposited,
@@ -965,6 +971,7 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
     // Burn the corresponding coins.
     coin_.burn(sender, amount);
 
+    logging_v2_.purchasedBonds(count);
     emit PurchaseBondsEvent(sender, count, redemption);
     return redemption;
   }
@@ -1009,6 +1016,8 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
     }
     require((bond_.totalSupply().toInt256()).add(bond_budget_) >= 0,
             "redeemBonds: 1");
+    
+    logging_v2_.redeemedBonds(count_total);
     emit RedeemBondsEvent(sender, redemptions, count_total);
     return count_total;
   }

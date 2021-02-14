@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright 2021 Google LLC
+# Copyright 2021 Kentaro Hara
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ common.reset_network(41)
 command = ("truffle test acb_simulator.js " +
            "'1000 84 7 90 10 10 [6, 7, 8, 9, 10, 11, 12, 13, 14] " +
            "[950, 965, 978, 990, 997, 997, 997, 997, 997] 1 40 100 0'")
-common.run_test(command)
+#common.run_test(command)
 
 iteration = 100
 for bond_redemption_price in [1000]:
@@ -71,6 +71,6 @@ for bond_redemption_price in [1000]:
                                         str(level_to_bond_price) + " " +
                                         str(reclaim_threshold) + " " +
                                         str(voter_count) + " " +
-                                        str(iteration) + "'")
+                                        str(iteration) + " 0'")
                                     common.reset_network(voter_count + 1)
                                     common.run_test(command)

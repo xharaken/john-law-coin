@@ -1,4 +1,4 @@
-// Copyright 2021 Google LLC
+// Copyright 2021 Kentaro Hara
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -743,18 +743,19 @@ function parameterized_test(accounts,
       if (!_should_upgrade) {
         return;
       }
-      if (epoch == 3) {
+      if (epoch == 10) {
         _oracle = await upgradeProxy(
             _oracle.address, OracleForTesting_v2,
             {unsafeAllowCustomTypes: true});
         common.print_contract_size(_oracle, "OracleForTesting_v2");
-        let logging = await Logging_v2.new();
-        common.print_contract_size(logging, "Logging_v2");
+        _logging = await Logging_v2.new();
+        common.print_contract_size(_logging, "Logging_v2");
         _acb = await upgradeProxy(
             _acb.address, ACBForTesting_v2, {unsafeAllowCustomTypes: true});
+        await _logging.transferOwnership(_acb.address);
         common.print_contract_size(_acb, "ACBForTesting_v2");
-        await _acb.upgrade(_oracle.address, logging.address);
-      } else if (epoch == 6) {
+        await _acb.upgrade(_oracle.address, _logging.address);
+      } else if (epoch == 20) {
         _oracle = await upgradeProxy(
             _oracle.address, OracleForTesting_v3,
             {unsafeAllowCustomTypes: true});

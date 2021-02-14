@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright 2021 Google LLC
+# Copyright 2021 Kentaro Hara
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -71,6 +71,6 @@ for bond_redemption_price in [1000]:
                                         str(level_to_bond_price) + " " +
                                         str(reclaim_threshold) + " " +
                                         str(voter_count) + " " +
-                                        str(iteration) + "'")
+                                        str(iteration) + " 1'")
                                     common.reset_network(voter_count + 1)
                                     common.run_test(command)
