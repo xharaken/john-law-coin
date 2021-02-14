@@ -359,13 +359,15 @@ contract Oracle_v3 is OwnableUpgradeable {
       // The rest of the reward is distributed to the voters evenly. This
       // incentivizes more voters (including new voters) to join the oracle.
       if (epoch.votes[revealed_level].deposit > 0) {
-        reward += (uint(PROPORTIONAL_REWARD_RATE).mul(epoch.reward_total)
-                       .mul(deposit))
-                  .div((uint(100).mul(epoch.votes[revealed_level].deposit)));
+        reward = reward.add(
+            (uint(PROPORTIONAL_REWARD_RATE).mul(epoch.reward_total)
+                 .mul(deposit))
+            .div((uint(100).mul(epoch.votes[revealed_level].deposit))));
       }
-      reward += ((uint(100).sub(PROPORTIONAL_REWARD_RATE))
-                     .mul(epoch.reward_total))
-                .div(uint(100).mul(epoch.votes[revealed_level].count));
+      reward = reward.add(
+          ((uint(100).sub(PROPORTIONAL_REWARD_RATE))
+               .mul(epoch.reward_total))
+          .div(uint(100).mul(epoch.votes[revealed_level].count)));
       coin.move(epoch.reward_account, sender, reward);
     }
     emit ReclaimEvent(sender, deposit, reward);
@@ -632,6 +634,7 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
   Oracle public oracle_;
   uint public oracle_level_;
   uint public current_phase_start_;
+  Logging public logging_;
 
   JohnLawCoin public coin_v2_;
   JohnLawBond public bond_v2_;
@@ -639,12 +642,13 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
   Oracle_v2 public oracle_v2_;
   uint public oracle_level_v2_;
   uint public current_phase_start_v2_;
+  Logging_v2 public logging_v2_;
 
   Oracle_v3 public oracle_v3_;
   
   // Events.
   event VoteEvent(address indexed, bytes32, uint, uint,
-                  bool, bool, uint, uint, bool);
+                  bool, bool, uint, uint, uint, bool);
   event PurchaseBondsEvent(address indexed, uint, uint);
   event RedeemBondsEvent(address indexed, uint[], uint);
   event ControlSupplyEvent(int, int, uint);
@@ -664,8 +668,11 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
   //
   // Parameters
   // ----------------
-  // |oracle|: The oracle. The ownership needs to be transferred to the ACB.
-  function initialize(Oracle oracle)
+  // |oracle|: The oracle contract. The ownership needs to be transferred to
+  // the ACB.
+  // |logging|: The logging contract. The ownership needs to be transferred to
+  // the ACB.
+  function initialize(Oracle oracle, Logging logging)
       public initializer {
     __Ownable_init();
     __Pausable_init();
@@ -778,6 +785,9 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
     // The current oracle level.
     oracle_level_ = oracle.getLevelMax();
 
+    // The logging contract.
+    logging_ = logging;
+
     require(LEVEL_TO_EXCHANGE_RATE.length == oracle.getLevelMax(),
             "constructor: 1");
     require(LEVEL_TO_BOND_PRICE.length == oracle.getLevelMax(),
@@ -801,6 +811,17 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
     coin_.unpause();
   }
 
+  // A struct to pack local variables and avoid a stack-too-deep error of
+  // Solidity.
+  struct VoteResult {
+    bool phase_updated;
+    bool reveal_result;
+    bool commit_result;
+    uint deposited;
+    uint reclaimed;
+    uint rewarded;
+  }
+
   // Vote to the oracle. The voter can commit a vote in the current phase,
   // reveal their vote in the prior phase, and reclaim the deposited coins and
   // get a reward for their vote in the next prior phase at the same time.
@@ -813,27 +834,31 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
   //
   // Returns
   // ----------------
-  // A tuple of four values.
+  // A tuple of six values.
   //  - boolean: Whether the commit succeeded or not.
   //  - boolean: Whether the reveal succeeded or not.
-  //  - uint: The total amount of the reclaimed coins and the reward.
+  //  - uint: The amount of the deposited coins.
+  //  - uint: The amount of the reclaimed coins.
+  //  - uint: The amount of the reward.
   //  - boolean: Whether this vote resulted in a phase update.
   function vote(bytes32 committed_hash, uint revealed_level,
                 uint revealed_salt)
-      public whenNotPaused returns (bool, bool, uint, uint, bool) {
-    address sender = msg.sender;
-
+      public whenNotPaused returns (bool, bool, uint, uint, uint, bool) {
+    
+    VoteResult memory result;
+    
     // Temporarily transfer the ownership of the JohnLawCoin contract to the
     // oracle.
     coin_.transferOwnership(address(oracle_v3_));
     
-    bool phase_updated = false;
+    result.phase_updated = false;
     if (getTimestamp() >= current_phase_start_.add(PHASE_DURATION)) {
       // Start a new phase.
-      phase_updated = true;
+      result.phase_updated = true;
       current_phase_start_ = getTimestamp();
       
       uint mint = 0;
+      int delta = 0;
       oracle_level_ = oracle_v3_.getModeLevel();
       if (oracle_level_ != oracle_v3_.getLevelMax()) {
         require(0 <= oracle_level_ && oracle_level_ < oracle_v3_.getLevelMax(),
@@ -846,11 +871,10 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
         // = 1.1 USD), the total coin supply is increased by 10%. If the
         // exchange rate is 0.8 (i.e., 1 coin = 0.8 USD), the total coin supply
         // is decreased by 20%.
-        int delta =
-            coin_.totalSupply().toInt256()
-            .mul(int(exchange_rate)
-                     .sub(int(EXCHANGE_RATE_DIVISOR)))
-            .div(int(EXCHANGE_RATE_DIVISOR));
+        delta = coin_.totalSupply().toInt256()
+                .mul(int(exchange_rate)
+                         .sub(int(EXCHANGE_RATE_DIVISOR)))
+                .div(int(EXCHANGE_RATE_DIVISOR));
 
         // To avoid increasing or decreasing too many coins in one phase,
         // multiply the damping factor.
@@ -869,24 +893,30 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
     //
     // The voter needs to deposit the DEPOSIT_RATE percentage of their coin
     // balance.
-    bool commit_result = oracle_v3_.commit(
-        coin_, sender, committed_hash,
-        coin_.balanceOf(sender).mul(DEPOSIT_RATE).div(100));
+    result.deposited =
+        coin_.balanceOf(msg.sender).mul(DEPOSIT_RATE).div(100);
+    result.commit_result = oracle_v3_.commit(
+        coin_, msg.sender, committed_hash, result.deposited);
+    if (!result.commit_result) {
+      result.deposited = 0;
+    }
     
     // Reveal.
-    bool reveal_result = oracle_v3_.reveal(
-        sender, revealed_level, revealed_salt);
+    result.reveal_result = oracle_v3_.reveal(
+        msg.sender, revealed_level, revealed_salt);
     
     // Reclaim.
-    (uint reclaimed, uint reward) = oracle_v3_.reclaim(coin_, sender);
+    (result.reclaimed, result.rewarded) = oracle_v3_.reclaim(coin_, msg.sender);
 
     // Revoke the ownership of the JohnLawCoin contract from the oracle.
     oracle_v3_.revokeOwnership(coin_);
     
     emit VoteEvent(
-        sender, committed_hash, revealed_level, revealed_salt,
-        commit_result, reveal_result, reclaimed, reward, phase_updated);
-    return (commit_result, reveal_result, reclaimed, reward, phase_updated);
+        msg.sender, committed_hash, revealed_level, revealed_salt,
+        result.commit_result, result.reveal_result, result.deposited,
+        result.reclaimed, result.rewarded, result.phase_updated);
+    return (result.commit_result, result.reveal_result, result.deposited,
+            result.reclaimed, result.rewarded, result.phase_updated);
   }
 
   // Purchase bonds.

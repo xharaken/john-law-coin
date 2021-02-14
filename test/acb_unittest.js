@@ -16,6 +16,7 @@ const JohnLawCoin = artifacts.require("JohnLawCoin");
 const JohnLawBond = artifacts.require("JohnLawBond");
 const Oracle = artifacts.require("Oracle");
 const OracleForTesting = artifacts.require("OracleForTesting");
+const Logging = artifacts.require("Logging");
 const ACB = artifacts.require("ACB");
 const ACBForTesting = artifacts.require("ACBForTesting");
 const common = require("./common.js");
@@ -67,10 +68,14 @@ function parameterized_test(accounts,
         {from: accounts[1]});
     common.print_contract_size(_oracle, "OracleForTesting");
     await _oracle.initialize({from: accounts[1]});
+    let _logging = await Logging.new({from: accounts[1]});
+    common.print_contract_size(_logging, "Logging");
     // Cannot use deployProxy because {from: ...} is not supported.
     let _acb = await ACBForTesting.new({from: accounts[1]});
     common.print_contract_size(_acb, "ACBForTesting");
-    await _acb.initialize(_oracle.address, {from: accounts[1]});
+    await _acb.initialize(_oracle.address, _logging.address,
+                          {from: accounts[1]});
+    await _logging.transferOwnership(_acb.address, {from: accounts[1]});
     await _oracle.transferOwnership(_acb.address, {from: accounts[1]});
     await _oracle.overrideConstants(_level_max, _reclaim_threshold,
                                      _proportional_reward_rate);
@@ -787,7 +792,7 @@ function parameterized_test(accounts,
 
     await check_vote(await _acb.hash(_default_level, 7777, {from: accounts[7]}),
                      _default_level, 7777, {from: accounts[7]},
-                     true, false, 0, 0, true);
+                     true, false, 0, 0, 0, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.current_phase_start, await _acb.getTimestamp());
 
@@ -796,7 +801,7 @@ function parameterized_test(accounts,
     deposit_4[mod(now, 3)] = parseInt(balance * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 1, {from: accounts[4]}),
                      _default_level, 1, {from: accounts[4]},
-                     true, false, 0, 0, false);
+                     true, false, deposit_4[mod(now, 3)], 0, 0, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.current_phase_start, await _acb.getTimestamp());
     assert.equal(current.oracle_level, _level_max);
@@ -805,13 +810,13 @@ function parameterized_test(accounts,
     balance = current.balances[accounts[4]];
     await check_vote(await _acb.hash(_default_level, 1, {from: accounts[4]}),
                      _default_level, 1, {from: accounts[4]},
-                     false, false, 0, 0, false);
+                     false, false, 0, 0, 0, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.current_phase_start, await _acb.getTimestamp());
     assert.equal(current.balances[accounts[4]], balance);
     await check_vote(await _acb.hash(_default_level, 1, {from: accounts[4]}),
                      _default_level, 1, {from: accounts[4]},
-                     false, false, 0, 0, false);
+                     false, false, 0, 0, 0, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.current_phase_start, await _acb.getTimestamp());
     assert.equal(current.balances[accounts[4]], balance);
@@ -827,7 +832,7 @@ function parameterized_test(accounts,
                  await _acb.getTimestamp() - _phase_duration);
     await check_vote(await _acb.hash(_default_level, 2, {from: accounts[4]}),
                      _default_level, 1, {from: accounts[4]},
-                     true, true, 0, 0, true);
+                     true, true, deposit_4[mod(now, 3)], 0, 0, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.current_phase_start, await _acb.getTimestamp());
     assert.equal(current.oracle_level, _level_max);
@@ -836,7 +841,7 @@ function parameterized_test(accounts,
     balance = current.balances[accounts[4]];
     await check_vote(await _acb.hash(_default_level, 2, {from: accounts[4]}),
                      _default_level, 1, {from: accounts[4]},
-                     false, false, 0, 0, false);
+                     false, false, 0, 0, 0, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.current_phase_start, await _acb.getTimestamp());
     assert.equal(current.balances[accounts[4]], balance);
@@ -860,7 +865,8 @@ function parameterized_test(accounts,
                  await _acb.getTimestamp() - _phase_duration);
     await check_vote(await _acb.hash(_default_level, 3, {from: accounts[4]}),
                      _default_level, 1, {from: accounts[4]},
-                     true, false, deposit_4[mod(now - 2, 3)], reward, true);
+                     true, false, deposit_4[mod(now, 3)],
+                     deposit_4[mod(now - 2, 3)], reward, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.current_phase_start, await _acb.getTimestamp());
     assert.equal(current.oracle_level, _default_level);
@@ -870,7 +876,7 @@ function parameterized_test(accounts,
     balance = current.balances[accounts[4]];
     await check_vote(await _acb.hash(_default_level, 3, {from: accounts[4]}),
                      _default_level, 1, {from: accounts[4]},
-                     false, false, 0, 0, false);
+                     false, false, 0, 0, 0, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.current_phase_start, await _acb.getTimestamp());
     assert.equal(current.balances[accounts[4]], balance);
@@ -886,7 +892,7 @@ function parameterized_test(accounts,
     deposit_4[mod(now, 3)] = parseInt(balance * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 4, {from: accounts[4]}),
                      _default_level, 3, {from: accounts[4]},
-                     true, true, 0, 0, true);
+                     true, true, deposit_4[mod(now, 3)], 0, 0, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _level_max);
     assert.equal(current.balances[accounts[4]],
@@ -894,7 +900,7 @@ function parameterized_test(accounts,
     balance = current.balances[accounts[4]];
     await check_vote(await _acb.hash(_default_level, 4, {from: accounts[4]}),
                      _default_level, 2, {from: accounts[4]},
-                     false, false, 0, 0, false);
+                     false, false, 0, 0, 0, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[4]], balance);
     assert.equal(current.coin_supply,
@@ -918,7 +924,8 @@ function parameterized_test(accounts,
     deposit_4[mod(now, 3)] = parseInt(balance * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 5, {from: accounts[4]}),
                      _default_level, 4, {from: accounts[4]},
-                     true, true, deposit_4[mod(now - 2, 3)], reward, true);
+                     true, true, deposit_4[mod(now, 3)],
+                     deposit_4[mod(now - 2, 3)], reward, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _default_level);
     assert.equal(current.balances[accounts[4]],
@@ -927,7 +934,7 @@ function parameterized_test(accounts,
     balance = current.balances[accounts[4]];
     await check_vote(await _acb.hash(_default_level, 5, {from: accounts[4]}),
                      _default_level, 4, {from: accounts[4]},
-                     false, false, 0, 0, false);
+                     false, false, 0, 0, 0, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[4]], balance);
     assert.equal(current.coin_supply,
@@ -951,7 +958,8 @@ function parameterized_test(accounts,
     deposit_4[mod(now, 3)] = parseInt(balance * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 6, {from: accounts[4]}),
                      _default_level, 5, {from: accounts[4]},
-                     true, true, deposit_4[mod(now - 2, 3)], reward, true);
+                     true, true, deposit_4[mod(now, 3)],
+                     deposit_4[mod(now - 2, 3)], reward, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _default_level);
     assert.equal(current.balances[accounts[4]],
@@ -960,7 +968,7 @@ function parameterized_test(accounts,
     balance = current.balances[accounts[4]];
     await check_vote(await _acb.hash(_default_level, 6, {from: accounts[4]}),
                      _default_level, 5, {from: accounts[4]},
-                     false, false, 0, 0, false);
+                     false, false, 0, 0, 0, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[4]], balance);
     assert.equal(current.coin_supply,
@@ -986,7 +994,8 @@ function parameterized_test(accounts,
     deposit_4[mod(now, 3)] = parseInt(balance * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 7, {from: accounts[4]}),
                      _default_level, 6, {from: accounts[4]},
-                     true, true, deposit_4[mod(now - 2, 3)], reward, true);
+                     true, true, deposit_4[mod(now, 3)],
+                     deposit_4[mod(now - 2, 3)], reward, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _default_level);
     assert.equal(current.balances[accounts[4]],
@@ -995,7 +1004,7 @@ function parameterized_test(accounts,
     balance = current.balances[accounts[4]];
     await check_vote(await _acb.hash(_default_level, 7, {from: accounts[4]}),
                      _default_level, 6, {from: accounts[4]},
-                     false, false, 0, 0, false);
+                     false, false, 0, 0, 0, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[4]], balance);
     assert.equal(current.coin_supply,
@@ -1019,7 +1028,8 @@ function parameterized_test(accounts,
     deposit_4[mod(now, 3)] = parseInt(balance * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 8, {from: accounts[4]}),
                      _default_level, 6, {from: accounts[4]},
-                     true, false, deposit_4[mod(now - 2, 3)], reward, true);
+                     true, false, deposit_4[mod(now, 3)],
+                     deposit_4[mod(now - 2, 3)], reward, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _default_level);
     assert.equal(current.balances[accounts[4]],
@@ -1028,7 +1038,7 @@ function parameterized_test(accounts,
     balance = current.balances[accounts[4]];
     await check_vote(await _acb.hash(_default_level, 8, {from: accounts[4]}),
                      _default_level, 6, {from: accounts[4]},
-                     false, false, 0, 0, false);
+                     false, false, 0, 0, 0, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[4]], balance);
     assert.equal(current.coin_supply,
@@ -1055,7 +1065,7 @@ function parameterized_test(accounts,
     deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 1000, {from: accounts[4]}),
                      _default_level, 1000, {from: accounts[4]},
-                     true, false, 0, 0, true);
+                     true, false, deposit_4[mod(now, 3)], 0, 0, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _level_max);
     assert.equal(current.balances[accounts[4]],
@@ -1064,7 +1074,7 @@ function parameterized_test(accounts,
     deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 1000, {from: accounts[5]}),
                      _default_level, 1000, {from: accounts[5]},
-                     true, false, 0, 0, false);
+                     true, false, deposit_5[mod(now, 3)], 0, 0, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[5]],
                  balance_5 - deposit_5[mod(now, 3)]);
@@ -1072,7 +1082,7 @@ function parameterized_test(accounts,
     deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 1000, {from: accounts[6]}),
                      _default_level, 1000, {from: accounts[6]},
-                     true, false, 0, 0, false);
+                     true, false, deposit_6[mod(now, 3)], 0, 0, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[6]],
                  balance_6 - deposit_6[mod(now, 3)]);
@@ -1091,7 +1101,7 @@ function parameterized_test(accounts,
     deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 1, {from: accounts[4]}),
                      _default_level, 0, {from: accounts[4]},
-                     true, false, 0, 0, true);
+                     true, false, deposit_4[mod(now, 3)], 0, 0, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _level_max);
     assert.equal(current.balances[accounts[4]],
@@ -1100,7 +1110,7 @@ function parameterized_test(accounts,
     deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 1, {from: accounts[5]}),
                      _default_level, 0, {from: accounts[5]},
-                     true, false, 0, 0, false);
+                     true, false, deposit_5[mod(now, 3)], 0, 0, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[5]],
                  balance_5 - deposit_5[mod(now, 3)]);
@@ -1108,7 +1118,7 @@ function parameterized_test(accounts,
     deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 1, {from: accounts[6]}),
                      _default_level, 0, {from: accounts[6]},
-                     true, false, 0, 0, false);
+                     true, false, deposit_6[mod(now, 3)], 0, 0, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[6]],
                  balance_6 - deposit_6[mod(now, 3)]);
@@ -1129,7 +1139,7 @@ function parameterized_test(accounts,
     deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 2, {from: accounts[4]}),
                      _default_level, 1, {from: accounts[4]},
-                     true, true, 0, 0, true);
+                     true, true, deposit_4[mod(now, 3)], 0, 0, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _level_max);
     assert.equal(current.balances[accounts[4]],
@@ -1138,7 +1148,7 @@ function parameterized_test(accounts,
     deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 2, {from: accounts[5]}),
                      _default_level, 1, {from: accounts[5]},
-                     true, true, 0, 0, false);
+                     true, true, deposit_5[mod(now, 3)], 0, 0, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[5]],
                  balance_5 - deposit_5[mod(now, 3)]);
@@ -1146,7 +1156,7 @@ function parameterized_test(accounts,
     deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 2, {from: accounts[6]}),
                      _default_level, 1, {from: accounts[6]},
-                     true, true, 0, 0, false);
+                     true, true, deposit_6[mod(now, 3)], 0, 0, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[6]],
                  balance_6 - deposit_6[mod(now, 3)]);
@@ -1183,7 +1193,8 @@ function parameterized_test(accounts,
     deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 3, {from: accounts[4]}),
                      _default_level, 2, {from: accounts[4]},
-                     true, true, deposit_4[mod(now - 2, 3)],
+                     true, true, deposit_4[mod(now, 3)],
+                     deposit_4[mod(now - 2, 3)],
                      reward_4 + constant_reward, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _default_level);
@@ -1195,7 +1206,8 @@ function parameterized_test(accounts,
     deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 3, {from: accounts[5]}),
                      _default_level, 2, {from: accounts[5]},
-                     true, true, deposit_5[mod(now - 2, 3)],
+                     true, true, deposit_5[mod(now, 3)],
+                     deposit_5[mod(now - 2, 3)],
                      reward_5 + constant_reward, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[5]],
@@ -1206,7 +1218,8 @@ function parameterized_test(accounts,
     deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 3, {from: accounts[6]}),
                      _default_level, 2, {from: accounts[6]},
-                     true, true, deposit_6[mod(now - 2, 3)],
+                     true, true, deposit_6[mod(now, 3)],
+                     deposit_6[mod(now - 2, 3)],
                      reward_6 + constant_reward, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[6]],
@@ -1246,7 +1259,8 @@ function parameterized_test(accounts,
     deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 4, {from: accounts[4]}),
                      _default_level, 3, {from: accounts[4]},
-                     true, true, deposit_4[mod(now - 2, 3)],
+                     true, true, deposit_4[mod(now, 3)],
+                     deposit_4[mod(now - 2, 3)],
                      reward_4 + constant_reward, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _default_level);
@@ -1258,7 +1272,8 @@ function parameterized_test(accounts,
     deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 4, {from: accounts[5]}),
                      _default_level, 3, {from: accounts[5]},
-                     true, true, deposit_5[mod(now - 2, 3)],
+                     true, true, deposit_5[mod(now, 3)],
+                     deposit_5[mod(now - 2, 3)],
                      reward_5 + constant_reward, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[5]],
@@ -1269,7 +1284,8 @@ function parameterized_test(accounts,
     deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 4, {from: accounts[6]}),
                      _default_level, 3, {from: accounts[6]},
-                     true, true, deposit_6[mod(now - 2, 3)],
+                     true, true, deposit_6[mod(now, 3)],
+                     deposit_6[mod(now - 2, 3)],
                      reward_6 + constant_reward, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[6]],
@@ -1313,7 +1329,8 @@ function parameterized_test(accounts,
     deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 5, {from: accounts[4]}),
                      _default_level, 4, {from: accounts[4]},
-                     true, true, deposit_4[mod(now - 2, 3)],
+                     true, true, deposit_4[mod(now, 3)],
+                     deposit_4[mod(now - 2, 3)],
                      reward_4 + constant_reward, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _default_level);
@@ -1325,7 +1342,8 @@ function parameterized_test(accounts,
     deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 5, {from: accounts[5]}),
                      _default_level, 4, {from: accounts[5]},
-                     true, true, deposit_5[mod(now - 2, 3)],
+                     true, true, deposit_5[mod(now, 3)],
+                     deposit_5[mod(now - 2, 3)],
                      reward_5 + constant_reward, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[5]],
@@ -1336,7 +1354,8 @@ function parameterized_test(accounts,
     deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 5, {from: accounts[6]}),
                      _default_level, 4, {from: accounts[6]},
-                     true, true, deposit_6[mod(now - 2, 3)],
+                     true, true, deposit_6[mod(now, 3)],
+                     deposit_6[mod(now - 2, 3)],
                      reward_6 + constant_reward, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[6]],
@@ -1379,7 +1398,8 @@ function parameterized_test(accounts,
     deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 6, {from: accounts[4]}),
                      _default_level, 5, {from: accounts[4]},
-                     true, true, deposit_4[mod(now - 2, 3)],
+                     true, true, deposit_4[mod(now, 3)],
+                     deposit_4[mod(now - 2, 3)],
                      reward_4 + constant_reward, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _default_level);
@@ -1391,7 +1411,8 @@ function parameterized_test(accounts,
     deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 6, {from: accounts[5]}),
                      _default_level, 5, {from: accounts[5]},
-                     true, true, deposit_5[mod(now - 2, 3)],
+                     true, true, deposit_5[mod(now, 3)],
+                     deposit_5[mod(now - 2, 3)],
                      reward_5 + constant_reward, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[5]],
@@ -1402,7 +1423,8 @@ function parameterized_test(accounts,
     deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 6, {from: accounts[6]}),
                      _default_level, 5, {from: accounts[6]},
-                     true, true, deposit_6[mod(now - 2, 3)],
+                     true, true, deposit_6[mod(now, 3)],
+                     deposit_6[mod(now - 2, 3)],
                      reward_6 + constant_reward, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[6]],
@@ -1431,7 +1453,8 @@ function parameterized_test(accounts,
     deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 7, {from: accounts[4]}),
                      _default_level, 6, {from: accounts[4]},
-                     true, true, deposit_4[mod(now - 2, 3)],
+                     true, true, deposit_4[mod(now, 3)],
+                     deposit_4[mod(now - 2, 3)],
                      reward_4 + constant_reward, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _default_level);
@@ -1443,7 +1466,8 @@ function parameterized_test(accounts,
     deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 7, {from: accounts[5]}),
                      _default_level, 6, {from: accounts[5]},
-                     true, true, deposit_5[mod(now - 2, 3)],
+                     true, true, deposit_5[mod(now, 3)],
+                     deposit_5[mod(now - 2, 3)],
                      reward_5 + constant_reward, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[5]],
@@ -1454,7 +1478,8 @@ function parameterized_test(accounts,
     deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 7, {from: accounts[6]}),
                      _default_level, 5, {from: accounts[6]},
-                     true, false, deposit_6[mod(now - 2, 3)],
+                     true, false, deposit_6[mod(now, 3)],
+                     deposit_6[mod(now - 2, 3)],
                      reward_6 + constant_reward, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[6]],
@@ -1490,7 +1515,8 @@ function parameterized_test(accounts,
     deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 8, {from: accounts[4]}),
                      _default_level, 6, {from: accounts[4]},
-                     true, false, deposit_4[mod(now - 2, 3)],
+                     true, false, deposit_4[mod(now, 3)],
+                     deposit_4[mod(now - 2, 3)],
                      reward_4 + constant_reward, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _default_level);
@@ -1502,7 +1528,8 @@ function parameterized_test(accounts,
     deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 8, {from: accounts[5]}),
                      _default_level, 6, {from: accounts[5]},
-                     true, false, deposit_5[mod(now - 2, 3)],
+                     true, false, deposit_5[mod(now, 3)],
+                     deposit_5[mod(now - 2, 3)],
                      reward_5 + constant_reward, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[5]],
@@ -1513,7 +1540,7 @@ function parameterized_test(accounts,
     deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 8, {from: accounts[6]}),
                      _default_level, 7, {from: accounts[6]},
-                     true, true, 0, 0, false);
+                     true, true, deposit_6[mod(now, 3)], 0, 0, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[6]],
                  balance_6 - deposit_6[mod(now, 3)] +
@@ -1545,7 +1572,7 @@ function parameterized_test(accounts,
     deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 9, {from: accounts[4]}),
                      _default_level, 0, {from: accounts[4]},
-                     true, false, 0, 0, true);
+                     true, false, deposit_4[mod(now, 3)], 0, 0, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _default_level);
     assert.equal(current.balances[accounts[4]],
@@ -1554,7 +1581,7 @@ function parameterized_test(accounts,
     deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 9, {from: accounts[5]}),
                      _default_level, 0, {from: accounts[5]},
-                     true, false, 0, 0, false);
+                     true, false, deposit_5[mod(now, 3)], 0, 0, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[5]],
                  balance_5 - deposit_5[mod(now, 3)]);
@@ -1562,7 +1589,8 @@ function parameterized_test(accounts,
     deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 9, {from: accounts[6]}),
                      _default_level, 0, {from: accounts[6]},
-                     true, false, deposit_6[mod(now - 2, 3)],
+                     true, false, deposit_6[mod(now, 3)],
+                     deposit_6[mod(now - 2, 3)],
                      reward_6 + constant_reward, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[6]],
@@ -1590,7 +1618,7 @@ function parameterized_test(accounts,
     deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 10, {from: accounts[4]}),
                      _default_level, 9, {from: accounts[4]},
-                     true, true, 0, 0, true);
+                     true, true, deposit_4[mod(now, 3)], 0, 0, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _level_max);
     assert.equal(current.balances[accounts[4]],
@@ -1599,7 +1627,7 @@ function parameterized_test(accounts,
     deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 10, {from: accounts[5]}),
                      _default_level, 9, {from: accounts[5]},
-                     true, true, 0, 0, false);
+                     true, true, deposit_5[mod(now, 3)], 0, 0, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[5]],
                  balance_5 - deposit_5[mod(now, 3)]);
@@ -1607,7 +1635,7 @@ function parameterized_test(accounts,
     deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 10, {from: accounts[6]}),
                      _default_level, 9, {from: accounts[6]},
-                     true, true, 0, 0, false);
+                     true, true, deposit_6[mod(now, 3)], 0, 0, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[6]],
                  balance_6 - deposit_6[mod(now, 3)]);
@@ -1641,7 +1669,8 @@ function parameterized_test(accounts,
     deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 11, {from: accounts[5]}),
                      _default_level, 10, {from: accounts[5]},
-                     true, true, deposit_5[mod(now - 2, 3)],
+                     true, true, deposit_5[mod(now, 3)],
+                     deposit_5[mod(now - 2, 3)],
                      reward_5 + constant_reward, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _default_level);
@@ -1653,7 +1682,8 @@ function parameterized_test(accounts,
     deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 11, {from: accounts[6]}),
                      _default_level, 10, {from: accounts[6]},
-                     true, true, deposit_6[mod(now - 2, 3)],
+                     true, true, deposit_6[mod(now, 3)],
+                     deposit_6[mod(now - 2, 3)],
                      reward_6 + constant_reward, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[6]],
@@ -1686,7 +1716,8 @@ function parameterized_test(accounts,
     deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 12, {from: accounts[6]}),
                      _default_level, 11, {from: accounts[6]},
-                     true, true, deposit_6[mod(now - 2, 3)],
+                     true, true, deposit_6[mod(now, 3)],
+                     deposit_6[mod(now - 2, 3)],
                      reward_6 + constant_reward, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _default_level);
@@ -1717,7 +1748,7 @@ function parameterized_test(accounts,
         current.balances[accounts[1]] * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 1000, {from: accounts[1]}),
                      _default_level, 1000, {from: accounts[1]},
-                     true, false, 0, 0, true);
+                     true, false, deposit13, 0, 0, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _default_level);
     assert.equal(current.coin_supply,
@@ -1736,7 +1767,7 @@ function parameterized_test(accounts,
         current.balances[accounts[1]] * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 1000, {from: accounts[1]}),
                      _default_level, 1000, {from: accounts[1]},
-                     true, true, 0, 0, true);
+                     true, true, deposit14, 0, 0, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _level_max);
     assert.equal(current.coin_supply,
@@ -1768,7 +1799,7 @@ function parameterized_test(accounts,
     deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(0, 1, {from: accounts[4]}),
                      _default_level, 0, {from: accounts[4]},
-                     true, false, 0, 0, true);
+                     true, false, deposit_4[mod(now, 3)], 0, 0, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _default_level);
     assert.equal(current.balances[accounts[4]],
@@ -1777,7 +1808,7 @@ function parameterized_test(accounts,
     deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 1, {from: accounts[5]}),
                      _default_level, 0, {from: accounts[5]},
-                     true, false, 0, 0, false);
+                     true, false, deposit_5[mod(now, 3)], 0, 0, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[5]],
                  balance_5 - deposit_5[mod(now, 3)]);
@@ -1785,7 +1816,7 @@ function parameterized_test(accounts,
     deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 1, {from: accounts[6]}),
                      _default_level, 0, {from: accounts[6]},
-                     true, false, 0, 0, false);
+                     true, false, deposit_6[mod(now, 3)], 0, 0, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[6]],
                  balance_6 - deposit_6[mod(now, 3)]);
@@ -1809,7 +1840,7 @@ function parameterized_test(accounts,
     deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 2, {from: accounts[4]}),
                      0, 1, {from: accounts[4]},
-                     true, true, 0, 0, true);
+                     true, true, deposit_4[mod(now, 3)], 0, 0, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _level_max);
     assert.equal(current.balances[accounts[4]],
@@ -1818,7 +1849,7 @@ function parameterized_test(accounts,
     deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 2, {from: accounts[5]}),
                      _default_level, 1, {from: accounts[5]},
-                     true, true, 0, 0, false);
+                     true, true, deposit_5[mod(now, 3)], 0, 0, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[5]],
                  balance_5 - deposit_5[mod(now, 3)]);
@@ -1826,7 +1857,7 @@ function parameterized_test(accounts,
     deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 2, {from: accounts[6]}),
                      _default_level, 1, {from: accounts[6]},
-                     true, true, 0, 0, false);
+                     true, true, deposit_6[mod(now, 3)], 0, 0, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[6]],
                  balance_6 - deposit_6[mod(now, 3)]);
@@ -1866,7 +1897,7 @@ function parameterized_test(accounts,
     deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 3, {from: accounts[4]}),
                      _default_level, 2, {from: accounts[4]},
-                     true, true, reclaim_4, 0, true);
+                     true, true, deposit_4[mod(now, 3)], reclaim_4, 0, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _default_level);
     assert.equal(current.balances[accounts[4]],
@@ -1875,7 +1906,8 @@ function parameterized_test(accounts,
     deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 3, {from: accounts[5]}),
                      _default_level, 2, {from: accounts[5]},
-                     true, true, deposit_5[mod(now - 2, 3)],
+                     true, true, deposit_5[mod(now, 3)],
+                     deposit_5[mod(now - 2, 3)],
                      reward_5 + constant_reward, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[5]],
@@ -1886,7 +1918,8 @@ function parameterized_test(accounts,
     deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 3, {from: accounts[6]}),
                      _default_level, 2, {from: accounts[6]},
-                     true, true, deposit_6[mod(now - 2, 3)],
+                     true, true, deposit_6[mod(now, 3)],
+                     deposit_6[mod(now - 2, 3)],
                      reward_6 + constant_reward, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[6]],
@@ -1939,7 +1972,8 @@ function parameterized_test(accounts,
     deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(0, 4, {from: accounts[4]}),
                      _default_level, 3, {from: accounts[4]},
-                     true, true, deposit_4[mod(now - 2, 3)],
+                     true, true, deposit_4[mod(now, 3)],
+                     deposit_4[mod(now - 2, 3)],
                      reward_4 + constant_reward, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _default_level);
@@ -1951,7 +1985,8 @@ function parameterized_test(accounts,
     deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(0, 4, {from: accounts[5]}),
                      _default_level, 3, {from: accounts[5]},
-                     true, true, deposit_5[mod(now - 2, 3)],
+                     true, true, deposit_5[mod(now, 3)],
+                     deposit_5[mod(now - 2, 3)],
                      reward_5 + constant_reward, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[5]],
@@ -1962,7 +1997,8 @@ function parameterized_test(accounts,
     deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 4, {from: accounts[6]}),
                      _default_level, 3, {from: accounts[6]},
-                     true, true, deposit_6[mod(now - 2, 3)],
+                     true, true, deposit_6[mod(now, 3)],
+                     deposit_6[mod(now - 2, 3)],
                      reward_6 + constant_reward, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[6]],
@@ -2005,7 +2041,8 @@ function parameterized_test(accounts,
     deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 5, {from: accounts[4]}),
                      0, 4, {from: accounts[4]},
-                     true, true, deposit_4[mod(now - 2, 3)],
+                     true, true, deposit_4[mod(now, 3)],
+                     deposit_4[mod(now - 2, 3)],
                      reward_4 + constant_reward, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _default_level);
@@ -2017,7 +2054,8 @@ function parameterized_test(accounts,
     deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash( _default_level, 5, {from: accounts[5]}),
                      0, 4, {from: accounts[5]},
-                     true, true, deposit_5[mod(now - 2, 3)],
+                     true, true, deposit_5[mod(now, 3)],
+                     deposit_5[mod(now - 2, 3)],
                      reward_5 + constant_reward, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[5]],
@@ -2028,7 +2066,8 @@ function parameterized_test(accounts,
     deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 5, {from: accounts[6]}),
                      _default_level, 4, {from: accounts[6]},
-                     true, true, deposit_6[mod(now - 2, 3)],
+                     true, true, deposit_6[mod(now, 3)],
+                     deposit_6[mod(now - 2, 3)],
                      reward_6 + constant_reward, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[6]],
@@ -2070,7 +2109,7 @@ function parameterized_test(accounts,
     deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 6, {from: accounts[4]}),
                      _default_level, 5, {from: accounts[4]},
-                     true, true, reclaim_4, 0, true);
+                     true, true, deposit_4[mod(now, 3)], reclaim_4, 0, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _default_level);
     assert.equal(current.balances[accounts[4]],
@@ -2079,7 +2118,7 @@ function parameterized_test(accounts,
     deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 6, {from: accounts[5]}),
                      _default_level, 5, {from: accounts[5]},
-                     true, true, reclaim_5, 0, false);
+                     true, true, deposit_5[mod(now, 3)], reclaim_5, 0, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[5]],
                  balance_5 - deposit_5[mod(now, 3)] + reclaim_5);
@@ -2087,7 +2126,8 @@ function parameterized_test(accounts,
     deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 6, {from: accounts[6]}),
                      _default_level, 5, {from: accounts[6]},
-                     true, true, deposit_6[mod(now - 2, 3)],
+                     true, true, deposit_6[mod(now, 3)],
+                     deposit_6[mod(now - 2, 3)],
                      reward_6 + constant_reward, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[6]],
@@ -2134,7 +2174,8 @@ function parameterized_test(accounts,
     deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 7, {from: accounts[4]}),
                      _default_level, 6, {from: accounts[4]},
-                     true, true, deposit_4[mod(now - 2, 3)],
+                     true, true, deposit_4[mod(now, 3)],
+                     deposit_4[mod(now - 2, 3)],
                      reward_4 + constant_reward, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _default_level);
@@ -2146,7 +2187,8 @@ function parameterized_test(accounts,
     deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 7, {from: accounts[5]}),
                      _default_level, 6, {from: accounts[5]},
-                     true, true, deposit_5[mod(now - 2, 3)],
+                     true, true, deposit_5[mod(now, 3)],
+                     deposit_5[mod(now - 2, 3)],
                      reward_5 + constant_reward, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[5]],
@@ -2157,7 +2199,8 @@ function parameterized_test(accounts,
     deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_level_max - 1, 7, {from: accounts[6]}),
                      _default_level, 6, {from: accounts[6]},
-                     true, true, deposit_6[mod(now - 2, 3)],
+                     true, true, deposit_6[mod(now, 3)],
+                     deposit_6[mod(now - 2, 3)],
                      reward_6 + constant_reward, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[6]],
@@ -2197,7 +2240,8 @@ function parameterized_test(accounts,
     deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 8, {from: accounts[4]}),
                      _default_level, 7, {from: accounts[4]},
-                     true, true, deposit_4[mod(now - 2, 3)],
+                     true, true, deposit_4[mod(now, 3)],
+                     deposit_4[mod(now - 2, 3)],
                      reward_4 + constant_reward, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _default_level);
@@ -2209,7 +2253,8 @@ function parameterized_test(accounts,
     deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 8, {from: accounts[5]}),
                      _default_level, 7, {from: accounts[5]},
-                     true, true, deposit_5[mod(now - 2, 3)],
+                     true, true, deposit_5[mod(now, 3)],
+                     deposit_5[mod(now - 2, 3)],
                      reward_5 + constant_reward, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[5]],
@@ -2220,7 +2265,8 @@ function parameterized_test(accounts,
     deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 8, {from: accounts[6]}),
                      _level_max - 1, 7, {from: accounts[6]},
-                     true, true, deposit_6[mod(now - 2, 3)],
+                     true, true, deposit_6[mod(now, 3)],
+                     deposit_6[mod(now - 2, 3)],
                      reward_6 + constant_reward, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[6]],
@@ -2263,7 +2309,8 @@ function parameterized_test(accounts,
     deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 9, {from: accounts[4]}),
                      _default_level, 8, {from: accounts[4]},
-                     true, true, deposit_4[mod(now - 2, 3)],
+                     true, true, deposit_4[mod(now, 3)],
+                     deposit_4[mod(now - 2, 3)],
                      reward_4 + constant_reward, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _default_level);
@@ -2275,7 +2322,8 @@ function parameterized_test(accounts,
     deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 9, {from: accounts[5]}),
                      _default_level, 8, {from: accounts[5]},
-                     true, true, deposit_5[mod(now - 2, 3)],
+                     true, true, deposit_5[mod(now, 3)],
+                     deposit_5[mod(now - 2, 3)],
                      reward_5 + constant_reward, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[5]],
@@ -2286,7 +2334,7 @@ function parameterized_test(accounts,
     deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 9, {from: accounts[6]}),
                      _default_level, 8, {from: accounts[6]},
-                     true, true, reclaim_6, 0, false);
+                     true, true, deposit_6[mod(now, 3)], reclaim_6, 0, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[6]],
                  balance_6 - deposit_6[mod(now, 3)] + reclaim_6);
@@ -2336,7 +2384,8 @@ function parameterized_test(accounts,
     deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 10, {from: accounts[4]}),
                      _default_level, 9, {from: accounts[4]},
-                     true, true, deposit_4[mod(now - 2, 3)],
+                     true, true, deposit_4[mod(now, 3)],
+                     deposit_4[mod(now - 2, 3)],
                      reward_4 + constant_reward, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _default_level);
@@ -2348,7 +2397,8 @@ function parameterized_test(accounts,
     deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_level_max - 1, 10, {from: accounts[5]}),
                      _default_level, 9, {from: accounts[5]},
-                     true, true, deposit_5[mod(now - 2, 3)],
+                     true, true, deposit_5[mod(now, 3)],
+                     deposit_5[mod(now - 2, 3)],
                      reward_5 + constant_reward, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[5]],
@@ -2359,7 +2409,8 @@ function parameterized_test(accounts,
     deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_level_max - 1, 10, {from: accounts[6]}),
                      _default_level, 9, {from: accounts[6]},
-                     true, true, deposit_6[mod(now - 2, 3)],
+                     true, true, deposit_6[mod(now, 3)],
+                     deposit_6[mod(now - 2, 3)],
                      reward_6 + constant_reward, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[6]],
@@ -2402,7 +2453,8 @@ function parameterized_test(accounts,
     deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 11, {from: accounts[4]}),
                      _default_level, 10, {from: accounts[4]},
-                     true, true, deposit_4[mod(now - 2, 3)],
+                     true, true, deposit_4[mod(now, 3)],
+                     deposit_4[mod(now - 2, 3)],
                      reward_4 + constant_reward, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _default_level);
@@ -2414,7 +2466,8 @@ function parameterized_test(accounts,
     deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 11, {from: accounts[5]}),
                      _level_max - 1, 10, {from: accounts[5]},
-                     true, true, deposit_5[mod(now - 2, 3)],
+                     true, true, deposit_5[mod(now, 3)],
+                     deposit_5[mod(now - 2, 3)],
                      reward_5 + constant_reward, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[5]],
@@ -2425,7 +2478,8 @@ function parameterized_test(accounts,
     deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 11, {from: accounts[6]}),
                      _level_max - 1, 10, {from: accounts[6]},
-                     true, true, deposit_6[mod(now - 2, 3)],
+                     true, true, deposit_6[mod(now, 3)],
+                     deposit_6[mod(now - 2, 3)],
                      reward_6 + constant_reward, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[6]],
@@ -2467,7 +2521,8 @@ function parameterized_test(accounts,
     deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 12, {from: accounts[4]}),
                      _default_level, 11, {from: accounts[4]},
-                     true, true, deposit_4[mod(now - 2, 3)],
+                     true, true, deposit_4[mod(now, 3)],
+                     deposit_4[mod(now - 2, 3)],
                      reward_4 + constant_reward, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _default_level);
@@ -2479,7 +2534,7 @@ function parameterized_test(accounts,
     deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 12, {from: accounts[5]}),
                      _default_level, 11, {from: accounts[5]},
-                     true, true, reclaim_5, 0, false);
+                     true, true, deposit_5[mod(now, 3)], reclaim_5, 0, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[5]],
                  balance_5 - deposit_5[mod(now, 3)] + reclaim_5);
@@ -2487,7 +2542,7 @@ function parameterized_test(accounts,
     deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 12, {from: accounts[6]}),
                      _default_level, 11, {from: accounts[6]},
-                     true, true, reclaim_6, 0, false);
+                     true, true, deposit_6[mod(now, 3)], reclaim_6, 0, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[6]],
                  balance_6 - deposit_6[mod(now, 3)] + reclaim_6);
@@ -2531,7 +2586,8 @@ function parameterized_test(accounts,
     deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_level_max - 1, 13, {from: accounts[4]}),
                      _default_level, 12, {from: accounts[4]},
-                     true, true, deposit_4[mod(now - 2, 3)],
+                     true, true, deposit_4[mod(now, 3)],
+                     deposit_4[mod(now - 2, 3)],
                      reward_4 + constant_reward, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _default_level);
@@ -2543,7 +2599,8 @@ function parameterized_test(accounts,
     deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 13, {from: accounts[5]}),
                      _default_level, 12, {from: accounts[5]},
-                     true, true, deposit_5[mod(now - 2, 3)],
+                     true, true, deposit_5[mod(now, 3)],
+                     deposit_5[mod(now - 2, 3)],
                      reward_5 + constant_reward, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[5]],
@@ -2554,7 +2611,8 @@ function parameterized_test(accounts,
     deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 13, {from: accounts[6]}),
                      _default_level, 12, {from: accounts[6]},
-                     true, true, deposit_6[mod(now - 2, 3)],
+                     true, true, deposit_6[mod(now, 3)],
+                     deposit_6[mod(now - 2, 3)],
                      reward_6 + constant_reward, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[6]],
@@ -2594,7 +2652,8 @@ function parameterized_test(accounts,
     deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 14, {from: accounts[4]}),
                      _level_max - 1, 13, {from: accounts[4]},
-                     true, true, deposit_4[mod(now - 2, 3)],
+                     true, true, deposit_4[mod(now, 3)],
+                     deposit_4[mod(now - 2, 3)],
                      reward_4 + constant_reward, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _default_level);
@@ -2606,7 +2665,8 @@ function parameterized_test(accounts,
     deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100)
     await check_vote(await _acb.hash(_default_level, 14, {from: accounts[5]}),
                      _default_level, 13, {from: accounts[5]},
-                     true, true, deposit_5[mod(now - 2, 3)],
+                     true, true, deposit_5[mod(now, 3)],
+                     deposit_5[mod(now - 2, 3)],
                      reward_5 + constant_reward, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[5]],
@@ -2617,7 +2677,8 @@ function parameterized_test(accounts,
     deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 14, {from: accounts[6]}),
                      _default_level, 13, {from: accounts[6]},
-                     true, true, deposit_6[mod(now - 2, 3)],
+                     true, true, deposit_6[mod(now, 3)],
+                     deposit_6[mod(now - 2, 3)],
                      reward_6 + constant_reward, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[6]],
@@ -2660,7 +2721,7 @@ function parameterized_test(accounts,
     deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 15, {from: accounts[4]}),
                      _default_level, 14, {from: accounts[4]},
-                     true, true, reclaim_4, 0, true);
+                     true, true, deposit_4[mod(now, 3)], reclaim_4, 0, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _default_level);
     assert.equal(current.balances[accounts[4]],
@@ -2669,7 +2730,8 @@ function parameterized_test(accounts,
     deposit_5[mod(now, 3)] = parseInt(balance_5 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 15, {from: accounts[5]}),
                      _default_level, 14, {from: accounts[5]},
-                     true, true, deposit_5[mod(now - 2, 3)],
+                     true, true, deposit_5[mod(now, 3)],
+                     deposit_5[mod(now - 2, 3)],
                      reward_5 + constant_reward, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[5]],
@@ -2680,7 +2742,8 @@ function parameterized_test(accounts,
     deposit_6[mod(now, 3)] = parseInt(balance_6 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 15, {from: accounts[6]}),
                      _default_level, 14, {from: accounts[6]},
-                     true, true, deposit_6[mod(now - 2, 3)],
+                     true, true, deposit_6[mod(now, 3)],
+                     deposit_6[mod(now - 2, 3)],
                      reward_6 + constant_reward, false);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[6]],
@@ -2718,7 +2781,8 @@ function parameterized_test(accounts,
     deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(0, 4444, {from: accounts[4]}),
                      _default_level, 15, {from: accounts[4]},
-                     true, true, deposit_4[mod(now - 2, 3)],
+                     true, true, deposit_4[mod(now, 3)],
+                     deposit_4[mod(now - 2, 3)],
                      reward_4 + constant_reward, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _default_level);
@@ -2753,7 +2817,8 @@ function parameterized_test(accounts,
     deposit_4[mod(now, 3)] = parseInt(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(1, 4444, {from: accounts[4]}),
                      0, 4444, {from: accounts[4]},
-                     true, true, deposit_4[mod(now - 2, 3)],
+                     true, true, deposit_4[mod(now, 3)],
+                     deposit_4[mod(now - 2, 3)],
                      reward_4 + constant_reward, true);
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _default_level);
@@ -2825,6 +2890,7 @@ function parameterized_test(accounts,
                        level - 1, 4444, {from: accounts[4]},
                        true,
                        (level < _level_max + 1) ? true : false,
+                       deposit_4[mod(now, 3)],
                        deposit_4[mod(now - 2, 3)],
                        reward_4 + constant_reward,
                        true);
@@ -2999,7 +3065,8 @@ function parameterized_test(accounts,
 
     async function check_vote(
         committed_hash, revealed_level, revealed_salt, option,
-        commit_result, reveal_result, reclaimed, reward, phase_updated) {
+        commit_result, reveal_result, deposited, reclaimed, rewarded,
+        phase_updated) {
       let receipt = await _acb.vote(
           committed_hash, revealed_level, revealed_salt, option);
       let args = receipt.logs.filter(e => e.event == 'VoteEvent')[0].args;
@@ -3009,9 +3076,10 @@ function parameterized_test(accounts,
       assert.equal(args[3], revealed_salt);
       assert.equal(args[4], commit_result);
       assert.equal(args[5], reveal_result);
-      assert.equal(args[6], reclaimed);
-      assert.equal(args[7], reward);
-      assert.equal(args[8], phase_updated);
+      assert.equal(args[6], deposited);
+      assert.equal(args[7], reclaimed);
+      assert.equal(args[8], rewarded);
+      assert.equal(args[9], phase_updated);
     }
 
     async function check_purchase_bonds(count, option, redemption) {

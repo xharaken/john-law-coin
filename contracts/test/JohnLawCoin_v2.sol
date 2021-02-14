@@ -379,13 +379,15 @@ contract Oracle_v2 is OwnableUpgradeable {
       // The rest of the reward is distributed to the voters evenly. This
       // incentivizes more voters (including new voters) to join the oracle.
       if (epoch.votes[revealed_level].deposit_v2 > 0) {
-        reward += (uint(PROPORTIONAL_REWARD_RATE).mul(epoch.reward_total_v2)
-                       .mul(deposit))
-                  .div((uint(100).mul(epoch.votes[revealed_level].deposit_v2)));
+        reward = reward.add(
+            (uint(PROPORTIONAL_REWARD_RATE).mul(epoch.reward_total_v2)
+                 .mul(deposit))
+            .div((uint(100).mul(epoch.votes[revealed_level].deposit_v2))));
       }
-      reward += ((uint(100).sub(PROPORTIONAL_REWARD_RATE))
-                     .mul(epoch.reward_total_v2))
-                .div(uint(100).mul(epoch.votes[revealed_level].count_v2));
+      reward = reward.add(
+          ((uint(100).sub(PROPORTIONAL_REWARD_RATE))
+               .mul(epoch.reward_total_v2))
+          .div(uint(100).mul(epoch.votes[revealed_level].count_v2)));
       coin.move(epoch.reward_account_v2, sender, reward);
     }
     emit ReclaimEvent(sender, deposit, reward);
@@ -620,6 +622,192 @@ contract Oracle_v2 is OwnableUpgradeable {
 }
 
 //------------------------------------------------------------------------------
+// [Logging contract]
+//
+// The Logging contract records metrics about JohnLawCoin. The logs are useful
+// to analyze JohnLawCoin's historical trend.
+//------------------------------------------------------------------------------
+contract Logging_v2 is Ownable {
+  using SafeMath for uint;
+  using SignedSafeMath for int;
+  
+  // A struct to record metrics about the voting.
+  struct VoteLog {
+    uint commit_succeeded;
+    uint commit_failed;
+    uint reveal_succeeded;
+    uint reveal_failed;
+    uint reclaim_succeeded;
+    uint reward_succeeded;
+    uint deposited;
+    uint reclaimed;
+    uint rewarded;
+  }
+
+  // A struct to record metrics about the ACB.
+  struct ACBLog {
+    uint minted_coins;
+    uint burned_coins;
+    int coin_supply_delta;
+    int bond_budget;
+    uint purchased_bonds;
+    uint redeemed_bonds;
+    uint coin_total_supply;
+    uint bond_total_supply;
+    uint oracle_level;
+    uint current_phase_start;
+  }
+
+  // The maximum number of logs.
+  uint constant LOG_MAX = 1000;
+  
+  // The index of the current log. When the index exceeds Logging.LOG_MAX,
+  // the index is reset to 0.
+  uint public log_index_ = 0;
+  
+  // The logs about the voting.
+  VoteLog[LOG_MAX] public vote_logs_;
+  
+  // The logs about the ACB.
+  ACBLog[LOG_MAX] public acb_logs_;
+
+  // Constructor.
+  constructor() {
+  }
+
+  function getVoteLog(uint log_index)
+      public view returns (
+          uint, uint, uint, uint, uint, uint, uint, uint, uint) {
+    VoteLog memory log = vote_logs_[log_index];
+    return (log.commit_succeeded, log.commit_failed, log.reveal_succeeded,
+            log.reveal_failed, log.reclaim_succeeded, log.reward_succeeded,
+            log.deposited, log.reclaimed, log.rewarded);
+  }
+
+  function getACBLog(uint log_index)
+      public view returns (
+          uint, uint, int, int, uint, uint, uint, uint, uint, uint) {
+    ACBLog memory log = acb_logs_[log_index];
+    return (log.minted_coins, log.burned_coins, log.coin_supply_delta,
+            log.bond_budget, log.purchased_bonds, log.redeemed_bonds,
+            log.coin_total_supply, log.bond_total_supply,
+            log.oracle_level, log.current_phase_start);
+  }
+
+  // Called when the oracle phase is updated.
+  //
+  // Parameters
+  // ----------------
+  // |current_phase_start|: ACB.current_phase_start_.
+  // |bond_budget|: ACB.bond_budget_.
+  // |delta|: The delta of the total coin supply.
+  // |oracle_level|: ACB.oracle_level_.
+  // |mint|: The amount of the minted coins.
+  // |burned|: The amount of the burned coins.
+  // |coin_total_supply|: The total coin supply.
+  // |bond_total_supply|: The total bond supply.
+  //
+  // Returns
+  // ----------------
+  // None.
+  function phaseUpdated(uint current_phase_start, int bond_budget, int delta,
+                        uint oracle_level, uint mint, uint burned,
+                        uint coin_total_supply, uint bond_total_supply)
+      public onlyOwner {
+    log_index_ = (log_index_.add(1)).div(LOG_MAX);
+    vote_logs_[log_index_] =
+        VoteLog(0, 0, 0, 0, 0, 0, 0, 0, 0);
+    acb_logs_[log_index_] =
+        ACBLog(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+      
+    acb_logs_[log_index_].current_phase_start = current_phase_start;
+    acb_logs_[log_index_].bond_budget = bond_budget;
+    acb_logs_[log_index_].coin_supply_delta = delta;
+    acb_logs_[log_index_].oracle_level = oracle_level;
+    acb_logs_[log_index_].minted_coins = mint;
+    acb_logs_[log_index_].burned_coins = burned;
+    acb_logs_[log_index_].coin_total_supply = coin_total_supply;
+    acb_logs_[log_index_].bond_total_supply = bond_total_supply;
+  }
+
+  // Called when ACB.vote is called.
+  //
+  // Parameters
+  // ----------------
+  // |commit_result|: Whether the commit succeeded or not.
+  // |deposit|: The amount of the deposited coins.
+  // |reveal_result|: Whether the reveal succeeded or not.
+  // |reclaimed|: The amount of the reclaimed coins.
+  // |reward|: The amount of the reward.
+  //
+  // Returns
+  // ----------------
+  // None.
+  function voted(bool commit_result, bool reveal_result, uint deposit,
+                 uint reclaimed, uint reward)
+      public onlyOwner {
+    if (commit_result) {
+      vote_logs_[log_index_].commit_succeeded =
+          vote_logs_[log_index_].commit_succeeded.add(1);
+    } else {
+      vote_logs_[log_index_].commit_failed =
+          vote_logs_[log_index_].commit_failed.add(1);
+    }
+    if (reveal_result) {
+      vote_logs_[log_index_].reveal_succeeded =
+          vote_logs_[log_index_].reveal_succeeded.add(1);
+    } else {
+      vote_logs_[log_index_].reveal_failed =
+          vote_logs_[log_index_].reveal_failed.add(1);
+    }
+    if (reclaimed > 0) {
+      vote_logs_[log_index_].reclaim_succeeded =
+          vote_logs_[log_index_].reclaim_succeeded.add(1);
+    }
+    if (reward > 0) {
+      vote_logs_[log_index_].reward_succeeded =
+          vote_logs_[log_index_].reward_succeeded.add(1);
+    }
+    vote_logs_[log_index_].deposited =
+        vote_logs_[log_index_].deposited.add(deposit);
+    vote_logs_[log_index_].reclaimed =
+        vote_logs_[log_index_].reclaimed.add(reclaimed);
+    vote_logs_[log_index_].rewarded =
+        vote_logs_[log_index_].rewarded.add(reward);
+  }
+
+  // Called when ACB.purchaseBonds is called.
+  //
+  // Parameters
+  // ----------------
+  // |count|: The number of purchased bonds.
+  //
+  // Returns
+  // ----------------
+  // None.
+  function purchasedBonds(uint count)
+      public onlyOwner {
+    acb_logs_[log_index_].purchased_bonds =
+        acb_logs_[log_index_].purchased_bonds.add(count);
+  }
+
+  // Called when ACB.redeemBonds is called.
+  //
+  // Parameters
+  // ----------------
+  // |count|: The number of redeemded bonds.
+  //
+  // Returns
+  // ----------------
+  // None.
+  function redeemedBonds(uint count)
+      public onlyOwner {
+    acb_logs_[log_index_].redeemed_bonds =
+        acb_logs_[log_index_].redeemed_bonds.add(count);
+  }
+}
+
+//------------------------------------------------------------------------------
 // [ACB contract]
 //
 // The ACB stabilizes the coin price with algorithmically defined monetary
@@ -672,6 +860,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
   Oracle public oracle_;
   uint public oracle_level_;
   uint public current_phase_start_;
+  Logging public logging_;
 
   JohnLawCoin public coin_v2_;
   JohnLawBond public bond_v2_;
@@ -679,15 +868,16 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
   Oracle_v2 public oracle_v2_;
   uint public oracle_level_v2_;
   uint public current_phase_start_v2_;
+  Logging_v2 public logging_v2_;
 
   // Events.
   event VoteEvent(address indexed, bytes32, uint, uint,
-                  bool, bool, uint, uint, bool);
+                  bool, bool, uint, uint, uint, bool);
   event PurchaseBondsEvent(address indexed, uint, uint);
   event RedeemBondsEvent(address indexed, uint[], uint);
   event ControlSupplyEvent(int, int, uint);
 
-  function upgrade(Oracle_v2 oracle)
+  function upgrade(Oracle_v2 oracle, Logging_v2 logging)
       public onlyOwner {
     coin_v2_ = coin_;
     bond_v2_ = bond_;
@@ -695,6 +885,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
     oracle_v2_ = oracle;
     oracle_level_v2_ = oracle_level_;
     current_phase_start_v2_ = current_phase_start_;
+    logging_v2_ = logging;
     oracle_v2_.upgrade();
   }
 
@@ -702,8 +893,11 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
   //
   // Parameters
   // ----------------
-  // |oracle|: The oracle. The ownership needs to be transferred to the ACB.
-  function initialize(Oracle oracle)
+  // |oracle|: The oracle contract. The ownership needs to be transferred to
+  // the ACB.
+  // |logging|: The logging contract. The ownership needs to be transferred to
+  // the ACB.
+  function initialize(Oracle oracle, Logging logging)
       public initializer {
     __Ownable_init();
     __Pausable_init();
@@ -816,6 +1010,9 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
     // The current oracle level.
     oracle_level_ = oracle.getLevelMax();
 
+    // The logging contract.
+    logging_ = logging;
+
     require(LEVEL_TO_EXCHANGE_RATE.length == oracle.getLevelMax(),
             "constructor: 1");
     require(LEVEL_TO_BOND_PRICE.length == oracle.getLevelMax(),
@@ -839,6 +1036,17 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
     coin_v2_.unpause();
   }
 
+  // A struct to pack local variables and avoid a stack-too-deep error of
+  // Solidity.
+  struct VoteResult {
+    bool phase_updated;
+    bool reveal_result;
+    bool commit_result;
+    uint deposited;
+    uint reclaimed;
+    uint rewarded;
+  }
+
   // Vote to the oracle. The voter can commit a vote in the current phase,
   // reveal their vote in the prior phase, and reclaim the deposited coins and
   // get a reward for their vote in the next prior phase at the same time.
@@ -851,34 +1059,37 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
   //
   // Returns
   // ----------------
-  // A tuple of five values:
+  // A tuple of six values:
   //  - boolean: Whether the commit succeeded or not.
   //  - boolean: Whether the reveal succeeded or not.
+  //  - uint: The amount of the deposited coins.
   //  - uint: The amount of the reclaimed coins.
   //  - uint: The amount of the reward.
   //  - boolean: Whether this vote resulted in a phase update.
   function vote(bytes32 committed_hash, uint revealed_level,
                 uint revealed_salt)
-      public whenNotPaused returns (bool, bool, uint, uint, bool) {
+      public whenNotPaused returns (bool, bool, uint, uint, uint, bool) {
     return vote_v2(committed_hash, revealed_level, revealed_salt);
   }
   
   function vote_v2(bytes32 committed_hash, uint revealed_level,
                    uint revealed_salt)
-      public whenNotPaused returns (bool, bool, uint, uint, bool) {
-    address sender = msg.sender;
-
+      public whenNotPaused returns (bool, bool, uint, uint, uint, bool) {
+    
+    VoteResult memory result;
+    
     // Temporarily transfer the ownership of the JohnLawCoin contract to the
     // oracle.
     coin_v2_.transferOwnership(address(oracle_v2_));
     
-    bool phase_updated = false;
+    result.phase_updated = false;
     if (getTimestamp() >= current_phase_start_v2_.add(PHASE_DURATION)) {
       // Start a new phase.
-      phase_updated = true;
+      result.phase_updated = true;
       current_phase_start_v2_ = getTimestamp();
       
       uint mint = 0;
+      int delta = 0;
       oracle_level_ = oracle_v2_.getModeLevel();
       if (oracle_level_ != oracle_v2_.getLevelMax()) {
         require(0 <= oracle_level_ && oracle_level_ < oracle_v2_.getLevelMax(),
@@ -891,12 +1102,11 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
         // = 1.1 USD), the total coin supply is increased by 10%. If the
         // exchange rate is 0.8 (i.e., 1 coin = 0.8 USD), the total coin supply
         // is decreased by 20%.
-        int delta =
-            coin_v2_.totalSupply().toInt256()
-            .mul(int(exchange_rate)
-                     .sub(int(EXCHANGE_RATE_DIVISOR)))
-            .div(int(EXCHANGE_RATE_DIVISOR));
-
+        delta = coin_v2_.totalSupply().toInt256()
+                .mul(int(exchange_rate)
+                         .sub(int(EXCHANGE_RATE_DIVISOR)))
+                .div(int(EXCHANGE_RATE_DIVISOR));
+        
         // To avoid increasing or decreasing too many coins in one phase,
         // multiply the damping factor.
         delta = delta.mul(int(DAMPING_FACTOR)).div(100);
@@ -907,31 +1117,44 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
 
       // Advance to the next phase. Provide the |mint| coins to the oracle
       // as a reward.
-      oracle_v2_.advance(coin_v2_, mint);
+      uint burned = oracle_v2_.advance(coin_v2_, mint);
+      
+      logging_v2_.phaseUpdated(current_phase_start_, bond_budget_, delta,
+                               oracle_level_, mint, burned,
+                               coin_.totalSupply(), bond_.totalSupply());
     }
 
     // Commit.
     //
     // The voter needs to deposit the DEPOSIT_RATE percentage of their coin
     // balance.
-    bool commit_result = oracle_v2_.commit(
-        coin_v2_, sender, committed_hash,
-        coin_v2_.balanceOf(sender).mul(DEPOSIT_RATE).div(100));
+    result.deposited =
+        coin_v2_.balanceOf(msg.sender).mul(DEPOSIT_RATE).div(100);
+    result.commit_result = oracle_v2_.commit(
+        coin_v2_, msg.sender, committed_hash, result.deposited);
+    if (!result.commit_result) {
+      result.deposited = 0;
+    }
     
     // Reveal.
-    bool reveal_result = oracle_v2_.reveal(
-        sender, revealed_level, revealed_salt);
+    result.reveal_result = oracle_v2_.reveal(
+        msg.sender, revealed_level, revealed_salt);
     
     // Reclaim.
-    (uint reclaimed, uint reward) = oracle_v2_.reclaim(coin_v2_, sender);
+    (result.reclaimed, result.rewarded) =
+        oracle_v2_.reclaim(coin_v2_, msg.sender);
 
     // Revoke the ownership of the JohnLawCoin contract from the oracle.
     oracle_v2_.revokeOwnership(coin_v2_);
     
+    logging_v2_.voted(result.commit_result, result.reveal_result,
+                      result.deposited, result.reclaimed, result.rewarded);
     emit VoteEvent(
-        sender, committed_hash, revealed_level, revealed_salt,
-        commit_result, reveal_result, reclaimed, reward, phase_updated);
-    return (commit_result, reveal_result, reclaimed, reward, phase_updated);
+        msg.sender, committed_hash, revealed_level, revealed_salt,
+        result.commit_result, result.reveal_result, result.deposited,
+        result.reclaimed, result.rewarded, result.phase_updated);
+    return (result.commit_result, result.reveal_result, result.deposited,
+            result.reclaimed, result.rewarded, result.phase_updated);
   }
 
   // Purchase bonds.
@@ -985,6 +1208,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
     // Burn the corresponding coins.
     coin_v2_.burn(sender, amount);
 
+    logging_v2_.purchasedBonds(count);
     emit PurchaseBondsEvent(sender, count, redemption);
     return redemption;
   }
@@ -1034,6 +1258,8 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
     }
     require((bond_v2_.totalSupply().toInt256()).add(bond_budget_) >= 0,
             "redeemBonds: 1");
+    
+    logging_v2_.redeemedBonds(count_total);
     emit RedeemBondsEvent(sender, redemptions, count_total);
     return count_total;
   }

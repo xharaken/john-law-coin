@@ -70,7 +70,8 @@ class ACBSimulator(unittest.TestCase):
         print(level_to_bond_price)
 
         self.oracle = Oracle()
-        self.acb = ACB(0x1000, self.oracle)
+        self.logging = Logging()
+        self.acb = ACB(0x1000, self.oracle, self.logging)
         level_max = len(level_to_exchange_rate)
         self.oracle.override_constants_for_testing(
             level_max, reclaim_threshold, proportional_reward_rate)
@@ -97,20 +98,29 @@ class ACBSimulator(unittest.TestCase):
                 self.reveal_miss = 0
                 self.reclaim_hit = 0
                 self.reclaim_miss = 0
+                self.reward_hit = 0
+                self.reward_miss = 0
                 self.redeem_count = 0
                 self.fast_redeem_count = 0
                 self.redemption_count = 0
                 self.redeem_hit = 0
                 self.purchase_hit = 0
+                self.purchase_count = 0
                 self.delta = 0
                 self.mint = 0
                 self.lost = 0
+                self.oracle_level = 0
+                self.deposited = 0
+                self.reclaimed = 0
+                self.rewarded = 0
 
             def reset_total(self):
                 self.total_reveal_hit = 0
                 self.total_reveal_miss = 0
                 self.total_reclaim_hit = 0
                 self.total_reclaim_miss = 0
+                self.total_reward_hit = 0
+                self.total_reward_miss = 0
                 self.supply_increased = 0
                 self.supply_decreased = 0
                 self.supply_nochange = 0
@@ -119,6 +129,7 @@ class ACBSimulator(unittest.TestCase):
                 self.total_fast_redeem_count = 0
                 self.total_redeem_hit = 0
                 self.total_purchase_hit = 0
+                self.total_purchase_count = 0
                 self.total_mint = 0
                 self.total_lost = 0
 
@@ -127,6 +138,8 @@ class ACBSimulator(unittest.TestCase):
                 self.total_reveal_miss += self.reveal_miss
                 self.total_reclaim_hit += self.reclaim_hit
                 self.total_reclaim_miss += self.reclaim_miss
+                self.total_reward_hit += self.reward_hit
+                self.total_reward_miss += self.reward_miss
                 if self.delta > 0:
                     self.supply_increased += 1
                 elif self.delta < 0:
@@ -138,6 +151,7 @@ class ACBSimulator(unittest.TestCase):
                 self.total_redemption_count += self.redemption_count
                 self.total_redeem_hit += self.redeem_hit
                 self.total_purchase_hit += self.purchase_hit
+                self.total_purchase_count += self.purchase_count
                 self.total_mint += self.mint
                 self.total_lost += self.lost
 
@@ -149,6 +163,7 @@ class ACBSimulator(unittest.TestCase):
 
     def run(self):
         acb = self.acb
+        logging = self.logging
 
         for i in range(self.voter_count):
             amount = random.randint(
@@ -177,13 +192,41 @@ class ACBSimulator(unittest.TestCase):
             coin_supply2 = acb.coin.total_supply
             bond_supply = acb.bond.total_supply
             bond_budget = acb.bond_budget
+            current_phase_start = acb.current_phase_start
 
             self.redeem_bonds()
             self.purchase_bonds()
 
+            acb_log = logging.acb_logs[logging.log_index]
+            self.assertEqual(acb_log.current_phase_start, acb.get_timestamp())
+            self.assertEqual(acb_log.bond_budget, bond_budget)
+            self.assertEqual(acb_log.coin_supply_delta, self.metrics.delta)
+            self.assertEqual(acb_log.oracle_level, self.metrics.oracle_level)
+            self.assertEqual(acb_log.minted_coins, self.metrics.mint)
+            self.assertEqual(acb_log.burned_coins, self.metrics.lost)
+            self.assertEqual(acb_log.coin_total_supply, coin_supply2)
+            self.assertEqual(acb_log.bond_total_supply, bond_supply)
+            self.assertEqual(acb_log.purchased_bonds,
+                             self.metrics.purchase_count)
+            self.assertEqual(acb_log.redeemed_bonds, self.metrics.redeem_count)
+            vote_log = logging.vote_logs[logging.log_index]
+            self.assertEqual(vote_log.commit_succeeded,
+                             self.metrics.reveal_hit + self.metrics.reveal_miss)
+            self.assertEqual(vote_log.deposited, self.metrics.deposited)
+            self.assertEqual(vote_log.commit_failed, 0)
+            self.assertEqual(vote_log.reveal_succeeded, self.metrics.reveal_hit)
+            self.assertEqual(vote_log.reveal_failed, self.metrics.reveal_miss)
+            self.assertEqual(vote_log.reclaim_succeeded,
+                             self.metrics.reclaim_hit)
+            self.assertEqual(vote_log.reward_succeeded,
+                             self.metrics.reward_hit)
+            self.assertEqual(vote_log.reclaimed, self.metrics.reclaimed)
+            self.assertEqual(vote_log.rewarded, self.metrics.rewarded)
+
             if False:
                 print('epoch=%d reveal_hit=%d/%d=%d%% reclaim_hit=%d/%d=%d%% '
-                      'purchase_hit=%d/%d=%d%% redeem_hit=%d/%d=%d%% '
+                      'reward_hit=%d/%d=%d%% purchase_hit=%d/%d=%d%% '
+                      'redeem_hit=%d/%d=%d%% '
                       'redemptions=%d/%d=%d%% fast_redeem=%d/%d=%d%% '
                       'delta=%d mint=%d lost=%d coin_supply=%d->%d->%d=%d '
                       'bond_supply=%d->%d bond_budget=%d->%d' %
@@ -198,6 +241,11 @@ class ACBSimulator(unittest.TestCase):
                        divide_or_zero(100 * self.metrics.reclaim_hit,
                                       self.metrics.reclaim_hit +
                                       self.metrics.reclaim_miss),
+                       self.metrics.reward_hit,
+                       self.metrics.reward_hit + self.metrics.reward_miss,
+                       divide_or_zero(100 * self.metrics.reward_hit,
+                                      self.metrics.reward_hit +
+                                      self.metrics.reward_miss),
                        self.metrics.purchase_hit,
                        self.voter_count,
                        divide_or_zero(100 * self.metrics.purchase_hit,
@@ -230,6 +278,7 @@ class ACBSimulator(unittest.TestCase):
 
         print("================")
         print('epoch=%d reveal_hit=%d/%d=%d%% reclaim_hit=%d/%d=%d%% '
+              'reward_hit=%d/%d=%d%% '
               'purchase_hit=%d/%d=%d%% redeem_hit=%d/%d=%d%% '
               'redemptions=%d/%d=%d%% fast_redeem=%d/%d=%d%% '
               'supply=%d/%d/%d coin_supply=%d%% mint=%d lost=%d bond_supply=%d'
@@ -245,6 +294,11 @@ class ACBSimulator(unittest.TestCase):
                divide_or_zero(100 * self.metrics.total_reclaim_hit,
                               (self.metrics.total_reclaim_hit +
                                self.metrics.total_reclaim_miss)),
+               self.metrics.total_reward_hit,
+               self.metrics.total_reward_hit + self.metrics.total_reward_miss,
+               divide_or_zero(100 * self.metrics.total_reward_hit,
+                              (self.metrics.total_reward_hit +
+                               self.metrics.total_reward_miss)),
                self.metrics.total_purchase_hit,
                self.voter_count * epoch,
                divide_or_zero(100 * self.metrics.total_purchase_hit,
@@ -315,6 +369,7 @@ class ACBSimulator(unittest.TestCase):
                              voter.bonds[redemption])
 
             self.metrics.purchase_hit += 1
+            self.metrics.purchase_count += count
 
     def redeem_bonds(self):
         acb = self.acb
@@ -535,9 +590,9 @@ class ACBSimulator(unittest.TestCase):
             bond_supply = acb.bond.total_supply
             bond_budget = acb.bond_budget
 
-            reclaimed_deposit = 0
+            reclaimed = 0
             if reclaim_result:
-                reclaimed_deposit = voters[i].deposit[prev_prev]
+                reclaimed = voters[i].deposit[prev_prev]
 
             reward = 0
             if (reclaim_result and
@@ -555,33 +610,36 @@ class ACBSimulator(unittest.TestCase):
 
             voters[i].balance = (voters[i].balance -
                                  voters[i].deposit[current] +
-                                 reclaimed_deposit + reward)
-            reclaimed_total += reclaimed_deposit + reward
+                                 reclaimed + reward)
+            reclaimed_total += reclaimed + reward
 
             self.assertEqual(acb.vote(voters[i].address,
                                       committed_hash,
                                       voters[i].revealed_level[prev],
                                       voters[i].revealed_salt[prev]),
-                             (True, reveal_result,
-                              reclaimed_deposit, reward, not commit_observed))
-            self.assertEqual(acb.vote(voters[i].address,
-                                      committed_hash,
-                                      voters[i].revealed_level[prev],
-                                      voters[i].revealed_salt[prev]),
-                             (False, False, 0, 0, False))
+                             (True, reveal_result, voters[i].deposit[current],
+                              reclaimed, reward, not commit_observed))
 
             self.assertEqual(acb.coin.balance_of(voters[i].address),
                              voters[i].balance)
             self.assertEqual(acb.current_phase_start, acb.get_timestamp())
 
+            self.metrics.deposited += voters[i].deposit[current]
+            self.metrics.reclaimed += reclaimed
+            self.metrics.rewarded += reward
+
             if reveal_result:
                 self.metrics.reveal_hit += 1
             else:
                 self.metrics.reveal_miss += 1
-            if reclaim_result > 0:
+            if reclaimed > 0:
                 self.metrics.reclaim_hit += 1
             else:
                 self.metrics.reclaim_miss += 1
+            if reward > 0:
+                self.metrics.reward_hit += 1
+            else:
+                self.metrics.reward_miss += 1
 
             if not commit_observed:
                 self.assertEqual(acb.bond.total_supply, bond_supply)
@@ -600,6 +658,7 @@ class ACBSimulator(unittest.TestCase):
                 self.metrics.delta = delta
                 self.metrics.mint = mint
                 self.metrics.lost = self.lost_deposit[(epoch - 1) % 3]
+                self.metrics.oracle_level = mode_level
             else:
                 self.assertEqual(acb.oracle_level, mode_level)
                 self.assertEqual(acb.bond.total_supply, bond_supply)

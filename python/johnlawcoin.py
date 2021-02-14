@@ -235,69 +235,67 @@ class JohnLawBond:
 # voting scheme.
 #-------------------------------------------------------------------------------
 
-# The valid phase transition is: COMMIT => REVEAL => RECLAIM.
-class Phase:
-    COMMIT = 0
-    REVEAL = 1
-    RECLAIM = 2
-
-# Commit is a struct to manage one commit entry in the commit-reveal-reclaim
-# scheme.
-class Commit:
-    def __init__(self, committed_hash, deposit,
-                 revealed_level, phase, epoch_timestamp):
-        # The committed hash (filled in the commit phase).
-        self.committed_hash = committed_hash
-        # The amount of deposited coins (filled in the commit phase).
-        self.deposit = deposit
-        # The revealed level (filled in the reveal phase).
-        self.revealed_level = revealed_level
-        # The phase of this commit entry.
-        self.phase = phase
-        # The timestamp when this commit entry is created.
-        self.epoch_timestamp = epoch_timestamp
-
-
-# Vote is a struct to count votes in each oracle level.
-class Vote:
-    # Voting statitics are aggregated during the reveal phase and finalized at
-    # the end of the reveal phase.
-    def __init__(self, deposit, count, should_reclaim, should_reward):
-        # The total amount of the coins deposited by the voters who voted for
-        # this oracle level.
-        self.deposit = deposit
-        # The number of the voters.
-        self.count = count
-        # Set to true when the voters for this oracle level are eligible to
-        # reclaim the coins they deposited.
-        self.should_reclaim = should_reclaim
-        # Set to true when the voters for this oracle level are eligible to
-        # receive a reward.
-        self.should_reward = should_reward
-
-
-# Epoch is a struct to keep track of states in the commit-reveal-reclaim
-# scheme. The oracle creates three Epoch objects and uses them in a
-# round-robin manner. For example, when the first Epoch object is in use for
-# the commit phase, the second Epoch object is in use for the reveal phase,
-# and the third Epoch object is in use for the reclaim phase.
-class Epoch:
-    def __init__(self):
-        # The commit entries.
-        self.commits = {}
-        # The voting statistics for all the oracle levels.
-        self.votes = []
-        # A special account to store coins deposited by the voters.
-        self.deposit_account = 0
-        # A special account to store the reward.
-        self.reward_account = 0
-        # The total amount of the reward.
-        self.reward_total = 0
-        # The current phase of this Epoch.
-        self.phase = 0
-
 # The oracle.
 class Oracle:
+
+    # The valid phase transition is: COMMIT => REVEAL => RECLAIM.
+    class Phase:
+        COMMIT = 0
+        REVEAL = 1
+        RECLAIM = 2
+
+    # Commit is a struct to manage one commit entry in the commit-reveal-reclaim
+    # scheme.
+    class Commit:
+        def __init__(self, committed_hash, deposit,
+                     revealed_level, phase, epoch_timestamp):
+            # The committed hash (filled in the commit phase).
+            self.committed_hash = committed_hash
+            # The amount of deposited coins (filled in the commit phase).
+            self.deposit = deposit
+            # The revealed level (filled in the reveal phase).
+            self.revealed_level = revealed_level
+            # The phase of this commit entry.
+            self.phase = phase
+            # The timestamp when this commit entry is created.
+            self.epoch_timestamp = epoch_timestamp
+
+    # Vote is a struct to count votes in each oracle level.
+    class Vote:
+        # Voting statitics are aggregated during the reveal phase and finalized
+        # at the end of the reveal phase.
+        def __init__(self, deposit, count, should_reclaim, should_reward):
+            # The total amount of the coins deposited by the voters who voted
+            # for this oracle level.
+            self.deposit = deposit
+            # The number of the voters.
+            self.count = count
+            # Set to true when the voters for this oracle level are eligible to
+            # reclaim the coins they deposited.
+            self.should_reclaim = should_reclaim
+            # Set to true when the voters for this oracle level are eligible to
+            # receive a reward.
+            self.should_reward = should_reward
+
+    # Epoch is a struct to keep track of states in the commit-reveal-reclaim
+    # scheme. The oracle creates three Epoch objects and uses them in a
+    # round-robin manner. For example, when the first Epoch object is in use for
+    # the commit phase, the second Epoch object is in use for the reveal phase,
+    # and the third Epoch object is in use for the reclaim phase.
+    class Epoch:
+        def __init__(self):
+            # The commit entries.
+            self.commits = {}
+            # The voting statistics for all the oracle levels.
+            self.votes = []
+            # A special account to store coins deposited by the voters.
+            self.deposit_account = 0
+            # A special account to store the reward.
+            self.reward_account = 0
+            # The total amount of the reward.
+            self.reward_total = 0
+            # The current phase of this Epoch.
+            self.phase = 0
 
     # Constructor.
     def __init__(self):
@@ -326,18 +324,19 @@ class Oracle:
 
         # The oracle creates three Epoch objects and uses them in a round-robin
         # manner (commit => reveal => reclaim).
-        self.epochs = [Epoch(), Epoch(), Epoch()]
+        self.epochs = [Oracle.Epoch(), Oracle.Epoch(), Oracle.Epoch()]
         for epoch_index in [0, 1, 2]:
             for level in range(Oracle.LEVEL_MAX):
-                self.epochs[epoch_index].votes.append(Vote(0, 0, False, False))
+                self.epochs[epoch_index].votes.append(
+                    Oracle.Vote(0, 0, False, False))
             self.epochs[epoch_index].deposit_account = (
                 "__deposit_account_for_epoch" + str(epoch_index))
             self.epochs[epoch_index].reward_account = (
                 "__reward_account_for_epoch" + str(epoch_index))
             self.epochs[epoch_index].reward_total = 0
-        self.epochs[0].phase = Phase.COMMIT
-        self.epochs[1].phase = Phase.RECLAIM
-        self.epochs[2].phase = Phase.REVEAL
+        self.epochs[0].phase = Oracle.Phase.COMMIT
+        self.epochs[1].phase = Oracle.Phase.RECLAIM
+        self.epochs[2].phase = Oracle.Phase.REVEAL
 
         # |epoch_timestamp_| is a monotonically increasing timestamp (3, 4, 5,
         # ...). The Epoch object at |epoch_timestamp_ % 3| is in the commit
@@ -365,7 +364,8 @@ class Oracle:
         for epoch_index in [0, 1, 2]:
             for level in range(
                 len(self.epochs[epoch_index].votes), Oracle.LEVEL_MAX):
-                self.epochs[epoch_index].votes.append(Vote(0, 0, False, False))
+                self.epochs[epoch_index].votes.append(
+                    Oracle.Vote(0, 0, False, False))
 
     # Do commit.
     #
@@ -381,7 +381,7 @@ class Oracle:
     # True if the commit succeeded. False otherwise.
     def commit(self, coin, sender, committed_hash, deposit):
         epoch = self.epochs[self.epoch_timestamp % 3]
-        assert(epoch.phase == Phase.COMMIT)
+        assert(epoch.phase == Oracle.Phase.COMMIT)
         assert(deposit >= 0)
         if coin.balance_of(sender) < deposit:
             return False
@@ -391,9 +391,9 @@ class Oracle:
             return False
 
         # Create a commit entry.
-        epoch.commits[sender] = Commit(
+        epoch.commits[sender] = Oracle.Commit(
             committed_hash, deposit, Oracle.LEVEL_MAX,
-            Phase.COMMIT, self.epoch_timestamp)
+            Oracle.Phase.COMMIT, self.epoch_timestamp)
 
         # Move the deposited coins to the deposit account.
         coin.move(sender, epoch.deposit_account, deposit)
@@ -412,7 +412,7 @@ class Oracle:
     # True if the reveal succeeded. False otherwise.
     def reveal(self, sender, revealed_level, revealed_salt):
         epoch = self.epochs[(self.epoch_timestamp - 1) % 3]
-        assert(epoch.phase == Phase.REVEAL)
+        assert(epoch.phase == Oracle.Phase.REVEAL)
         if revealed_level < 0 or Oracle.LEVEL_MAX <= revealed_level:
             return False
         if (sender not in epoch.commits or
@@ -420,9 +420,9 @@ class Oracle:
             # The corresponding commit was not found.
             return False
         # One voter can reveal only once per epoch.
-        if epoch.commits[sender].phase != Phase.COMMIT:
+        if epoch.commits[sender].phase != Oracle.Phase.COMMIT:
             return False
-        epoch.commits[sender].phase = Phase.REVEAL
+        epoch.commits[sender].phase = Oracle.Phase.REVEAL
 
         # Check if the committed hash matches the revealed level and salt.
         reveal_hash = Oracle.hash(
@@ -455,16 +455,16 @@ class Oracle:
     #    voter voted for the "truth" oracle level.
     def reclaim(self, coin, sender):
         epoch = self.epochs[(self.epoch_timestamp - 2) % 3]
-        assert(epoch.phase == Phase.RECLAIM)
+        assert(epoch.phase == Oracle.Phase.RECLAIM)
         if (sender not in epoch.commits or
             epoch.commits[sender].epoch_timestamp != self.epoch_timestamp - 2):
             # The corresponding commit was not found.
             return (0, 0)
         # One voter can reclaim only once per epoch.
-        if epoch.commits[sender].phase != Phase.REVEAL:
+        if epoch.commits[sender].phase != Oracle.Phase.REVEAL:
             return (0, 0)
 
-        epoch.commits[sender].phase = Phase.RECLAIM
+        epoch.commits[sender].phase = Oracle.Phase.RECLAIM
         deposit = epoch.commits[sender].deposit
         revealed_level = epoch.commits[sender].revealed_level
         if revealed_level == Oracle.LEVEL_MAX:
@@ -519,12 +519,12 @@ class Oracle:
 
         # Step 1: Move the commit phase to the reveal phase.
         epoch = self.epochs[self.epoch_timestamp % 3]
-        assert(epoch.phase == Phase.COMMIT)
-        epoch.phase = Phase.REVEAL
+        assert(epoch.phase == Oracle.Phase.COMMIT)
+        epoch.phase = Oracle.Phase.REVEAL
 
         # Step 2: Move the reveal phase to the reclaim phase.
         epoch = self.epochs[(self.epoch_timestamp - 1) % 3]
-        assert(epoch.phase == Phase.REVEAL)
+        assert(epoch.phase == Oracle.Phase.REVEAL)
 
         # The "truth" level is set to the mode of the votes.
         mode_level = self.get_mode_level()
@@ -566,11 +566,11 @@ class Oracle:
 
         # Set the total amount of the reward.
         epoch.reward_total = coin.balance_of(epoch.reward_account)
-        epoch.phase = Phase.RECLAIM
+        epoch.phase = Oracle.Phase.RECLAIM
 
         # Step 3: Move the reclaim phase to the commit phase.
         epoch = self.epochs[(self.epoch_timestamp - 2) % 3]
-        assert(epoch.phase == Phase.RECLAIM)
+        assert(epoch.phase == Oracle.Phase.RECLAIM)
 
         burned = (coin.balance_of(epoch.deposit_account) +
                   coin.balance_of(epoch.reward_account))
@@ -585,11 +585,11 @@ class Oracle:
         # |epoch_timestamp_| ensures the stale commit entries are not used.
         epoch.votes = []
         for i in range(Oracle.LEVEL_MAX):
-            epoch.votes.append(Vote(0, 0, False, False))
+            epoch.votes.append(Oracle.Vote(0, 0, False, False))
         assert(coin.balance_of(epoch.deposit_account) == 0)
         assert(coin.balance_of(epoch.reward_account) == 0)
         epoch.reward_total = 0
-        epoch.phase = Phase.COMMIT
+        epoch.phase = Oracle.Phase.COMMIT
 
         # Advance the phase.
         self.epoch_timestamp += 1
@@ -610,7 +610,7 @@ class Oracle:
     # smallest mode. If there are no votes, return LEVEL_MAX.
     def get_mode_level(self):
         epoch = self.epochs[(self.epoch_timestamp - 1) % 3]
-        assert(epoch.phase == Phase.REVEAL)
+        assert(epoch.phase == Oracle.Phase.REVEAL)
         mode_level = Oracle.LEVEL_MAX
         max_deposit = 0
         max_count = 0
@@ -648,6 +648,156 @@ class Oracle:
 
 
 #-------------------------------------------------------------------------------
+# [Logging contract]
+#
+# The Logging contract records metrics about JohnLawCoin. The logs are useful
+# to analyze JohnLawCoin's historical trend.
+#-------------------------------------------------------------------------------
+class Logging:
+    # A struct to record metrics about the voting.
+    class VoteLog:
+      def __init__(self, commit_succeeded, commit_failed,
+                   reveal_succeeded, reveal_failed, reclaim_succeeded,
+                   reward_succeeded, deposited, reclaimed, rewarded):
+          self.commit_succeeded = commit_succeeded
+          self.commit_failed = commit_failed
+          self.reveal_succeeded = reveal_succeeded
+          self.reveal_failed = reveal_failed
+          self.reclaim_succeeded = reclaim_succeeded
+          self.reward_succeeded = reward_succeeded
+          self.deposited = deposited
+          self.reclaimed = reclaimed
+          self.rewarded = rewarded
+
+    # A struct to record metrics about the ACB.
+    class ACBLog:
+      def __init__(self, minted_coins, burned_coins, coin_supply_delta,
+                   bond_budge, purchased_bonds, redeemed_bonds,
+                   coin_total_supply, bond_total_supply, oracle_level,
+                   current_phase_start):
+          self.minted_coins = minted_coins
+          self.burned_coins = burned_coins
+          self.coin_supply_delta = coin_supply_delta
+          self.bond_budget = bond_budge
+          self.purchased_bonds = purchased_bonds
+          self.redeemed_bonds = redeemed_bonds
+          self.coin_total_supply = coin_total_supply
+          self.bond_total_supply = bond_total_supply
+          self.oracle_level = oracle_level
+          self.current_phase_start = current_phase_start
+
+    # Constructor.
+    def __init__(self):
+        # The maximum number of logs.
+        Logging.LOG_MAX = 1000
+
+        # The index of the current log. When the index exceeds Logging.LOG_MAX,
+        # the index is reset to 0.
+        self.log_index = 0
+
+        # The logs about the voting.
+        self.vote_logs = []
+        for i in range(Logging.LOG_MAX):
+            self.vote_logs.append(
+                Logging.VoteLog(0, 0, 0, 0, 0, 0, 0, 0, 0))
+
+        # The logs about the ACB.
+        self.acb_logs = []
+        for i in range(Logging.LOG_MAX):
+            self.acb_logs.append(
+                Logging.ACBLog(0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+
+    # Called when the oracle phase is updated.
+    #
+    # Parameters
+    # ----------------
+    # |current_phase_start|: ACB.current_phase_start.
+    # |bond_budget|: ACB.bond_budget.
+    # |delta|: The delta of the total coin supply.
+    # |oracle_level|: ACB.oracle_level.
+    # |mint|: The amount of the minted coins.
+    # |burned|: The amount of the burned coins.
+    # |coin_total_supply|: The total coin supply.
+    # |bond_total_supply|: The total bond supply.
+    #
+    # Returns
+    # ----------------
+    # None.
+    def phase_updated(self, current_phase_start, bond_budget, delta,
+                      oracle_level, mint, burned, coin_total_supply,
+                      bond_total_supply):
+        self.log_index = (self.log_index + 1) % Logging.LOG_MAX
+        self.vote_logs[self.log_index] = Logging.VoteLog(
+            0, 0, 0, 0, 0, 0, 0, 0, 0)
+        self.acb_logs[self.log_index] = Logging.ACBLog(
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+
+        self.acb_logs[self.log_index].current_phase_start = current_phase_start
+        self.acb_logs[self.log_index].bond_budget = bond_budget
+        self.acb_logs[self.log_index].coin_supply_delta = delta
+        self.acb_logs[self.log_index].oracle_level = oracle_level
+        self.acb_logs[self.log_index].minted_coins = mint
+        self.acb_logs[self.log_index].burned_coins = burned
+        self.acb_logs[self.log_index].coin_total_supply = coin_total_supply
+        self.acb_logs[self.log_index].bond_total_supply = bond_total_supply
+
+    # Called when ACB.vote is called.
+    #
+    # Parameters
+    # ----------------
+    # |commit_result|: Whether the commit succeeded or not.
+    # |deposited|: The amount of the deposited coins.
+    # |reveal_result|: Whether the reveal succeeded or not.
+    # |reclaimed|: The amount of the reclaimed coins.
+    # |rewarded|: The amount of the reward.
+    #
+    # Returns
+    # ----------------
+    # None.
+    def voted(self, commit_result, reveal_result, deposited,
+              reclaimed, rewarded):
+        if commit_result:
+            self.vote_logs[self.log_index].commit_succeeded += 1
+        else:
+            self.vote_logs[self.log_index].commit_failed += 1
+        if reveal_result:
+            self.vote_logs[self.log_index].reveal_succeeded += 1
+        else:
+            self.vote_logs[self.log_index].reveal_failed += 1
+        if reclaimed > 0:
+            self.vote_logs[self.log_index].reclaim_succeeded += 1
+        if rewarded > 0:
+            self.vote_logs[self.log_index].reward_succeeded += 1
+        self.vote_logs[self.log_index].deposited += deposited
+        self.vote_logs[self.log_index].reclaimed += reclaimed
+        self.vote_logs[self.log_index].rewarded += rewarded
+
+    # Called when ACB.purchase_bonds is called.
+    #
+    # Parameters
+    # ----------------
+    # |count|: The number of purchased bonds.
+    #
+    # Returns
+    # ----------------
+    # None.
+    def purchased_bonds(self, count):
+        self.acb_logs[self.log_index].purchased_bonds += count
+
+    # Called when ACB.redeem_bonds is called.
+    #
+    # Parameters
+    # ----------------
+    # |count|: The number of redeemded bonds.
+    #
+    # Returns
+    # ----------------
+    # None.
+    def redeemed_bonds(self, count):
+        self.acb_logs[self.log_index].redeemed_bonds += count
+
+
+#-------------------------------------------------------------------------------
 # [ACB contract]
 #
 # The ACB stabilizes the coin price with algorithmically defined monetary
@@ -670,7 +820,9 @@ class ACB:
     # Parameters
     # ----------------
     # |genesis_account|: The genesis account that created the ACB.
-    def __init__(self, genesis_account, oracle):
+    # |oracle|: The oracle contract.
+    # |logging|: The logging contract.
+    def __init__(self, genesis_account, oracle, logging):
         # ----------------
         # Constants
         # ----------------
@@ -781,6 +933,9 @@ class ACB:
         # The current oracle level.
         self.oracle_level = Oracle.LEVEL_MAX
 
+        # The logging contract.
+        self.logging = logging
+
         assert(len(ACB.LEVEL_TO_EXCHANGE_RATE) == Oracle.LEVEL_MAX)
         assert(len(ACB.LEVEL_TO_BOND_PRICE) == Oracle.LEVEL_MAX)
 
@@ -830,9 +985,10 @@ class ACB:
     #
     # Returns
     # ----------------
-    # A tuple of five values:
+    # A tuple of six values:
     #  - boolean: Whether the commit succeeded or not.
     #  - boolean: Whether the reveal succeeded or not.
+    #  - uint: The amount of the deposited coins.
     #  - uint: The amount of the reclaimed coins.
     #  - uint: The amount of the reward.
     #  - boolean: Whether this vote resulted in a phase update.
@@ -845,6 +1001,7 @@ class ACB:
             self.current_phase_start = timestamp
 
             mint = 0
+            delta = 0
             self.oracle_level = self.oracle.get_mode_level()
             if self.oracle_level != Oracle.LEVEL_MAX:
                 assert(0 <= self.oracle_level and
@@ -870,26 +1027,36 @@ class ACB:
 
             # Advance to the next phase. Provide the |mint| coins to the oracle
             # as a reward.
-            self.oracle.advance(self.coin, mint)
+            burned = self.oracle.advance(self.coin, mint)
+
+            self.logging.phase_updated(
+                self.current_phase_start, self.bond_budget, delta,
+                self.oracle_level, mint, burned,
+                self.coin.total_supply, self.bond.total_supply)
 
         # Commit.
         #
         # The voter needs to deposit the DEPOSIT_RATE percentage of their coin
         # balance.
-        deposit = int(
+        deposited = int(
             self.coin.balance_of(sender) * ACB.DEPOSIT_RATE / 100)
-        assert(deposit >= 0)
+        assert(deposited >= 0)
         commit_result = self.oracle.commit(
-            self.coin, sender, committed_hash, deposit)
+            self.coin, sender, committed_hash, deposited)
+        if not commit_result:
+            deposited = 0
 
         # Reveal.
         reveal_result = self.oracle.reveal(
             sender, revealed_level, revealed_salt)
 
         # Reclaim.
-        (reclaimed, reward) = self.oracle.reclaim(self.coin, sender)
+        (reclaimed, rewarded) = self.oracle.reclaim(self.coin, sender)
 
-        return (commit_result, reveal_result, reclaimed, reward, phase_updated)
+        self.logging.voted(
+            commit_result, reveal_result, deposited, reclaimed, rewarded)
+        return (commit_result, reveal_result, deposited, reclaimed, rewarded,
+                phase_updated)
 
     # Purchase bonds.
     #
@@ -929,6 +1096,8 @@ class ACB:
 
         # Burn the corresponding coins.
         self.coin.burn(sender, amount)
+
+        self.logging.purchased_bonds(count)
         return redemption_timestamp
 
     # Redeem bonds.
@@ -965,6 +1134,8 @@ class ACB:
             count_total += count
 
         assert(self.bond.total_supply + self.bond_budget >= 0)
+
+        self.logging.redeemed_bonds(count_total)
         return count_total
 
     # Increase or decrease the total coin supply.

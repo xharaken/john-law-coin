@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+#
 # Copyright 2021 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,11 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cd `dirname $0`
-python3 coin_bond_unittest.py
-python3 logging_unittest.py
-python3 oracle_unittest.py
-python3 oracle_simulator.py
-python3 acb_unittest.py
-python3 acb_simulator.py
+import common
 
+common.reset_network(8)
+command = ("truffle test logging_unittest.js")
+common.run_test(command)

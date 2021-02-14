@@ -19,10 +19,12 @@ const JohnLawCoin = artifacts.require("JohnLawCoin");
 const JohnLawBond = artifacts.require("JohnLawBond");
 const Oracle = artifacts.require("Oracle");
 const OracleForTesting = artifacts.require("OracleForTesting");
+const Logging = artifacts.require("Logging");
 const ACB = artifacts.require("ACB");
 const ACBForTesting = artifacts.require("ACBForTesting");
 const Oracle_v2 = artifacts.require("Oracle_v2");
 const OracleForTesting_v2 = artifacts.require("OracleForTesting_v2");
+const Logging_v2 = artifacts.require("Logging_v2");
 const ACB_v2 = artifacts.require("ACB_v2");
 const ACBForTesting_v2 = artifacts.require("ACBForTesting_v2");
 const Oracle_v3 = artifacts.require("Oracle_v3");
@@ -88,10 +90,14 @@ function parameterized_test(accounts,
     let _oracle = await deployProxy(
         OracleForTesting, [], {unsafeAllowCustomTypes: true});
     common.print_contract_size(_oracle, "OracleForTesting");
+    let _logging = await Logging.new();
+    common.print_contract_size(_logging, "Logging");
     let _acb = await deployProxy(
-        ACBForTesting, [_oracle.address], {unsafeAllowCustomTypes: true});
+        ACBForTesting, [_oracle.address, _logging.address],
+        {unsafeAllowCustomTypes: true});
     common.print_contract_size(_acb, "ACBForTesting");
     await _oracle.transferOwnership(_acb.address);
+    await _logging.transferOwnership(_acb.address);
     await _oracle.overrideConstants(_level_max, _reclaim_threshold,
                                      _proportional_reward_rate);
     await _acb.overrideConstants(_bond_redemption_price,
@@ -131,11 +137,35 @@ function parameterized_test(accounts,
         this.reset_local();
       }
 
+      reset_local() {
+        this.reveal_hit = 0;
+        this.reveal_miss = 0;
+        this.reclaim_hit = 0;
+        this.reclaim_miss = 0;
+        this.reward_hit = 0;
+        this.reward_miss = 0;
+        this.redeem_count = 0;
+        this.fast_redeem_count = 0;
+        this.redemption_count = 0;
+        this.redeem_hit = 0;
+        this.purchase_hit = 0;
+        this.purchase_count = 0;
+        this.delta = 0;
+        this.mint = 0;
+        this.lost = 0;
+        this.oracle_level = 0;
+        this.deposited = 0;
+        this.reclaimed = 0;
+        this.rewarded = 0;
+      }
+
       reset_total() {
         this.total_reveal_hit = 0;
         this.total_reveal_miss = 0;
         this.total_reclaim_hit = 0;
         this.total_reclaim_miss = 0;
+        this.total_reward_hit = 0;
+        this.total_reward_miss = 0;
         this.supply_increased = 0;
         this.supply_decreased = 0;
         this.supply_nochange = 0;
@@ -144,23 +174,9 @@ function parameterized_test(accounts,
         this.total_fast_redeem_count = 0;
         this.total_redeem_hit = 0;
         this.total_purchase_hit = 0;
+        this.total_purchase_count = 0;
         this.total_mint = 0;
         this.total_lost = 0;
-      }
-
-      reset_local() {
-        this.reveal_hit = 0;
-        this.reveal_miss = 0;
-        this.reclaim_hit = 0;
-        this.reclaim_miss = 0;
-        this.redeem_count = 0;
-        this.fast_redeem_count = 0;
-        this.redemption_count = 0;
-        this.redeem_hit = 0;
-        this.purchase_hit = 0;
-        this.delta = 0;
-        this.mint = 0;
-        this.lost = 0;
       }
 
       update_total() {
@@ -168,6 +184,8 @@ function parameterized_test(accounts,
         this.total_reveal_miss += this.reveal_miss;
         this.total_reclaim_hit += this.reclaim_hit;
         this.total_reclaim_miss += this.reclaim_miss;
+        this.total_reward_hit += this.reward_hit;
+        this.total_reward_miss += this.reward_miss;
         if (this.delta > 0) {
           this.supply_increased += 1;
         } else if (this.delta < 0) {
@@ -180,6 +198,7 @@ function parameterized_test(accounts,
         this.total_redemption_count += this.redemption_count;
         this.total_redeem_hit += this.redeem_hit;
         this.total_purchase_hit += this.purchase_hit;
+        this.total_purchase_count += this.purchase_count;
         this.total_mint += this.mint;
         this.total_lost += this.lost;
       }
@@ -227,6 +246,31 @@ function parameterized_test(accounts,
       await redeem_bonds();
       await purchase_bonds();
 
+      let acb_log = await get_acb_logs(await _logging.log_index_());
+      assert.equal(acb_log.current_phase_start,
+                   (await _acb.getTimestamp()).toNumber());
+      assert.equal(acb_log.bond_budget, bond_budget);
+      assert.equal(acb_log.coin_supply_delta, _metrics.delta);
+      assert.equal(acb_log.oracle_level, _metrics.oracle_level);
+      assert.equal(acb_log.minted_coins, _metrics.mint);
+      assert.equal(acb_log.burned_coins, _metrics.lost);
+      assert.equal(acb_log.coin_total_supply, coin_supply2);
+      assert.equal(acb_log.bond_total_supply, bond_supply);
+      assert.equal(acb_log.purchased_bonds,
+                   _metrics.purchase_count);
+      assert.equal(acb_log.redeemed_bonds, _metrics.redeem_count);
+      let vote_log = await get_vote_logs(await _logging.log_index_());
+      assert.equal(vote_log.commit_succeeded,
+                   _metrics.reveal_hit + _metrics.reveal_miss);
+      assert.equal(vote_log.deposited, _metrics.deposited);
+      assert.equal(vote_log.commit_failed, 0);
+      assert.equal(vote_log.reveal_succeeded, _metrics.reveal_hit);
+      assert.equal(vote_log.reveal_failed, _metrics.reveal_miss);
+      assert.equal(vote_log.reclaim_succeeded, _metrics.reclaim_hit);
+      assert.equal(vote_log.reward_succeeded, _metrics.reward_hit);
+      assert.equal(vote_log.reclaimed, _metrics.reclaimed);
+      assert.equal(vote_log.rewarded, _metrics.rewarded);
+
       if (true) {
         let coin_supply3 = await get_coin_supply();
         console.log("epoch=" + epoch +
@@ -240,6 +284,11 @@ function parameterized_test(accounts,
                     "=" + divide_or_zero(100 * _metrics.reclaim_hit,
                                          _metrics.reclaim_hit +
                                          _metrics.reclaim_miss) +
+                    "% reward_hit=" + _metrics.reward_hit +
+                    "/" + (_metrics.reward_hit + _metrics.reward_miss) +
+                    "=" + divide_or_zero(100 * _metrics.reward_hit,
+                                         _metrics.reward_hit +
+                                         _metrics.reward_miss) +
                     "% purchase_hit=" + _metrics.purchase_hit +
                     "/" + _voter_count +
                     "=" + divide_or_zero(100 * _metrics.purchase_hit,
@@ -285,6 +334,12 @@ function parameterized_test(accounts,
                     "=" + divide_or_zero(100 * _metrics.total_reclaim_hit,
                                          (_metrics.total_reclaim_hit +
                                           _metrics.total_reclaim_miss)) +
+                    "% reward_hit=" + _metrics.total_reward_hit +
+                    "/" + (_metrics.total_reward_hit +
+                           _metrics.total_reward_miss) +
+                    "=" + divide_or_zero(100 * _metrics.total_reward_hit,
+                                         (_metrics.total_reward_hit +
+                                          _metrics.total_reward_miss)) +
                     "% purchase_hit=" + _metrics.total_purchase_hit +
                     "/" + _voter_count * epoch +
                     "=" + divide_or_zero(100 * _metrics.total_purchase_hit,
@@ -360,6 +415,7 @@ function parameterized_test(accounts,
                      voter.bonds[redemption]);
 
         _metrics.purchase_hit += 1;
+        _metrics.purchase_count += count;
       }
     }
 
@@ -595,9 +651,9 @@ function parameterized_test(accounts,
         let bond_supply = await get_bond_supply();
         let bond_budget = (await _acb.bond_budget_()).toNumber();
 
-        let reclaimed_deposit = 0;
+        let reclaimed = 0;
         if (reclaim_result) {
-          reclaimed_deposit = _voters[i].deposit[prev_prev];
+          reclaimed = _voters[i].deposit[prev_prev];
         }
 
         let reward = 0;
@@ -618,40 +674,41 @@ function parameterized_test(accounts,
 
         _voters[i].balance = (_voters[i].balance -
                               _voters[i].deposit[current] +
-                              reclaimed_deposit + reward);
-        reclaimed_total += reclaimed_deposit + reward;
+                              reclaimed + reward);
+        reclaimed_total += reclaimed + reward;
 
         await check_vote(committed_hash,
                          _voters[i].revealed_level[prev],
                          _voters[i].revealed_salt[prev],
                          {from: _voters[i].address},
-                         true, reveal_result,
-                         reclaimed_deposit, reward, !commit_observed);
-
-        let ret = await _acb.vote.call(committed_hash,
-                                       _voters[i].revealed_level[prev],
-                                       _voters[i].revealed_salt[prev],
-                                       {from: _voters[i].address});
-        assert.equal(ret[0], false);
-        assert.equal(ret[1], false);
-        assert.equal(ret[2], 0);
-        assert.equal(ret[3], false);
+                         true, reveal_result, _voters[i].deposit[current],
+                         reclaimed, reward, !commit_observed);
 
         assert.equal(await get_balance(_voters[i].address),
                      _voters[i].balance);
         assert.equal((await _acb.current_phase_start_()).toNumber(),
                      (await _acb.getTimestamp()).toNumber())
 
+        _metrics.deposited += _voters[i].deposit[current];
+        _metrics.reclaimed += reclaimed;
+        _metrics.rewarded += reward;
+
         if (reveal_result) {
           _metrics.reveal_hit += 1;
         } else {
           _metrics.reveal_miss += 1;
         }
-        if (reclaim_result > 0) {
+        if (reclaimed > 0) {
           _metrics.reclaim_hit += 1;
         } else {
           _metrics.reclaim_miss += 1;
         }
+        if (reward > 0) {
+          _metrics.reward_hit += 1;
+        } else {
+          _metrics.reward_miss += 1;
+        }
+
         if (commit_observed == false) {
           assert.equal(await get_bond_supply(), bond_supply);
           if (mode_level == _level_max) {
@@ -670,6 +727,7 @@ function parameterized_test(accounts,
           _metrics.delta = delta;
           _metrics.mint = mint;
           _metrics.lost = _lost_deposit[mod(epoch - 1, 3)];
+          _metrics.oracle_level = mode_level;
         } else {
           assert.equal(await _acb.oracle_level_(), mode_level);
           assert.equal(await get_bond_supply(), bond_supply);
@@ -685,16 +743,18 @@ function parameterized_test(accounts,
       if (!_should_upgrade) {
         return;
       }
-      if (epoch == 10) {
+      if (epoch == 3) {
         _oracle = await upgradeProxy(
             _oracle.address, OracleForTesting_v2,
             {unsafeAllowCustomTypes: true});
         common.print_contract_size(_oracle, "OracleForTesting_v2");
+        let logging = await Logging_v2.new();
+        common.print_contract_size(logging, "Logging_v2");
         _acb = await upgradeProxy(
             _acb.address, ACBForTesting_v2, {unsafeAllowCustomTypes: true});
         common.print_contract_size(_acb, "ACBForTesting_v2");
-        await _acb.upgrade(_oracle.address);
-      } else if (epoch == 20) {
+        await _acb.upgrade(_oracle.address, logging.address);
+      } else if (epoch == 6) {
         _oracle = await upgradeProxy(
             _oracle.address, OracleForTesting_v3,
             {unsafeAllowCustomTypes: true});
@@ -716,7 +776,8 @@ function parameterized_test(accounts,
 
     async function check_vote(
         committed_hash, revealed_level, revealed_salt, option,
-        commit_result, reveal_result, reclaimed, reward, phase_updated) {
+        commit_result, reveal_result, deposited, reclaimed, rewarded,
+        phase_updated) {
       let receipt = await _acb.vote(
           committed_hash, revealed_level, revealed_salt, option);
       let args = receipt.logs.filter(e => e.event == 'VoteEvent')[0].args;
@@ -726,9 +787,10 @@ function parameterized_test(accounts,
       assert.equal(args[3], revealed_salt);
       assert.equal(args[4], commit_result);
       assert.equal(args[5], reveal_result);
-      assert.equal(args[6], reclaimed);
-      assert.equal(args[7], reward);
-      assert.equal(args[8], phase_updated);
+      assert.equal(args[6], deposited);
+      assert.equal(args[7], reclaimed);
+      assert.equal(args[8], rewarded);
+      assert.equal(args[9], phase_updated);
     }
 
     async function check_transfer(receiver, amount, option) {
@@ -774,8 +836,38 @@ function parameterized_test(accounts,
     async function get_bond_supply() {
       return (await _bond.totalSupply()).toNumber();
     }
-  });
 
+    async function get_vote_logs(log_index) {
+      const ret = await _logging.getVoteLog(log_index);
+      let vote_log = {};
+      vote_log.commit_succeeded = ret[0];
+      vote_log.commit_failed = ret[1];
+      vote_log.reveal_succeeded = ret[2];
+      vote_log.reveal_failed = ret[3];
+      vote_log.reclaim_succeeded = ret[4];
+      vote_log.reward_succeeded = ret[5];
+      vote_log.deposited = ret[6];
+      vote_log.reclaimed = ret[7];
+      vote_log.rewarded = ret[8];
+      return vote_log;
+    }
+
+    async function get_acb_logs(log_index) {
+      const ret = await _logging.getACBLog(log_index);
+      let acb_log = {};
+      acb_log.minted_coins = ret[0];
+      acb_log.burned_coins = ret[1];
+      acb_log.coin_supply_delta = ret[2];
+      acb_log.bond_budget = ret[3];
+      acb_log.purchased_bonds = ret[4];
+      acb_log.redeemed_bonds = ret[5];
+      acb_log.coin_total_supply = ret[6];
+      acb_log.bond_total_supply = ret[7];
+      acb_log.oracle_level = ret[8];
+      acb_log.current_phase_start = ret[9];
+      return acb_log;
+    }
+  });
 }
 
 function divide_or_zero(a, b) {

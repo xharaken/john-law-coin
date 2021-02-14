@@ -14,14 +14,17 @@
 
 const { deployProxy } = require('@openzeppelin/truffle-upgrades');
 const Oracle = artifacts.require("Oracle");
+const Logging = artifacts.require("Logging");
 const ACB = artifacts.require("ACB");
 
 module.exports = async function (deployer) {
   let oracle = await deployProxy(
       Oracle, [],
       {deployer: deployer, unsafeAllowCustomTypes: true});
+  let logging = await Logging.new();
   let acb = await deployProxy(
-      ACB, [oracle.address],
+      ACB, [oracle.address, logging.address],
       {deployer: deployer, unsafeAllowCustomTypes: true});
   await oracle.transferOwnership(acb.address);
+  await logging.transferOwnership(acb.address);
 };
