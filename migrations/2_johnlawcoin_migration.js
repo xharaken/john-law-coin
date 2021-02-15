@@ -16,6 +16,8 @@ const { deployProxy } = require('@openzeppelin/truffle-upgrades');
 const Oracle = artifacts.require("Oracle");
 const Logging = artifacts.require("Logging");
 const ACB = artifacts.require("ACB");
+const JohnLawCoin = artifacts.require("JohnLawCoin");
+const JohnLawBond = artifacts.require("JohnLawBond");
 
 module.exports = async function (deployer) {
   let oracle = await deployProxy(
@@ -30,4 +32,6 @@ module.exports = async function (deployer) {
   console.log("ACB address: ", acb.address);
   console.log("Oracle address: ", oracle.address);
   console.log("Logging address: ", logging.address);
+  console.log("JohnLawCoin address: ", await acb.coin_());
+  console.log("JohnLawBond address: ", await acb.bond_());
 };

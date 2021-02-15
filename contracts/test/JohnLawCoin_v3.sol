@@ -136,10 +136,13 @@ contract Oracle_v3 is OwnableUpgradeable {
   uint public epoch_timestamp_v2_;
   
   // Events.
-  event CommitEvent(address indexed, bytes32, uint);
-  event RevealEvent(address indexed, uint, uint);
-  event ReclaimEvent(address indexed, uint, uint);
-  event AdvancePhaseEvent(uint indexed, uint, uint);
+  event CommitEvent(address indexed sender,
+                    bytes32 committed_hash, uint deposited);
+  event RevealEvent(address indexed sender,
+                    uint revealed_level, uint revealed_salt);
+  event ReclaimEvent(address indexed sender, uint deposited, uint rewarded);
+  event AdvancePhaseEvent(uint indexed epoch_timestamp,
+                          uint minted, uint burned);
 
   function upgrade()
       public onlyOwner {
@@ -647,11 +650,16 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
   Oracle_v3 public oracle_v3_;
   
   // Events.
-  event VoteEvent(address indexed, bytes32, uint, uint,
-                  bool, bool, uint, uint, uint, bool);
-  event PurchaseBondsEvent(address indexed, uint, uint);
-  event RedeemBondsEvent(address indexed, uint[], uint);
-  event ControlSupplyEvent(int, int, uint);
+  event VoteEvent(address indexed sender, bytes32 committed_hash,
+                  uint revealed_level, uint revealed_salt,
+                  bool commit_result, bool reveal_result,
+                  uint deposited, uint reclaimed, uint rewarded,
+                  bool phase_updated);
+  event PurchaseBondsEvent(address indexed sender, uint count,
+                           uint redemption_timestamp);
+  event RedeemBondsEvent(address indexed sender,
+                         uint[] redemption_timestamps, uint count);
+  event ControlSupplyEvent(int delta, int bond_budget, uint mint);
 
   function upgrade(Oracle_v3 oracle)
       public onlyOwner {

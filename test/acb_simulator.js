@@ -767,14 +767,6 @@ function parameterized_test(accounts,
       }
     }
 
-    async function check_create_account(option) {
-      let receipt = await _acb.create_account(option);
-      let args =
-          receipt.logs.filter(e => e.event == 'CreateAccountEvent')[0].args;
-      assert.equal(args[0], option.from);
-
-    }
-
     async function check_vote(
         committed_hash, revealed_level, revealed_salt, option,
         commit_result, reveal_result, deposited, reclaimed, rewarded,
@@ -782,44 +774,44 @@ function parameterized_test(accounts,
       let receipt = await _acb.vote(
           committed_hash, revealed_level, revealed_salt, option);
       let args = receipt.logs.filter(e => e.event == 'VoteEvent')[0].args;
-      assert.equal(args[0], option.from);
-      assert.equal(args[1], committed_hash);
-      assert.equal(args[2], revealed_level);
-      assert.equal(args[3], revealed_salt);
-      assert.equal(args[4], commit_result);
-      assert.equal(args[5], reveal_result);
-      assert.equal(args[6], deposited);
-      assert.equal(args[7], reclaimed);
-      assert.equal(args[8], rewarded);
-      assert.equal(args[9], phase_updated);
+      assert.equal(args.sender, option.from);
+      assert.equal(args.committed_hash, committed_hash);
+      assert.equal(args.revealed_level, revealed_level);
+      assert.equal(args.revealed_salt, revealed_salt);
+      assert.equal(args.commit_result, commit_result);
+      assert.equal(args.reveal_result, reveal_result);
+      assert.equal(args.deposited, deposited);
+      assert.equal(args.reclaimed, reclaimed);
+      assert.equal(args.rewarded, rewarded);
+      assert.equal(args.phase_updated, phase_updated);
     }
 
     async function check_transfer(receiver, amount, option) {
       let receipt = await _acb.transfer(receiver, amount, option);
       let args = receipt.logs.filter(e => e.event == 'TransferEvent')[0].args;
-      assert.equal(args[0], option.from);
-      assert.equal(args[1], receiver);
-      assert.equal(args[2], amount);
+      assert.equal(args.from, option.from);
+      assert.equal(args.to, receiver);
+      assert.equal(args.value, amount);
     }
 
     async function check_purchase_bonds(count, option, redemption) {
       let receipt = await _acb.purchaseBonds(count, option);
       let args =
           receipt.logs.filter(e => e.event == 'PurchaseBondsEvent')[0].args;
-      assert.equal(args[0], option.from);
-      assert.equal(args[1], count);
-      assert.equal(args[2], redemption);
+      assert.equal(args.sender, option.from);
+      assert.equal(args.count, count);
+      assert.equal(args.redemption_timestamp, redemption);
     }
 
     async function check_redeem_bonds(redemptions, option, count_total) {
       let receipt = await _acb.redeemBonds(redemptions, option);
       let args =
           receipt.logs.filter(e => e.event == 'RedeemBondsEvent')[0].args;
-      assert.equal(args[0], option.from);
+      assert.equal(args.sender, option.from);
       for (let i = 0; i < redemptions.length; i++) {
-        assert.equal(args[1][i], redemptions[i]);
+        assert.equal(args.redemption_timestamps[i], redemptions[i]);
       }
-      assert.equal(args[2], count_total);
+      assert.equal(args.count, count_total);
     }
 
     async function get_balance(address) {

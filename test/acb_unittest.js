@@ -89,6 +89,7 @@ function parameterized_test(accounts,
                                   {from: accounts[1]});
 
     let _coin = await JohnLawCoin.at(await _acb.coin_());
+    let _bond = await JohnLawBond.at(await _acb.bond_());
     let _initial_coin_supply = (await _coin.balanceOf(accounts[1])).toNumber();
     assert.equal(await _acb.paused(), false);
 
@@ -441,9 +442,9 @@ function parameterized_test(accounts,
       assert.equal(current.bonds[accounts[1]][t2], 10);
       assert.equal(current.bonds[accounts[2]][t2], 11);
       assert.equal(current.bonds[accounts[3]][t3], 48);
-      assert.equal(await bond.numberOfBondsOwnedBy(accounts[1]), 10);
-      assert.equal(await bond.numberOfBondsOwnedBy(accounts[2]), 22);
-      assert.equal(await bond.numberOfBondsOwnedBy(accounts[3]), 48);
+      assert.equal(await _bond.numberOfBondsOwnedBy(accounts[1]), 10);
+      assert.equal(await _bond.numberOfBondsOwnedBy(accounts[2]), 22);
+      assert.equal(await _bond.numberOfBondsOwnedBy(accounts[3]), 48);
       check_redemption_timestamps(current, accounts[1], [t2]);
       check_redemption_timestamps(current, accounts[2], [t1, t2]);
       check_redemption_timestamps(current, accounts[3], [t3]);
@@ -534,9 +535,9 @@ function parameterized_test(accounts,
       await check_redeem_bonds([t2], {from: accounts[1]}, 10);
       current = await get_current(sub_accounts, redemptions);
       assert.equal(current.bonds[accounts[1]][t2], 0);
-      assert.equal(await bond.numberOfBondsOwnedBy(accounts[1]), 0);
-      assert.equal(await bond.numberOfBondsOwnedBy(accounts[2]), 0);
-      assert.equal(await bond.numberOfBondsOwnedBy(accounts[3]), 0);
+      assert.equal(await _bond.numberOfBondsOwnedBy(accounts[1]), 0);
+      assert.equal(await _bond.numberOfBondsOwnedBy(accounts[2]), 0);
+      assert.equal(await _bond.numberOfBondsOwnedBy(accounts[3]), 0);
       check_redemption_timestamps(current, accounts[1], []);
       assert.equal(current.balances[accounts[1]],
                    balance + 10 * _bond_redemption_price);
@@ -596,9 +597,9 @@ function parameterized_test(accounts,
       assert.equal(current.bonds[accounts[2]][t6], 20);
       assert.equal(current.bonds[accounts[2]][t7], 20);
       assert.equal(current.bonds[accounts[2]][t8], 20);
-      assert.equal(await bond.numberOfBondsOwnedBy(accounts[1]), 0);
-      assert.equal(await bond.numberOfBondsOwnedBy(accounts[2]), 60);
-      assert.equal(await bond.numberOfBondsOwnedBy(accounts[3]), 0);
+      assert.equal(await _bond.numberOfBondsOwnedBy(accounts[1]), 0);
+      assert.equal(await _bond.numberOfBondsOwnedBy(accounts[2]), 60);
+      assert.equal(await _bond.numberOfBondsOwnedBy(accounts[3]), 0);
       check_redemption_timestamps(current, accounts[2], [t6, t7, t8]);
       assert.equal(current.coin_supply,
                    coin_supply + 40 * _bond_redemption_price);
@@ -770,9 +771,9 @@ function parameterized_test(accounts,
       assert.equal(current.bonds[accounts[2]][t6], 0);
       assert.equal(current.bonds[accounts[2]][t7], 0);
       assert.equal(current.bonds[accounts[2]][t8], 0);
-      assert.equal(await bond.numberOfBondsOwnedBy(accounts[1]), 0);
-      assert.equal(await bond.numberOfBondsOwnedBy(accounts[2]), 0);
-      assert.equal(await bond.numberOfBondsOwnedBy(accounts[3]), 0);
+      assert.equal(await _bond.numberOfBondsOwnedBy(accounts[1]), 0);
+      assert.equal(await _bond.numberOfBondsOwnedBy(accounts[2]), 0);
+      assert.equal(await _bond.numberOfBondsOwnedBy(accounts[3]), 0);
       check_redemption_timestamps(current, accounts[2], []);
       assert.equal(current.coin_supply,
                    coin_supply + 7 * _bond_redemption_price);
@@ -3082,45 +3083,45 @@ function parameterized_test(accounts,
       let receipt = await _acb.vote(
           committed_hash, revealed_level, revealed_salt, option);
       let args = receipt.logs.filter(e => e.event == 'VoteEvent')[0].args;
-      assert.equal(args[0], option.from);
-      assert.equal(args[1], committed_hash);
-      assert.equal(args[2], revealed_level);
-      assert.equal(args[3], revealed_salt);
-      assert.equal(args[4], commit_result);
-      assert.equal(args[5], reveal_result);
-      assert.equal(args[6], deposited);
-      assert.equal(args[7], reclaimed);
-      assert.equal(args[8], rewarded);
-      assert.equal(args[9], phase_updated);
+      assert.equal(args.sender, option.from);
+      assert.equal(args.committed_hash, committed_hash);
+      assert.equal(args.revealed_level, revealed_level);
+      assert.equal(args.revealed_salt, revealed_salt);
+      assert.equal(args.commit_result, commit_result);
+      assert.equal(args.reveal_result, reveal_result);
+      assert.equal(args.deposited, deposited);
+      assert.equal(args.reclaimed, reclaimed);
+      assert.equal(args.rewarded, rewarded);
+      assert.equal(args.phase_updated, phase_updated);
     }
 
     async function check_purchase_bonds(count, option, redemption) {
       let receipt = await _acb.purchaseBonds(count, option);
       let args =
           receipt.logs.filter(e => e.event == 'PurchaseBondsEvent')[0].args;
-      assert.equal(args[0], option.from);
-      assert.equal(args[1], count);
-      assert.equal(args[2], redemption);
+      assert.equal(args.sender, option.from);
+      assert.equal(args.count, count);
+      assert.equal(args.redemption_timestamp, redemption);
     }
 
     async function check_redeem_bonds(redemptions, option, count_total) {
       let receipt = await _acb.redeemBonds(redemptions, option);
       let args =
           receipt.logs.filter(e => e.event == 'RedeemBondsEvent')[0].args;
-      assert.equal(args[0], option.from);
+      assert.equal(args.sender, option.from);
       for (let i = 0; i < redemptions.length; i++) {
-        assert.equal(args[1][i], redemptions[i]);
+        assert.equal(args.redemption_timestamps[i], redemptions[i]);
       }
-      assert.equal(args[2], count_total);
+      assert.equal(args.count, count_total);
     }
 
     async function check_controlSupply(delta, bond_budget, mint) {
       let receipt = await _acb.controlSupply(delta);
       let args =
           receipt.logs.filter(e => e.event == 'ControlSupplyEvent')[0].args;
-      assert.equal(args[0], delta);
-      assert.equal(args[1], bond_budget);
-      assert.equal(args[2], mint);
+      assert.equal(args.delta, delta);
+      assert.equal(args.bond_budget, bond_budget);
+      assert.equal(args.mint, mint);
     }
 
     async function get_current(accounts, redemptions) {

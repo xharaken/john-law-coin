@@ -249,17 +249,17 @@ function parameterized_test(accounts,
           await _oracle.commit(_coin.address, account, committed_hash, deposit);
       await _oracle.revokeOwnership(_coin.address);
       let args = receipt.logs.filter(e => e.event == 'CommitEvent')[0].args;
-      assert.equal(args[0], account);
-      assert.equal(args[1], committed_hash);
-      assert.equal(args[2], deposit);
+      assert.equal(args.sender, account);
+      assert.equal(args.committed_hash, committed_hash);
+      assert.equal(args.deposited, deposit);
     }
 
     async function check_reveal(account, level, salt) {
       let receipt = await _oracle.reveal(account, level, salt);
       let args = receipt.logs.filter(e => e.event == 'RevealEvent')[0].args;
-      assert.equal(args[0], account);
-      assert.equal(args[1], level);
-      assert.equal(args[2], salt);
+      assert.equal(args.sender, account);
+      assert.equal(args.revealed_level, level);
+      assert.equal(args.revealed_salt, salt);
     }
 
     async function check_reclaim(account, reclaimed, reward) {
@@ -267,9 +267,9 @@ function parameterized_test(accounts,
       let receipt = await _oracle.reclaim(_coin.address, account);
       await _oracle.revokeOwnership(_coin.address);
       let args = receipt.logs.filter(e => e.event == 'ReclaimEvent')[0].args;
-      assert.equal(args[0], account);
-      assert.equal(args[1].toNumber(), reclaimed);
-      assert.equal(args[2].toNumber(), reward);
+      assert.equal(args.sender, account);
+      assert.equal(args.reclaimed, reclaimed);
+      assert.equal(args.rewarded, reward);
     }
 
     async function check_advance(mint, burned) {
@@ -278,9 +278,9 @@ function parameterized_test(accounts,
       await _oracle.revokeOwnership(_coin.address);
       let args = receipt.logs.filter(
           e => e.event == 'AdvancePhaseEvent')[0].args;
-      assert.isTrue(args[0] >= 3);
-      assert.equal(args[1].toNumber(), mint);
-      assert.equal(args[2].toNumber(), burned);
+      assert.isTrue(args.epoch_timestamp >= 3);
+      assert.equal(args.minted, mint);
+      assert.equal(args.burned, burned);
     }
 
   });
