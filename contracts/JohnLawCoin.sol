@@ -1032,7 +1032,8 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
   event PurchaseBondsEvent(address indexed sender, uint count,
                            uint redemption_timestamp);
   event RedeemBondsEvent(address indexed sender,
-                         uint[] redemption_timestamps, uint count);
+                         uint[] redeemed_redemption_timestamps,
+                         uint[] redeemed_counts, uint count);
   event ControlSupplyEvent(int delta, int bond_budget, uint mint);
 
   // Initializer.
@@ -1358,7 +1359,9 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
   function redeemBonds(uint[] memory redemption_timestamps)
       public whenNotPaused returns (uint) {
     address sender = msg.sender;
-    
+
+    uint[] memory redeemed_redemption_timestamps;
+    uint[] memory redeemed_counts;
     uint count_total = 0;
     for (uint i = 0; i < redemption_timestamps.length; i++) {
       uint redemption_timestamp = redemption_timestamps[i];
@@ -1382,12 +1385,17 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
       bond_budget_ = bond_budget_.add(count.toInt256());
       bond_.burn(sender, redemption_timestamp, count);
       count_total = count_total.add(count);
+      if (count > 0) {
+        redeemed_redemption_timestamps.push(redemption_timestamp);
+        redeemed_counts.push(count);
+      }
     }
     require((bond_.totalSupply().toInt256()).add(bond_budget_) >= 0,
             "redeemBonds: 1");
     
     logging_.redeemedBonds(count_total);
-    emit RedeemBondsEvent(sender, redemption_timestamps, count_total);
+    emit RedeemBondsEvent(
+        sender, redeemed_redemption_timestamps, redeemed_counts, count_total);
     return count_total;
   }
 
