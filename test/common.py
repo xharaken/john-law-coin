@@ -24,7 +24,7 @@ def kill_ganache():
         kill_command, shell=True, stdin=subprocess.DEVNULL,
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     kill_proc.communicate()
-    command = "rm -rf /tmp/tmp-*"
+    command = "sudo rm -rf /tmp/tmp-*"
     subprocess.run(command, shell=True)
 
 def reset_network(voters):
