@@ -1438,13 +1438,13 @@ function parameterized_test(accounts,
         real_other_level <= real_mode_level + _reclaim_threshold) {
       balance = await balance_of(accounts[2]);
       await check_reclaim(  accounts[2], _deposit, 0);
-      assert.equal(await balance_of(accounts[2], balance + _deposit));
+      assert.equal(await balance_of(accounts[2]), balance + _deposit);
       balance = await balance_of(accounts[4]);
       await check_reclaim(  accounts[4], _deposit, 0);
-      assert.equal(await balance_of(accounts[4], balance + _deposit));
+      assert.equal(await balance_of(accounts[4]), balance + _deposit);
       balance = await balance_of(accounts[6]);
       await check_reclaim(  accounts[6], _deposit, 0);
-      assert.equal(await balance_of(accounts[6], balance + _deposit));
+      assert.equal(await balance_of(accounts[6]), balance + _deposit);
     } else {
       array_equal(await _oracle.reclaim.call(_coin.address, accounts[2]),
                   [0, 0]);
