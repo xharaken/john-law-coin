@@ -30,12 +30,12 @@ contract OracleForTesting_v2 is Oracle_v2 {
     PROPORTIONAL_REWARD_RATE = proportional_reward_rate;
 
     require(2 <= LEVEL_MAX && LEVEL_MAX < 100,
-            "override_constants: 1");
+            "overrideConstants: 1");
     require(0 <= RECLAIM_THRESHOLD && RECLAIM_THRESHOLD < LEVEL_MAX,
-            "override_constants: 2");
+            "overrideConstants: 2");
     require(0 <= PROPORTIONAL_REWARD_RATE &&
             PROPORTIONAL_REWARD_RATE <= 100,
-            "override_constants: 3");
+            "overrideConstants: 3");
 
     for (uint i = 0; i < 3; i++) {
       for (uint level = epochs_[i].votes.length; level < LEVEL_MAX; level++) {
@@ -67,22 +67,22 @@ contract ACBForTesting_v2 is ACB_v2 {
     LEVEL_TO_BOND_PRICE = level_to_bond_price;
 
     require(1 <= BOND_REDEMPTION_PRICE && BOND_REDEMPTION_PRICE <= 100000,
-            "override_constants: 1");
+            "overrideConstants: 1");
     require(1 <= BOND_REDEMPTION_PERIOD &&
             BOND_REDEMPTION_PERIOD <= 365 * 24 * 60 * 60,
-            "override_constants: 2");
+            "overrideConstants: 2");
     require(1 <= PHASE_DURATION && PHASE_DURATION <= 30 * 24 * 60 * 60,
-            "override_constants: 3");
+            "overrideConstants: 3");
     require(0 <= DEPOSIT_RATE && DEPOSIT_RATE <= 100,
-            "override_constants: 4");
+            "overrideConstants: 4");
     require(1 <= DAMPING_FACTOR && DAMPING_FACTOR <= 100,
-            "override_constants: 5");
+            "overrideConstants: 5");
     require(0 <= INITIAL_COIN_SUPPLY,
-            "override_constants: 6");
+            "overrideConstants: 6");
     for (uint i = 0; i < LEVEL_TO_BOND_PRICE.length; i++) {
       require(
           LEVEL_TO_BOND_PRICE[i] <= BOND_REDEMPTION_PRICE,
-          "override_constants: 7");
+          "overrideConstants: 7");
     }
   }
 
