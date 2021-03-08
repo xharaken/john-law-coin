@@ -34,5 +34,5 @@ If you want to contribute to grow the ecosystem of JohnLawCoin (thanks!), please
 
 If you have any questions / feedback, create a GitHub issue or talk to [@johnlawcoin on Twitter](https://twitter.com/johnlawcoin).
 
-*[Note: This is not an officially supported Google product.]*
+*[Note: This product and opinions are the author's own and not the view of the author's employer.]*
 
