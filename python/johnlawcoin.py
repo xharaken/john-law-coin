@@ -935,11 +935,11 @@ class ACB:
         # increase the total coin supply.
         self.bond_budget = 0
 
-        # The timestamp when the current phase started.
-        self.current_phase_start = 0
-
         # The current timestamp.
         self.timestamp = 0
+
+        # The timestamp when the current phase started.
+        self.current_phase_start = self.get_timestamp()
 
         # The oracle contract.
         self.oracle = oracle

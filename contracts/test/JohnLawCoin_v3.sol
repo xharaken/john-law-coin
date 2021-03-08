@@ -785,7 +785,7 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
     bond_budget_ = 0;
     
     // The timestamp when the current phase started.
-    current_phase_start_ = 0;
+    current_phase_start_ = getTimestamp();
 
     // The oracle contract.
     oracle_ = oracle;
