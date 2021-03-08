@@ -80,6 +80,7 @@ contract JohnLawCoin is ERC20Pausable, Ownable {
   // Constructor.
   constructor()
       ERC20(NAME, SYMBOL) {
+    _setupDecimals(0);
   }
 
   // Mint coins to one account. Only the ACB and its oracle can call this

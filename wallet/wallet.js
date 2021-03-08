@@ -74,12 +74,15 @@ async function sendCoins() {
     const receipt = await coin_contract.methods.transfer(address, amount).send(
         {from: ethereum.selectedAddress});
     console.log(receipt);
+    if (!receipt.events.Transfer) {
+      throw null;
+    }
     const ret = receipt.events.Transfer.returnValues;
     const message = "Sent " + ret.value + " coins to " + ret.to + ".";
     await showTransactionSuccessMessage(message, receipt);
   } catch (error) {
     console.log(error);
-    await showErrorMessage("Couldn't send coins", error);
+    await showErrorMessage("Couldn't send coins.", error);
     return;
   }
 }
@@ -87,7 +90,8 @@ async function sendCoins() {
 async function purchaseBonds() {
   try {
     const amount = $("purchase_bonds_amount").value;
-    const bond_budget = await acb_contract.methods.bond_budget_().call();
+    const bond_budget =
+          parseInt(await acb_contract.methods.bond_budget_().call());
     if (amount > bond_budget) {
       await showErrorMessage(
           "ACB's current bond budget is " + bond_budget +
@@ -98,6 +102,9 @@ async function purchaseBonds() {
           await acb_contract.methods.purchaseBonds(amount).send(
               {from: ethereum.selectedAddress});
     console.log(receipt);
+    if (!receipt.events.PurchaseBondsEvent) {
+      throw null;
+    }
     const ret = receipt.events.PurchaseBondsEvent.returnValues;
     const message = "Purchased " + ret.count +
           " bonds. The redemption timestamp is " +
@@ -112,15 +119,18 @@ async function purchaseBonds() {
 
 async function redeemBonds() {
   try {
-    const bond_budget = -(await acb_contract.methods.bond_budget_().call());
+    const bond_budget =
+        -(parseInt(await acb_contract.methods.bond_budget_().call()));
     const redemption_count =
-          await bond_contract.methods.numberOfRedemptionTimestampsOwnedBy(
-              ethereum.selectedAddress).call();
+          parseInt(await bond_contract.methods.
+                   numberOfRedemptionTimestampsOwnedBy(
+                       ethereum.selectedAddress).call());
     let redemption_timestamps = [];
     for (let index = 0; index < redemption_count; index++) {
       const redemption_timestamp =
-            (await bond_contract.methods.getRedemptionTimestampOwnedBy(
-                ethereum.selectedAddress, index).call());
+            parseInt(await bond_contract.methods.
+                     getRedemptionTimestampOwnedBy(
+                         ethereum.selectedAddress, index).call());
       redemption_timestamps.push(redemption_timestamp);
     }
     redemption_timestamps =
@@ -135,9 +145,9 @@ async function redeemBonds() {
       } else if (bond_count < bond_budget) {
         redeemable_timestamps.push(redemption_timestamp);
         const balance =
-              await bond_contract.methods.balanceOf(
-                  ethereum.selectedAddress, redemption_timestamp).call();
-        bond_count += parseInt(balance);
+              parseInt(await bond_contract.methods.balanceOf(
+                  ethereum.selectedAddress, redemption_timestamp).call());
+        bond_count += balance;
       }
     }
     console.log(redeemable_timestamps);
@@ -145,6 +155,9 @@ async function redeemBonds() {
     const receipt = await acb_contract.methods.redeemBonds(
         redeemable_timestamps).send({from: ethereum.selectedAddress});
     console.log(receipt);
+    if (!receipt.events.RedeemBondsEvent) {
+      throw null;
+    }
     const ret = receipt.events.RedeemBondsEvent.returnValues;
     let message = "Redeemed " + ret.count + " bonds.";
     await showTransactionSuccessMessage(message, receipt);
@@ -166,6 +179,9 @@ async function vote() {
     const receipt = await acb_contract.methods.vote(
         hash, reveal_level, reveal_salt).send({from: ethereum.selectedAddress});
     console.log(receipt);
+    if (!receipt.events.VoteEvent) {
+      throw null;
+    }
     const ret = receipt.events.VoteEvent.returnValues;
     const message =
           (ret.commit_result ? "Commit succeeded. You voted for the oracle " +
@@ -194,13 +210,13 @@ async function reloadInfo() {
     html += "<table><tr><td>Address</td><td class='right'>" +
         ethereum.selectedAddress + "</td></tr>";
     const coin_balance =
-          await coin_contract.methods.balanceOf(
-              ethereum.selectedAddress).call();
+          parseInt(await coin_contract.methods.balanceOf(
+              ethereum.selectedAddress).call());
     html += "<tr><td>Coin balance</td><td class='right'>" +
         coin_balance + "</td></tr>";
     const bond_balance =
-          await bond_contract.methods.numberOfBondsOwnedBy(
-              ethereum.selectedAddress).call();
+          parseInt(await bond_contract.methods.numberOfBondsOwnedBy(
+              ethereum.selectedAddress).call());
     html += "<tr><td>Bond balance</td><td class='right'>" +
         bond_balance + "</td></tr></table>";
     $("account_info").innerHTML = html;
@@ -212,7 +228,8 @@ async function reloadInfo() {
         (await coin_contract.methods.totalSupply().call()) + "</td></tr>";
     html += "<tr><td>Total bond supply</td><td class='right'>" +
         (await bond_contract.methods.totalSupply().call()) + "</td></tr>";
-    const bond_budget = await acb_contract.methods.bond_budget_().call();
+    const bond_budget =
+          parseInt(await acb_contract.methods.bond_budget_().call());
     html += "<tr><td>Bond budget</td><td class='right'>" +
         bond_budget + "</td></tr>";
     html += "<tr><td>Current time</td><td class='right'>" +
@@ -223,7 +240,8 @@ async function reloadInfo() {
     html += "<tr><td>Current phase started</td><td class='right'>" +
         getDateString(current_phase_start_ms) + "</td></tr>";
     html += "<tr><td>Oracle level</td><td class='right'>" +
-        getOracleLevelString(await acb_contract.methods.oracle_level_().call())
+        getOracleLevelString(
+            parseInt(await acb_contract.methods.oracle_level_().call()))
         + "</td></tr>";
     $("acb_info").innerHTML = html;
     $("acb_info_loading").style.display = "none";
@@ -239,7 +257,7 @@ async function reloadInfo() {
     }
 
     const epoch_timestamp =
-          await oracle_contract.methods.epoch_timestamp_().call();
+          parseInt(await oracle_contract.methods.epoch_timestamp_().call());
     const commit = await oracle_contract.methods.getCommit(
         epoch_timestamp % 3, ethereum.selectedAddress).call();
     const phase_duration_ms = 60 * 1000;
@@ -261,13 +279,15 @@ async function reloadInfo() {
       bond_list_text += "<br><br><table><tr><td>Redemption timestamp</td>" +
           "<td># of bonds</td><td>Redeemable?</td></tr>";
       const redemption_count =
-            await bond_contract.methods.numberOfRedemptionTimestampsOwnedBy(
-                ethereum.selectedAddress).call();
+            parseInt(await bond_contract.methods.
+                     numberOfRedemptionTimestampsOwnedBy(
+                         ethereum.selectedAddress).call());
       let redemption_timestamps = [];
       for (let index = 0; index < redemption_count; index++) {
         const redemption_timestamp =
-              (await bond_contract.methods.getRedemptionTimestampOwnedBy(
-                  ethereum.selectedAddress, index).call());
+              parseInt(await bond_contract.methods.
+                       getRedemptionTimestampOwnedBy(
+                           ethereum.selectedAddress, index).call());
         redemption_timestamps.push(redemption_timestamp);
       }
       redemption_timestamps =
@@ -275,8 +295,8 @@ async function reloadInfo() {
 
       for (let redemption_timestamp of redemption_timestamps) {
         const balance =
-              await bond_contract.methods.balanceOf(
-                  ethereum.selectedAddress, redemption_timestamp).call();
+              parseInt(await bond_contract.methods.balanceOf(
+                  ethereum.selectedAddress, redemption_timestamp).call());
         const redemption_timestamp_ms = parseInt(redemption_timestamp) * 1000;
         bond_list_text += "<tr><td>" + getDateString(redemption_timestamp_ms) +
             "</td><td class='right'>" + balance + "</td><td>" +
@@ -317,7 +337,7 @@ async function showAdvancedInfo() {
 async function showOracleStatus() {
   let html = "";
   const epoch_timestamp =
-        await oracle_contract.methods.epoch_timestamp_().call();
+        parseInt(await oracle_contract.methods.epoch_timestamp_().call());
   const level_max = 9;
   html += "<table><tr><td>epoch_timestamp_</td><td class='right'>" +
       epoch_timestamp + "</td></tr></table>";
@@ -348,7 +368,8 @@ async function showOracleStatus() {
 
 async function showLoggingStatus() {
   let html = "";
-  const log_index = await logging_contract.methods.log_index_().call();
+  const log_index =
+        parseInt(await logging_contract.methods.log_index_().call());
   for (let index of [log_index, log_index - 1]) {
     if (index < 0) {
       continue;
@@ -418,8 +439,9 @@ async function drawChart() {
   logs["bond_total_supply"] = [];
   logs["oracle_level"] = [];
 
-  const log_index = await logging_contract.methods.log_index_().call();
-  for (let index = 1; index <= log_index; index++) {
+  const log_index =
+        parseInt(await logging_contract.methods.log_index_().call());
+  for (let index = 0; index <= log_index; index++) {
     const vote_log =
           await logging_contract.methods.getVoteLog(index).call();
     const acb_log = await logging_contract.methods.getACBLog(index).call();
@@ -580,7 +602,7 @@ async function showErrorMessage(message, object) {
   div.className = "error";
   div.innerHTML =
       "<span class='bold'>Error</span>: " + message +
-      (object ? "<br><br>" + JSON.stringify(object) : "");
+      (object ? "<br><br>" + object.toString() : "");
   document.body.scrollIntoView({behavior: "smooth", block: "start"});
 }
 
