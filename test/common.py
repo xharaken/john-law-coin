@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os, subprocess, sys, time
+import glob, os, subprocess, sys, time
 
 def kill_ganache():
     kill_command = [
@@ -24,8 +24,11 @@ def kill_ganache():
         kill_command, shell=True, stdin=subprocess.DEVNULL,
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     kill_proc.communicate()
-    command = "sudo rm -rf /tmp/tmp-*"
+    command = "rm -rf /tmp/tmp-*/*"
     subprocess.run(command, shell=True)
+    for file in glob.glob("/tmp/tmp-*/*"):
+        command = "rm -rf " + file
+        subprocess.run(command, shell=True)
 
 def reset_network(voters):
     os.chdir(os.path.dirname(os.path.abspath(__file__)))

@@ -22,13 +22,13 @@ h1 {
 }
 
 table {
-  margin: 0.4em;
+  margin: 0.4rem;
   border-collapse: collapse;
 }
 
 td {
   border: solid 1px;
-  padding: 0.2em;
+  padding: 0.2rem;
 }
 
 .right {
@@ -46,18 +46,49 @@ td {
 
 .info {
   background: #FFEE99;
-  padding: 0.6em;
-  border-radius: 0.6em;
+  padding: 0.6rem;
+  border-radius: 0.6rem;
 }
 
 .success {
   background: #CCFFCC;
-  padding: 1em;
-  border-radius: 1em;
+  padding: 1rem;
+  border-radius: 1rem;
 }
 
 .error {
   background: #FFCCCC;
-  padding: 1em;
-  border-radius: 1em;
+  padding: 1rem;
+  border-radius: 1rem;
+}
+
+.tooltip {
+  position: relative;
+  cursor: pointer;
+  background: #DDDDDD;
+  border-radius: 1rem;
+  padding: 0.2rem 0.3rem 0.2rem 0.3rem;
+  font-size: 1rem;
+  font-weight: normal;
+}
+
+.tooltip-text {
+  opacity: 0;
+  visibility: hidden;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: -30px;
+  display: inline-block;
+  padding: 0.2rem;
+  white-space: nowrap;
+  font-size: 1rem;
+  background: #DDDDDD;
+  border-radius: 0.2rem;
+  transition: 0.3s ease-in;
+}
+
+.tooltip:hover .tooltip-text {
+  opacity: 1;
+  visibility: visible;
 }

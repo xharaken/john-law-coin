@@ -808,9 +808,6 @@ function parameterized_test(accounts,
       let args =
           receipt.logs.filter(e => e.event == 'RedeemBondsEvent')[0].args;
       assert.equal(args.sender, option.from);
-      for (let i = 0; i < redemptions.length; i++) {
-        assert.equal(args.redemption_timestamps[i], redemptions[i]);
-      }
       assert.equal(args.count, count_total);
     }
 
