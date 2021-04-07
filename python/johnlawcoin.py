@@ -852,6 +852,8 @@ class Logging:
 #-------------------------------------------------------------------------------
 
 class ACB:
+    NULL_HASH = 0
+
     # Constructor.
     #
     # Parameters
@@ -873,10 +875,10 @@ class ACB:
         # | oracle level | exchange rate    | bond issue price      | tax rate |
         # |              |                  | (annual interest rate)|          |
         # ----------------------------------------------------------------------
-        # |             0| 1 coin = 0.6 USD |      950 coins (25.0%)|       30%|
-        # |             1| 1 coin = 0.7 USD |      965 coins (16.7%)|       20%|
-        # |             2| 1 coin = 0.8 USD |      978 coins (10.1%)|       12%|
-        # |             3| 1 coin = 0.9 USD |      990 coins (4.46%)|        5%|
+        # |             0| 1 coin = 0.6 USD |      970 coins (14.1%)|       30%|
+        # |             1| 1 coin = 0.7 USD |      978 coins (10.1%)|       20%|
+        # |             2| 1 coin = 0.8 USD |      986 coins (6.32%)|       12%|
+        # |             3| 1 coin = 0.9 USD |      992 coins (3.55%)|        5%|
         # |             4| 1 coin = 1.0 USD |      997 coins (1.31%)|        0%|
         # |             5| 1 coin = 1.1 USD |      997 coins (1.31%)|        0%|
         # |             6| 1 coin = 1.2 USD |      997 coins (1.31%)|        0%|
@@ -908,7 +910,7 @@ class ACB:
 
         # LEVEL_TO_BOND_PRICE is the mapping from the oracle levels to the
         # bond prices.
-        ACB.LEVEL_TO_BOND_PRICE = [950, 965, 978, 990, 997, 997, 997, 997, 997]
+        ACB.LEVEL_TO_BOND_PRICE = [970, 978, 986, 992, 997, 997, 997, 997, 997]
 
         # The bond redemption price and the redemption period.
         ACB.BOND_REDEMPTION_PRICE = 1000 # One bond is redeemed for 1000 USD.
@@ -1019,7 +1021,9 @@ class ACB:
     #
     # Parameters
     # ----------------
-    # |committed_hash|: The hash to be committed in the current phase.
+    # |committed_hash|: The hash to be committed in the current phase. Specify
+    # ACB.NULL_HASH if you only want to reveal and reclaim previous votes and
+    # do not want to commit.
     # |revealed_level|: The oracle level to be revealed in the prior phase.
     # |revealed_salt|: The voter's salt to be revealed in the prior phase.
     #
@@ -1089,8 +1093,9 @@ class ACB:
         #
         # The voter needs to deposit the DEPOSIT_RATE percentage of their coin
         # balance.
-        deposited = int(
-            self.coin.balance_of(sender) * ACB.DEPOSIT_RATE / 100)
+        deposited = int(self.coin.balance_of(sender) * ACB.DEPOSIT_RATE / 100)
+        if committed_hash == ACB.NULL_HASH:
+            deposited = 0
         assert(deposited >= 0)
         commit_result = self.oracle.commit(
             self.coin, sender, committed_hash, deposited)

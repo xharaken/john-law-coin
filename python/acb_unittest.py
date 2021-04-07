@@ -908,7 +908,33 @@ class ACBUnitTest(unittest.TestCase):
             self.default_level, 6), (False, False, 0, 0, 0, False))
         self.assertEqual(acb.coin.balance_of(accounts[4]), balance)
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply  + mint -
+                         coin_supply + mint -
+                         remainder[(now - 1) % 3])
+
+        now = (now + 1) % 3
+        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        mint = 0
+
+        balance = acb.coin.balance_of(accounts[4])
+        coin_supply = acb.coin.total_supply
+        reward = 0
+        remainder[now] = deposit_4[(now - 2) % 3] + mint - reward
+        deposit_4[now] = 0
+        self.assertEqual(acb.vote(
+            accounts[4], ACB.NULL_HASH, self.default_level, 7),
+                         (True, False, deposit_4[now],
+                          0, reward, True))
+        self.assertEqual(acb.oracle_level, Oracle.LEVEL_MAX)
+        self.assertEqual(acb.coin.balance_of(accounts[4]),
+                         balance - deposit_4[now] + reward)
+        balance = acb.coin.balance_of(accounts[4])
+        self.assertEqual(acb.vote(
+            accounts[4], Oracle.hash(
+                accounts[4], self.default_level, 8),
+            self.default_level, 6), (False, False, 0, 0, 0, False))
+        self.assertEqual(acb.coin.balance_of(accounts[4]), balance)
+        self.assertEqual(acb.coin.total_supply,
+                         coin_supply + mint -
                          remainder[(now - 1) % 3])
 
         # 3 commits on the stable level.

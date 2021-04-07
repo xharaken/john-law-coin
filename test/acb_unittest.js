@@ -1085,7 +1085,36 @@ function parameterized_test(accounts,
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[4]], balance);
     assert.equal(current.coin_supply,
-                 coin_supply  + mint -
+                 coin_supply + mint -
+                 remainder[mod(now - 1, 3)]);
+
+    now = mod(now + 1, 3);
+    await _acb.setTimestamp((
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
+    mint = 0;
+
+    balance = current.balances[accounts[4]];
+    coin_supply = current.coin_supply;
+    reward = 0;
+    remainder[mod(now, 3)] = deposit_4[mod(now - 2, 3)] + mint - reward;
+    deposit_4[mod(now, 3)] = 0;
+    await check_vote(await _acb.NULL_HASH(), _default_level,
+                     7, {from: accounts[4]},
+                     true, false, deposit_4[mod(now, 3)],
+                     0, reward, true);
+    current = await get_current(sub_accounts, []);
+    assert.equal(current.oracle_level, _level_max);
+    assert.equal(current.balances[accounts[4]],
+                 balance - deposit_4[mod(now, 3)] + reward);
+    balance = current.balances[accounts[4]];
+    await check_vote(await _acb.hash(_default_level, 8, {from: accounts[4]}),
+                     _default_level, 6, {from: accounts[4]},
+                     false, false, 0, 0, 0, false);
+    current = await get_current(sub_accounts, []);
+    assert.equal(current.balances[accounts[4]], balance);
+    assert.equal(current.coin_supply,
+                 coin_supply + mint -
                  remainder[mod(now - 1, 3)]);
 
     // 3 commits on the stable level.

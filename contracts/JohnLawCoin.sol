@@ -1004,6 +1004,7 @@ contract Logging is Ownable {
 contract ACB is OwnableUpgradeable, PausableUpgradeable {
   using SafeCast for uint;
   using SafeCast for int;
+  bytes32 public constant NULL_HASH = 0;
 
   // Constants. The values are defined in initialize(). The values never
   // change during the contract execution but use 'internal' (instead of
@@ -1201,7 +1202,9 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
   //
   // Parameters
   // ----------------
-  // |committed_hash|: The hash to be committed in the current phase.
+  // |committed_hash|: The hash to be committed in the current phase. Specify
+  // ACB.NULL_HASH if you only want to reveal and reclaim previous votes and
+  // do not want to commit.
   // |revealed_level|: The oracle level to be revealed in the prior phase.
   // |revealed_salt|: The voter's salt to be revealed in the prior phase.
   //
@@ -1284,6 +1287,9 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
     // The voter needs to deposit the DEPOSIT_RATE percentage of their coin
     // balance.
     result.deposited = coin_.balanceOf(msg.sender) * DEPOSIT_RATE / 100;
+    if (committed_hash == NULL_HASH) {
+      result.deposited = 0;
+    }
     result.commit_result = oracle_.commit(
         coin_, msg.sender, committed_hash, result.deposited);
     if (!result.commit_result) {
@@ -1465,7 +1471,7 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
     address sender = msg.sender;
     return oracle_.hash(sender, level, salt);
   }
-  
+
   // Public getter: Return the current timestamp in seconds.
   function getTimestamp()
       public virtual view returns (uint) {
