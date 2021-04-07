@@ -29,7 +29,10 @@ class CoinBondUnitTest(unittest.TestCase):
                     '0x5000', '0x6000', '0x7000']
 
         # JohnLawCoin
-        coin = JohnLawCoin()
+        coin = JohnLawCoin(accounts[0])
+        self.assertTrue(coin.total_supply > 0)
+        self.assertEqual(coin.balance_of(accounts[0]), coin.total_supply)
+        coin.burn(accounts[0], coin.total_supply)
         self.assertEqual(coin.total_supply, 0)
 
         # balance_of
@@ -138,6 +141,30 @@ class CoinBondUnitTest(unittest.TestCase):
         self.assertEqual(coin.balance_of(accounts[2]), 8)
         self.assertEqual(coin.balance_of(accounts[3]), 1)
         self.assertEqual(coin.balance_of(accounts[5]), 1)
+
+        # tax
+        coin.set_tax_rate(0)
+        coin.transfer(accounts[1], accounts[2], 10)
+        self.assertEqual(coin.balance_of(accounts[1]), 280)
+        self.assertEqual(coin.balance_of(accounts[2]), 18)
+        self.assertEqual(coin.balance_of(coin.tax_account), 0)
+        coin.set_tax_rate(10)
+        coin.transfer(accounts[1], accounts[2], 10)
+        self.assertEqual(coin.balance_of(accounts[1]), 270)
+        self.assertEqual(coin.balance_of(accounts[2]), 27)
+        self.assertEqual(coin.balance_of(coin.tax_account), 1)
+        coin.transfer(accounts[1], accounts[2], 1)
+        self.assertEqual(coin.balance_of(accounts[1]), 269)
+        self.assertEqual(coin.balance_of(accounts[2]), 28)
+        self.assertEqual(coin.balance_of(coin.tax_account), 1)
+        coin.transfer(accounts[1], accounts[2], 19)
+        self.assertEqual(coin.balance_of(accounts[1]), 250)
+        self.assertEqual(coin.balance_of(accounts[2]), 46)
+        self.assertEqual(coin.balance_of(coin.tax_account), 2)
+        coin.transfer(accounts[1], accounts[1], 20)
+        self.assertEqual(coin.balance_of(accounts[1]), 248)
+        self.assertEqual(coin.balance_of(accounts[2]), 46)
+        self.assertEqual(coin.balance_of(coin.tax_account), 4)
 
         # JohnLawBond
         bond = JohnLawBond()

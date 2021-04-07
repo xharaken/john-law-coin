@@ -28,6 +28,7 @@ class ACBUnitTest(unittest.TestCase):
                  damping_factor,
                  level_to_exchange_rate,
                  level_to_bond_price,
+                 level_to_tax_rate,
                  reclaim_threshold):
         super().__init__()
 
@@ -48,15 +49,20 @@ class ACBUnitTest(unittest.TestCase):
         self.accounts = ['0x0000', '0x1000', '0x2000', '0x3000', '0x4000',
                          '0x5000', '0x6000', '0x7000']
 
+        coin = JohnLawCoin(self.accounts[1])
+        bond = JohnLawBond()
         self.oracle = Oracle()
-        self.acb = ACB(self.accounts[1], self.oracle, Logging())
+        logging = Logging()
+        self.acb = ACB(coin, bond, self.oracle, logging)
         level_max = len(level_to_exchange_rate)
         self.oracle.override_constants_for_testing(
             level_max, reclaim_threshold, proportional_reward_rate)
         self.acb.override_constants_for_testing(
             bond_redemption_price, bond_redemption_period,
             phase_duration, deposit_rate, damping_factor,
-            level_to_exchange_rate, level_to_bond_price)
+            level_to_exchange_rate, level_to_bond_price, level_to_tax_rate)
+
+        self.initial_coin_supply = self.acb.coin.total_supply
 
         for level in range(Oracle.LEVEL_MAX):
             if (ACB.LEVEL_TO_EXCHANGE_RATE[level] ==
@@ -84,7 +90,7 @@ class ACBUnitTest(unittest.TestCase):
 
         # initial coin supply
         self.assertEqual(acb.coin.balance_of(accounts[1]),
-                         ACB.INITIAL_COIN_SUPPLY)
+                         self.initial_coin_supply)
         self.assertEqual(acb.coin.balance_of(accounts[2]), 0)
         self.assertEqual(acb.coin.balance_of(accounts[3]), 0)
 
@@ -95,17 +101,18 @@ class ACBUnitTest(unittest.TestCase):
         with self.assertRaises(Exception):
             acb.coin.move(accounts[2], accounts[1], 1)
         with self.assertRaises(Exception):
-            acb.coin.move(accounts[1], accounts[2], ACB.INITIAL_COIN_SUPPLY + 1)
+            acb.coin.move(accounts[1], accounts[2],
+                          self.initial_coin_supply + 1)
         acb.coin.move(accounts[1], accounts[2], 1)
         acb.coin.move(accounts[1], accounts[3], 10)
         acb.coin.move(accounts[3], accounts[2], 5)
         self.assertEqual(acb.coin.balance_of(accounts[1]),
-                         ACB.INITIAL_COIN_SUPPLY - 11)
+                         self.initial_coin_supply - 11)
         self.assertEqual(acb.coin.balance_of(accounts[2]), 6)
         self.assertEqual(acb.coin.balance_of(accounts[3]), 5)
         acb.coin.move(accounts[2], accounts[2], 5)
         self.assertEqual(acb.coin.balance_of(accounts[1]),
-                         ACB.INITIAL_COIN_SUPPLY - 11)
+                         self.initial_coin_supply - 11)
         self.assertEqual(acb.coin.balance_of(accounts[2]), 6)
         self.assertEqual(acb.coin.balance_of(accounts[3]), 5)
         acb.coin.move(accounts[2], accounts[3], 0)
@@ -113,15 +120,15 @@ class ACBUnitTest(unittest.TestCase):
             acb.coin.move(accounts[2], accounts[3], 7)
         acb.coin.move(accounts[2], accounts[3], 6)
         self.assertEqual(acb.coin.balance_of(accounts[1]),
-                         ACB.INITIAL_COIN_SUPPLY - 11)
+                         self.initial_coin_supply - 11)
         self.assertEqual(acb.coin.balance_of(accounts[2]), 0)
         self.assertEqual(acb.coin.balance_of(accounts[3]), 11)
         acb.coin.move(accounts[3], accounts[1], 11)
         self.assertEqual(acb.coin.balance_of(accounts[1]),
-                         ACB.INITIAL_COIN_SUPPLY)
+                         self.initial_coin_supply)
         self.assertEqual(acb.coin.balance_of(accounts[2]), 0)
         self.assertEqual(acb.coin.balance_of(accounts[3]), 0)
-        self.assertEqual(acb.coin.total_supply, ACB.INITIAL_COIN_SUPPLY)
+        self.assertEqual(acb.coin.total_supply, self.initial_coin_supply)
 
         # _control_supply
         acb.oracle_level = Oracle.LEVEL_MAX - 1
@@ -2564,6 +2571,7 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.purchase_bonds(accounts[1], 2), t12)
         self.assertEqual(acb.bond.total_supply, 2)
 
+        burned_tax = 0
         for level in range(2, Oracle.LEVEL_MAX + 2):
             now = (now + 1) % 3
             acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
@@ -2620,9 +2628,26 @@ class ACBUnitTest(unittest.TestCase):
                              reward_4 + constant_reward)
             self.assertEqual(acb.coin.total_supply,
                              coin_supply + mint -
-                             remainder[(now - 1) % 3])
+                             remainder[(now - 1) % 3] - burned_tax)
             self.assertEqual(acb.bond.total_supply, 2)
             self.assertEqual(acb.bond_budget, bond_budget)
+
+            burned_tax = 0
+            self.assertEqual(acb.coin.balance_of(acb.coin.tax_account), 0)
+            for transfer in [0, 1234, 1111]:
+                tax = int(transfer * ACB.LEVEL_TO_TAX_RATE[acb.oracle_level] /
+                          100)
+                balance_1 = acb.coin.balance_of(accounts[1])
+                balance_2 = acb.coin.balance_of(accounts[2])
+                balance_tax = acb.coin.balance_of(acb.coin.tax_account)
+                acb.coin.transfer(accounts[1], accounts[2], transfer)
+                self.assertEqual(acb.coin.balance_of(accounts[1]),
+                                 balance_1 - transfer)
+                self.assertEqual(acb.coin.balance_of(accounts[2]),
+                                 balance_2 + transfer - tax)
+                self.assertEqual(acb.coin.balance_of(acb.coin.tax_account),
+                                 balance_tax + tax)
+                burned_tax += tax
 
         now += 1
         acb.set_timestamp(acb.get_timestamp() + ACB.BOND_REDEMPTION_PERIOD)
@@ -2631,7 +2656,7 @@ class ACBUnitTest(unittest.TestCase):
         self.reset_balances();
         self.assertEqual(acb.bond.total_supply, 0)
         self.assertEqual(acb.coin.total_supply,
-                         ACB.INITIAL_COIN_SUPPLY + deposit_4[(now - 2) % 3] +
+                         self.initial_coin_supply + deposit_4[(now - 2) % 3] +
                          deposit_4[(now - 1) % 3] + remainder[(now - 1) % 3])
 
 
@@ -2660,7 +2685,7 @@ class ACBUnitTest(unittest.TestCase):
     def reset_balances(self):
         for account in self.accounts:
             self.acb.coin.burn(account, self.acb.coin.balance_of(account))
-        self.acb.coin.mint(self.accounts[1], ACB.INITIAL_COIN_SUPPLY)
+        self.acb.coin.mint(self.accounts[1], self.initial_coin_supply)
 
 
 def main():
@@ -2673,6 +2698,7 @@ def main():
     reclaim_threshold = 1
     level_to_exchange_rate = [1, 11, 20]
     level_to_bond_price = [990, 997, 997]
+    level_to_tax_rate = [20, 10, 0]
 
     test = ACBUnitTest(
         bond_redemption_price,
@@ -2683,6 +2709,7 @@ def main():
         damping_factor,
         level_to_exchange_rate,
         level_to_bond_price,
+        level_to_tax_rate,
         reclaim_threshold)
     test.run()
     test.teardown()
@@ -2695,17 +2722,21 @@ def main():
                         for damping_factor in [1, 10, 100]:
                             p = bond_redemption_price
                             for (level_to_exchange_rate,
-                                 level_to_bond_price) in [
+                                 level_to_bond_price,
+                                 level_to_tax_rate) in [
                                      ([9, 11, 12],
-                                      [max(1, p - 20), max(1, p - 10), p]),
+                                      [max(1, p - 20), max(1, p - 10), p],
+                                      [20, 10, 0]),
                                      ([0, 1, 10, 11, 12],
                                       [max(1, p - 20), max(1, p - 10),
-                                       p, p, p]),
+                                       p, p, p],
+                                      [20, 10, 10, 0, 0]),
                                      ([6, 7, 8, 9, 10, 11, 12, 13, 14],
                                       [max(1, p - 30),
                                        max(1, p - 20), max(1, p - 20),
                                        max(1, p - 10), max(1, p - 10),
-                                       p, p, p, p])]:
+                                       p, p, p, p],
+                                      [30, 20, 12, 5, 0, 0, 0, 0, 0])]:
                                 for reclaim_threshold in [0, 1, len(
                                     level_to_exchange_rate) - 1]:
                                     test = ACBUnitTest(
@@ -2717,6 +2748,7 @@ def main():
                                         damping_factor,
                                         level_to_exchange_rate,
                                         level_to_bond_price,
+                                        level_to_tax_rate,
                                         reclaim_threshold)
                                     test.run()
                                     test.teardown()

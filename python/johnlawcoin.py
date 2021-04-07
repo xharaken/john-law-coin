@@ -62,11 +62,19 @@ import hashlib
 #-------------------------------------------------------------------------------
 class JohnLawCoin:
     # Constructor.
-    def __init__(self):
+    def __init__(self, genesis_account):
         # The mapping from the user account to the coin balance.
         self.balances = {}
         # The total coin supply.
         self.total_supply = 0
+        # The tax rate set by the ACB.
+        self.tax_rate = 0
+        # The account to which the tax is sent.
+        self.tax_account = "____tax_account_address"
+
+        # Mint the initial coins to the genesis account.
+        JohnLawCoin.INITIAL_COIN_SUPPLY = 2100000
+        self.mint(genesis_account, JohnLawCoin.INITIAL_COIN_SUPPLY)
 
     # Mint coins to one account.
     #
@@ -127,6 +135,18 @@ class JohnLawCoin:
         if account not in self.balances:
             return 0
         return self.balances[account]
+
+    # Set the tax rate. Only the ACB can call this method.
+    def set_tax_rate(self, tax_rate):
+        self.tax_rate = tax_rate
+
+    # Override ERC20's transfer method to impose a tax set by the ACB.
+    def transfer(self, sender, receiver, amount):
+        tax = int(amount * self.tax_rate / 100)
+        if tax > 0:
+            self.move(sender, self.tax_account, tax)
+        self.move(sender, receiver, amount - tax)
+
 
 #------------------------------------------------------------------------------
 # [JohnLawBond contract]
@@ -686,19 +706,20 @@ class Logging:
     # A struct to record metrics about the ACB.
     class ACBLog:
       def __init__(self, minted_coins, burned_coins, coin_supply_delta,
-                   bond_budge, purchased_bonds, redeemed_bonds,
-                   coin_total_supply, bond_total_supply, oracle_level,
-                   current_phase_start):
+                   bond_budget, coin_total_supply, bond_total_supply,
+                   oracle_level, current_phase_start, burned_tax,
+                   purchased_bonds, redeemed_bonds):
           self.minted_coins = minted_coins
           self.burned_coins = burned_coins
           self.coin_supply_delta = coin_supply_delta
-          self.bond_budget = bond_budge
-          self.purchased_bonds = purchased_bonds
-          self.redeemed_bonds = redeemed_bonds
+          self.bond_budget = bond_budget
           self.coin_total_supply = coin_total_supply
           self.bond_total_supply = bond_total_supply
           self.oracle_level = oracle_level
           self.current_phase_start = current_phase_start
+          self.burned_tax = burned_tax
+          self.purchased_bonds = purchased_bonds
+          self.redeemed_bonds = redeemed_bonds
 
     # Constructor.
     def __init__(self):
@@ -719,41 +740,43 @@ class Logging:
         self.acb_logs = []
         for i in range(Logging.LOG_MAX):
             self.acb_logs.append(
-                Logging.ACBLog(0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+                Logging.ACBLog(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
 
     # Called when the oracle phase is updated.
     #
     # Parameters
     # ----------------
-    # |current_phase_start|: ACB.current_phase_start.
-    # |bond_budget|: ACB.bond_budget.
-    # |delta|: The delta of the total coin supply.
-    # |oracle_level|: ACB.oracle_level.
-    # |mint|: The amount of the minted coins.
+    # |minted|: The amount of the minted coins.
     # |burned|: The amount of the burned coins.
+    # |delta|: The delta of the total coin supply.
+    # |bond_budget|: ACB.bond_budget_.
     # |coin_total_supply|: The total coin supply.
     # |bond_total_supply|: The total bond supply.
+    # |oracle_level|: ACB.oracle_level_.
+    # |current_phase_start|: ACB.current_phase_start_.
+    # |burned_tax|: The amount of the burned tax.
     #
     # Returns
     # ----------------
     # None.
-    def phase_updated(self, current_phase_start, bond_budget, delta,
-                      oracle_level, mint, burned, coin_total_supply,
-                      bond_total_supply):
+    def phase_updated(self, minted, burned, delta, bond_budget,
+                      coin_total_supply, bond_total_supply,
+                      oracle_level, current_phase_start, burned_tax):
         self.log_index = (self.log_index + 1) % Logging.LOG_MAX
         self.vote_logs[self.log_index] = Logging.VoteLog(
             0, 0, 0, 0, 0, 0, 0, 0, 0)
         self.acb_logs[self.log_index] = Logging.ACBLog(
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 
-        self.acb_logs[self.log_index].current_phase_start = current_phase_start
-        self.acb_logs[self.log_index].bond_budget = bond_budget
-        self.acb_logs[self.log_index].coin_supply_delta = delta
-        self.acb_logs[self.log_index].oracle_level = oracle_level
-        self.acb_logs[self.log_index].minted_coins = mint
+        self.acb_logs[self.log_index].minted_coins = minted
         self.acb_logs[self.log_index].burned_coins = burned
+        self.acb_logs[self.log_index].coin_supply_delta = delta
+        self.acb_logs[self.log_index].bond_budget = bond_budget
         self.acb_logs[self.log_index].coin_total_supply = coin_total_supply
         self.acb_logs[self.log_index].bond_total_supply = bond_total_supply
+        self.acb_logs[self.log_index].oracle_level = oracle_level
+        self.acb_logs[self.log_index].current_phase_start = current_phase_start
+        self.acb_logs[self.log_index].burned_tax = burned_tax
 
     # Called when ACB.vote is called.
     #
@@ -833,32 +856,33 @@ class ACB:
     #
     # Parameters
     # ----------------
-    # |genesis_account|: The genesis account that created the ACB.
-    # |oracle|: The oracle contract.
-    # |logging|: The logging contract.
-    def __init__(self, genesis_account, oracle, logging):
+    # |coin|: The JohnLawCoin contract.
+    # |bond|: The JohnLawBond contract.
+    # |oracle|: The Oracle contract.
+    # |logging|: The Logging contract.
+    def __init__(self, coin, bond, oracle, logging):
         # ----------------
         # Constants
         # ----------------
 
-        # The following table shows the mapping from the oracle levels to the
-        # exchange rates and the bond prices. Voters can vote for one of the
-        # oracle levels.
+        # The following table shows the mapping from the oracle level to the
+        # exchange rate, the bond issue price and the tax rate. Voters can vote
+        # for one of the oracle levels.
         #
-        #  -------------------------------------------------------------
-        #  | oracle level | exchange rate    | bond price              |
-        #  |              |                  | (annual interest rate)  |
-        #  -------------------------------------------------------------
-        #  | 0            | 1 coin = 0.6 USD | 950 coins (25.0%)       |
-        #  | 1            | 1 coin = 0.7 USD | 965 coins (16.7%)       |
-        #  | 2            | 1 coin = 0.8 USD | 978 coins (10.1%)       |
-        #  | 3            | 1 coin = 0.9 USD | 990 coins (4.46%)       |
-        #  | 4            | 1 coin = 1.0 USD | 997 coins (1.31%)       |
-        #  | 5            | 1 coin = 1.1 USD | 997 coins (1.31%)       |
-        #  | 6            | 1 coin = 1.2 USD | 997 coins (1.31%)       |
-        #  | 7            | 1 coin = 1.3 USD | 997 coins (1.31%)       |
-        #  | 8            | 1 coin = 1.4 USD | 997 coins (1.31%)       |
-        #  -------------------------------------------------------------
+        # ----------------------------------------------------------------------
+        # | oracle level | exchange rate    | bond issue price      | tax rate |
+        # |              |                  | (annual interest rate)|          |
+        # ----------------------------------------------------------------------
+        # |             0| 1 coin = 0.6 USD |      950 coins (25.0%)|       30%|
+        # |             1| 1 coin = 0.7 USD |      965 coins (16.7%)|       20%|
+        # |             2| 1 coin = 0.8 USD |      978 coins (10.1%)|       12%|
+        # |             3| 1 coin = 0.9 USD |      990 coins (4.46%)|        5%|
+        # |             4| 1 coin = 1.0 USD |      997 coins (1.31%)|        0%|
+        # |             5| 1 coin = 1.1 USD |      997 coins (1.31%)|        0%|
+        # |             6| 1 coin = 1.2 USD |      997 coins (1.31%)|        0%|
+        # |             7| 1 coin = 1.3 USD |      997 coins (1.31%)|        0%|
+        # |             8| 1 coin = 1.4 USD |      997 coins (1.31%)|        0%|
+        # ----------------------------------------------------------------------
         #
         # Voters are expected to look up the current exchange rate using
         # real-world currency exchangers and vote for the oracle level that
@@ -890,6 +914,10 @@ class ACB:
         ACB.BOND_REDEMPTION_PRICE = 1000 # One bond is redeemed for 1000 USD.
         ACB.BOND_REDEMPTION_PERIOD = 84 * 24 * 60 * 60 # 12 weeks.
 
+        # LEVEL_TO_TAX_RATE is the mapping from the oracle levels to the tax
+        # rate.
+        ACB.LEVEL_TO_TAX_RATE = [30, 20, 12, 5, 0, 0, 0, 0, 0]
+
         # The duration of the oracle phase. The ACB adjusts the total coin
         # supply once per phase. Voters can vote once per phase.
         ACB.PHASE_DURATION = 7 * 24 * 60 * 60 # 1 week.
@@ -901,14 +929,21 @@ class ACB:
         # phase.
         ACB.DAMPING_FACTOR = 10 # 10%.
 
-        # It is important to give a substantial amount of coins to the genesis
-        # account so that the genesis account can have power to determine the
-        # exchange rate until the ecosystem stabilizes. Once real-world currency
-        # exchangers start converting JLC with USD and the oracle gets a
-        # sufficient number of honest voters to agree on the real-world exchange
-        # rate consistently, the genesis account can lose its power by
-        # decreasing its coin balance. This mechanism is mandatory to stabilize
-        # the exchange rate and bootstrap the ecosystem successfully.
+        # ----------------
+        # Attributes
+        # ----------------
+
+        # The JohnLawCoin contract.
+        #
+        # Note that 2100000 coins (corresponding to 2.1 MB) are given to the
+        # genesis account initially. This is important to make sure that the
+        # genesis account can have power to determine the exchange rate until
+        # the ecosystem stabilizes. Once real-world currency exchangers start
+        # converting JLC with USD and the oracle gets a sufficient number of
+        # honest voters to agree on the real-world exchange rate consistently,
+        # the genesis account can lose its power by decreasing its coin balance.
+        # This mechanism is mandatory to stabilize the exchange rate and
+        # bootstrap the ecosystem successfully.
         #
         # Specifically, the genesis account votes for the oracle level 5 until
         # real-world currency exchangers appear. Once real-world currency
@@ -917,17 +952,10 @@ class ACB:
         # expected to follow the genesis account. Once the oracle gets enough
         # honest voters, the genesis account decreases its coin balance and
         # loses its power, moving the oracle to a fully decentralized system.
-        ACB.INITIAL_COIN_SUPPLY = 2100000 # 2.1 M USD
-
-        # ----------------
-        # Attributes
-        # ----------------
-
-        # The JohnLawCoin contract.
-        self.coin = JohnLawCoin()
+        self.coin = coin
 
         # The JohnLawBond contract.
-        self.bond = JohnLawBond()
+        self.bond = bond
 
         # If |bond_budget| is positive, it indicates the number of bonds the ACM
         # wants to issue to decrease the total coin supply. If |bond_budget| is
@@ -953,14 +981,11 @@ class ACB:
         assert(len(ACB.LEVEL_TO_EXCHANGE_RATE) == Oracle.LEVEL_MAX)
         assert(len(ACB.LEVEL_TO_BOND_PRICE) == Oracle.LEVEL_MAX)
 
-        # Mint the initial coins to the genesis account.
-        self.coin.mint(genesis_account, ACB.INITIAL_COIN_SUPPLY)
-
     # Test only.
     def override_constants_for_testing(
         self, bond_redemption_price, bond_redemption_period,
         phase_duration, deposit_rate, damping_factor,
-        level_to_exchange_rate, level_to_bond_price):
+        level_to_exchange_rate, level_to_bond_price, level_to_tax_rate):
 
         ACB.BOND_REDEMPTION_PRICE = bond_redemption_price
         ACB.BOND_REDEMPTION_PERIOD = bond_redemption_period
@@ -969,6 +994,7 @@ class ACB:
         ACB.DAMPING_FACTOR = damping_factor
         ACB.LEVEL_TO_EXCHANGE_RATE = level_to_exchange_rate
         ACB.LEVEL_TO_BOND_PRICE = level_to_bond_price
+        ACB.LEVEL_TO_TAX_RATE = level_to_tax_rate
 
         assert(1 <= ACB.BOND_REDEMPTION_PRICE and
                ACB.BOND_REDEMPTION_PRICE <= 100000)
@@ -978,12 +1004,12 @@ class ACB:
                ACB.PHASE_DURATION <= 30 * 24 * 60 * 60)
         assert(0 <= ACB.DEPOSIT_RATE and ACB.DEPOSIT_RATE <= 100)
         assert(1 <= ACB.DAMPING_FACTOR and ACB.DAMPING_FACTOR <= 100)
-        assert(0 <= ACB.INITIAL_COIN_SUPPLY)
         for bond_price in ACB.LEVEL_TO_BOND_PRICE:
             assert(bond_price <= ACB.BOND_REDEMPTION_PRICE)
 
         assert(len(ACB.LEVEL_TO_EXCHANGE_RATE) == Oracle.LEVEL_MAX)
         assert(len(ACB.LEVEL_TO_BOND_PRICE) == Oracle.LEVEL_MAX)
+        assert(len(ACB.LEVEL_TO_TAX_RATE) == Oracle.LEVEL_MAX)
 
         self.oracle_level = Oracle.LEVEL_MAX
 
@@ -1016,6 +1042,7 @@ class ACB:
 
             mint = 0
             delta = 0
+            tax_rate = 0
             self.oracle_level = self.oracle.get_mode_level()
             if self.oracle_level != Oracle.LEVEL_MAX:
                 assert(0 <= self.oracle_level and
@@ -1039,14 +1066,24 @@ class ACB:
                 # Increase or decrease the total coin supply.
                 mint = self._control_supply(delta)
 
+                # Translate the mode level to the tax rate.
+                tax_rate = ACB.LEVEL_TO_TAX_RATE[self.oracle_level]
+
+            # Burn the tax. This is fine because the purpose of the tax is to
+            # decrease the total coin supply.
+            tax_account = self.coin.tax_account
+            burned_tax = self.coin.balance_of(tax_account)
+            self.coin.burn(tax_account, burned_tax)
+            self.coin.set_tax_rate(tax_rate)
+
             # Advance to the next phase. Provide the |mint| coins to the oracle
             # as a reward.
             burned = self.oracle.advance(self.coin, mint)
 
             self.logging.phase_updated(
-                self.current_phase_start, self.bond_budget, delta,
-                self.oracle_level, mint, burned,
-                self.coin.total_supply, self.bond.total_supply)
+                mint, burned, delta, self.bond_budget,
+                self.coin.total_supply, self.bond.total_supply,
+                self.oracle_level, self.current_phase_start, burned_tax)
 
         # Commit.
         #

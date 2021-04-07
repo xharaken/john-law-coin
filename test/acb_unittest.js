@@ -25,7 +25,7 @@ const mod = common.mod;
 
 contract("ACBUnittest", function (accounts) {
   let args = common.custom_arguments();
-  assert.isTrue(args.length == 9);
+  assert.isTrue(args.length == 10);
   parameterized_test(accounts,
                      args[0],
                      args[1],
@@ -35,7 +35,8 @@ contract("ACBUnittest", function (accounts) {
                      args[5],
                      args[6],
                      args[7],
-                     args[8]);
+                     args[8],
+                     args[9]);
 });
 
 function parameterized_test(accounts,
@@ -47,6 +48,7 @@ function parameterized_test(accounts,
                             _damping_factor,
                             _level_to_exchange_rate,
                             _level_to_bond_price,
+                            _level_to_tax_rate,
                             _reclaim_threshold) {
   let test_name = "ACB parameters:" +
       " bond_redemp_price=" + _bond_redemption_price +
@@ -57,6 +59,7 @@ function parameterized_test(accounts,
       " damping_factor=" + _damping_factor +
       " level_to_exchange_rate=" + _level_to_exchange_rate +
       " level_to_bond_price=" + _level_to_bond_price +
+      " level_to_tax_rate=" + _level_to_tax_rate +
       " reclaim=" + _reclaim_threshold;
   console.log(test_name);
 
@@ -68,29 +71,38 @@ function parameterized_test(accounts,
         {from: accounts[1]});
     common.print_contract_size(_oracle, "OracleForTesting");
     await _oracle.initialize({from: accounts[1]});
+
+    // Cannot use deployProxy because {from: ...} is not supported.
+    let _coin = await JohnLawCoin.new({from: accounts[1]});
+    common.print_contract_size(_coin, "JohnLawCoin");
+    let _bond = await JohnLawBond.new({from: accounts[1]});
+    common.print_contract_size(_bond, "JohnLawBond");
     let _logging = await Logging.new({from: accounts[1]});
     common.print_contract_size(_logging, "Logging");
-    // Cannot use deployProxy because {from: ...} is not supported.
     let _acb = await ACBForTesting.new({from: accounts[1]});
     common.print_contract_size(_acb, "ACBForTesting");
-    await _acb.initialize(_oracle.address, _logging.address,
+    await _acb.initialize(_coin.address, _bond.address,
+                          _oracle.address, _logging.address,
                           {from: accounts[1]});
+
+    await _oracle.overrideConstants(
+        _level_max, _reclaim_threshold, _proportional_reward_rate,
+        {from: accounts[1]});
+    await _coin.transferOwnership(_acb.address, {from: accounts[1]});
+    await _bond.transferOwnership(_acb.address, {from: accounts[1]});
     await _logging.transferOwnership(_acb.address, {from: accounts[1]});
     await _oracle.transferOwnership(_acb.address, {from: accounts[1]});
-    await _oracle.overrideConstants(_level_max, _reclaim_threshold,
-                                     _proportional_reward_rate);
     await _acb.overrideConstants(_bond_redemption_price,
-                                  _bond_redemption_period,
-                                  _phase_duration,
-                                  _deposit_rate,
-                                  _damping_factor,
-                                  _level_to_exchange_rate,
-                                  _level_to_bond_price,
-                                  {from: accounts[1]});
+                                 _bond_redemption_period,
+                                 _phase_duration,
+                                 _deposit_rate,
+                                 _damping_factor,
+                                 _level_to_exchange_rate,
+                                 _level_to_bond_price,
+                                 _level_to_tax_rate,
+                                 {from: accounts[1]});
 
-    let _coin = await JohnLawCoin.at(await _acb.coin_());
-    let _bond = await JohnLawBond.at(await _acb.bond_());
-    let _initial_coin_supply = (await _coin.balanceOf(accounts[1])).toNumber();
+    let _initial_coin_supply = (await _coin.totalSupply()).toNumber();
     assert.equal(await _acb.paused(), false);
 
     let _default_level;
@@ -163,7 +175,7 @@ function parameterized_test(accounts,
 
       // controlSupply
       let bond_price = _level_to_bond_price[_level_max - 1];
-      await _acb.setOracleLevel(_level_max - 1);
+      await _acb.setOracleLevel(_level_max - 1, {from: accounts[1]});
       current = await get_current([], []);
       assert.equal(current.bond_supply, 0);
       assert.equal(current.bond_budget, 0);
@@ -284,22 +296,22 @@ function parameterized_test(accounts,
 
       // timestamp
       assert.equal(await _acb.getTimestamp(), 0);
-      await _acb.setTimestamp(1);
+      await _acb.setTimestamp(1, {from: accounts[1]});
       assert.equal(await _acb.getTimestamp(), 1);
-      await _acb.setTimestamp(_phase_duration);
+      await _acb.setTimestamp(_phase_duration, {from: accounts[1]});
       assert.equal(await _acb.getTimestamp(), _phase_duration);
 
       await should_throw(async () => {
-        await _acb.setTimestamp(_phase_duration - 1);
-      }, "setTimestamp:");
+        await _acb.setTimestamp(_phase_duration - 1, {from: accounts[1]});
+      }, "st1");
 
       await should_throw(async () => {
-        await _acb.setTimestamp(_phase_duration);
-      }, "setTimestamp:");
+        await _acb.setTimestamp(_phase_duration, {from: accounts[1]});
+      }, "st1");
 
       await should_throw(async () => {
-        await _acb.setTimestamp(0);
-      }, "setTimestamp:");
+        await _acb.setTimestamp(0, {from: accounts[1]});
+      }, "st1");
 
       // purchase_bonds
       await check_controlSupply(-bond_price * 80, 80, 0);
@@ -310,7 +322,8 @@ function parameterized_test(accounts,
       coin_supply = current.coin_supply;
 
       await _acb.setTimestamp(
-          (await _acb.getTimestamp()).toNumber() + _phase_duration);
+          (await _acb.getTimestamp()).toNumber() + _phase_duration,
+          {from: accounts[1]});
       let t1 =
           (await _acb.getTimestamp()).toNumber() + _bond_redemption_period;
       redemptions = [t1];
@@ -354,7 +367,8 @@ function parameterized_test(accounts,
           70, {from: accounts[3]}), 0);
 
       await _acb.setTimestamp(
-          (await _acb.getTimestamp()).toNumber() + _phase_duration);
+          (await _acb.getTimestamp()).toNumber() + _phase_duration,
+          {from: accounts[1]});
       let t2 =
           (await _acb.getTimestamp()).toNumber() + _bond_redemption_period;
       redemptions = [t2];
@@ -392,7 +406,8 @@ function parameterized_test(accounts,
                    coin_supply - bond_price * 32);
 
       await _acb.setTimestamp(
-          (await _acb.getTimestamp()).toNumber() + _phase_duration);
+          (await _acb.getTimestamp()).toNumber() + _phase_duration,
+          {from: accounts[1]});
       let t3 =
           (await _acb.getTimestamp()).toNumber() + _bond_redemption_period;
       redemptions = [t3];
@@ -450,7 +465,8 @@ function parameterized_test(accounts,
       check_redemption_timestamps(current, accounts[3], [t3]);
 
       await _acb.setTimestamp(
-          (await _acb.getTimestamp()).toNumber() + _bond_redemption_period);
+          (await _acb.getTimestamp()).toNumber() + _bond_redemption_period,
+          {from: accounts[1]});
       let t4 =
           (await _acb.getTimestamp()).toNumber() + _bond_redemption_period;
       redemptions = [t1, t2, t3, t4];
@@ -558,24 +574,27 @@ function parameterized_test(accounts,
       assert.equal(current.balances[accounts[2]], 0);
       await _coin.transfer(accounts[2], 100 * bond_price, {from: accounts[1]});
       await check_purchase_bonds(20, {from: accounts[2]}, t4);
-      await _acb.setTimestamp((await _acb.getTimestamp()).toNumber() + 1);
+      await _acb.setTimestamp((await _acb.getTimestamp()).toNumber() + 1,
+                              {from: accounts[1]});
       let t5 =
           (await _acb.getTimestamp()).toNumber() + _bond_redemption_period;
       redemptions.push(t5);
       await check_purchase_bonds(20, {from: accounts[2]}, t5);
       await _acb.setTimestamp(
           (await _acb.getTimestamp()).toNumber() +
-            _bond_redemption_period - 2);
+            _bond_redemption_period - 2, {from: accounts[1]});
       let t6 =
           (await _acb.getTimestamp()).toNumber() + _bond_redemption_period;
       redemptions.push(t6);
       await check_purchase_bonds(20, {from: accounts[2]}, t6);
-      await _acb.setTimestamp((await _acb.getTimestamp()).toNumber() + 1);
+      await _acb.setTimestamp((await _acb.getTimestamp()).toNumber() + 1,
+                              {from: accounts[1]});
       let t7 =
           (await _acb.getTimestamp()).toNumber() + _bond_redemption_period;
       redemptions.push(t7);
       await check_purchase_bonds(20, {from: accounts[2]}, t7);
-      await _acb.setTimestamp((await _acb.getTimestamp()).toNumber() + 1);
+      await _acb.setTimestamp((await _acb.getTimestamp()).toNumber() + 1,
+                              {from: accounts[1]});
       let t8 =
           (await _acb.getTimestamp()).toNumber() + _bond_redemption_period;
       redemptions.push(t8);
@@ -673,7 +692,7 @@ function parameterized_test(accounts,
 
       await _acb.setTimestamp(
           (await _acb.getTimestamp()).toNumber() +
-            _bond_redemption_period - 2);
+            _bond_redemption_period - 2, {from: accounts[1]});
       let t9 =
           (await _acb.getTimestamp()).toNumber() + _bond_redemption_period;
 
@@ -722,7 +741,8 @@ function parameterized_test(accounts,
       assert.equal(current.bond_supply, bond_supply - 1);
       assert.equal(current.bond_budget, 0);
 
-      await _acb.setTimestamp((await _acb.getTimestamp()).toNumber() + 1);
+      await _acb.setTimestamp((await _acb.getTimestamp()).toNumber() + 1,
+                              {from: accounts[1]});
       let t10 =
           (await _acb.getTimestamp()).toNumber() + _bond_redemption_period;
 
@@ -760,7 +780,8 @@ function parameterized_test(accounts,
       assert.equal(current.bond_supply, bond_supply - 1);
       assert.equal(current.bond_budget, 0);
 
-      await _acb.setTimestamp((await _acb.getTimestamp()).toNumber() + 1);
+      await _acb.setTimestamp((await _acb.getTimestamp()).toNumber() + 1,
+                              {from: accounts[1]});
       let t11 =
           (await _acb.getTimestamp()).toNumber() + _bond_redemption_period;
 
@@ -790,7 +811,8 @@ function parameterized_test(accounts,
     }
 
     await _acb.setTimestamp(
-        (await _acb.getTimestamp()).toNumber() + _phase_duration);
+        (await _acb.getTimestamp()).toNumber() + _phase_duration,
+        {from: accounts[1]});
 
     let remainder = [0, 0, 0];
     let deposit_4 = [0, 0, 0];
@@ -799,7 +821,7 @@ function parameterized_test(accounts,
     let now = 0;
     sub_accounts = accounts.slice(4, 7);
 
-    await _coin.transfer(accounts[4], 100, {from: accounts[1]});
+    await move_coins(accounts[1], accounts[4], 100);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[4]], 100);
 
@@ -836,7 +858,8 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
 
     balance = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = parseInt(balance * _deposit_rate / 100);
@@ -861,7 +884,8 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     let mint = await _mint_at_default_level();
 
     balance = current.balances[accounts[4]];
@@ -896,7 +920,8 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     mint = 0;
 
     balance = current.balances[accounts[4]];
@@ -922,7 +947,8 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     mint = await _mint_at_default_level();
 
     balance = current.balances[accounts[4]];
@@ -956,7 +982,8 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     mint = await _mint_at_default_level();
 
     balance = current.balances[accounts[4]];
@@ -990,9 +1017,11 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     mint = await _mint_at_default_level();
 
     balance = current.balances[accounts[4]];
@@ -1026,7 +1055,8 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     mint = await _mint_at_default_level();
 
     balance = current.balances[accounts[4]];
@@ -1061,15 +1091,16 @@ function parameterized_test(accounts,
     // 3 commits on the stable level.
     await reset_balances(accounts);
 
-    await _coin.transfer(accounts[4], 100, {from: accounts[1]});
-    await _coin.transfer(accounts[5], 100, {from: accounts[1]});
+    await move_coins(accounts[1], accounts[4], 100);
+    await move_coins(accounts[1], accounts[5], 100);
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[5]], 100);
     assert.equal(current.balances[accounts[6]], 0);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     mint = 0;
 
     coin_supply = current.coin_supply;
@@ -1105,7 +1136,8 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     mint = 0;
 
     coin_supply = current.coin_supply;
@@ -1141,7 +1173,8 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     mint = 0;
 
     coin_supply = current.coin_supply;
@@ -1179,7 +1212,8 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     mint = await _mint_at_default_level();
 
     coin_supply = current.coin_supply;
@@ -1245,7 +1279,8 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     mint = await _mint_at_default_level();
 
     coin_supply = current.coin_supply;
@@ -1314,7 +1349,8 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     mint = await _mint_at_default_level();
     current = await get_current(sub_accounts, []);
 
@@ -1384,7 +1420,8 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     mint = await _mint_at_default_level();
 
     coin_supply = current.coin_supply;
@@ -1450,7 +1487,8 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     mint = await _mint_at_default_level();
 
     coin_supply = current.coin_supply;
@@ -1505,7 +1543,8 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     mint = await _mint_at_default_level();
 
     coin_supply = current.coin_supply;
@@ -1564,7 +1603,8 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     mint = await _mint_at_default_level();
 
     coin_supply = current.coin_supply;
@@ -1616,7 +1656,8 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     mint = 0;
 
     coin_supply = current.coin_supply;
@@ -1658,7 +1699,8 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     mint = await _mint_at_default_level();
 
     coin_supply = current.coin_supply;
@@ -1709,7 +1751,8 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     mint = await _mint_at_default_level();
 
     coin_supply = current.coin_supply;
@@ -1744,7 +1787,8 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     mint = await _mint_at_default_level();
 
     current = await get_current([accounts[1]], []);
@@ -1770,7 +1814,8 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     mint = 0;
 
     current = await get_current([accounts[1]], []);
@@ -1792,13 +1837,14 @@ function parameterized_test(accounts,
     // 0, stable, stable
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     await reset_balances(accounts);
     mint = await _mint_at_default_level();
 
-    await _coin.transfer(accounts[4], 10000, {from: accounts[1]});
-    await _coin.transfer(accounts[5], 2000, {from: accounts[1]});
-    await _coin.transfer(accounts[5], 8100, {from: accounts[1]});
+    await move_coins(accounts[1], accounts[4], 10000);
+    await move_coins(accounts[1], accounts[5], 2000);
+    await move_coins(accounts[1], accounts[5], 8100);
     current = await get_current(sub_accounts, []);
 
     coin_supply = current.coin_supply;
@@ -1839,7 +1885,8 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     mint = 0;
 
     coin_supply = current.coin_supply;
@@ -1880,7 +1927,8 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     mint = await _mint_at_default_level();
 
     coin_supply = current.coin_supply;
@@ -1947,18 +1995,19 @@ function parameterized_test(accounts,
     tmp_deposit_rate = _deposit_rate;
     if (_deposit_rate == 0) {
       _deposit_rate = 1;
-      _acb.setDepositRate(_deposit_rate);
+      _acb.setDepositRate(_deposit_rate, {from: accounts[1]});
     }
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     await reset_balances(accounts);
     mint = await _mint_at_default_level();
 
-    await _coin.transfer(accounts[4], 2900, {from: accounts[1]});
-    await _coin.transfer(accounts[5], 7000, {from: accounts[1]});
-    await _coin.transfer(accounts[6], 10000, {from: accounts[1]});
+    await move_coins(accounts[1], accounts[4], 2900);
+    await move_coins(accounts[1], accounts[5], 7000);
+    await move_coins(accounts[1], accounts[6], 10000);
     current = await get_current(sub_accounts, []);
 
     coin_supply = current.coin_supply;
@@ -2023,11 +2072,12 @@ function parameterized_test(accounts,
                  remainder[mod(now - 1, 3)]);
 
     _deposit_rate = tmp_deposit_rate;
-    _acb.setDepositRate(_deposit_rate);
+    _acb.setDepositRate(_deposit_rate, {from: accounts[1]});
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     mint = await _mint_at_default_level();
 
     coin_supply = current.coin_supply;
@@ -2093,7 +2143,8 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     mint = await _mint_at_default_level();
 
     coin_supply = current.coin_supply;
@@ -2154,13 +2205,14 @@ function parameterized_test(accounts,
     // stable, stable, level_max - 1
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     await reset_balances(accounts);
     mint = await _mint_at_default_level();
 
-    await _coin.transfer(accounts[4], 3100, {from: accounts[1]});
-    await _coin.transfer(accounts[5], 7000, {from: accounts[1]});
-    await _coin.transfer(accounts[6], 10000, {from: accounts[1]});
+    await move_coins(accounts[1], accounts[4], 3100);
+    await move_coins(accounts[1], accounts[5], 7000);
+    await move_coins(accounts[1], accounts[6], 10000);
     current = await get_current(sub_accounts, []);
 
     coin_supply = current.coin_supply;
@@ -2226,7 +2278,8 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     mint = await _mint_at_default_level();
 
     coin_supply = current.coin_supply;
@@ -2292,7 +2345,8 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     mint = await _mint_at_default_level();
 
     coin_supply = current.coin_supply;
@@ -2359,18 +2413,19 @@ function parameterized_test(accounts,
     tmp_deposit_rate = _deposit_rate;
     if (_deposit_rate == 0) {
       _deposit_rate = 1;
-      _acb.setDepositRate(_deposit_rate);
+      _acb.setDepositRate(_deposit_rate, {from: accounts[1]});
     }
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     await reset_balances(accounts);
     mint = await _mint_at_default_level();
 
-    await _coin.transfer(accounts[4], 10000, {from: accounts[1]});
-    await _coin.transfer(accounts[5], 7000, {from: accounts[1]});
-    await _coin.transfer(accounts[6], 2900, {from: accounts[1]});
+    await move_coins(accounts[1], accounts[4], 10000);
+    await move_coins(accounts[1], accounts[5], 7000);
+    await move_coins(accounts[1], accounts[6], 2900);
     current = await get_current(sub_accounts, []);
 
     coin_supply = current.coin_supply;
@@ -2435,11 +2490,12 @@ function parameterized_test(accounts,
                  remainder[mod(now - 1, 3)]);
 
     _deposit_rate = tmp_deposit_rate;
-    _acb.setDepositRate(_deposit_rate);
+    _acb.setDepositRate(_deposit_rate, {from: accounts[1]});
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     mint = await _mint_at_default_level();
 
     coin_supply = current.coin_supply;
@@ -2505,7 +2561,8 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     mint = await _mint_at_default_level();
 
     coin_supply = current.coin_supply;
@@ -2566,13 +2623,14 @@ function parameterized_test(accounts,
     // stable, stable, level_max - 1; deposit is the same
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     await reset_balances(accounts);
     mint = await _mint_at_default_level();
 
-    await _coin.transfer(accounts[4], 10000, {from: accounts[1]});
-    await _coin.transfer(accounts[5], 7000, {from: accounts[1]});
-    await _coin.transfer(accounts[6], 3000, {from: accounts[1]});
+    await move_coins(accounts[1], accounts[4], 10000);
+    await move_coins(accounts[1], accounts[5], 7000);
+    await move_coins(accounts[1], accounts[6], 3000);
     current = await get_current(sub_accounts, []);
 
     coin_supply = current.coin_supply;
@@ -2638,7 +2696,8 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     mint = await _mint_at_default_level();
 
     coin_supply = current.coin_supply;
@@ -2704,7 +2763,8 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     mint = await _mint_at_default_level();
 
     coin_supply = current.coin_supply;
@@ -2770,7 +2830,8 @@ function parameterized_test(accounts,
     // all levels
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     await reset_balances(accounts);
     mint = await _mint_at_default_level();
     current = await get_current(sub_accounts, []);
@@ -2809,7 +2870,8 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration);
+        await _acb.getTimestamp()).toNumber() + _phase_duration,
+                            {from: accounts[1]});
     mint = await _mint_at_default_level();
 
     coin_supply = current.coin_supply;
@@ -2855,10 +2917,12 @@ function parameterized_test(accounts,
     current = await get_current(sub_accounts, []);
     assert.equal(current.bond_supply, 2);
 
+    let burned_tax = 0
     for (let level = 2; level < _level_max + 2; level++) {
       now = mod(now + 1, 3);
       await _acb.setTimestamp((
-          await _acb.getTimestamp()).toNumber() + _phase_duration);
+          await _acb.getTimestamp()).toNumber() + _phase_duration,
+                              {from: accounts[1]});
 
       current = await get_current(sub_accounts, []);
       assert.equal(current.bond_supply, 2);
@@ -2915,14 +2979,33 @@ function parameterized_test(accounts,
                    reward_4 + constant_reward);
       assert.equal(current.coin_supply,
                    coin_supply + mint -
-                   remainder[mod(now - 1, 3)]);
+                   remainder[mod(now - 1, 3)] - burned_tax);
       assert.equal(current.bond_supply, 2);
       assert.equal(current.bond_budget, bond_budget);
+
+      burned_tax = 0
+      assert.equal(await _coin.balanceOf(await _coin.tax_account_()), 0);
+      for (let transfer of [0, 1234, 1111]) {
+        let tax = parseInt(transfer *
+                           _level_to_tax_rate[current.oracle_level] / 100);
+        let balance_1 = (await _coin.balanceOf(accounts[1])).toNumber();
+        let balance_2 = (await _coin.balanceOf(accounts[2])).toNumber();
+        let balance_tax =
+            (await _coin.balanceOf(await _coin.tax_account_())).toNumber();
+        await _coin.transfer(accounts[2], transfer, {from: accounts[1]});
+        assert.equal(await _coin.balanceOf(accounts[1]), balance_1 - transfer);
+        assert.equal(await _coin.balanceOf(accounts[2]),
+                     balance_2 + transfer - tax);
+        assert.equal(await _coin.balanceOf(await _coin.tax_account_()),
+                     balance_tax + tax);
+        burned_tax += tax;
+      }
     }
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _bond_redemption_period);
+        await _acb.getTimestamp()).toNumber() + _bond_redemption_period,
+                            {from: accounts[1]});
 
     await check_redeem_bonds([t12], {from: accounts[1]}, 2);
     await reset_balances(accounts);
@@ -3113,7 +3196,7 @@ function parameterized_test(accounts,
     }
 
     async function check_controlSupply(delta, bond_budget, mint) {
-      let receipt = await _acb.controlSupply(delta);
+      let receipt = await _acb.controlSupply(delta, {from: accounts[1]});
       let args =
           receipt.logs.filter(e => e.event == 'ControlSupplyEvent')[0].args;
       assert.equal(args.delta, delta);
@@ -3155,12 +3238,16 @@ function parameterized_test(accounts,
       return acb;
     }
 
+    async function move_coins(sender, receiver, amount) {
+      await _acb.moveCoin(sender, receiver, amount, {from: accounts[1]});
+    }
+
     async function reset_balances(account) {
       for (let account of accounts) {
-        await _acb.coinBurn(
-            account, (await _coin.balanceOf(account)).toNumber());
+        await _acb.setCoin(account, 0, {from: accounts[1]});
       }
-      await _acb.coinMint(accounts[1], _initial_coin_supply);
+      await _acb.setCoin(accounts[1], _initial_coin_supply,
+                         {from: accounts[1]});
     }
   });
 }

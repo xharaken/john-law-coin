@@ -15,10 +15,12 @@
 
 body {
   width: 720px;
+  line-height: 1.2rem;
 }
 
 h1 {
   border-bottom: solid 3px #FFA500;
+  padding-bottom: 6px;
 }
 
 table {
@@ -37,6 +39,10 @@ td {
 
 .bold {
   font-weight: bold;
+}
+
+.italic {
+  font-style: italic;
 }
 
 .disabled {
@@ -73,22 +79,20 @@ td {
 }
 
 .tooltip-text {
-  opacity: 0;
   visibility: hidden;
   position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: -30px;
   display: inline-block;
-  padding: 0.2rem;
-  white-space: nowrap;
+  width: 540px;
+  padding: 0.6rem;
+  margin-top: 2rem;
+  white-space: wrap;
   font-size: 1rem;
   background: #DDDDDD;
   border-radius: 0.2rem;
-  transition: 0.3s ease-in;
+  transition: 0.3s;
 }
 
 .tooltip:hover .tooltip-text {
-  opacity: 1;
   visibility: visible;
+  z-index: 10;
 }

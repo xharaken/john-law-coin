@@ -28,14 +28,15 @@ class LoggingUnitTest(unittest.TestCase):
         logging = Logging()
         self.assertEqual(logging.log_index, 0)
         acb_log = logging.acb_logs[logging.log_index]
-        self.assertEqual(acb_log.current_phase_start, 0)
-        self.assertEqual(acb_log.bond_budget, 0)
-        self.assertEqual(acb_log.coin_supply_delta, 0)
-        self.assertEqual(acb_log.oracle_level, 0)
         self.assertEqual(acb_log.minted_coins, 0)
         self.assertEqual(acb_log.burned_coins, 0)
+        self.assertEqual(acb_log.coin_supply_delta, 0)
+        self.assertEqual(acb_log.bond_budget, 0)
         self.assertEqual(acb_log.coin_total_supply, 0)
         self.assertEqual(acb_log.bond_total_supply, 0)
+        self.assertEqual(acb_log.oracle_level, 0)
+        self.assertEqual(acb_log.current_phase_start, 0)
+        self.assertEqual(acb_log.burned_tax, 0)
         self.assertEqual(acb_log.purchased_bonds, 0)
         self.assertEqual(acb_log.redeemed_bonds, 0)
         vote_log = logging.vote_logs[logging.log_index]
@@ -51,7 +52,7 @@ class LoggingUnitTest(unittest.TestCase):
 
         log_max = 1000
         for i in range(log_max + 10):
-            logging.phase_updated(1, 2, 3, 4, 5, 6, 7, 8)
+            logging.phase_updated(1, 2, 3, 4, 5, 6, 7, 8, 9)
             if i >= 5 and i < log_max - 5:
                 continue
             logging.purchased_bonds(1)
@@ -63,14 +64,15 @@ class LoggingUnitTest(unittest.TestCase):
             logging.redeemed_bonds(4)
             self.assertEqual(logging.log_index, (i + 1) % log_max)
             acb_log = logging.acb_logs[logging.log_index]
-            self.assertEqual(acb_log.current_phase_start, 1)
-            self.assertEqual(acb_log.bond_budget, 2)
+            self.assertEqual(acb_log.minted_coins, 1)
+            self.assertEqual(acb_log.burned_coins, 2)
             self.assertEqual(acb_log.coin_supply_delta, 3)
-            self.assertEqual(acb_log.oracle_level, 4)
-            self.assertEqual(acb_log.minted_coins, 5)
-            self.assertEqual(acb_log.burned_coins, 6)
-            self.assertEqual(acb_log.coin_total_supply, 7)
-            self.assertEqual(acb_log.bond_total_supply, 8)
+            self.assertEqual(acb_log.bond_budget, 4)
+            self.assertEqual(acb_log.coin_total_supply, 5)
+            self.assertEqual(acb_log.bond_total_supply, 6)
+            self.assertEqual(acb_log.oracle_level, 7)
+            self.assertEqual(acb_log.current_phase_start, 8)
+            self.assertEqual(acb_log.burned_tax, 9)
             self.assertEqual(acb_log.purchased_bonds, 6)
             self.assertEqual(acb_log.redeemed_bonds, 10)
 

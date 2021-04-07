@@ -2046,7 +2046,8 @@ function parameterized_test(accounts,
     await check_advance(0, _mint);
     await check_advance(0, 0);
 
-    let balance_total = (await balance_of(accounts[1]) +
+    let balance_total = (await balance_of(accounts[0]) +
+                         await balance_of(accounts[1]) +
                          await balance_of(accounts[2]) +
                          await balance_of(accounts[3]) +
                          await balance_of(accounts[4]) +

@@ -33,7 +33,8 @@ import common
 common.reset_network(41)
 command = ("truffle test acb_simulator.js " +
            "'1000 84 7 90 10 10 [6, 7, 8, 9, 10, 11, 12, 13, 14] " +
-           "[950, 965, 978, 990, 997, 997, 997, 997, 997] 1 40 30 1'")
+           "[970, 978, 986, 992, 997, 997, 997, 997, 997] " +
+           "[30, 20, 12, 5, 0, 0, 0, 0, 0]1 40 30 1'")
 common.run_test(command)
 
 iteration = 30
@@ -45,17 +46,21 @@ for bond_redemption_price in [1000]:
                     for damping_factor in [10, 100]:
                         p = bond_redemption_price
                         for (level_to_exchange_rate,
-                             level_to_bond_price) in [
+                             level_to_bond_price,
+                             level_to_tax_rate) in [
                                  ([9, 11, 12],
-                                  [max(1, p - 20), max(1, p - 10), p]),
+                                  [max(1, p - 20), max(1, p - 10), p],
+                                  [20, 10, 0]),
                                  ([0, 1, 10, 11, 12],
                                   [max(1, p - 20), max(1, p - 10),
-                                   p, p, p]),
+                                   p, p, p],
+                                  [20, 10, 10, 0, 0]),
                                  ([6, 7, 8, 9, 10, 11, 12, 13, 14],
                                   [max(1, p - 30),
                                    max(1, p - 20), max(1, p - 20),
                                    max(1, p - 10), max(1, p - 10),
-                                   p, p, p])]:
+                                   p, p, p, p],
+                                  [30, 20, 12, 5, 0, 0, 0, 0, 0])]:
                             for reclaim_threshold in [1, len(
                                 level_to_exchange_rate) - 1]:
                                 for voter_count in [40]:
@@ -69,6 +74,7 @@ for bond_redemption_price in [1000]:
                                         str(damping_factor) + " " +
                                         str(level_to_exchange_rate) + " " +
                                         str(level_to_bond_price) + " " +
+                                        str(level_to_tax_rate) + " " +
                                         str(reclaim_threshold) + " " +
                                         str(voter_count) + " " +
                                         str(iteration) + " 1'")

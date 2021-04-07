@@ -39,7 +39,7 @@ const randint = common.randint;
 
 contract("ACBSimulator", function (accounts) {
   let args = common.custom_arguments();
-  assert.isTrue(args.length == 12);
+  assert.isTrue(args.length == 13);
   parameterized_test(accounts,
                      args[0],
                      args[1],
@@ -52,7 +52,8 @@ contract("ACBSimulator", function (accounts) {
                      args[8],
                      args[9],
                      args[10],
-                     args[11]);
+                     args[11],
+                     args[12]);
 });
 
 function parameterized_test(accounts,
@@ -64,6 +65,7 @@ function parameterized_test(accounts,
                             _damping_factor,
                             _level_to_exchange_rate,
                             _level_to_bond_price,
+                            _level_to_tax_rate,
                             _reclaim_threshold,
                             _voter_count,
                             _iteration,
@@ -77,6 +79,7 @@ function parameterized_test(accounts,
       " damping_factor=" + _damping_factor +
       " level_to_exchange_rate=" + _level_to_exchange_rate +
       " level_to_bond_price=" + _level_to_bond_price +
+      " level_to_tax_rate=" + _level_to_tax_rate +
       " reclaim=" + _reclaim_threshold +
       " voter=" + _voter_count +
       " iter=" + _iteration +
@@ -87,19 +90,26 @@ function parameterized_test(accounts,
   it(test_name, async function () {
     let _level_max = _level_to_exchange_rate.length;
 
-    let _oracle = await deployProxy(
-        OracleForTesting, [], {unsafeAllowCustomTypes: true});
+    let _oracle = await deployProxy(OracleForTesting, []);
     common.print_contract_size(_oracle, "OracleForTesting");
+
+    let _coin = await JohnLawCoin.new();
+    common.print_contract_size(_coin, "JohnLawCoin");
+    let _bond = await JohnLawBond.new();
+    common.print_contract_size(_bond, "JohnLawBond");
     let _logging = await Logging.new();
     common.print_contract_size(_logging, "Logging");
     let _acb = await deployProxy(
-        ACBForTesting, [_oracle.address, _logging.address],
-        {unsafeAllowCustomTypes: true});
+        ACBForTesting, [_coin.address, _bond.address,
+                        _oracle.address, _logging.address]);
     common.print_contract_size(_acb, "ACBForTesting");
-    await _oracle.transferOwnership(_acb.address);
-    await _logging.transferOwnership(_acb.address);
+
     await _oracle.overrideConstants(_level_max, _reclaim_threshold,
                                      _proportional_reward_rate);
+    await _coin.transferOwnership(_acb.address);
+    await _bond.transferOwnership(_acb.address);
+    await _oracle.transferOwnership(_acb.address);
+    await _logging.transferOwnership(_acb.address);
     await _acb.overrideConstants(_bond_redemption_price,
                                   _bond_redemption_period,
                                   _phase_duration,
@@ -107,10 +117,8 @@ function parameterized_test(accounts,
                                   _damping_factor,
                                   _level_to_exchange_rate,
                                   _level_to_bond_price,
+                                  _level_to_tax_rate,
                                  {from: accounts[0]});
-
-    let _coin = await JohnLawCoin.at(await _acb.coin_());
-    let _bond = await JohnLawBond.at(await _acb.bond_());
 
     let _lost_deposit = [0, 0, 0];
 
@@ -212,13 +220,14 @@ function parameterized_test(accounts,
         amount = 0;
       }
       _voters[i].balance = amount;
-      await _acb.coinMint(_voters[i].address, _voters[i].balance);
+      await _acb.setCoin(_voters[i].address, _voters[i].balance);
       assert.equal(await get_balance(_voters[i].address),
                    _voters[i].balance);
     }
     let initial_coin_supply = await get_coin_supply();
 
     let epoch = 0;
+    let burned_tax = 0;
     for (let iter = 0; iter < _iteration; iter++) {
       if ((await get_coin_supply()) >= initial_coin_supply * 100) {
         break;
@@ -232,7 +241,7 @@ function parameterized_test(accounts,
 
       await _acb.setTimestamp(
           (await _acb.getTimestamp()).toNumber() + _phase_duration);
-      let commit_observed = await vote(epoch);
+      let commit_observed = await vote(epoch, burned_tax);
       if (commit_observed == false) {
         continue;
       }
@@ -247,15 +256,16 @@ function parameterized_test(accounts,
       await purchase_bonds();
 
       let acb_log = await get_acb_logs(await _logging.log_index_());
-      assert.equal(acb_log.current_phase_start,
-                   (await _acb.getTimestamp()).toNumber());
-      assert.equal(acb_log.bond_budget, bond_budget);
-      assert.equal(acb_log.coin_supply_delta, _metrics.delta);
-      assert.equal(acb_log.oracle_level, _metrics.oracle_level);
       assert.equal(acb_log.minted_coins, _metrics.mint);
       assert.equal(acb_log.burned_coins, _metrics.lost);
+      assert.equal(acb_log.coin_supply_delta, _metrics.delta);
+      assert.equal(acb_log.bond_budget, bond_budget);
       assert.equal(acb_log.coin_total_supply, coin_supply2);
       assert.equal(acb_log.bond_total_supply, bond_supply);
+      assert.equal(acb_log.oracle_level, _metrics.oracle_level);
+      assert.equal(acb_log.current_phase_start,
+                   (await _acb.getTimestamp()).toNumber());
+      assert.equal(acb_log.burned_tax, burned_tax);
       assert.equal(acb_log.purchased_bonds,
                    _metrics.purchase_count);
       assert.equal(acb_log.redeemed_bonds, _metrics.redeem_count);
@@ -270,6 +280,8 @@ function parameterized_test(accounts,
       assert.equal(vote_log.reward_succeeded, _metrics.reward_hit);
       assert.equal(vote_log.reclaimed, _metrics.reclaimed);
       assert.equal(vote_log.rewarded, _metrics.rewarded);
+
+      burned_tax = await transfer_coins();
 
       if (true) {
         let coin_supply3 = await get_coin_supply();
@@ -367,6 +379,44 @@ function parameterized_test(accounts,
                    );
     console.log("================");
     console.log();
+
+    async function transfer_coins() {
+      let start_index = randint(0, _voter_count - 1);
+      let burned_tax = 0;
+      for (let index = 0; index < Math.min(_voter_count, 10); index++) {
+        let sender = _voters[(start_index + index) % _voter_count];
+        let receiver = _voters[(start_index + index + 1) % _voter_count];
+        let transfer = randint(
+            0, Math.min(await get_balance(sender.address), 100));
+        let tax_rate = 0;
+        let oracle_level = (await _acb.oracle_level_()).toNumber();
+        if (0 <= oracle_level && oracle_level < _level_max) {
+          tax_rate = _level_to_tax_rate[oracle_level];
+        }
+        let tax = parseInt(transfer * tax_rate / 100);
+        let balance_sender = await get_balance(sender.address);
+        let balance_receiver = await get_balance(receiver.address);
+        let tax_account = await _coin.tax_account_();
+        let balance_tax = await get_balance(tax_account);
+        await _coin.transfer(
+            receiver.address, transfer, {from: sender.address});
+        if (sender != receiver) {
+          assert.equal(await get_balance(sender.address),
+                       balance_sender - transfer);
+          assert.equal(await get_balance(receiver.address),
+                       balance_receiver + transfer - tax);
+        } else {
+          assert.equal(await get_balance(sender.address),
+                       balance_receiver - tax);
+        }
+        assert.equal(await get_balance(tax_account),
+                     balance_tax + tax);
+        sender.balance -= transfer;
+        receiver.balance += transfer - tax;
+        burned_tax += tax;
+      }
+      return burned_tax;
+    }
 
     async function purchase_bonds() {
       let start_index = randint(0, _voter_count - 1);
@@ -488,7 +538,7 @@ function parameterized_test(accounts,
       }
     }
 
-    async function vote(epoch) {
+    async function vote(epoch, burned_tax) {
       let current = mod(epoch, 3);
       let prev = mod(epoch - 1, 3);
       let prev_prev = mod(epoch - 2, 3);
@@ -720,7 +770,7 @@ function parameterized_test(accounts,
           }
           assert.equal(await get_coin_supply(),
                        coin_supply + mint -
-                       _lost_deposit[mod(epoch - 1, 3)]);
+                       _lost_deposit[mod(epoch - 1, 3)] - burned_tax);
           assert.equal(await _acb.oracle_level_(), mode_level);
           commit_observed = true;
 
@@ -743,25 +793,19 @@ function parameterized_test(accounts,
       if (!_should_upgrade) {
         return;
       }
-      if (epoch == 10) {
-        _oracle = await upgradeProxy(
-            _oracle.address, OracleForTesting_v2,
-            {unsafeAllowCustomTypes: true});
+      if (epoch == 3) {
+        _oracle = await upgradeProxy(_oracle.address, OracleForTesting_v2);
         common.print_contract_size(_oracle, "OracleForTesting_v2");
         _logging = await Logging_v2.new();
         common.print_contract_size(_logging, "Logging_v2");
-        _acb = await upgradeProxy(
-            _acb.address, ACBForTesting_v2, {unsafeAllowCustomTypes: true});
+        _acb = await upgradeProxy(_acb.address, ACBForTesting_v2);
         await _logging.transferOwnership(_acb.address);
         common.print_contract_size(_acb, "ACBForTesting_v2");
         await _acb.upgrade(_oracle.address, _logging.address);
-      } else if (epoch == 20) {
-        _oracle = await upgradeProxy(
-            _oracle.address, OracleForTesting_v3,
-            {unsafeAllowCustomTypes: true});
+      } else if (epoch == 6) {
+        _oracle = await upgradeProxy(_oracle.address, OracleForTesting_v3);
         common.print_contract_size(_oracle, "OracleForTesting_v3");
-        _acb = await upgradeProxy(
-            _acb.address, ACBForTesting_v3, {unsafeAllowCustomTypes: true});
+        _acb = await upgradeProxy(_acb.address, ACBForTesting_v3);
         common.print_contract_size(_acb, "ACBForTesting_v3");
         await _acb.upgrade(_oracle.address);
       }
@@ -849,12 +893,13 @@ function parameterized_test(accounts,
       acb_log.burned_coins = ret[1];
       acb_log.coin_supply_delta = ret[2];
       acb_log.bond_budget = ret[3];
-      acb_log.purchased_bonds = ret[4];
-      acb_log.redeemed_bonds = ret[5];
-      acb_log.coin_total_supply = ret[6];
-      acb_log.bond_total_supply = ret[7];
-      acb_log.oracle_level = ret[8];
-      acb_log.current_phase_start = ret[9];
+      acb_log.coin_total_supply = ret[4];
+      acb_log.bond_total_supply = ret[5];
+      acb_log.oracle_level = ret[6];
+      acb_log.current_phase_start = ret[7];
+      acb_log.burned_tax = ret[8];
+      acb_log.purchased_bonds = ret[9];
+      acb_log.redeemed_bonds = ret[10];
       return acb_log;
     }
   });

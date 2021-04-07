@@ -29,28 +29,60 @@
   <p id="message_box"></p>
   <h1>JohnLawCoin Wallet</h1>
 
-  <h2>Your account info <span class="tooltip">?<span class="tooltip-text">aaaa</span></span></h2>
+  <h2>Your account info
+    <span class="tooltip">?<span class="tooltip-text">
+        <span class="bold">Account address</span>: Your account address.<br>
+        <span class="bold">Coin balance</span>: Your coin balance.<br>
+        <span class="bold">Bond balance</span>: Your bond balance.<br>
+        <span class="bold">Voted</span>: Whether you have voted in the current phase. You can vote only once per phase.
+  </span></span></h2>
   <div class="info">
     <div id="account_info_loading">Loading...</div>
     <div id="account_info"></div>
   </div>
 
-  <h2>ACB info <span class="tooltip">?<span class="tooltip-text">aaaa</span></span></h2>
+  <h2>ACB info
+    <span class="tooltip">?<span class="tooltip-text">
+        <span class="bold">Contract address</span>: The address of the ACB contract.<br>
+        <span class="bold">Total coin supply</span>: The total coin supply.<br>
+        <span class="bold">Total bond supply</span>: The total bond supply.<br>
+        <span class="bold">Bond budget</span>: The current bond budget. If the budget is positive, it indicates the number of bonds the ACB can issue (so you can purchase the bonds). If the budget is negative, it indicates the number of bonds the ACB can redeem regardless of their redemption dates (so you can redeem your bonds regardless of their redemption dates).<br>
+        <span class="bold">Current time</span>: The current timestamp.<br>
+        <span class="bold">Current phase started</span>: The timestamp when the current phase started. <br>
+        <span class="bold">Next phase will start</span>: The timestamp when the next phase will start.<br>
+        <span class="bold">Oracle level</span>: The current oracle level.
+  </span></span></h2>
   <div class="info">
     <div id="acb_info_loading">Loading...</div>
     <div id="acb_info"></div>
   </div>
 
-  <h2>Send coins <span class="tooltip">?<span class="tooltip-text">aaaa</span></span></h2>
+  <h2>Send coins
+    <span class="tooltip">?<span class="tooltip-text">
+        You can send coins to your friend's account address.<br>
+        <span class="italic">[This operation consumes some ETH as transaction fee.]</span>
+  </span></span></h2>
   <p>Your friend address: <input type="text" id="send_coins_address" size="56"></input></p>
   <p>Amount of coins: <input type="number" min="1" id="send_coins_amount"></input></p>
   <p><input type="button" value="Send" id="send_coins_button"></input></p>
   
-  <h2>Purchase bonds <span class="tooltip">?<span class="tooltip-text">aaaa</span></span></h2>
+  <h2>Purchase bonds
+    <span class="tooltip">?<span class="tooltip-text">
+        You can purchase bonds as long as the ACB's bond budget is positive. The bond issue price is shown in the above ACB info. The purchased bonds can be redeemed for 1000 coins on the redemption date (or as long as the ACB's bond budget is negative).<br>
+        <span class="italic">[This operation consumes some ETH as transaction fee.]</span>
+  </span></span></h2>
   <p>Amount of bonds: <input type="number" min="1" id="purchase_bonds_amount"></input></p>
   <p><input type="button" value="Purchase" id="purchase_bonds_button"></input><span class="disabled" id="purchase_bonds_button_disabled"></span></p>
   
-  <h2>Vote <span class="tooltip">?<span class="tooltip-text">aaaa</span></span></h2>
+  <h2>Vote <span class="tooltip">?<span class="tooltip-text">
+        You are expected to vote once per phase. You can get a reward by voting for the "correct" exchange rate. See <a href="https://github.com/xharaken/john-law-coin/blob/main/HowToUseWallet.md">help</a> to understand how the voting mechanism works.<br>
+        <span class="bold">Current exchange rate</span>: <br>
+        <span class="bold">Salt</span>:<br>
+        <span class="bold">Reveal the exchange rate in your previous vote</span>: Enter the exchange rate you used in the previous phase. If you didn't vote in the previous phase, leave it empty.<br>
+        <span class="bold">Reveal the salt in your previous vote</span>: Enter the salt you used in the previous phase. If you didn't vote in the previous phase, leave it empty.<br>
+        <span class="italic">[As a result of voting, 10% of your coin balance is deposited to the ACB. The deposited coins are returned to your coin balance later if you voted for the "correct" exchange rate or its surroundings. Otherwise, the deposited coins are lost. See <a href="https://github.com/xharaken/john-law-coin/blob/main/HowToUseWallet.md">help</a> to learn more.]</span><br>
+        <span class="italic">[This operation consumes some ETH as transaction fee.]</span>
+  </span></span></h2>
   <p>Current exchange rate: <select name="vote_commit_level" id="vote_commit_level" size="1">
       <option value="0">1 coin = 0.6 USD (Level 0)</option>
       <option value="1">1 coin = 0.7 USD (Level 1)</option>
@@ -78,7 +110,11 @@
   <p>Reveal the salt in your previous vote: <input type="text" id="vote_reveal_salt" size="56"></input></p>
   <p><input type="button" value="Vote" id="vote_button"></input><span class="disabled" id="vote_button_disabled"></span></p>
   
-  <h2>Redeem bonds <span class="tooltip">?<span class="tooltip-text">aaaa</span></span></h2>
+  <h2>Redeem bonds
+    <span class="tooltip">?<span class="tooltip-text">
+        You can redeem bonds whose redemption period is over. You can also redeem bonds regardless of their redemption dates as long as the ACB's bond budget is nevative.<br>
+        <span class="italic">[This operation consumes some ETH as transaction fee.]</span>
+  </span></span></h2>
   <div class="info">
     <div id="bond_list_loading">Loading...</div>
     <div id="bond_list"></div>
@@ -88,19 +124,28 @@
   <h1></h1>
   <p>Show <a href=""><span id="advanced_button">advanced information</span></a>.</p>
 
-  <h2>Oracle status <span class="tooltip">?<span class="tooltip-text">aaaa</span></span></h2>
+  <h2>Oracle status
+    <span class="tooltip">?<span class="tooltip-text">
+        This shows the internal stats of the Oracle contract.
+  </span></span></h2>
   <div class="info">
     <div id="oracle_status_loading">Loading...</div>
     <div id="oracle_status"></div>
   </div>
 
-  <h2>Logging status <span class="tooltip">?<span class="tooltip-text">aaaa</span></span></h2>
+  <h2>Logging status
+    <span class="tooltip">?<span class="tooltip-text">
+        This shows the internal stats of the Logging contract.
+  </span></span></h2>
   <div class="info">
     <div id="logging_status_loading">Loading...</div>
     <div id="logging_status"></div>
   </div>
 
-  <h2>History <span class="tooltip">?<span class="tooltip-text">aaaa</span></span></h2>
+  <h2>History of JohnLawCoin
+    <span class="tooltip">?<span class="tooltip-text">
+        This shows the historical stats of key parameters in the system.
+  </span></span></h2>
   <div class="info">
     <p><div id="chart_oracle_level"></div></p>
     <p><div id="chart_coin_total_supply"></div></p>

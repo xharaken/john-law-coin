@@ -45,7 +45,7 @@ function parameterized_test(accounts,
       " voter_count=" + _voter_count +
       " iteration=" + _iteration;
   console.log(test_name);
-  assert.isTrue(_voter_count <= accounts.length);
+  assert.isTrue(_voter_count <= accounts.length - 1);
 
   it(test_name, async function () {
     let _prev_mint = 0;
@@ -56,12 +56,14 @@ function parameterized_test(accounts,
                                     _proportional_reward_rate);
     common.print_contract_size(_oracle, "OracleForTesting");
 
+    let initial_coin_supply = (await _coin.totalSupply()).toNumber();
+
     for (let iter = 0; iter < _iteration; iter++) {
       console.log(iter);
       let voters = [];
       for (let i = 0; i < _voter_count; i++) {
         let voter = {
-          address: accounts[i],
+          address: accounts[i + 1],
           committed: false,
           deposit: 0,
           committed_level: 0,
@@ -77,7 +79,7 @@ function parameterized_test(accounts,
       }
 
       for (let i = 0; i < voters.length; i++) {
-        assert.equal(voters[i].address, accounts[i]);
+        assert.equal(voters[i].address, accounts[i + 1]);
         voters[i].committed = (randint(0, 99) < 95);
         if (voters[i].committed) {
           voters[i].deposit = randint(0, 10);
@@ -108,7 +110,7 @@ function parameterized_test(accounts,
       _prev_mint = mint;
 
       for (let i = 0; i < voters.length; i++) {
-        assert.equal(voters[i].address, accounts[i]);
+        assert.equal(voters[i].address, accounts[i + 1]);
         voters[i].revealed = (randint(0, 99) < 95);
         if (voters[i].revealed) {
           if (randint(0, 99) < 95) {
@@ -193,7 +195,7 @@ function parameterized_test(accounts,
 
       let reclaim_total = 0;
       for (let i = 0; i < voters.length; i++) {
-        assert.equal(voters[i].address, accounts[i]);
+        assert.equal(voters[i].address, accounts[i + 1]);
         voters[i].reclaimed = (randint(0, 99) < 95);
         if (voters[i].reclaimed) {
           assert.equal(await _coin.balanceOf(voters[i].address), 0);
@@ -239,9 +241,9 @@ function parameterized_test(accounts,
       mint = randint(0, 20);
       await check_advance(mint, remainder);
       _prev_mint = mint;
-    }
 
-    assert.equal(await _coin.totalSupply(), _prev_mint);
+      assert.equal(await _coin.totalSupply(), _prev_mint + initial_coin_supply);
+    }
 
     async function check_commit(account, committed_hash, deposit) {
       await _coin.transferOwnership(_oracle.address);

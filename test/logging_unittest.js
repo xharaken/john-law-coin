@@ -23,14 +23,15 @@ contract("LoggingUnittest", function (accounts) {
 
     assert.equal(await _logging.log_index_(), 0);
     let acb_log = await get_acb_logs(await _logging.log_index_());
-    assert.equal(acb_log.current_phase_start, 0);
-    assert.equal(acb_log.bond_budget, 0);
-    assert.equal(acb_log.coin_supply_delta, 0);
-    assert.equal(acb_log.oracle_level, 0);
     assert.equal(acb_log.minted_coins, 0);
     assert.equal(acb_log.burned_coins, 0);
+    assert.equal(acb_log.coin_supply_delta, 0);
+    assert.equal(acb_log.bond_budget, 0);
     assert.equal(acb_log.coin_total_supply, 0);
     assert.equal(acb_log.bond_total_supply, 0);
+    assert.equal(acb_log.oracle_level, 0);
+    assert.equal(acb_log.current_phase_start, 0);
+    assert.equal(acb_log.burned_tax, 0);
     assert.equal(acb_log.purchased_bonds, 0);
     assert.equal(acb_log.redeemed_bonds, 0);
     let vote_log = await get_vote_logs(await _logging.log_index_());
@@ -46,7 +47,7 @@ contract("LoggingUnittest", function (accounts) {
 
     const log_max = 1000;
     for (let i = 0; i < log_max + 10; i++) {
-      await _logging.phaseUpdated(1, 2, 3, 4, 5, 6, 7, 8);
+      await _logging.phaseUpdated(1, 2, 3, 4, 5, 6, 7, 8, 9);
       if (i >= 5 && i < log_max - 5) {
         continue;
       }
@@ -59,14 +60,15 @@ contract("LoggingUnittest", function (accounts) {
       await _logging.redeemedBonds(4);
       assert.equal(await _logging.log_index_(), (i + 1) % log_max);
       acb_log = await get_acb_logs(await _logging.log_index_());
-      assert.equal(acb_log.current_phase_start, 1);
-      assert.equal(acb_log.bond_budget, 2);
+      assert.equal(acb_log.minted_coins, 1);
+      assert.equal(acb_log.burned_coins, 2);
       assert.equal(acb_log.coin_supply_delta, 3);
-      assert.equal(acb_log.oracle_level, 4);
-      assert.equal(acb_log.minted_coins, 5);
-      assert.equal(acb_log.burned_coins, 6);
-      assert.equal(acb_log.coin_total_supply, 7);
-      assert.equal(acb_log.bond_total_supply, 8);
+      assert.equal(acb_log.bond_budget, 4);
+      assert.equal(acb_log.coin_total_supply, 5);
+      assert.equal(acb_log.bond_total_supply, 6);
+      assert.equal(acb_log.oracle_level, 7);
+      assert.equal(acb_log.current_phase_start, 8);
+      assert.equal(acb_log.burned_tax, 9);
       assert.equal(acb_log.purchased_bonds, 6);
       assert.equal(acb_log.redeemed_bonds, 10);
 
@@ -146,7 +148,8 @@ contract("LoggingUnittest", function (accounts) {
 
   it("Ownable", async function () {
     await should_throw(async () => {
-      await _logging.phaseUpdated(1, 2, 3, 4, 5, 6, 7, 8, {from: accounts[1]});
+      await _logging.phaseUpdated(1, 2, 3, 4, 5, 6, 7, 8, 9,
+                                  {from: accounts[1]});
     }, "Ownable");
     await should_throw(async () => {
       await _logging.voted(false, false, 0, 0, 0, {from: accounts[1]});
@@ -181,12 +184,13 @@ contract("LoggingUnittest", function (accounts) {
     acb_log.burned_coins = ret[1];
     acb_log.coin_supply_delta = ret[2];
     acb_log.bond_budget = ret[3];
-    acb_log.purchased_bonds = ret[4];
-    acb_log.redeemed_bonds = ret[5];
-    acb_log.coin_total_supply = ret[6];
-    acb_log.bond_total_supply = ret[7];
-    acb_log.oracle_level = ret[8];
-    acb_log.current_phase_start = ret[9];
+    acb_log.coin_total_supply = ret[4];
+    acb_log.bond_total_supply = ret[5];
+    acb_log.oracle_level = ret[6];
+    acb_log.current_phase_start = ret[7];
+    acb_log.burned_tax = ret[8];
+    acb_log.purchased_bonds = ret[9];
+    acb_log.redeemed_bonds = ret[10];
     return acb_log;
   }
 });

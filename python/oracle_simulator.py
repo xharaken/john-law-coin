@@ -25,7 +25,7 @@ class OracleSimulator(unittest.TestCase):
               (level_max, reclaim_threshold,
                proportional_reward_rate, voter_count, iteration))
 
-        self.coin = JohnLawCoin()
+        self.coin = JohnLawCoin(0)
         self.oracle = Oracle()
         self.oracle.override_constants_for_testing(
             level_max, reclaim_threshold, proportional_reward_rate)
@@ -38,9 +38,11 @@ class OracleSimulator(unittest.TestCase):
         pass
 
     def run(self):
+        initial_coin_supply = self.coin.total_supply
         for i in range(self.iteration):
             self.run_cycle()
-        self.assertEqual(self.coin.total_supply, self.prev_mint)
+            self.assertEqual(self.coin.total_supply,
+                             self.prev_mint + initial_coin_supply)
 
     def run_cycle(self):
 
@@ -60,10 +62,10 @@ class OracleSimulator(unittest.TestCase):
 
         voters = []
         for i in range(self.voter_count):
-            voters.append(Voter(i))
+            voters.append(Voter(i + 1))
 
         for i in range(len(voters)):
-            self.assertEqual(voters[i].address, i)
+            self.assertEqual(voters[i].address, i + 1)
             voters[i].committed = (random.randint(0, 99) < 95)
             if voters[i].committed:
                 voters[i].deposit = random.randint(0, 10)
@@ -93,13 +95,14 @@ class OracleSimulator(unittest.TestCase):
         self.prev_mint = mint
 
         for i in range(len(voters)):
-            self.assertEqual(voters[i].address, i)
+            self.assertEqual(voters[i].address, i + 1)
             voters[i].revealed = (random.randint(0, 99) < 95)
             if voters[i].revealed:
                 if random.randint(0, 99) < 95:
                     voters[i].revealed_level = voters[i].committed_level
                 else:
-                    voters[i].revealed_level = random.randint(0, Oracle.LEVEL_MAX)
+                    voters[i].revealed_level = random.randint(
+                        0, Oracle.LEVEL_MAX)
                 if random.randint(0, 99) < 95:
                     voters[i].revealed_salt = voters[i].committed_salt
                 else:
@@ -169,7 +172,7 @@ class OracleSimulator(unittest.TestCase):
 
         reclaim_total = 0
         for i in range(len(voters)):
-            self.assertEqual(voters[i].address, i)
+            self.assertEqual(voters[i].address, i + 1)
             voters[i].reclaimed = (random.randint(0, 99) < 95)
             if voters[i].reclaimed:
                 self.assertEqual(self.coin.balance_of(voters[i].address), 0)

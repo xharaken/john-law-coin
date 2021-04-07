@@ -59,8 +59,8 @@ exports.print_contract_size = (instance, name) => {
 };
 
 exports.randint = (a, b) => {
-  assert.isTrue(a < b);
-  let random = parseInt(Math.random() * (b - a - 1)) + a;
+  assert.isTrue(a <= b);
+  let random = parseInt(Math.random() * (b - a + 1)) + a;
   assert.isTrue(a <= random && random <= b);
   return random;
 };

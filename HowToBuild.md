@@ -9,7 +9,7 @@ $ git clone https://github.com/xharaken/john-law-coin/
 $ cd john-law-coin
 $ sudo apt-get install nodejs npm
 $ sudo npm install -g truffle
-$ sudo npm install  openzeppelin-solidity
+$ sudo npm install @openzeppelin/contracts
 $ sudo npm install @openzeppelin/contracts-upgradeable
 $ sudo npm install -g ganache-cli
 $ sudo npm init -y

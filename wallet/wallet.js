@@ -94,7 +94,7 @@ async function purchaseBonds() {
           parseInt(await acb_contract.methods.bond_budget_().call());
     if (amount > bond_budget) {
       await showErrorMessage(
-          "ACB's current bond budget is " + bond_budget +
+          "The ACB's current bond budget is " + bond_budget +
             ". You cannot purchase bonds larger than this budget.", null);
       return;
     }
@@ -207,7 +207,7 @@ async function reloadInfo() {
 
   try {
     let html = "";
-    html += "<table><tr><td>Address</td><td class='right'>" +
+    html += "<table><tr><td>Account address</td><td class='right'>" +
         ethereum.selectedAddress + "</td></tr>";
     const coin_balance =
           parseInt(await coin_contract.methods.balanceOf(
@@ -222,7 +222,7 @@ async function reloadInfo() {
     $("account_info").innerHTML = html;
     $("account_info_loading").style.display = "none";
 
-    html = "<table><tr><td>Address</td><td class='right'>" +
+    html = "<table><tr><td>Contract address</td><td class='right'>" +
         ACB_ADDRESS + "</td></tr>";
     html += "<tr><td>Total coin supply</td><td class='right'>" +
         (await coin_contract.methods.totalSupply().call()) + "</td></tr>";
@@ -252,7 +252,7 @@ async function reloadInfo() {
     } else {
       $("purchase_bonds_button").disabled = true;
       $("purchase_bonds_button_disabled").innerText =
-          " [You can purchase bonds only when ACB's bond budget " +
+          " [You can purchase bonds only when the ACB's bond budget " +
           "is positive. The current ACB's bond budget is " + bond_budget + ".]";
     }
 
@@ -301,7 +301,7 @@ async function reloadInfo() {
         bond_list_text += "<tr><td>" + getDateString(redemption_timestamp_ms) +
             "</td><td class='right'>" + balance + "</td><td>" +
             (redemption_timestamp_ms < Date.now() ? "Yes" :
-             "As long as ACB's bond budget is negative") + "</td></tr>";
+             "As long as the ACB's bond budget is negative") + "</td></tr>";
         if (redemption_timestamp_ms < Date.now()) {
           has_redeemable = true;
         }

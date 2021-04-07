@@ -48,6 +48,7 @@ class ACBSimulator(unittest.TestCase):
                  damping_factor,
                  level_to_exchange_rate,
                  level_to_bond_price,
+                 level_to_tax_rate,
                  reclaim_threshold,
                  voter_count,
                  iteration):
@@ -68,17 +69,21 @@ class ACBSimulator(unittest.TestCase):
         print(level_to_exchange_rate)
         print('bond_price=', end='')
         print(level_to_bond_price)
+        print('tax_rate=', end='')
+        print(level_to_tax_rate)
 
+        coin = JohnLawCoin(0)
+        bond = JohnLawBond()
         self.oracle = Oracle()
         self.logging = Logging()
-        self.acb = ACB(0x1000, self.oracle, self.logging)
+        self.acb = ACB(coin, bond, self.oracle, self.logging)
         level_max = len(level_to_exchange_rate)
         self.oracle.override_constants_for_testing(
             level_max, reclaim_threshold, proportional_reward_rate)
         self.acb.override_constants_for_testing(
             bond_redemption_price, bond_redemption_period,
             phase_duration, deposit_rate, damping_factor,
-            level_to_exchange_rate, level_to_bond_price)
+            level_to_exchange_rate, level_to_bond_price, level_to_tax_rate)
 
         self.lost_deposit = [0] * 3
         self.iteration = iteration
@@ -86,7 +91,7 @@ class ACBSimulator(unittest.TestCase):
         self.voter_count = voter_count
         self.voters = []
         for i in range(self.voter_count):
-            self.voters.append(Voter("address" + str(i)))
+            self.voters.append(Voter(i + 1))
 
         class Metrics:
             def __init__(self):
@@ -175,8 +180,9 @@ class ACBSimulator(unittest.TestCase):
         initial_coin_supply = acb.coin.total_supply
 
         epoch = 0
+        burned_tax = 0
         for i in range(self.iteration):
-            if acb.coin.total_supply >= ACB.INITIAL_COIN_SUPPLY * 100:
+            if acb.coin.total_supply >= initial_coin_supply * 100:
                 break
 
             self.metrics.reset_local()
@@ -184,7 +190,7 @@ class ACBSimulator(unittest.TestCase):
             coin_supply1 = acb.coin.total_supply
 
             acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
-            commit_observed = self.vote(epoch)
+            commit_observed = self.vote(epoch, burned_tax)
             if not commit_observed:
                 continue
 
@@ -198,14 +204,15 @@ class ACBSimulator(unittest.TestCase):
             self.purchase_bonds()
 
             acb_log = logging.acb_logs[logging.log_index]
-            self.assertEqual(acb_log.current_phase_start, acb.get_timestamp())
-            self.assertEqual(acb_log.bond_budget, bond_budget)
-            self.assertEqual(acb_log.coin_supply_delta, self.metrics.delta)
-            self.assertEqual(acb_log.oracle_level, self.metrics.oracle_level)
             self.assertEqual(acb_log.minted_coins, self.metrics.mint)
             self.assertEqual(acb_log.burned_coins, self.metrics.lost)
+            self.assertEqual(acb_log.coin_supply_delta, self.metrics.delta)
+            self.assertEqual(acb_log.bond_budget, bond_budget)
             self.assertEqual(acb_log.coin_total_supply, coin_supply2)
             self.assertEqual(acb_log.bond_total_supply, bond_supply)
+            self.assertEqual(acb_log.oracle_level, self.metrics.oracle_level)
+            self.assertEqual(acb_log.current_phase_start, acb.get_timestamp())
+            self.assertEqual(acb_log.burned_tax, burned_tax)
             self.assertEqual(acb_log.purchased_bonds,
                              self.metrics.purchase_count)
             self.assertEqual(acb_log.redeemed_bonds, self.metrics.redeem_count)
@@ -222,6 +229,8 @@ class ACBSimulator(unittest.TestCase):
                              self.metrics.reward_hit)
             self.assertEqual(vote_log.reclaimed, self.metrics.reclaimed)
             self.assertEqual(vote_log.rewarded, self.metrics.rewarded)
+
+            burned_tax = self.transfer_coins()
 
             if False:
                 print('epoch=%d reveal_hit=%d/%d=%d%% reclaim_hit=%d/%d=%d%% '
@@ -325,6 +334,39 @@ class ACBSimulator(unittest.TestCase):
                ))
         print("================")
         print()
+
+    def transfer_coins(self):
+        acb = self.acb
+
+        start_index = random.randint(0, self.voter_count - 1)
+        burned_tax = 0
+        for index in range(min(self.voter_count, 10)):
+            sender = self.voters[(start_index + index) % self.voter_count]
+            receiver = self.voters[(start_index + index + 1) % self.voter_count]
+            transfer = random.randint(
+                0, min(acb.coin.balance_of(sender.address), 100))
+            tax_rate = 0
+            if 0 <= acb.oracle_level and acb.oracle_level < Oracle.LEVEL_MAX:
+                tax_rate = ACB.LEVEL_TO_TAX_RATE[acb.oracle_level]
+            tax = int(transfer * tax_rate / 100)
+            balance_sender = acb.coin.balance_of(sender.address)
+            balance_receiver = acb.coin.balance_of(receiver.address)
+            balance_tax = acb.coin.balance_of(acb.coin.tax_account)
+            acb.coin.transfer(sender.address, receiver.address, transfer)
+            if sender != receiver:
+                self.assertEqual(acb.coin.balance_of(sender.address),
+                                 balance_sender - transfer)
+                self.assertEqual(acb.coin.balance_of(receiver.address),
+                                 balance_receiver + transfer - tax)
+            else:
+                self.assertEqual(acb.coin.balance_of(sender.address),
+                                 balance_receiver - tax)
+            self.assertEqual(acb.coin.balance_of(acb.coin.tax_account),
+                             balance_tax + tax)
+            sender.balance -= transfer
+            receiver.balance += transfer - tax
+            burned_tax += tax
+        return burned_tax
 
     def purchase_bonds(self):
         acb = self.acb
@@ -432,7 +474,7 @@ class ACBSimulator(unittest.TestCase):
             self.metrics.redeem_hit += 1
 
 
-    def vote(self, epoch):
+    def vote(self, epoch, burned_tax):
         acb = self.acb
         voters = self.voters
         current = epoch % 3
@@ -651,7 +693,8 @@ class ACBSimulator(unittest.TestCase):
                     self.assertEqual(acb.bond_budget, issued_bonds)
                 self.assertEqual(acb.coin.total_supply,
                                  coin_supply + mint -
-                                 self.lost_deposit[(epoch - 1) % 3])
+                                 self.lost_deposit[(epoch - 1) % 3] -
+                                 burned_tax)
                 self.assertEqual(acb.oracle_level, mode_level)
                 commit_observed = True
 
@@ -679,7 +722,8 @@ def main():
         10,
         10,
         [6, 7, 8, 9, 10, 11, 12, 13, 14],
-        [950, 965, 978, 990, 997, 997, 997, 997, 997],
+        [970, 978, 986, 992, 997, 997, 997, 997, 997],
+        [30, 20, 12, 5, 0, 0, 0, 0, 0],
         1,
         200,
         iteration)
@@ -694,17 +738,21 @@ def main():
                         for damping_factor in [10, 100]:
                             p = bond_redemption_price
                             for (level_to_exchange_rate,
-                                 level_to_bond_price) in [
+                                 level_to_bond_price,
+                                 level_to_tax_rate) in [
                                      ([9, 11, 12],
-                                      [max(1, p - 20), max(1, p - 10), p]),
+                                      [max(1, p - 20), max(1, p - 10), p],
+                                      [20, 10, 0]),
                                      ([0, 1, 10, 11, 12],
                                       [max(1, p - 20), max(1, p - 10),
-                                       p, p, p]),
+                                       p, p, p],
+                                      [20, 10, 10, 0, 0]),
                                      ([6, 7, 8, 9, 10, 11, 12, 13, 14],
                                       [max(1, p - 30),
                                        max(1, p - 20), max(1, p - 20),
                                        max(1, p - 10), max(1, p - 10),
-                                       p, p, p, p])]:
+                                       p, p, p, p],
+                                      [30, 20, 12, 5, 0, 0, 0, 0, 0])]:
                                 for reclaim_threshold in [0, 1, len(
                                     level_to_exchange_rate) - 1]:
                                     for voter_count in [1, 200]:
@@ -717,6 +765,7 @@ def main():
                                             damping_factor,
                                             level_to_exchange_rate,
                                             level_to_bond_price,
+                                            level_to_tax_rate,
                                             reclaim_threshold,
                                             voter_count,
                                             iteration)

@@ -20,18 +20,22 @@ const JohnLawCoin = artifacts.require("JohnLawCoin");
 const JohnLawBond = artifacts.require("JohnLawBond");
 
 module.exports = async function (deployer) {
+  let coin = await JohnLawCoin.new();
+  let bond = await JohnLawBond.new();
   let oracle = await deployProxy(
       Oracle, [],
       {deployer: deployer, unsafeAllowCustomTypes: true});
   let logging = await Logging.new();
   let acb = await deployProxy(
-      ACB, [oracle.address, logging.address],
+      ACB, [coin.address, bond.address, oracle.address, logging.address],
       {deployer: deployer, unsafeAllowCustomTypes: true});
+  await coin.transferOwnership(acb.address);
+  await bond.transferOwnership(acb.address);
   await oracle.transferOwnership(acb.address);
   await logging.transferOwnership(acb.address);
-  console.log("ACB address: ", acb.address);
+  console.log("JohnLawCoin address: ", coin.address);
+  console.log("JohnLawBond address: ", bond.address);
   console.log("Oracle address: ", oracle.address);
   console.log("Logging address: ", logging.address);
-  console.log("JohnLawCoin address: ", await acb.coin_());
-  console.log("JohnLawBond address: ", await acb.bond_());
+  console.log("ACB address: ", acb.address);
 };

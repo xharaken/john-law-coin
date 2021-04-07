@@ -36,7 +36,10 @@ class OracleUnitTest(unittest.TestCase):
         assert(0 <= other_level and other_level < level_max)
         assert(mode_level != other_level)
 
-        self.coin = JohnLawCoin()
+        self.accounts = ['0x0000', '0x1000', '0x2000', '0x3000', '0x4000',
+                         '0x5000', '0x6000', '0x7000']
+
+        self.coin = JohnLawCoin(self.accounts[0])
         self.oracle = Oracle()
         self.oracle.override_constants_for_testing(
             level_max, reclaim_threshold, proportional_reward_rate)
@@ -62,8 +65,7 @@ class OracleUnitTest(unittest.TestCase):
         _coin = self.coin
         _oracle = self.oracle
 
-        accounts = ['0x0000', '0x1000', '0x2000', '0x3000', '0x4000',
-                    '0x5000', '0x6000', '0x7000']
+        accounts = self.accounts
 
         # no commit -> no reveal -> no reclaim
         self.assertEqual(_oracle.get_mode_level(), _level_max)
@@ -2147,7 +2149,8 @@ class OracleUnitTest(unittest.TestCase):
         self.assertEqual(_coin.balance_of(_oracle.epochs[2].reward_account), 0)
         self.assertEqual(_coin.balance_of(_oracle.epochs[2].deposit_account), 0)
 
-        balance_total = (self.coin.balance_of(accounts[1]) +
+        balance_total = (self.coin.balance_of(accounts[0]) +
+                         self.coin.balance_of(accounts[1]) +
                          self.coin.balance_of(accounts[2]) +
                          self.coin.balance_of(accounts[3]) +
                          self.coin.balance_of(accounts[4]) +
