@@ -45,12 +45,8 @@ contract("LoggingUnittest", function (accounts) {
     assert.equal(vote_log.reclaimed, 0);
     assert.equal(vote_log.rewarded, 0);
 
-    const log_max = 1000;
-    for (let i = 0; i < log_max + 10; i++) {
+    for (let i = 0; i < 50; i++) {
       await _logging.phaseUpdated(1, 2, 3, 4, 5, 6, 7, 8, 9);
-      if (i >= 5 && i < log_max - 5) {
-        continue;
-      }
       await _logging.purchasedBonds(1);
       await _logging.purchasedBonds(2);
       await _logging.purchasedBonds(3);
@@ -58,7 +54,7 @@ contract("LoggingUnittest", function (accounts) {
       await _logging.redeemedBonds(2);
       await _logging.redeemedBonds(3);
       await _logging.redeemedBonds(4);
-      assert.equal(await _logging.log_index_(), (i + 1) % log_max);
+      assert.equal(await _logging.log_index_(), i + 1);
       acb_log = await get_acb_logs(await _logging.log_index_());
       assert.equal(acb_log.minted_coins, 1);
       assert.equal(acb_log.burned_coins, 2);

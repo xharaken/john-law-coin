@@ -53,12 +53,12 @@ These complexities come from the collateral. The goal of JohnLawCoin is to demon
 
 \subsection{Modern Monetary Theory}
 
-JohnLawCoin is inspired by Modern Monetary Theory (MMT)~\cite{kelton2020deficit,mmt2016wray}. Specifically, JohnLawCoin is designed based on the following monetary principles of MMT:\footnote{MMT is controversial when it comes to its political implications about fiscal policies and taxing~\cite{palley2015money}, but digging into the political implications is out of the scope of this experiment. In the first place, JohnLawCoin does not have any gatekeeper that can enforce fiscal policies or taxes. The author does not want to highlight JohnLawCoin's dependencies on MMT too much because MMT is recognized as ``heterodox'' economics due to the controversial political implications. Even if MMT fails, it does not mean JohnLawCoin fails. JohnLawCoin only depends on the monetary principles [MMT-I], [MMT-II] and [MMT-III], which do not contradict the standard economic theories.}
+JohnLawCoin is inspired by Modern Monetary Theory (MMT)~\cite{kelton2020deficit,mmt2016wray}. Specifically, JohnLawCoin is designed based on the following monetary principles of MMT:\footnote{MMT is controversial when it comes to its political implications about fiscal policies and taxing~\cite{palley2015money}, but digging into the political implications is out of the scope of this experiment. In the first place, JohnLawCoin does not have any gatekeeper that can enforce fiscal policies. JohnLawCoin only depends on the monetary principles [MMT-I], [MMT-II] and [MMT-III], which do not contradict the standard economic theories.}
 
 \begin{description}
-\item{\textbf{[MMT-I]}} A central bank that issues its own fiat currency is never forced to default on debt denominated by the fiat currency because the central bank can always redeem the debt by creating money.
+\item{\textbf{[MMT-I]}} A government that issues its own fiat currency is never forced to default on debt denominated by the fiat currency because the government can always redeem the debt by creating money.
 \item{\textbf{[MMT-II]}} The money creation and the increased balance of the debt are not a problem as long as they do not lead to inflation.
-\item{\textbf{[MMT-III]}} The central bank does not need to issue debt (and borrow money from private sectors) to create money because the central bank can create money from scratch. Debt is not a tool for financing the money creation but is a tool to control the currency price.
+\item{\textbf{[MMT-III]}} The government does not need to issue debt and borrow money from private sectors to create money because the government can create money from scratch. Debt is not a tool for financing the money creation but is a tool for controling the currency price.
 \end{description}
 
 \section{Value proposition}
@@ -233,21 +233,27 @@ If $E>1$, the ACB increases the total coin supply by $k\,M\,(E-1)$. If $E<1$, th
 
 Now the ACB knows how many coins should be minted (when $E>1$) or burned (when $E<1$). The next question is how the ACB mints or burns the coins.
 
-The ACB mints coins by redeeming issued bonds regardless of their redemption dates. Specifically, the ACB redeems $k\,M\,(E-1)/B_{\mathrm{redemp}}$ bonds regardless of their redemption dates.\footnote{The ACB does not need to worry about what bonds should be redeemed first (e.g., first-issued-first-redeemed) because it is bondholder's responsibility to request the redemption. The ACB only needs to redeem bonds as requested until $k\,M\,(E-1)/B_{\mathrm{redemp}}$ bonds are redeemed. Note that bondholders are incentivized to redeem bonds as soon as possible to get the interest rate.} If $k\,M\,(E-1)/B_{\mathrm{redemp}}$ exceeds the number of issued bonds, the ACB mints the remaining coins and provides them to the oracle as a reward. As described above, the oracle distributes the reward to voters who voted for the ``truth'' exchange rate.
+The ACB mints coins by redeeming issued bonds regardless of their redemption dates. Specifically, the ACB redeems $k\,M\,(E-1)/B_{\mathrm{redemp}}$ bonds regardless of their redemption dates.\footnote{The ACB does not need to worry about what bonds should be redeemed first (e.g., first-issued-first-redeemed) because it is bondholder's responsibility to request the redemption. The ACB only needs to redeem bonds as requested until $k\,M\,(E-1)/B_{\mathrm{redemp}}$ bonds are redeemed. Note that bondholders are incentivized to redeem bonds as soon as possible to get the interest.} If $k\,M\,(E-1)/B_{\mathrm{redemp}}$ exceeds the number of issued bonds, the ACB mints the remaining coins and provides them to the oracle as a reward. As described above, the oracle distributes the reward to voters who voted for the ``truth'' exchange rate.
 
 The ACB burns coins by issuing new bonds. Specifically, the ACB issues $k\,M\,(1-E)/B_{\mathrm{issue}}$ bonds.
 
 In this way, the ACB increases / decreases the total coin supply by redeeming / issuing bonds. The redeem / issue operations do not require an open market. The ACB redeems a bond at a price of $B_{\mathrm{redemp}}$ and issues a bond at a price of $B_{\mathrm{issue}}$. The ACB can always redeem / issue bonds without relying on an open market at all.\footnote{An open market may emerge but that's a separate discussion.}
+
+\subsubsection{Taxation}
+
+When $E<1$, the ACB decreases the total coin supply by issuing bonds. However, the ACB needs to redeem the bonds with the annual interest rate $R$ on their redemption date. This means that the bonds are useful to decrease the total coin supply in a short period of time but increase the total coin supply in the long run.
+
+To stabilize the exchange rate, there must be a mechanism to \textit{really} decrease the total coin supply. The ACB imposes a consumption tax to all the coin transfers. The collected tax is simply burned by the ACB because the purpose of the tax is to decrease the total coin supply.\footnote{This is aligned with MMT's view that tax is not a tool for financing government's spending but a tool for controling the currency price.} The tax rate $t$ is set to 0\% when $E>=0$. $t$ is set to a positive number when $E<0$.
 
 \section{Incentive structure}
 
 For the described algorithm to work, the following condition must be met:
 
 \begin{description}
-\item{\textbf{[Condition]}} The ACB can find users who are willing to buy issued bonds.
+\item{\textbf{[Condition]}} The ACB can find users who are willing to purchase issued bonds.
 \end{description}
 
-If the [Condition] is met, the algorithm works. If the [Condition] is not met, the algorithm does not work because the ACB cannot decrease the total coin supply by issuing bonds. This section analyzes when the [Condition] is met or not met using Domar's theorem~\cite{domar1944burden}.
+If the [Condition] is met, the algorithm works. If the [Condition] is not met, the algorithm does not work because the ACB cannot decrease the total coin supply by issuing bonds. This section analyzes when the [Condition] is met or not met.
 
 Let $R$ be the annual interest rate of the bond and $G$ be the annual growth of the economy. The total coin supply is expected to grow with the annual growth rate of $G$. 
 
@@ -260,17 +266,17 @@ It is important to understand that no matter what happens with $G$ and $R$, the 
 \item If the [Condition] is met, inflation does not happen. One coin is convertible to one USD when the redemption date comes.
 \end{enumerate}
 
-(a) is obvious. According to [MMT-I], a central bank that issues its own fiat currency is never forced to default on debt denominated by the fiat currency because the central bank can always redeem the debt by minting the fiat currency. (b) is obvious per the bond definition. (c) holds because if the [Condition] is met, the ACB can continue running the algorithm and the algorithm adjusts the JohnLawCoin / USD exchange rate toward 1.0 (i.e., inflation does not happen).
+(a) is obvious. According to [MMT-I], a government that issues its own fiat currency is never forced to default on debt denominated by the fiat currency because the government can always redeem the debt by minting the fiat currency. (b) is obvious per the bond definition. (c) holds because if the [Condition] is met, the ACB can continue running the algorithm and the algorithm adjusts the JohnLawCoin / USD exchange rate toward 1.0 (i.e., inflation does not happen).
 
-Therefore, rational users are incentivized to buy bonds if the users believe the [Condition] is met when the redemption date comes. The question is when the users believe the [Condition] is met. The following three cases need to be analyzed: $G>R$, $G=R$, and $G<R$.
+Therefore, rational users are incentivized to purchase bonds if the users believe the [Condition] is met when the redemption date comes. The question is when the users believe the [Condition] is met. The following three cases need to be analyzed: $G>R$, $G=R$, and $G<R$.
 
 Case 1: $G>R$. In this case, the balance of the issued bonds decreases (and may go down to zero) over time because the ACB needs to redeem bonds faster than issuing bonds. The [Condition] is met.
 
 Case 2: $G=R$. In this special case, the balance of the issued bonds does not change. The ACB can realize the expected total coin supply (whose annual growth rate is $G$) by redeeming bonds on their redemption dates (whose interest rate is $R$). The [Condition] is met.
 
-Case 3: $G<R$. In this case, the balance of the issued bonds increases. The ACB needs to issue bonds faster than redeeming bonds because the expected annual growth of the total coin supply ($G$) is smaller than the annual interest rate of the bonds ($R$). If the balance of the issued bonds is likely to go to infinity, users will stop buying the bonds and thus the [Condition] breaks. However, $G<R$ does not break the [Condition] immediately. As demonstrated in Japan, the United States and other advanced countries, private sectors can tolerate some degree of the increased balance of the government's debt~\cite{elmendorf1999government}. Where is the threshold?
+Case 3: $G<R$. In this case, the balance of the issued bonds increases. The ACB needs to issue bonds faster than redeeming bonds because the expected annual growth of the total coin supply ($G$) is smaller than the annual interest rate of the bonds ($R$). If the balance of the issued bonds is likely to go to infinity, users will stop purchasing the bonds and thus the [Condition] breaks. However, $G<R$ does not break the [Condition] immediately. As demonstrated in Japan, the United States and other advanced countries, some degree of the increased balance of the government's debt does not lead to their bond price crash~\cite{elmendorf1999government}. Where is the threshold?
 
-The key observation is that there is a limit to people's abilities and willingness about how much they can buy bonds. If people believe that other people will have abilities and willingness to buy bonds, people believe that the ACB has the ability of adjusting the exchange rate toward 1.0. Then people buy bonds and thus the [Condition] is met (regardless of the balance of the issued bonds). This infinite incentive recursion plays a critical role here. Money is accepted as money by everybody merely because it is accepted as money by everybody else~\cite{iwai1996boostrap,iwai1997evolution}. Similarly, bonds are accepted as bonds by everybody merely because they are accepted as bonds by everybody else. If the gap between $G$ and $R$ is small, $G<R$ will not break the infinite incentive recursion and not break the [Condition]. As [MMT-II] states, money creation and the increased balance of the debt are not a problem as long as they do not lead to inflation (i.e., as long as they do not break the infinite incentive recursion).
+The key observation is that if people believe that other people will have willingness to purchase bonds, they believe that the ACB has the ability of adjusting the exchange rate toward 1.0. Then they purchase bonds and thus the [Condition] is met (regardless of the balance of the issued bonds). The infinite incentive recursion plays a critical role here. Money is accepted as money by everybody merely because it is accepted as money by everybody else~\cite{iwai1996boostrap,iwai1997evolution}. Similarly, bonds are accepted as bonds by everybody merely because they are accepted as bonds by everybody else. If the gap between $G$ and $R$ is small, $G<R$ will not break the infinite incentive recursion and not break the [Condition] even when the balance of the issued bonds increases. As [MMT-II] states, the increased balance of the debt is not a problem as long as it does not lead to inflation (i.e., as long as it does not break the infinite incentive recursion).
 
 The conclusion is that \textbf{the [Condition] is met if $G>=R$, or $G<R$ but the gap is limited}. As long as the ACB sets a lower value to $R$ (e.g., 1\%), the [Condition] is likely to be met.\footnote{If $G$ is consistently lower than 1\%, it means that the economy is not growing. This is a far more fundamental problem before worrying about the incentive recursion.}
 
@@ -290,30 +296,32 @@ JohnLawCoin is implemented as a smart contract on Ethereum.\footnote{The impleme
 
 The coins are implemented as ERC20 tokens~\cite{erc20token}. There are only three ways to get the coins; 1) ask someone to transfer coins to your account (e.g., by purchasing JohnLawCoin at an external currency exchanger), 2) contribute to the oracle and get the reward and 3) get an interest rate by holding bonds. It is worth noting that the ACB does not have the ability to exchange ETH with the coins. This is an intentional design because defining the conversion rate between fluctuating ETH and JohnLawCoin contradicts the goal of stabilizing the JohnLawCoin / USD exchange rate.
 
-The bonds are implemented as non-transferable tokens. Bondholders can buy and redeem the bonds at the ACB but cannot transfer the bonds to others.\footnote{ If the bonds are transferable, that produces a strange situation. If the bonds are transferable, no users will hold the coins because they cannot get any interest by holding the coins whereas they can get an interest by holding the bonds. For the bonds to work as a mechanism to adjust the total coin supply, their liquidity needs to be restricted.}\footnote{This is only saying that the bonds are not transferable at the layer of the ACB. An open market to exchange bonds may emerge.}
+The bonds are implemented as non-transferable tokens. Bondholders can purchase and redeem the bonds at the ACB but cannot transfer the bonds to others.\footnote{ If the bonds are transferable, that produces a strange situation. If the bonds are transferable, no users will hold the coins because they cannot get any interest by holding the coins whereas they can get an interest by holding the bonds. For the bonds to work as a mechanism to adjust the total coin supply, their liquidity needs to be restricted.}\footnote{This is only saying that the bonds are not transferable at the layer of the ACB. An open market to exchange bonds may emerge.}
 
 \subsection{Constant values}
 
 \begin{table}[htb]
 \begin{center}
 \caption{The quantized exchange rates supported by the oracle.}\vspace{2ex}
-\begin{tabular}{rrrrr}\hline
-\multicolumn{1}{c}{$E$} & \multicolumn{1}{c}{$B_{\mathrm{issue}}$} & \multicolumn{1}{c}{$B_{\mathrm{redemp}}$} & \multicolumn{1}{c}{$T$} & \multicolumn{1}{c}{$R$}\\\hline
-1 coin = 0.6 USD & 950 coins & 1000 coins & 12 weeks & 25.0\%\\
-1 coin = 0.7 USD & 965 coins & 1000 coins & 12 weeks & 16.7\%\\
-1 coin = 0.8 USD & 978 coins & 1000 coins & 12 weeks & 10.1\%\\
-1 coin = 0.9 USD & 990 coins & 1000 coins & 12 weeks & 4.46\%\\
-1 coin = 1.0 USD & 997 coins & 1000 coins & 12 weeks & 1.31\%\\
-1 coin = 1.1 USD & 997 coins & 1000 coins & 12 weeks & 1.31\%\\
-1 coin = 1.2 USD & 997 coins & 1000 coins & 12 weeks & 1.31\%\\
-1 coin = 1.3 USD & 997 coins & 1000 coins & 12 weeks & 1.31\%\\
-1 coin = 1.4 USD & 997 coins & 1000 coins & 12 weeks & 1.31\%\\\hline
+\begin{tabular}{rrrrrr}\hline
+\multicolumn{1}{c}{$E$} & \multicolumn{1}{c}{$B_{\mathrm{issue}}$} & \multicolumn{1}{c}{$B_{\mathrm{redemp}}$} & \multicolumn{1}{c}{$T$} & \multicolumn{1}{c}{$R$} & \multicolumn{1}{c}{$t$}\\\hline
+1 coin = 0.6 USD & 970 coins & 1000 coins & 12 weeks & 14.1\% & 30\%\\
+1 coin = 0.7 USD & 978 coins & 1000 coins & 12 weeks & 10.1\% & 20\%\\
+1 coin = 0.8 USD & 986 coins & 1000 coins & 12 weeks & 6.32\% & 12\%\\
+1 coin = 0.9 USD & 992 coins & 1000 coins & 12 weeks & 3.55\% & 5\%\\
+1 coin = 1.0 USD & 997 coins & 1000 coins & 12 weeks & 1.31\% & 0\%\\
+1 coin = 1.1 USD & 997 coins & 1000 coins & 12 weeks & 1.31\% & 0\%\\
+1 coin = 1.2 USD & 997 coins & 1000 coins & 12 weeks & 1.31\% & 0\%\\
+1 coin = 1.3 USD & 997 coins & 1000 coins & 12 weeks & 1.31\% & 0\%\\
+1 coin = 1.4 USD & 997 coins & 1000 coins & 12 weeks & 1.31\% & 0\%\\\hline
 \end{tabular}
 \label{table1}
 \end{center}
 \end{table}
 
-Table \ref{table1} shows the quantized exchange rates supported by the oracle.\footnote{You may wonder why bonds are issued when the exchange rate is 1.0 or above. In the ACB algorithm, it's possible that \textit{acb.bond\_budget} becomes positive when the exchange rate is 1.0 or above if the bond redemption happens too much. In this case, the ACB issues new bonds until \textit{acb.bond\_budget} goes down to zero.} The bond issue price $B_{\mathrm{issue}}$ depends on the exchange rates to reflect the risks. The bonds are designed as zero-coupon bonds, and $R$, $T$ (measured in days), $B_{\mathrm{redemp}}$ and $B_{\mathrm{issue}}$ meet $B_{\mathrm{issue}}(1+R)^{365/T}=B_{\mathrm{redemp}}$. These values are carefully chosen based on the author's simulation results. The simulation tested how the total coin supply, the bond supply and the exchange rate changes over time in the next 20 years using various parameters.
+Table \ref{table1} shows the quantized exchange rates supported by the oracle.\footnote{You may wonder why bonds are issued when the exchange rate is 1.0 or above. In the ACB algorithm, it's possible that \textit{acb.bond\_budget} becomes positive when the exchange rate is 1.0 or above if the bond redemption happens too much. In this case, the ACB issues new bonds until \textit{acb.bond\_budget} goes down to zero.} The bond issue price $B_{\mathrm{issue}}$ depends on the exchange rates to reflect the risks. The bonds are designed as zero-coupon bonds, and $R$, $T$ (measured in days), $B_{\mathrm{redemp}}$ and $B_{\mathrm{issue}}$ meet $B_{\mathrm{issue}}(1+R)^{365/T}=B_{\mathrm{redemp}}$. The tax rate $t$ is set to 0\% when the exchange rate is 1.0 or above because there is no need to decrease the total coin supply. $t$ is set to a positive number when the exchange rate is below 1.0.\footnote{Imagine that the exchange rate is 1 coin = 0.6 USD. In this case, a 30\% consumption tax is imposed on all coin transfers. The tax rate might look high but users who believe that the ACB has the ability of stabilizing the exchange rate towards 1.0 are still incentivized to get the coins. For example, 1 USD is convertible to 1 / 0.6 * (1 - 0.3) = 1.16 coins. When the exchange rate is stabilized to 1.0 in the future, the coins are convertible to 1.16 USD.}
+
+These values are carefully chosen based on the author's simulation results. The simulation tested how the total coin supply, the bond supply and the exchange rate changes over time in the next 20 years using various parameters.
 
 \begin{table}[htb]
 \begin{center}

@@ -211,7 +211,7 @@ contract JohnLawBond is Ownable {
   mapping (address => uint) private _number_of_bonds;
   
   // _bonds[account][redemption_timestamp] stores the number of the bonds
-  // that is owned by the |account| and has the |redemption_timestamp|.
+  // owned by the |account| and has the |redemption_timestamp|.
   mapping (address => mapping (uint => uint)) private _bonds;
 
   // The total bond supply.
@@ -471,6 +471,7 @@ contract Oracle is OwnableUpgradeable {
     if (coin.balanceOf(sender) < deposit) {
       return false;
     }
+    
     // One voter can commit only once per epoch.
     if (epoch.commits[sender].epoch_timestamp == epoch_timestamp_) {
       return false;
@@ -509,6 +510,7 @@ contract Oracle is OwnableUpgradeable {
       // The corresponding commit was not found.
       return false;
     }
+    
     // One voter can reveal only once per epoch.
     if (epoch.commits[sender].phase != Phase.COMMIT) {
       return false;
@@ -516,8 +518,7 @@ contract Oracle is OwnableUpgradeable {
     epoch.commits[sender].phase = Phase.REVEAL;
 
     // Check if the committed hash matches the revealed level and the salt.
-    bytes32 reveal_hash = hash(
-        sender, revealed_level, revealed_salt);
+    bytes32 reveal_hash = hash(sender, revealed_level, revealed_salt);
     bytes32 committed_hash = epoch.commits[sender].committed_hash;
     if (committed_hash != reveal_hash) {
       return false;
@@ -555,6 +556,7 @@ contract Oracle is OwnableUpgradeable {
       // The corresponding commit was not found.
       return (0, 0);
     }
+    
     // One voter can reclaim only once per epoch.
     if (epoch.commits[sender].phase != Phase.REVEAL) {
       return (0, 0);
@@ -571,8 +573,8 @@ contract Oracle is OwnableUpgradeable {
     if (!epoch.votes[revealed_level].should_reclaim) {
       return (0, 0);
     }
-
     require(epoch.votes[revealed_level].count > 0, "rc3");
+    
     // Reclaim the deposited coins.
     coin.move(epoch.deposit_account, sender, deposit);
 
@@ -654,10 +656,8 @@ contract Oracle is OwnableUpgradeable {
           deposit_to_reclaim <= coin.balanceOf(epoch.deposit_account), "ad6");
 
       // The lost coins are moved to the reward account.
-      coin.move(
-          epoch.deposit_account,
-          epoch.reward_account,
-          coin.balanceOf(epoch.deposit_account) - deposit_to_reclaim);
+      coin.move(epoch.deposit_account, epoch.reward_account,
+                coin.balanceOf(epoch.deposit_account) - deposit_to_reclaim);
     }
 
     // Mint |mint| coins to the reward account.
@@ -835,20 +835,16 @@ contract Logging is Ownable {
 
   // Constants.
 
-  // The maximum number of logs.
-  uint internal constant LOG_MAX = 1000;
-  
   // Attributes.
 
-  // The index of the current log. When the index exceeds Logging.LOG_MAX,
-  // the index is reset to 0.
+  // The index of the current log.
   uint public log_index_ = 0;
   
   // The logs about the voting.
-  VoteLog[LOG_MAX] public vote_logs_;
+  mapping (uint => VoteLog) public vote_logs_;
   
   // The logs about the ACB.
-  ACBLog[LOG_MAX] public acb_logs_;
+  mapping (uint => ACBLog) public acb_logs_;
 
   // Constructor.
   constructor() {
@@ -895,11 +891,9 @@ contract Logging is Ownable {
                         uint oracle_level, uint current_phase_start,
                         uint burned_tax)
       public onlyOwner {
-    log_index_ = (log_index_ + 1) % LOG_MAX;
-    vote_logs_[log_index_] =
-        VoteLog(0, 0, 0, 0, 0, 0, 0, 0, 0);
-    acb_logs_[log_index_] =
-        ACBLog(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    log_index_ += 1;
+    vote_logs_[log_index_] = VoteLog(0, 0, 0, 0, 0, 0, 0, 0, 0);
+    acb_logs_[log_index_] = ACBLog(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
       
     acb_logs_[log_index_].minted_coins = minted;
     acb_logs_[log_index_].burned_coins = burned;
@@ -1219,7 +1213,6 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
   //  - boolean: Whether this vote resulted in a phase update.
   function vote(bytes32 committed_hash, uint revealed_level, uint revealed_salt)
       public whenNotPaused returns (bool, bool, uint, uint, uint, bool) {
-
     VoteResult memory result;
     
     result.phase_updated = false;

@@ -50,11 +50,8 @@ class LoggingUnitTest(unittest.TestCase):
         self.assertEqual(vote_log.reclaimed, 0)
         self.assertEqual(vote_log.rewarded, 0)
 
-        log_max = 1000
-        for i in range(log_max + 10):
+        for i in range(50):
             logging.phase_updated(1, 2, 3, 4, 5, 6, 7, 8, 9)
-            if i >= 5 and i < log_max - 5:
-                continue
             logging.purchased_bonds(1)
             logging.purchased_bonds(2)
             logging.purchased_bonds(3)
@@ -62,7 +59,7 @@ class LoggingUnitTest(unittest.TestCase):
             logging.redeemed_bonds(2)
             logging.redeemed_bonds(3)
             logging.redeemed_bonds(4)
-            self.assertEqual(logging.log_index, (i + 1) % log_max)
+            self.assertEqual(logging.log_index, i + 1)
             acb_log = logging.acb_logs[logging.log_index]
             self.assertEqual(acb_log.minted_coins, 1)
             self.assertEqual(acb_log.burned_coins, 2)

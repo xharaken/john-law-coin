@@ -138,6 +138,7 @@ class JohnLawCoin:
 
     # Set the tax rate. Only the ACB can call this method.
     def set_tax_rate(self, tax_rate):
+        assert(0 <= tax_rate and tax_rate <= 100)
         self.tax_rate = tax_rate
 
     # Override ERC20's transfer method to impose a tax set by the ACB.
@@ -166,8 +167,7 @@ class JohnLawBond:
         self.number_of_bonds = {}
 
         # bonds[account][redemption_timestamp] stores the number of the
-        # bonds that is owned by the |account| and has the
-        # |redemption_timestamp|.
+        # bonds owned by the |account| and has the |redemption_timestamp|.
         self.bonds = {}
 
         # The total bond supply.
@@ -223,6 +223,7 @@ class JohnLawBond:
         self.bonds[account][redemption_timestamp] -= amount
         assert(self.total_supply >= amount)
         self.total_supply -= amount
+        assert(self.number_of_bonds[account] >= amount)
         self.number_of_bonds[account] -= amount
 
         if account not in self.redemption_timestamps:
@@ -419,6 +420,7 @@ class Oracle:
         assert(deposit >= 0)
         if coin.balance_of(sender) < deposit:
             return False
+
         # One voter can commit only once per epoch.
         if (sender in epoch.commits and
             epoch.commits[sender].epoch_timestamp == self.epoch_timestamp):
@@ -428,6 +430,7 @@ class Oracle:
         epoch.commits[sender] = Oracle.Commit(
             committed_hash, deposit, Oracle.LEVEL_MAX,
             Oracle.Phase.COMMIT, self.epoch_timestamp)
+        assert(epoch.commits[sender].phase == Oracle.Phase.COMMIT)
 
         # Move the deposited coins to the deposit account.
         coin.move(sender, epoch.deposit_account, deposit)
@@ -453,14 +456,14 @@ class Oracle:
             epoch.commits[sender].epoch_timestamp != self.epoch_timestamp - 1):
             # The corresponding commit was not found.
             return False
+
         # One voter can reveal only once per epoch.
         if epoch.commits[sender].phase != Oracle.Phase.COMMIT:
             return False
         epoch.commits[sender].phase = Oracle.Phase.REVEAL
 
         # Check if the committed hash matches the revealed level and salt.
-        reveal_hash = Oracle.hash(
-            sender, revealed_level, revealed_salt)
+        reveal_hash = Oracle.hash(sender, revealed_level, revealed_salt)
         committed_hash = epoch.commits[sender].committed_hash
         if committed_hash != reveal_hash:
             return False
@@ -494,6 +497,7 @@ class Oracle:
             epoch.commits[sender].epoch_timestamp != self.epoch_timestamp - 2):
             # The corresponding commit was not found.
             return (0, 0)
+
         # One voter can reclaim only once per epoch.
         if epoch.commits[sender].phase != Oracle.Phase.REVEAL:
             return (0, 0)
@@ -507,15 +511,14 @@ class Oracle:
 
         if not epoch.votes[revealed_level].should_reclaim:
             return (0, 0)
-
         assert(epoch.votes[revealed_level].should_reclaim)
         assert(epoch.votes[revealed_level].count > 0)
+
         # Reclaim the deposited coins.
         coin.move(epoch.deposit_account, sender, deposit)
 
         reward = 0
         if epoch.votes[revealed_level].should_reward:
-            assert(epoch.votes[revealed_level].count > 0)
             # The voter who voted for the "truth" level can receive the reward.
             #
             # The PROPORTIONAL_REWARD_RATE of the reward is distributed to the
@@ -591,8 +594,7 @@ class Oracle:
 
             # The lost coins are moved to the reward account.
             coin.move(
-                epoch.deposit_account,
-                epoch.reward_account,
+                epoch.deposit_account, epoch.reward_account,
                 coin.balance_of(epoch.deposit_account) - deposit_to_reclaim)
 
         # Mint |mint| coins to the reward account.
@@ -723,24 +725,18 @@ class Logging:
 
     # Constructor.
     def __init__(self):
-        # The maximum number of logs.
-        Logging.LOG_MAX = 1000
-
-        # The index of the current log. When the index exceeds Logging.LOG_MAX,
-        # the index is reset to 0.
+        # The index of the current log.
         self.log_index = 0
 
         # The logs about the voting.
         self.vote_logs = []
-        for i in range(Logging.LOG_MAX):
-            self.vote_logs.append(
-                Logging.VoteLog(0, 0, 0, 0, 0, 0, 0, 0, 0))
+        self.vote_logs.append(Logging.VoteLog(
+            0, 0, 0, 0, 0, 0, 0, 0, 0))
 
         # The logs about the ACB.
         self.acb_logs = []
-        for i in range(Logging.LOG_MAX):
-            self.acb_logs.append(
-                Logging.ACBLog(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+        self.acb_logs.append(Logging.ACBLog(
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
 
     # Called when the oracle phase is updated.
     #
@@ -762,11 +758,11 @@ class Logging:
     def phase_updated(self, minted, burned, delta, bond_budget,
                       coin_total_supply, bond_total_supply,
                       oracle_level, current_phase_start, burned_tax):
-        self.log_index = (self.log_index + 1) % Logging.LOG_MAX
-        self.vote_logs[self.log_index] = Logging.VoteLog(
-            0, 0, 0, 0, 0, 0, 0, 0, 0)
-        self.acb_logs[self.log_index] = Logging.ACBLog(
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+        self.log_index += 1
+        self.vote_logs.append(Logging.VoteLog(
+            0, 0, 0, 0, 0, 0, 0, 0, 0))
+        self.acb_logs.append(Logging.ACBLog(
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
 
         self.acb_logs[self.log_index].minted_coins = minted
         self.acb_logs[self.log_index].burned_coins = burned
@@ -982,6 +978,7 @@ class ACB:
 
         assert(len(ACB.LEVEL_TO_EXCHANGE_RATE) == Oracle.LEVEL_MAX)
         assert(len(ACB.LEVEL_TO_BOND_PRICE) == Oracle.LEVEL_MAX)
+        assert(len(ACB.LEVEL_TO_TAX_RATE) == Oracle.LEVEL_MAX)
 
     # Test only.
     def override_constants_for_testing(
