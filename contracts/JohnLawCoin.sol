@@ -993,9 +993,9 @@ contract Logging is OwnableUpgradeable {
 // Permission: All methods are public. No one (including the genesis account)
 // has the privileges of influencing the monetary policies of the ACB. The ACB
 // is fully decentralized and there is truly no gatekeeper. The only exceptions
-// are initialize(), pause() and unpause(). These methods can be called only by
-// the genesis account. This is needed for the genesis account to upgrade the
-// smart contract and fix bugs in a development phase.
+// are initialize(), deprecate(), pause() and unpause(). These methods can be
+// called only by the genesis account. This is needed for the genesis account
+// to upgrade the smart contract and fix bugs in a development phase.
 //------------------------------------------------------------------------------
 contract ACB is OwnableUpgradeable, PausableUpgradeable {
   using SafeCast for uint;
@@ -1022,11 +1022,11 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
   // Attributes. See the comment in initialize().
   JohnLawCoin public coin_;
   JohnLawBond public bond_;
-  int public bond_budget_;
   Oracle public oracle_;
+  Logging public logging_;
+  int public bond_budget_;
   uint public oracle_level_;
   uint public current_phase_start_;
-  Logging public logging_;
 
   // Events.
   event VoteEvent(address indexed sender, bytes32 committed_hash,
@@ -1144,27 +1144,36 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
     // The JohnLawBond contract.
     bond_ = bond;
     
+    // The Oracle contract.
+    oracle_ = oracle;
+
+    // The Logging contract.
+    logging_ = logging;
+
     // If |bond_budget_| is positive, it indicates the number of bonds the ACM
     // wants to issue to decrease the total coin supply. If |bond_budget_| is
     // negative, it indicates the number of bonds the ACB wants to redeem to
     // increase the total coin supply.
     bond_budget_ = 0;
     
-    // The timestamp when the current phase started.
-    current_phase_start_ = getTimestamp();
-
-    // The Oracle contract.
-    oracle_ = oracle;
-
     // The current oracle level.
     oracle_level_ = oracle.getLevelMax();
 
-    // The Logging contract.
-    logging_ = logging;
+    // The timestamp when the current phase started.
+    current_phase_start_ = getTimestamp();
 
     require(LEVEL_TO_EXCHANGE_RATE.length == oracle.getLevelMax(), "AC1");
     require(LEVEL_TO_BOND_PRICE.length == oracle.getLevelMax(), "AC2");
     require(LEVEL_TO_TAX_RATE.length == oracle.getLevelMax(), "AC3");
+  }
+
+  // Deprecate the ACB.
+  function deprecate()
+      public onlyOwner {
+    coin_.transferOwnership(msg.sender);
+    bond_.transferOwnership(msg.sender);
+    oracle_.transferOwnership(msg.sender);
+    logging_.transferOwnership(msg.sender);
   }
 
   // Pause the ACB in emergency cases.

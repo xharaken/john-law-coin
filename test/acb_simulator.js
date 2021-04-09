@@ -31,6 +31,8 @@ const Oracle_v3 = artifacts.require("Oracle_v3");
 const OracleForTesting_v3 = artifacts.require("OracleForTesting_v3");
 const ACB_v3 = artifacts.require("ACB_v3");
 const ACBForTesting_v3 = artifacts.require("ACBForTesting_v3");
+const ACB_v4 = artifacts.require("ACB_v4");
+const ACBForTesting_v4 = artifacts.require("ACBForTesting_v4");
 
 const common = require("./common.js");
 const should_throw = common.should_throw;
@@ -111,14 +113,13 @@ function parameterized_test(accounts,
     await _oracle.transferOwnership(_acb.address);
     await _logging.transferOwnership(_acb.address);
     await _acb.overrideConstants(_bond_redemption_price,
-                                  _bond_redemption_period,
-                                  _phase_duration,
-                                  _deposit_rate,
-                                  _damping_factor,
-                                  _level_to_exchange_rate,
-                                  _level_to_bond_price,
-                                  _level_to_tax_rate,
-                                 {from: accounts[0]});
+                                 _bond_redemption_period,
+                                 _phase_duration,
+                                 _deposit_rate,
+                                 _damping_factor,
+                                 _level_to_exchange_rate,
+                                 _level_to_bond_price,
+                                 _level_to_tax_rate);
 
     let _lost_deposit = [0, 0, 0];
 
@@ -793,7 +794,32 @@ function parameterized_test(accounts,
       if (!_should_upgrade) {
         return;
       }
-      if (epoch == 3) {
+      if (epoch == 2) {
+        let old_acb = _acb;
+        _acb = await deployProxy(
+            ACBForTesting_v4, [_coin.address, _bond.address,
+                               _oracle.address, _logging.address,
+                               await old_acb.bond_budget_(),
+                               await old_acb.oracle_level_(),
+                               await old_acb.current_phase_start_()]);
+        common.print_contract_size(_acb, "ACBForTesting_v4");
+
+        await old_acb.deprecate();
+
+        await _coin.transferOwnership(_acb.address);
+        await _bond.transferOwnership(_acb.address);
+        await _oracle.transferOwnership(_acb.address);
+        await _logging.transferOwnership(_acb.address);
+        await _acb.overrideConstants(_bond_redemption_price,
+                                     _bond_redemption_period,
+                                     _phase_duration,
+                                     _deposit_rate,
+                                     _damping_factor,
+                                     _level_to_exchange_rate,
+                                     _level_to_bond_price,
+                                     _level_to_tax_rate);
+        await _acb.setTimestamp((await old_acb.getTimestamp()).toNumber());
+      } else if (epoch == 10) {
         _tmp_bond_redemption_price = _bond_redemption_price;
         _tmp_bond_redemption_period = _bond_redemption_period;
         _tmp_phase_duration = _phase_duration;
@@ -835,7 +861,7 @@ function parameterized_test(accounts,
                                      _level_to_tax_rate);
         common.print_contract_size(_acb, "ACBForTesting_v2");
         await _acb.upgrade(_oracle.address, _logging.address);
-      } else if (epoch == 6) {
+      } else if (epoch == 14) {
         _bond_redemption_price = _tmp_bond_redemption_price;
         _bond_redemption_period = _tmp_bond_redemption_period;
         _phase_duration = _tmp_phase_duration;

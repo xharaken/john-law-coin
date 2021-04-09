@@ -515,9 +515,9 @@ contract Oracle_v3 is OwnableUpgradeable {
 // Permission: All methods are public. No one (including the genesis account)
 // has the privileges of influencing the monetary policies of the ACB. The ACB
 // is fully decentralized and there is truly no gatekeeper. The only exceptions
-// are initialize(), pause() and unpause(). These methods can be called only by
-// the genesis account. This is needed for the genesis account to upgrade the
-// smart contract and fix bugs in a development phase.
+// are initialize(), deprecate(), pause() and unpause(). These methods can be
+// called only by the genesis account. This is needed for the genesis account
+// to upgrade the smart contract and fix bugs in a development phase.
 //------------------------------------------------------------------------------
 contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
   using SafeCast for uint;
@@ -544,19 +544,19 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
   // Attributes. See the comment in initialize().
   JohnLawCoin public coin_;
   JohnLawBond public bond_;
-  int public bond_budget_;
   Oracle public oracle_;
+  Logging public logging_;
+  int public bond_budget_;
   uint public oracle_level_;
   uint public current_phase_start_;
-  Logging public logging_;
 
   JohnLawCoin public coin_v2_;
   JohnLawBond public bond_v2_;
-  int public bond_budget_v2_;
   Oracle_v2 public oracle_v2_;
+  Logging_v2 public logging_v2_;
+  int public bond_budget_v2_;
   uint public oracle_level_v2_;
   uint public current_phase_start_v2_;
-  Logging_v2 public logging_v2_;
 
   Oracle_v3 public oracle_v3_;
   
@@ -582,6 +582,15 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
     current_phase_start_ = current_phase_start_v2_;
 
     oracle_v3_.upgrade();
+  }
+
+  // Deprecate the ACB.
+  function deprecate()
+      public onlyOwner {
+    coin_.transferOwnership(msg.sender);
+    bond_.transferOwnership(msg.sender);
+    oracle_v3_.transferOwnership(msg.sender);
+    logging_v2_.transferOwnership(msg.sender);
   }
 
   // Pause the ACB in emergency cases.
