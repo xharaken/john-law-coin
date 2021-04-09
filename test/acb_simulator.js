@@ -97,7 +97,7 @@ function parameterized_test(accounts,
     common.print_contract_size(_coin, "JohnLawCoin");
     let _bond = await JohnLawBond.new();
     common.print_contract_size(_bond, "JohnLawBond");
-    let _logging = await Logging.new();
+    let _logging = await deployProxy(Logging, []);
     common.print_contract_size(_logging, "Logging");
     let _acb = await deployProxy(
         ACBForTesting, [_coin.address, _bond.address,
@@ -794,19 +794,73 @@ function parameterized_test(accounts,
         return;
       }
       if (epoch == 3) {
+        _tmp_bond_redemption_price = _bond_redemption_price;
+        _tmp_bond_redemption_period = _bond_redemption_period;
+        _tmp_phase_duration = _phase_duration;
+        _tmp_proportional_reward_rate = _proportional_reward_rate;
+        _tmp_deposit_rate = _deposit_rate;
+        _tmp_damping_factor = _damping_factor;
+        _tmp_level_to_exchange_rate = _level_to_exchange_rate.slice();
+        _tmp_level_to_bond_price = _level_to_bond_price.slice();
+        _tmp_level_to_tax_rate = _level_to_tax_rate.slice();
+        _tmp_reclaim_threshold = _reclaim_threshold;
+
+        _bond_redemption_price += 100;
+        _bond_redemption_period = 2;
+        _phase_duration = 10;
+        _proportional_reward_rate = 50;
+        _deposit_rate = 50;
+        _damping_factor = 50;
+        for (let level = 0; level < _level_max; level++) {
+          _level_to_exchange_rate[level] += 1;
+          _level_to_bond_price[level] += 100;
+          _level_to_tax_rate[level] = 5;
+        }
+        _reclaim_threshold = 0;
+
         _oracle = await upgradeProxy(_oracle.address, OracleForTesting_v2);
         common.print_contract_size(_oracle, "OracleForTesting_v2");
-        _logging = await Logging_v2.new();
+        await _oracle.overrideConstants(_reclaim_threshold,
+                                        _proportional_reward_rate);
+        _logging = await upgradeProxy(_logging.address, Logging_v2);
         common.print_contract_size(_logging, "Logging_v2");
         _acb = await upgradeProxy(_acb.address, ACBForTesting_v2);
-        await _logging.transferOwnership(_acb.address);
+        await _acb.overrideConstants(_bond_redemption_price,
+                                     _bond_redemption_period,
+                                     _phase_duration,
+                                     _deposit_rate,
+                                     _damping_factor,
+                                     _level_to_exchange_rate,
+                                     _level_to_bond_price,
+                                     _level_to_tax_rate);
         common.print_contract_size(_acb, "ACBForTesting_v2");
         await _acb.upgrade(_oracle.address, _logging.address);
       } else if (epoch == 6) {
+        _bond_redemption_price = _tmp_bond_redemption_price;
+        _bond_redemption_period = _tmp_bond_redemption_period;
+        _phase_duration = _tmp_phase_duration;
+        _proportional_reward_rate = _tmp_proportional_reward_rate;
+        _deposit_rate = _tmp_deposit_rate;
+        _damping_factor = _tmp_damping_factor;
+        _level_to_exchange_rate = _tmp_level_to_exchange_rate.slice();
+        _level_to_bond_price = _tmp_level_to_bond_price.slice();
+        _level_to_tax_rate = _tmp_level_to_tax_rate.slice();
+        _reclaim_threshold = _tmp_reclaim_threshold;
+
         _oracle = await upgradeProxy(_oracle.address, OracleForTesting_v3);
         common.print_contract_size(_oracle, "OracleForTesting_v3");
+        await _oracle.overrideConstants(_reclaim_threshold,
+                                        _proportional_reward_rate);
         _acb = await upgradeProxy(_acb.address, ACBForTesting_v3);
         common.print_contract_size(_acb, "ACBForTesting_v3");
+        await _acb.overrideConstants(_bond_redemption_price,
+                                     _bond_redemption_period,
+                                     _phase_duration,
+                                     _deposit_rate,
+                                     _damping_factor,
+                                     _level_to_exchange_rate,
+                                     _level_to_bond_price,
+                                     _level_to_tax_rate);
         await _acb.upgrade(_oracle.address);
       }
     }

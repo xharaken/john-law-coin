@@ -12,13 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+const { deployProxy, upgradeProxy } =
+      require('@openzeppelin/truffle-upgrades');
+
 const Logging = artifacts.require("Logging");
 const common = require("./common.js");
 const should_throw = common.should_throw;
 
 contract("LoggingUnittest", function (accounts) {
   it("Logging", async function () {
-    _logging = await Logging.new();
+    _logging = await deployProxy(Logging, []);
     common.print_contract_size(_logging, "Logging");
 
     assert.equal(await _logging.log_index_(), 0);

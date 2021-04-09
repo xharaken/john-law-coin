@@ -78,6 +78,7 @@ function parameterized_test(accounts,
     let _bond = await JohnLawBond.new({from: accounts[1]});
     common.print_contract_size(_bond, "JohnLawBond");
     let _logging = await Logging.new({from: accounts[1]});
+    await _logging.initialize({from: accounts[1]});
     common.print_contract_size(_logging, "Logging");
     let _acb = await ACBForTesting.new({from: accounts[1]});
     common.print_contract_size(_acb, "ACBForTesting");

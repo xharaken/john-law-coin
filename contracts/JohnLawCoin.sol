@@ -803,7 +803,7 @@ contract Oracle is OwnableUpgradeable {
 // The Logging contract records metrics about JohnLawCoin. The logs are useful
 // to analyze JohnLawCoin's historical trend.
 //------------------------------------------------------------------------------
-contract Logging is Ownable {
+contract Logging is OwnableUpgradeable {
 
   // A struct to record metrics about the voting.
   struct VoteLog {
@@ -833,21 +833,23 @@ contract Logging is Ownable {
     uint redeemed_bonds;
   }
 
-  // Constants.
-
   // Attributes.
 
-  // The index of the current log.
-  uint public log_index_ = 0;
-  
   // The logs about the voting.
   mapping (uint => VoteLog) public vote_logs_;
   
   // The logs about the ACB.
   mapping (uint => ACBLog) public acb_logs_;
 
-  // Constructor.
-  constructor() {
+  // The index of the current log.
+  uint public log_index_;
+  
+  // Initializer.
+  function initialize()
+      public initializer {
+    __Ownable_init();
+    
+    log_index_ = 0;
   }
 
   function getVoteLog(uint log_index)

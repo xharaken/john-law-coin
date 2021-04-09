@@ -25,7 +25,7 @@ module.exports = async function (deployer) {
   let oracle = await deployProxy(
       Oracle, [],
       {deployer: deployer, unsafeAllowCustomTypes: true});
-  let logging = await Logging.new();
+  let logging = await deployProxy(Logging, []);
   let acb = await deployProxy(
       ACB, [coin.address, bond.address, oracle.address, logging.address],
       {deployer: deployer, unsafeAllowCustomTypes: true});

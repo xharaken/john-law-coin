@@ -580,6 +580,7 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
     oracle_v3_ = oracle;
     // oracle_level_ = oracle_level_v2_;
     current_phase_start_ = current_phase_start_v2_;
+
     oracle_v3_.upgrade();
   }
 

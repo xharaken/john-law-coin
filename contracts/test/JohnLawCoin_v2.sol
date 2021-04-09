@@ -543,7 +543,7 @@ contract Oracle_v2 is OwnableUpgradeable {
 // The Logging contract records metrics about JohnLawCoin. The logs are useful
 // to analyze JohnLawCoin's historical trend.
 //------------------------------------------------------------------------------
-contract Logging_v2 is Ownable {
+contract Logging_v2 is OwnableUpgradeable {
   
   // A struct to record metrics about the voting.
   struct VoteLog {
@@ -556,6 +556,11 @@ contract Logging_v2 is Ownable {
     uint deposited;
     uint reclaimed;
     uint rewarded;
+
+    uint new_value1;
+    uint new_value2;
+    uint new_value3;
+    uint new_value4;
   }
 
   // A struct to record metrics about the ACB.
@@ -571,30 +576,45 @@ contract Logging_v2 is Ownable {
     uint burned_tax;
     uint purchased_bonds;
     uint redeemed_bonds;
+
+    uint new_value1;
+    uint new_value2;
   }
 
-  // Constants.
+  struct AnotherLog {
+    uint new_value1;
+    uint new_value2;
+    uint new_value3;
+    uint new_value4;
+  }
 
-  // The maximum number of logs.
-  uint internal constant LOG_MAX = 1000;
-  
   // Attributes.
 
-  // The index of the current log. When the index exceeds Logging.LOG_MAX,
-  // the index is reset to 0.
-  uint public log_index_ = 0;
-  
   // The logs about the voting.
-  VoteLog[LOG_MAX] public vote_logs_;
+  mapping (uint => VoteLog) public vote_logs_;
   
   // The logs about the ACB.
-  ACBLog[LOG_MAX] public acb_logs_;
+  mapping (uint => ACBLog) public acb_logs_;
 
-  // Constructor.
-  constructor() {
+  // The index of the current log.
+  uint public log_index_;
+ 
+  uint public log_index_v2_;
+
+  mapping (uint => AnotherLog) public another_logs_;
+ 
+  function upgrade()
+      public onlyOwner {
+    log_index_v2_ = log_index_;
   }
 
   function getVoteLog(uint log_index)
+      public view returns (
+          uint, uint, uint, uint, uint, uint, uint, uint, uint) {
+    return getVoteLog_v2(log_index);
+  }
+
+  function getVoteLog_v2(uint log_index)
       public view returns (
           uint, uint, uint, uint, uint, uint, uint, uint, uint) {
     VoteLog memory log = vote_logs_[log_index];
@@ -606,13 +626,19 @@ contract Logging_v2 is Ownable {
   function getACBLog(uint log_index)
       public view returns (
           uint, uint, int, int, uint, uint, uint, uint, uint, uint, uint) {
+    return getACBLog_v2(log_index);
+  }
+
+  function getACBLog_v2(uint log_index)
+      public view returns (
+          uint, uint, int, int, uint, uint, uint, uint, uint, uint, uint) {
     ACBLog memory log = acb_logs_[log_index];
     return (log.minted_coins, log.burned_coins, log.coin_supply_delta,
             log.bond_budget, log.coin_total_supply, log.bond_total_supply,
             log.oracle_level, log.current_phase_start, log.burned_tax,
             log.purchased_bonds, log.redeemed_bonds);
   }
-
+  
   // Called when the oracle phase is updated.
   //
   // Parameters
@@ -635,21 +661,40 @@ contract Logging_v2 is Ownable {
                         uint oracle_level, uint current_phase_start,
                         uint burned_tax)
       public onlyOwner {
-    log_index_ = (log_index_ + 1) / LOG_MAX;
-    vote_logs_[log_index_] =
-        VoteLog(0, 0, 0, 0, 0, 0, 0, 0, 0);
-    acb_logs_[log_index_] =
-        ACBLog(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    phaseUpdated_v2(minted, burned, delta, bond_budget, coin_total_supply,
+                    bond_total_supply, oracle_level, current_phase_start,
+                    burned_tax);
+  }
+
+  function phaseUpdated_v2(uint minted, uint burned, int delta, int bond_budget,
+                           uint coin_total_supply, uint bond_total_supply,
+                           uint oracle_level, uint current_phase_start,
+                           uint burned_tax)
+      public onlyOwner {
+    log_index_ += 1;
+    log_index_v2_ += 1;
+    vote_logs_[log_index_v2_] =
+        VoteLog(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    acb_logs_[log_index_v2_] =
+        ACBLog(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
       
-    acb_logs_[log_index_].minted_coins = minted;
-    acb_logs_[log_index_].burned_coins = burned;
-    acb_logs_[log_index_].coin_supply_delta = delta;
-    acb_logs_[log_index_].bond_budget = bond_budget;
-    acb_logs_[log_index_].coin_total_supply = coin_total_supply;
-    acb_logs_[log_index_].bond_total_supply = bond_total_supply;
-    acb_logs_[log_index_].oracle_level = oracle_level;
-    acb_logs_[log_index_].current_phase_start = current_phase_start;
-    acb_logs_[log_index_].burned_tax = burned_tax;
+    another_logs_[log_index_v2_] =
+        AnotherLog(0, 0, 0, 0);
+      
+    acb_logs_[log_index_v2_].minted_coins = minted;
+    acb_logs_[log_index_v2_].burned_coins = burned;
+    acb_logs_[log_index_v2_].coin_supply_delta = delta;
+    acb_logs_[log_index_v2_].bond_budget = bond_budget;
+    acb_logs_[log_index_v2_].coin_total_supply = coin_total_supply;
+    acb_logs_[log_index_v2_].bond_total_supply = bond_total_supply;
+    acb_logs_[log_index_v2_].oracle_level = oracle_level;
+    acb_logs_[log_index_v2_].current_phase_start = current_phase_start;
+    acb_logs_[log_index_v2_].burned_tax = burned_tax;
+    acb_logs_[log_index_v2_].new_value1 += minted;
+    acb_logs_[log_index_v2_].new_value2 += burned;
+
+    another_logs_[log_index_v2_].new_value1 += minted;
+    another_logs_[log_index_v2_].new_value2 += burned;
   }
 
   // Called when ACB.vote is called.
@@ -668,25 +713,36 @@ contract Logging_v2 is Ownable {
   function voted(bool commit_result, bool reveal_result, uint deposit,
                  uint reclaimed, uint reward)
       public onlyOwner {
+    voted_v2(commit_result, reveal_result, deposit, reclaimed, reward);
+  }
+
+  function voted_v2(bool commit_result, bool reveal_result, uint deposit,
+                    uint reclaimed, uint reward)
+      public onlyOwner {
     if (commit_result) {
-      vote_logs_[log_index_].commit_succeeded += 1;
+      vote_logs_[log_index_v2_].commit_succeeded += 1;
     } else {
-      vote_logs_[log_index_].commit_failed += 1;
+      vote_logs_[log_index_v2_].commit_failed += 1;
     }
     if (reveal_result) {
-      vote_logs_[log_index_].reveal_succeeded += 1;
+      vote_logs_[log_index_v2_].reveal_succeeded += 1;
     } else {
-      vote_logs_[log_index_].reveal_failed += 1;
+      vote_logs_[log_index_v2_].reveal_failed += 1;
     }
     if (reclaimed > 0) {
-      vote_logs_[log_index_].reclaim_succeeded += 1;
+      vote_logs_[log_index_v2_].reclaim_succeeded += 1;
     }
     if (reward > 0) {
-      vote_logs_[log_index_].reward_succeeded += 1;
+      vote_logs_[log_index_v2_].reward_succeeded += 1;
     }
-    vote_logs_[log_index_].deposited += deposit;
-    vote_logs_[log_index_].reclaimed += reclaimed;
-    vote_logs_[log_index_].rewarded += reward;
+    vote_logs_[log_index_v2_].deposited += deposit;
+    vote_logs_[log_index_v2_].reclaimed += reclaimed;
+    vote_logs_[log_index_v2_].rewarded += reward;
+    vote_logs_[log_index_v2_].new_value1 += deposit;
+    vote_logs_[log_index_v2_].new_value2 += reclaimed;
+
+    another_logs_[log_index_v2_].new_value1 += deposit;
+    another_logs_[log_index_v2_].new_value2 += reclaimed;
   }
 
   // Called when ACB.purchaseBonds is called.
@@ -700,7 +756,13 @@ contract Logging_v2 is Ownable {
   // None.
   function purchasedBonds(uint count)
       public onlyOwner {
-    acb_logs_[log_index_].purchased_bonds += count;
+    purchasedBonds_v2(count);
+  }
+
+  function purchasedBonds_v2(uint count)
+      public onlyOwner {
+    acb_logs_[log_index_v2_].purchased_bonds += count;
+    acb_logs_[log_index_v2_].new_value1 += count;
   }
 
   // Called when ACB.redeemBonds is called.
@@ -714,7 +776,13 @@ contract Logging_v2 is Ownable {
   // None.
   function redeemedBonds(uint count)
       public onlyOwner {
-    acb_logs_[log_index_].redeemed_bonds += count;
+    redeemedBonds_v2(count);
+  }
+  
+  function redeemedBonds_v2(uint count)
+      public onlyOwner {
+    acb_logs_[log_index_v2_].redeemed_bonds += count;
+    acb_logs_[log_index_v2_].new_value2 += count;
   }
 }
 
@@ -801,7 +869,9 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
     oracle_level_v2_ = oracle_level_;
     current_phase_start_v2_ = current_phase_start_;
     logging_v2_ = logging;
+
     oracle_v2_.upgrade();
+    logging_v2_.upgrade();
   }
 
   // Pause the ACB in emergency cases.
@@ -859,7 +929,6 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
   function vote_v2(bytes32 committed_hash, uint revealed_level,
                    uint revealed_salt)
       public whenNotPaused returns (bool, bool, uint, uint, uint, bool) {
-    
     VoteResult memory result;
     
     result.phase_updated = false;
