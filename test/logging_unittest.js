@@ -147,6 +147,9 @@ contract("LoggingUnittest", function (accounts) {
 
   it("Ownable", async function () {
     await should_throw(async () => {
+      await _logging.initialize({from: accounts[1]});
+    }, "Initializable");
+    await should_throw(async () => {
       await _logging.phaseUpdated(1, 2, 3, 4, 5, 6, 7, 8, 9,
                                   {from: accounts[1]});
     }, "Ownable");

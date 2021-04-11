@@ -3046,6 +3046,13 @@ function parameterized_test(accounts,
                  _initial_coin_supply + deposit_4[mod(now - 2, 3)] +
                  deposit_4[mod(now - 1, 3)] + remainder[mod(now - 1, 3)]);
 
+    // Initializable
+    await should_throw(async () => {
+      await _acb.initialize(_coin.address, _bond.address,
+                            _oracle.address, _logging.address,
+                            {from: accounts[1]});
+    }, "Initializable");
+
     // Ownable
     await should_throw(async () => {
       await _acb._controlSupply(0, {from: accounts[1]});
@@ -3070,6 +3077,14 @@ function parameterized_test(accounts,
     await should_throw(async () => {
       await _acb.unpause({from: accounts[2]});
     }, "Pausable");
+
+    await should_throw(async () => {
+      await _acb.deprecate();
+    }, "Ownable");
+
+    await should_throw(async () => {
+      await _acb.deprecate({from: accounts[2]});
+    }, "Ownable");
 
     await should_throw(async () => {
       await _coin.mint(accounts[1], 1, {from: accounts[1]});
@@ -3164,10 +3179,33 @@ function parameterized_test(accounts,
       await _acb.controlSupply(0, {from: accounts[1]});
     }, "Pausable");
 
+    await should_throw(async () => {
+      await _acb.deprecate({from: accounts[1]});
+    }, "Pausable");
+
     await _acb.unpause({from: accounts[1]});
     await should_throw(async () => {
       await _acb.unpause({from: accounts[1]});
     }, "Pausable");
+
+    // deprecate
+    await _acb.deprecate({from: accounts[1]});
+
+    await should_throw(async () => {
+      await _acb.vote(await _acb.hash(0, 0, {from: accounts[1]}),
+                      0, 0, {from: accounts[1]});
+    }, "Ownable");
+
+    await should_throw(async () => {
+      await _acb.deprecate({from: accounts[1]});
+    }, "Ownable");
+
+    await _coin.transferOwnership(_acb.address, {from: accounts[1]});
+    await _bond.transferOwnership(_acb.address, {from: accounts[1]});
+    await _logging.transferOwnership(_acb.address, {from: accounts[1]});
+    await _oracle.transferOwnership(_acb.address, {from: accounts[1]});
+
+    await _acb.deprecate({from: accounts[1]});
 
     function check_redemption_timestamps(current, account, expected) {
       let actual = current.redemption_timestamps[account];

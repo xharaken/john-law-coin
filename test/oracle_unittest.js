@@ -2062,6 +2062,11 @@ function parameterized_test(accounts,
     assert.notEqual(await _oracle.hash(accounts[1], 11, 111),
                     await _oracle.hash(accounts[1], 1, 1111));
 
+    // Initializable
+    await should_throw(async () => {
+      await _oracle.initialize({from: accounts[1]});
+    }, "Initializable");
+
     // Ownable
     await should_throw(async () => {
       await _oracle.commit(_coin.address, accounts[1],

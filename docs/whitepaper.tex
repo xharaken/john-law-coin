@@ -7,7 +7,7 @@
 
 \title{\textbf{JohnLawCoin:\\A Stablecoin with an Algorithmic Central Bank}}
 \author{Kentaro Hara\footnote{Twitter: @johnlawcoin, GitHub: https://github.com/xharaken/john-law-coin. Opinions are my own and not the views of my employer.}}
-\date{2020 Jan 23}
+\date{2021 April 11}
 
 \begin{document}
 
@@ -89,7 +89,7 @@ JohnLawCoin consists of the four components:
 
 \begin{description}
 \item{\textbf{Coins}}: The coins are the core tokens intended to be used as a medium of exchange. The goal of JohnLawCoin is to stabilize the currency price of the coins (i.e., 1 coin = 1 USD).
-\item{\textbf{Bonds}}: The bonds are used to expand and contract the total coin supply and thus adjust the currency price of the coins. The bonds are designed as zero-coupon bonds where the annual interest rate is set to $R$. One bond is redeemed for $B_{\mathrm{redemp}}$ coins on the redemption date. Let $T$ be the redemption period (measured in days) and $B_{\mathrm{issue}}$ be the bond issue price. $R$, $T$, $B_{\mathrm{redemp}}$ and $B_{\mathrm{issue}}$ meet $B_{\mathrm{issue}}(1+R)^{365/T}=B_{\mathrm{redemp}}$.
+\item{\textbf{Bonds}}: The bonds are used to expand and contract the total coin supply and thus adjust the currency price of the coins. The bonds are designed as zero-coupon bonds where the annual interest rate is set to $R$. One bond is redeemed for $B_{\mathrm{redemp}}$ coins on the redemption date. Let $T$ be the redemption period (measured in days) and $B_{\mathrm{issue}}$ be the bond issue price. $R$, $T$, $B_{\mathrm{redemp}}$ and $B_{\mathrm{issue}}$ meet $R=(B_{\mathrm{redemp}}/B_{\mathrm{issue}})^{365/T}-1$.
 \item{\textbf{Oracle}}: The oracle is a mechanism to determine the JohnLawCoin / USD exchange rate in a fully decentralized manner.
 \item{\textbf{Algorithmic Central Bank (ACB)}}: The ACB obtains the JohnLawCoin / USD exchange rate from the oracle. The ACB expands and contracts the total coin supply so that the exchange rate becomes 1.0.
 \end{description}
@@ -319,7 +319,7 @@ The bonds are implemented as non-transferable tokens. Bondholders can purchase a
 \end{center}
 \end{table}
 
-Table \ref{table1} shows the quantized exchange rates supported by the oracle.\footnote{You may wonder why bonds are issued when the exchange rate is 1.0 or above. In the ACB algorithm, it's possible that \textit{acb.bond\_budget} becomes positive when the exchange rate is 1.0 or above if the bond redemption happens too much. In this case, the ACB issues new bonds until \textit{acb.bond\_budget} goes down to zero.} The bond issue price $B_{\mathrm{issue}}$ depends on the exchange rates to reflect the risks. The bonds are designed as zero-coupon bonds, and $R$, $T$ (measured in days), $B_{\mathrm{redemp}}$ and $B_{\mathrm{issue}}$ meet $B_{\mathrm{issue}}(1+R)^{365/T}=B_{\mathrm{redemp}}$. The tax rate $t$ is set to 0\% when the exchange rate is 1.0 or above because there is no need to decrease the total coin supply. $t$ is set to a positive number when the exchange rate is below 1.0.\footnote{Imagine that the exchange rate is 1 coin = 0.6 USD. In this case, a 30\% consumption tax is imposed on all coin transfers. The tax rate might look high but users who believe that the ACB has the ability of stabilizing the exchange rate towards 1.0 are still incentivized to get the coins. For example, 1 USD is convertible to 1 / 0.6 * (1 - 0.3) = 1.16 coins. When the exchange rate is stabilized to 1.0 in the future, the coins are convertible to 1.16 USD.}
+Table \ref{table1} shows the quantized exchange rates supported by the oracle.\footnote{You may wonder why bonds are issued when the exchange rate is 1.0 or above. In the ACB algorithm, it's possible that \textit{acb.bond\_budget} becomes positive when the exchange rate is 1.0 or above if the bond redemption happens too much. In this case, the ACB issues new bonds until \textit{acb.bond\_budget} goes down to zero.} The bond issue price $B_{\mathrm{issue}}$ depends on the exchange rates to reflect the risks. The bonds are designed as zero-coupon bonds, and $R$, $T$ (measured in days), $B_{\mathrm{redemp}}$ and $B_{\mathrm{issue}}$ meet $R=(B_{\mathrm{redemp}}/B_{\mathrm{issue}})^{365/T}-1$. The tax rate $t$ is set to 0\% when the exchange rate is 1.0 or above because there is no need to decrease the total coin supply. $t$ is set to a positive number when the exchange rate is below 1.0.\footnote{Imagine that the exchange rate is 1 coin = 0.6 USD. In this case, a 30\% consumption tax is imposed on all coin transfers. The tax rate might look high but users who believe that the ACB has the ability of stabilizing the exchange rate towards 1.0 are still incentivized to get the coins. For example, 1 USD is convertible to 1 / 0.6 * (1 - 0.3) = 1.16 coins. When the exchange rate is stabilized to 1.0 in the future, the coins are convertible to 1.16 USD.}
 
 These values are carefully chosen based on the author's simulation results. The simulation tested how the total coin supply, the bond supply and the exchange rate changes over time in the next 20 years using various parameters.
 
