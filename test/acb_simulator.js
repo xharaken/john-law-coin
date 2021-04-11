@@ -33,6 +33,10 @@ const ACB_v3 = artifacts.require("ACB_v3");
 const ACBForTesting_v3 = artifacts.require("ACBForTesting_v3");
 const ACB_v4 = artifacts.require("ACB_v4");
 const ACBForTesting_v4 = artifacts.require("ACBForTesting_v4");
+const Oracle_v5 = artifacts.require("Oracle_v5");
+const OracleForTesting_v5 = artifacts.require("OracleForTesting_v5");
+const ACB_v5 = artifacts.require("ACB_v5");
+const ACBForTesting_v5 = artifacts.require("ACBForTesting_v5");
 
 const common = require("./common.js");
 const should_throw = common.should_throw;
@@ -808,6 +812,39 @@ function parameterized_test(accounts,
 
         await _coin.transferOwnership(_acb.address);
         await _bond.transferOwnership(_acb.address);
+        await _oracle.transferOwnership(_acb.address);
+        await _logging.transferOwnership(_acb.address);
+        await _acb.overrideConstants(_bond_redemption_price,
+                                     _bond_redemption_period,
+                                     _phase_duration,
+                                     _deposit_rate,
+                                     _damping_factor,
+                                     _level_to_exchange_rate,
+                                     _level_to_bond_price,
+                                     _level_to_tax_rate);
+        await _acb.setTimestamp((await old_acb.getTimestamp()).toNumber());
+      } else if (epoch == 4) {
+        let old_oracle = _oracle;
+        _oracle = await deployProxy(OracleForTesting_v5, []);
+        common.print_contract_size(_oracle, "OracleForTesting_v5");
+        await _oracle.overrideConstants(_level_max, _reclaim_threshold,
+                                        _proportional_reward_rate);
+
+        let old_acb = _acb;
+        _acb = await deployProxy(
+            ACBForTesting_v5, [_coin.address, _bond.address,
+                               old_oracle.address, _oracle.address,
+                               _logging.address,
+                               await old_acb.bond_budget_(),
+                               await old_acb.oracle_level_(),
+                               await old_acb.current_phase_start_()]);
+        common.print_contract_size(_acb, "ACBForTesting_v5");
+
+        await old_acb.deprecate();
+
+        await _coin.transferOwnership(_acb.address);
+        await _bond.transferOwnership(_acb.address);
+        await old_oracle.transferOwnership(_acb.address);
         await _oracle.transferOwnership(_acb.address);
         await _logging.transferOwnership(_acb.address);
         await _acb.overrideConstants(_bond_redemption_price,

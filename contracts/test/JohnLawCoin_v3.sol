@@ -586,7 +586,7 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
 
   // Deprecate the ACB.
   function deprecate()
-      public onlyOwner {
+      public whenNotPaused onlyOwner {
     coin_.transferOwnership(msg.sender);
     bond_.transferOwnership(msg.sender);
     oracle_v3_.transferOwnership(msg.sender);
@@ -688,22 +688,18 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
       coin_.burn(tax_account, burned_tax);
       coin_.setTaxRate(tax_rate);
 
-      // Temporarily transfer the ownership of the JohnLawCoin contract to the
-      // oracle.
-      coin_.transferOwnership(address(oracle_v3_));
-    
       // Advance to the next phase. Provide the |mint| coins to the oracle
       // as a reward.
+      coin_.transferOwnership(address(oracle_v3_));
       uint burned = oracle_v3_.advance(coin_, mint);
+      oracle_v3_.revokeOwnership(coin_);
       
       logging_v2_.phaseUpdated(mint, burned, delta, bond_budget_,
                                coin_.totalSupply(), bond_.totalSupply(),
                                oracle_level_, current_phase_start_, burned_tax);
-    } else {
-      // Temporarily transfer the ownership of the JohnLawCoin contract to the
-      // oracle.
-      coin_.transferOwnership(address(oracle_v3_));
     }
+
+    coin_.transferOwnership(address(oracle_v3_));
 
     // Commit.
     //
@@ -726,7 +722,6 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
     // Reclaim.
     (result.reclaimed, result.rewarded) = oracle_v3_.reclaim(coin_, msg.sender);
 
-    // Revoke the ownership of the JohnLawCoin contract from the oracle.
     oracle_v3_.revokeOwnership(coin_);
     
     logging_v2_.voted(result.commit_result, result.reveal_result,
