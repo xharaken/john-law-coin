@@ -49,9 +49,8 @@ function parameterized_test(accounts,
 
   it(test_name, async function () {
     let _prev_mint = 0;
-    let _coin = await JohnLawCoin.new();
-    let _oracle = await deployProxy(
-        OracleForTesting, [], {unsafeAllowCustomTypes: true});
+    let _coin = await deployProxy(JohnLawCoin, []);
+    let _oracle = await deployProxy(OracleForTesting, []);
     await _oracle.overrideConstants(_level_max, _reclaim_threshold,
                                     _proportional_reward_rate);
     common.print_contract_size(_oracle, "OracleForTesting");

@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+const { deployProxy, upgradeProxy } =
+      require('@openzeppelin/truffle-upgrades');
+
 const JohnLawCoin = artifacts.require("JohnLawCoin");
 const JohnLawBond = artifacts.require("JohnLawBond");
 const common = require("./common.js");
@@ -20,7 +23,7 @@ const mod = common.mod;
 
 contract("CoinBondUnittest", function (accounts) {
   it("JohnLawCoin", async function () {
-    let coin = await JohnLawCoin.new();
+    let coin = await deployProxy(JohnLawCoin, []);
     common.print_contract_size(coin, "JohnLawCoin");
     assert.isTrue((await coin.totalSupply()) > 0);
     assert.equal((await coin.balanceOf(accounts[0])).toNumber(),
@@ -166,7 +169,7 @@ contract("CoinBondUnittest", function (accounts) {
   });
 
   it("JohnLawBond", async function () {
-    let bond = await JohnLawBond.new();
+    let bond = await deployProxy(JohnLawBond, []);
     common.print_contract_size(bond, "JohnLawBond");
     assert.equal(await bond.totalSupply(), 0);
 
@@ -296,6 +299,7 @@ contract("CoinBondUnittest", function (accounts) {
 
   it("Ownable", async function () {
     let coin = await JohnLawCoin.new({from: accounts[1]});
+    await coin.initialize({from: accounts[1]});
     let initial_coin_supply = (await coin.totalSupply()).toNumber();
     await coin.mint(accounts[1], 10, {from: accounts[1]});
     assert.equal(await coin.balanceOf(accounts[1]), 10 + initial_coin_supply);
@@ -353,6 +357,7 @@ contract("CoinBondUnittest", function (accounts) {
     assert.equal(await coin.balanceOf(accounts[2]), 1);
 
     let bond = await JohnLawBond.new({from: accounts[1]});
+    await bond.initialize({from: accounts[1]});
 
     await should_throw(async () => {
       await bond.mint(accounts[1], 1111, 1);
@@ -372,7 +377,7 @@ contract("CoinBondUnittest", function (accounts) {
   });
 
   it("Pausable", async function () {
-    let coin = await JohnLawCoin.new();
+    let coin = await deployProxy(JohnLawCoin, []);
     let initial_coin_supply = (await coin.totalSupply()).toNumber();
     await coin.mint(accounts[1], 10);
     assert.equal(await coin.balanceOf(accounts[1]), 10);
@@ -414,7 +419,7 @@ contract("CoinBondUnittest", function (accounts) {
   });
 
   it("ERC20", async function () {
-    let coin = await JohnLawCoin.new();
+    let coin = await deployProxy(JohnLawCoin, []);
     let initial_coin_supply = (await coin.totalSupply()).toNumber();
     assert.equal(await coin.name(), "JohnLawCoin");
     assert.equal(await coin.symbol(), "JLC");

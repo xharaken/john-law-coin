@@ -34,7 +34,7 @@ common.reset_network(41)
 command = ("truffle test acb_simulator.js " +
            "'1000 84 7 90 10 10 [6, 7, 8, 9, 10, 11, 12, 13, 14] " +
            "[970, 978, 986, 992, 997, 997, 997, 997, 997] " +
-           "[30, 20, 12, 5, 0, 0, 0, 0, 0]1 40 30 1'")
+           "[30, 20, 12, 5, 0, 0, 0, 0, 0] 1 40 30 1'")
 common.run_test(command)
 
 iteration = 30

@@ -64,9 +64,9 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
   uint internal _timestamp_for_testing;
 
   // Attributes. See the comment in initialize().
-  JohnLawCoin public coin_;
-  JohnLawBond public bond_;
-  Oracle public oracle_;
+  JohnLawCoin_v2 public coin_;
+  JohnLawBond_v2 public bond_;
+  Oracle_v2 public oracle_;
   Logging public logging_;
   int public bond_budget_;
   uint public oracle_level_;
@@ -92,8 +92,8 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
   // |bond|: The JohnLawBond contract.
   // |oracle|: The Oracle contract.
   // |logging|: The Logging contract.
-  function initialize(JohnLawCoin coin, JohnLawBond bond,
-                      Oracle oracle, Logging logging,
+  function initialize(JohnLawCoin_v2 coin, JohnLawBond_v2 bond,
+                      Oracle_v2 oracle, Logging logging,
                       int bond_budget, uint oracle_level,
                       uint current_phase_start)
       public initializer {
@@ -208,9 +208,11 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
     // The timestamp when the current phase started.
     current_phase_start_ = current_phase_start;
 
+    /*
     require(LEVEL_TO_EXCHANGE_RATE.length == oracle.getLevelMax(), "AC1");
     require(LEVEL_TO_BOND_PRICE.length == oracle.getLevelMax(), "AC2");
     require(LEVEL_TO_TAX_RATE.length == oracle.getLevelMax(), "AC3");
+    */
   }
 
   // Deprecate the ACB.

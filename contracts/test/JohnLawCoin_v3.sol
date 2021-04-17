@@ -162,7 +162,7 @@ contract Oracle_v3 is OwnableUpgradeable {
   // Returns
   // ----------------
   // True if the commit succeeded. False otherwise.
-  function commit(JohnLawCoin coin, address sender,
+  function commit(JohnLawCoin_v2 coin, address sender,
                   bytes32 committed_hash, uint deposit)
       public onlyOwner returns (bool) {
     Epoch storage epoch = epochs_[epoch_timestamp_ % 3];
@@ -243,7 +243,7 @@ contract Oracle_v3 is OwnableUpgradeable {
   // Returns
   // ----------------
   // The total amount of the reclaimed coins and the reward.
-  function reclaim(JohnLawCoin coin, address sender)
+  function reclaim(JohnLawCoin_v2 coin, address sender)
       public onlyOwner returns (uint, uint) {
     Epoch storage epoch = epochs_[(epoch_timestamp_ - 2) % 3];
     require(epoch.phase == Phase.RECLAIM, "rc1");
@@ -306,7 +306,7 @@ contract Oracle_v3 is OwnableUpgradeable {
   // Returns
   // ----------------
   // None.
-  function advance(JohnLawCoin coin, uint mint)
+  function advance(JohnLawCoin_v2 coin, uint mint)
       public onlyOwner returns (uint) {
     // Step 1: Move the commit phase to the reveal phase.
     Epoch storage epoch = epochs_[epoch_timestamp_ % 3];
@@ -438,7 +438,7 @@ contract Oracle_v3 is OwnableUpgradeable {
   // Returns
   // ----------------
   // None.
-  function revokeOwnership(JohnLawCoin coin)
+  function revokeOwnership(JohnLawCoin_v2 coin)
       public onlyOwner {
     coin.transferOwnership(msg.sender);
   }
@@ -550,8 +550,8 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
   uint public oracle_level_;
   uint public current_phase_start_;
 
-  JohnLawCoin public coin_v2_;
-  JohnLawBond public bond_v2_;
+  JohnLawCoin_v2 public coin_v2_;
+  JohnLawBond_v2 public bond_v2_;
   Oracle_v2 public oracle_v2_;
   Logging_v2 public logging_v2_;
   int public bond_budget_v2_;
@@ -574,8 +574,6 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
 
   function upgrade(Oracle_v3 oracle)
       public onlyOwner {
-    coin_ = coin_v2_;
-    bond_ = bond_v2_;
     // bond_budget_ = bond_budget_v2_;
     oracle_v3_ = oracle;
     // oracle_level_ = oracle_level_v2_;
@@ -587,8 +585,8 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
   // Deprecate the ACB.
   function deprecate()
       public whenNotPaused onlyOwner {
-    coin_.transferOwnership(msg.sender);
-    bond_.transferOwnership(msg.sender);
+    coin_v2_.transferOwnership(msg.sender);
+    bond_v2_.transferOwnership(msg.sender);
     oracle_v3_.transferOwnership(msg.sender);
     logging_v2_.transferOwnership(msg.sender);
   }
@@ -597,14 +595,14 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
   function pause()
       public whenNotPaused onlyOwner {
     _pause();
-    coin_.pause();
+    coin_v2_.pause();
   }
 
   // Unpause the ACB.
   function unpause()
       public whenPaused onlyOwner {
     _unpause();
-    coin_.unpause();
+    coin_v2_.unpause();
   }
 
   // A struct to pack local variables. This is needed to avoid a stack-too-deep
@@ -666,7 +664,7 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
         // = 1.1 USD), the total coin supply is increased by 10%. If the
         // exchange rate is 0.8 (i.e., 1 coin = 0.8 USD), the total coin supply
         // is decreased by 20%.
-        delta = coin_.totalSupply().toInt256() *
+        delta = coin_v2_.totalSupply().toInt256() *
                 (int(exchange_rate) - int(EXCHANGE_RATE_DIVISOR)) /
                 int(EXCHANGE_RATE_DIVISOR);
 
@@ -683,34 +681,34 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
 
       // Burn the tax. This is fine because the purpose of the tax is to
       // decrease the total coin supply.
-      address tax_account = coin_.tax_account_();
-      uint burned_tax = coin_.balanceOf(tax_account);
-      coin_.burn(tax_account, burned_tax);
-      coin_.setTaxRate(tax_rate);
+      address tax_account = coin_v2_.tax_account_();
+      uint burned_tax = coin_v2_.balanceOf(tax_account);
+      coin_v2_.burn(tax_account, burned_tax);
+      coin_v2_.setTaxRate(tax_rate);
 
       // Advance to the next phase. Provide the |mint| coins to the oracle
       // as a reward.
-      coin_.transferOwnership(address(oracle_v3_));
-      uint burned = oracle_v3_.advance(coin_, mint);
-      oracle_v3_.revokeOwnership(coin_);
+      coin_v2_.transferOwnership(address(oracle_v3_));
+      uint burned = oracle_v3_.advance(coin_v2_, mint);
+      oracle_v3_.revokeOwnership(coin_v2_);
       
       logging_v2_.phaseUpdated(mint, burned, delta, bond_budget_,
-                               coin_.totalSupply(), bond_.totalSupply(),
+                               coin_v2_.totalSupply(), bond_v2_.totalSupply(),
                                oracle_level_, current_phase_start_, burned_tax);
     }
 
-    coin_.transferOwnership(address(oracle_v3_));
+    coin_v2_.transferOwnership(address(oracle_v3_));
 
     // Commit.
     //
     // The voter needs to deposit the DEPOSIT_RATE percentage of their coin
     // balance.
-    result.deposited = coin_.balanceOf(msg.sender) * DEPOSIT_RATE / 100;
+    result.deposited = coin_v2_.balanceOf(msg.sender) * DEPOSIT_RATE / 100;
     if (committed_hash == 0) {
       result.deposited = 0;
     }
     result.commit_result = oracle_v3_.commit(
-        coin_, msg.sender, committed_hash, result.deposited);
+        coin_v2_, msg.sender, committed_hash, result.deposited);
     if (!result.commit_result) {
       result.deposited = 0;
     }
@@ -720,9 +718,10 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
         msg.sender, revealed_level, revealed_salt);
     
     // Reclaim.
-    (result.reclaimed, result.rewarded) = oracle_v3_.reclaim(coin_, msg.sender);
+    (result.reclaimed, result.rewarded) =
+        oracle_v3_.reclaim(coin_v2_, msg.sender);
 
-    oracle_v3_.revokeOwnership(coin_);
+    oracle_v3_.revokeOwnership(coin_v2_);
     
     logging_v2_.voted(result.commit_result, result.reveal_result,
                       result.deposited, result.reclaimed, result.rewarded);
@@ -761,7 +760,7 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
       bond_price = LEVEL_TO_BOND_PRICE[oracle_level_];
     }
     uint amount = bond_price * count;
-    if (coin_.balanceOf(sender) < amount) {
+    if (coin_v2_.balanceOf(sender) < amount) {
       // The user does not have enough coins to purchase the bonds.
       return 0;
     }
@@ -770,14 +769,14 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
     uint redemption = getTimestamp() + BOND_REDEMPTION_PERIOD;
 
     // Issue new bonds
-    bond_.mint(sender, redemption, count);
+    bond_v2_.mint(sender, redemption, count);
     bond_budget_ -= count.toInt256();
     require(bond_budget_ >= 0, "pb1");
-    require(bond_.totalSupply().toInt256() + bond_budget_ >= 0, "pb2");
-    require(bond_.balanceOf(sender, redemption) > 0, "pb3");
+    require(bond_v2_.totalSupply().toInt256() + bond_budget_ >= 0, "pb2");
+    require(bond_v2_.balanceOf(sender, redemption) > 0, "pb3");
 
     // Burn the corresponding coins.
-    coin_.burn(sender, amount);
+    coin_v2_.burn(sender, amount);
 
     logging_v2_.purchasedBonds(count);
     emit PurchaseBondsEvent(sender, count, redemption);
@@ -801,7 +800,7 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
     uint count_total = 0;
     for (uint i = 0; i < redemptions.length; i++) {
       uint redemption = redemptions[i];
-      uint count = bond_.balanceOf(sender, redemption);
+      uint count = bond_v2_.balanceOf(sender, redemption);
       if (redemption > getTimestamp()) {
         // If the bonds have not yet hit their redemption timestamp, the ACB
         // accepts the redemption as long as |bond_budget_| is negative.
@@ -815,14 +814,14 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
 
       // Mint the corresponding coins to the user's balance.
       uint amount = count * BOND_REDEMPTION_PRICE;
-      coin_.mint(sender, amount);
+      coin_v2_.mint(sender, amount);
 
       // Burn the redeemed bonds.
       bond_budget_ += count.toInt256();
-      bond_.burn(sender, redemption, count);
+      bond_v2_.burn(sender, redemption, count);
       count_total += count;
     }
-    require(bond_.totalSupply().toInt256() + bond_budget_ >= 0, "rb1");
+    require(bond_v2_.totalSupply().toInt256() + bond_budget_ >= 0, "rb1");
     
     logging_v2_.redeemedBonds(count_total);
     emit RedeemBondsEvent(sender, redemptions, count_total);
@@ -849,15 +848,15 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
     } else if (delta > 0) {
       // Increase the total coin supply.
       uint count = delta.toUint256() / BOND_REDEMPTION_PRICE;
-      if (count <= bond_.totalSupply()) {
+      if (count <= bond_v2_.totalSupply()) {
         // If there are sufficient bonds to redeem, increase the total coin
         // supply by redeeming the bonds.
         bond_budget_ = -count.toInt256();
       } else {
         // Otherwise, redeem all the issued bonds.
-        bond_budget_ = -bond_.totalSupply().toInt256();
+        bond_budget_ = -bond_v2_.totalSupply().toInt256();
         // The ACB needs to mint the remaining coins.
-        mint = (count - bond_.totalSupply()) * BOND_REDEMPTION_PRICE;
+        mint = (count - bond_v2_.totalSupply()) * BOND_REDEMPTION_PRICE;
       }
       require(bond_budget_ <= 0, "cs1");
     } else {
@@ -868,7 +867,7 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
       require(bond_budget_ >= 0, "cs3");
     }
 
-    require(bond_.totalSupply().toInt256() + bond_budget_ >= 0, "cs4");
+    require(bond_v2_.totalSupply().toInt256() + bond_budget_ >= 0, "cs4");
     emit ControlSupplyEvent(delta, bond_budget_, mint);
     return mint;
   }

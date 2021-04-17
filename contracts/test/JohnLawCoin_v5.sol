@@ -174,7 +174,7 @@ contract Oracle_v5 is OwnableUpgradeable {
   // Returns
   // ----------------
   // True if the commit succeeded. False otherwise.
-  function commit(JohnLawCoin coin, address sender,
+  function commit(JohnLawCoin_v2 coin, address sender,
                   bytes32 committed_hash, uint deposit)
       public onlyOwner returns (bool) {
     Epoch storage epoch = epochs_[epoch_timestamp_ % 3];
@@ -259,7 +259,7 @@ contract Oracle_v5 is OwnableUpgradeable {
   //    the voter is eligible to reclaim their deposited coins.
   //  - uint: The amount of reward. This becomes a positive number when the
   //    voter voted for the "truth" oracle level.
-  function reclaim(JohnLawCoin coin, address sender)
+  function reclaim(JohnLawCoin_v2 coin, address sender)
       public onlyOwner returns (uint, uint) {
     Epoch storage epoch = epochs_[(epoch_timestamp_ - 2) % 3];
     require(epoch.phase == Phase.RECLAIM, "rc1");
@@ -323,7 +323,7 @@ contract Oracle_v5 is OwnableUpgradeable {
   // Returns
   // ----------------
   // None.
-  function advance(JohnLawCoin coin, uint mint)
+  function advance(JohnLawCoin_v2 coin, uint mint)
       public onlyOwner returns (uint) {
     // Step 1: Move the commit phase to the reveal phase.
     Epoch storage epoch = epochs_[epoch_timestamp_ % 3];
@@ -451,7 +451,7 @@ contract Oracle_v5 is OwnableUpgradeable {
   // Returns
   // ----------------
   // None.
-  function revokeOwnership(JohnLawCoin coin)
+  function revokeOwnership(JohnLawCoin_v2 coin)
       public onlyOwner {
     coin.transferOwnership(msg.sender);
   }
@@ -554,10 +554,10 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
   uint internal _timestamp_for_testing;
 
   // Attributes. See the comment in initialize().
-  JohnLawCoin public coin_;
-  JohnLawBond public bond_;
-  Oracle public old_oracle_;
-  Oracle public oracle_;
+  JohnLawCoin_v2 public coin_;
+  JohnLawBond_v2 public bond_;
+  Oracle_v2 public old_oracle_;
+  Oracle_v2 public oracle_;
   Logging public logging_;
   int public bond_budget_;
   uint public oracle_level_;
@@ -584,8 +584,8 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
   // |bond|: The JohnLawBond contract.
   // |oracle|: The Oracle contract.
   // |logging|: The Logging contract.
-  function initialize(JohnLawCoin coin, JohnLawBond bond,
-                      Oracle old_oracle, Oracle oracle, Logging logging,
+  function initialize(JohnLawCoin_v2 coin, JohnLawBond_v2 bond,
+                      Oracle_v2 old_oracle, Oracle_v2 oracle, Logging logging,
                       int bond_budget, uint oracle_level,
                       uint current_phase_start)
       public initializer {
@@ -705,9 +705,11 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
 
     epoch_timestamp_ = 0;
 
+    /*
     require(LEVEL_TO_EXCHANGE_RATE.length == oracle.getLevelMax(), "AC1");
     require(LEVEL_TO_BOND_PRICE.length == oracle.getLevelMax(), "AC2");
     require(LEVEL_TO_TAX_RATE.length == oracle.getLevelMax(), "AC3");
+    */
   }
 
   // Deprecate the ACB.
@@ -746,7 +748,7 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
   }
 
   function _currentOracle()
-      internal whenNotPaused view returns (Oracle) {
+      internal whenNotPaused view returns (Oracle_v2) {
     if (epoch_timestamp_ <= 2) {
       return old_oracle_;
     }

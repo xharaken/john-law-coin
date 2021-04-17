@@ -22,6 +22,8 @@ const OracleForTesting = artifacts.require("OracleForTesting");
 const Logging = artifacts.require("Logging");
 const ACB = artifacts.require("ACB");
 const ACBForTesting = artifacts.require("ACBForTesting");
+const JohnLawCoin_v2 = artifacts.require("JohnLawCoin_v2");
+const JohnLawBond_v2 = artifacts.require("JohnLawBond_v2");
 const Oracle_v2 = artifacts.require("Oracle_v2");
 const OracleForTesting_v2 = artifacts.require("OracleForTesting_v2");
 const Logging_v2 = artifacts.require("Logging_v2");
@@ -99,9 +101,9 @@ function parameterized_test(accounts,
     let _oracle = await deployProxy(OracleForTesting, []);
     common.print_contract_size(_oracle, "OracleForTesting");
 
-    let _coin = await JohnLawCoin.new();
+    let _coin = await deployProxy(JohnLawCoin, []);
     common.print_contract_size(_coin, "JohnLawCoin");
-    let _bond = await JohnLawBond.new();
+    let _bond = await deployProxy(JohnLawBond, []);
     common.print_contract_size(_bond, "JohnLawBond");
     let _logging = await deployProxy(Logging, []);
     common.print_contract_size(_logging, "Logging");
@@ -798,65 +800,8 @@ function parameterized_test(accounts,
       if (!_should_upgrade) {
         return;
       }
-      if (epoch == 2) {
-        let old_acb = _acb;
-        _acb = await deployProxy(
-            ACBForTesting_v4, [_coin.address, _bond.address,
-                               _oracle.address, _logging.address,
-                               await old_acb.bond_budget_(),
-                               await old_acb.oracle_level_(),
-                               await old_acb.current_phase_start_()]);
-        common.print_contract_size(_acb, "ACBForTesting_v4");
 
-        await old_acb.deprecate();
-
-        await _coin.transferOwnership(_acb.address);
-        await _bond.transferOwnership(_acb.address);
-        await _oracle.transferOwnership(_acb.address);
-        await _logging.transferOwnership(_acb.address);
-        await _acb.overrideConstants(_bond_redemption_price,
-                                     _bond_redemption_period,
-                                     _phase_duration,
-                                     _deposit_rate,
-                                     _damping_factor,
-                                     _level_to_exchange_rate,
-                                     _level_to_bond_price,
-                                     _level_to_tax_rate);
-        await _acb.setTimestamp((await old_acb.getTimestamp()).toNumber());
-      } else if (epoch == 4) {
-        let old_oracle = _oracle;
-        _oracle = await deployProxy(OracleForTesting_v5, []);
-        common.print_contract_size(_oracle, "OracleForTesting_v5");
-        await _oracle.overrideConstants(_level_max, _reclaim_threshold,
-                                        _proportional_reward_rate);
-
-        let old_acb = _acb;
-        _acb = await deployProxy(
-            ACBForTesting_v5, [_coin.address, _bond.address,
-                               old_oracle.address, _oracle.address,
-                               _logging.address,
-                               await old_acb.bond_budget_(),
-                               await old_acb.oracle_level_(),
-                               await old_acb.current_phase_start_()]);
-        common.print_contract_size(_acb, "ACBForTesting_v5");
-
-        await old_acb.deprecate();
-
-        await _coin.transferOwnership(_acb.address);
-        await _bond.transferOwnership(_acb.address);
-        await old_oracle.transferOwnership(_acb.address);
-        await _oracle.transferOwnership(_acb.address);
-        await _logging.transferOwnership(_acb.address);
-        await _acb.overrideConstants(_bond_redemption_price,
-                                     _bond_redemption_period,
-                                     _phase_duration,
-                                     _deposit_rate,
-                                     _damping_factor,
-                                     _level_to_exchange_rate,
-                                     _level_to_bond_price,
-                                     _level_to_tax_rate);
-        await _acb.setTimestamp((await old_acb.getTimestamp()).toNumber());
-      } else if (epoch == 10) {
+      if (epoch == 5) {
         _tmp_bond_redemption_price = _bond_redemption_price;
         _tmp_bond_redemption_period = _bond_redemption_period;
         _tmp_phase_duration = _phase_duration;
@@ -881,6 +826,10 @@ function parameterized_test(accounts,
         }
         _reclaim_threshold = 0;
 
+        _coin = await upgradeProxy(_coin.address, JohnLawCoin_v2);
+        common.print_contract_size(_coin, "JohnLawCoin_v2");
+        _bond = await upgradeProxy(_bond.address, JohnLawBond_v2);
+        common.print_contract_size(_bond, "JohnLawBond_v2");
         _oracle = await upgradeProxy(_oracle.address, OracleForTesting_v2);
         common.print_contract_size(_oracle, "OracleForTesting_v2");
         await _oracle.overrideConstants(_reclaim_threshold,
@@ -897,8 +846,9 @@ function parameterized_test(accounts,
                                      _level_to_bond_price,
                                      _level_to_tax_rate);
         common.print_contract_size(_acb, "ACBForTesting_v2");
-        await _acb.upgrade(_oracle.address, _logging.address);
-      } else if (epoch == 14) {
+        await _acb.upgrade(_coin.address, _bond.address,
+                           _oracle.address, _logging.address);
+      } else if (epoch == 10) {
         _bond_redemption_price = _tmp_bond_redemption_price;
         _bond_redemption_period = _tmp_bond_redemption_period;
         _phase_duration = _tmp_phase_duration;
@@ -925,6 +875,103 @@ function parameterized_test(accounts,
                                      _level_to_bond_price,
                                      _level_to_tax_rate);
         await _acb.upgrade(_oracle.address);
+      } else if (epoch == 15) {
+        _tmp_bond_redemption_price = _bond_redemption_price;
+        _tmp_bond_redemption_period = _bond_redemption_period;
+        _tmp_phase_duration = _phase_duration;
+        _tmp_proportional_reward_rate = _proportional_reward_rate;
+        _tmp_deposit_rate = _deposit_rate;
+        _tmp_damping_factor = _damping_factor;
+        _tmp_level_to_exchange_rate = _level_to_exchange_rate.slice();
+        _tmp_level_to_bond_price = _level_to_bond_price.slice();
+        _tmp_level_to_tax_rate = _level_to_tax_rate.slice();
+        _tmp_reclaim_threshold = _reclaim_threshold;
+
+        _bond_redemption_price += 100;
+        _bond_redemption_period = 2;
+        _phase_duration = 10;
+        _proportional_reward_rate = 50;
+        _deposit_rate = 50;
+        _damping_factor = 50;
+        for (let level = 0; level < _level_max; level++) {
+          _level_to_exchange_rate[level] += 1;
+          _level_to_bond_price[level] += 100;
+          _level_to_tax_rate[level] = 5;
+        }
+        _reclaim_threshold = 0;
+
+        await _oracle.overrideConstants(_reclaim_threshold,
+                                        _proportional_reward_rate);
+
+        let old_acb = _acb;
+        _acb = await deployProxy(
+            ACBForTesting_v4, [_coin.address, _bond.address,
+                               _oracle.address, _logging.address,
+                               await old_acb.bond_budget_(),
+                               await old_acb.oracle_level_(),
+                               await old_acb.current_phase_start_()]);
+        common.print_contract_size(_acb, "ACBForTesting_v4");
+        await old_acb.deprecate();
+
+        await _coin.transferOwnership(_acb.address);
+        await _bond.transferOwnership(_acb.address);
+        await _oracle.transferOwnership(_acb.address);
+        await _logging.transferOwnership(_acb.address);
+        await _acb.overrideConstants(_bond_redemption_price,
+                                     _bond_redemption_period,
+                                     _phase_duration,
+                                     _deposit_rate,
+                                     _damping_factor,
+                                     _level_to_exchange_rate,
+                                     _level_to_bond_price,
+                                     _level_to_tax_rate);
+        await _acb.setTimestamp((await old_acb.getTimestamp()).toNumber());
+      } else if (epoch == 20) {
+        _bond_redemption_price = _tmp_bond_redemption_price;
+        _bond_redemption_period = _tmp_bond_redemption_period;
+        _phase_duration = _tmp_phase_duration;
+        _proportional_reward_rate = _tmp_proportional_reward_rate;
+        _deposit_rate = _tmp_deposit_rate;
+        _damping_factor = _tmp_damping_factor;
+        _level_to_exchange_rate = _tmp_level_to_exchange_rate.slice();
+        _level_to_bond_price = _tmp_level_to_bond_price.slice();
+        _level_to_tax_rate = _tmp_level_to_tax_rate.slice();
+        _reclaim_threshold = _tmp_reclaim_threshold;
+
+        await _oracle.overrideConstants(_reclaim_threshold,
+                                        _proportional_reward_rate);
+
+        let old_oracle = _oracle;
+        _oracle = await deployProxy(OracleForTesting_v5, []);
+        common.print_contract_size(_oracle, "OracleForTesting_v5");
+        await _oracle.overrideConstants(_level_max, _reclaim_threshold,
+                                        _proportional_reward_rate);
+
+        let old_acb = _acb;
+        _acb = await deployProxy(
+            ACBForTesting_v5, [_coin.address, _bond.address,
+                               old_oracle.address, _oracle.address,
+                               _logging.address,
+                               await old_acb.bond_budget_(),
+                               await old_acb.oracle_level_(),
+                               await old_acb.current_phase_start_()]);
+        common.print_contract_size(_acb, "ACBForTesting_v5");
+        await old_acb.deprecate();
+
+        await _coin.transferOwnership(_acb.address);
+        await _bond.transferOwnership(_acb.address);
+        await old_oracle.transferOwnership(_acb.address);
+        await _oracle.transferOwnership(_acb.address);
+        await _logging.transferOwnership(_acb.address);
+        await _acb.overrideConstants(_bond_redemption_price,
+                                     _bond_redemption_period,
+                                     _phase_duration,
+                                     _deposit_rate,
+                                     _damping_factor,
+                                     _level_to_exchange_rate,
+                                     _level_to_bond_price,
+                                     _level_to_tax_rate);
+        await _acb.setTimestamp((await old_acb.getTimestamp()).toNumber());
       }
     }
 

@@ -18,8 +18,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
@@ -72,7 +71,7 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 // transfer their coins using ERC20's APIs.
 
 //------------------------------------------------------------------------------
-contract JohnLawCoin is ERC20Pausable, Ownable {
+contract JohnLawCoin is ERC20PausableUpgradeable, OwnableUpgradeable {
   // Constants.
 
   // Name of the ERC20 token.
@@ -92,9 +91,13 @@ contract JohnLawCoin is ERC20Pausable, Ownable {
   // The account to which the tax is sent.
   address public tax_account_;
 
-  // Constructor.
-  constructor()
-      ERC20(NAME, SYMBOL) {
+  // Initializer.
+  function initialize()
+      public initializer {
+    __ERC20Pausable_init();
+    __ERC20_init(NAME, SYMBOL);
+    __Ownable_init();
+    
     tax_rate_ = 0;
     tax_account_ = address(uint160(uint(keccak256(abi.encode(
         "tax_account_address")))));
@@ -198,7 +201,7 @@ contract JohnLawCoin is ERC20Pausable, Ownable {
 //
 // Permission: Only the ACB can mint and burn the bonds. 
 //------------------------------------------------------------------------------
-contract JohnLawBond is Ownable {
+contract JohnLawBond is OwnableUpgradeable {
   using EnumerableSet for EnumerableSet.UintSet;
 
   // Attributes.
@@ -215,7 +218,7 @@ contract JohnLawBond is Ownable {
   mapping (address => mapping (uint => uint)) private _bonds;
 
   // The total bond supply.
-  uint private _totalSupply;
+  uint private _total_supply;
 
   // Events.
   event MintEvent(address indexed account,
@@ -223,9 +226,12 @@ contract JohnLawBond is Ownable {
   event BurnEvent(address indexed account,
                   uint redemption_timestamp, uint amount);
 
-  // Constructor.
-  constructor() {
-    _totalSupply = 0;
+  // Initializer.
+  function initialize()
+      public initializer {
+    __Ownable_init();
+    
+    _total_supply = 0;
   }
   
   // Mint bonds to one account. Only the ACB can call this method.
@@ -242,7 +248,7 @@ contract JohnLawBond is Ownable {
   function mint(address account, uint redemption_timestamp, uint amount)
       public onlyOwner {
     _bonds[account][redemption_timestamp] += amount;
-    _totalSupply += amount;
+    _total_supply += amount;
     _number_of_bonds[account] += amount;
     if (_bonds[account][redemption_timestamp] > 0) {
       _redemption_timestamps[account].add(redemption_timestamp);
@@ -264,7 +270,7 @@ contract JohnLawBond is Ownable {
   function burn(address account, uint redemption_timestamp, uint amount)
       public onlyOwner {
     _bonds[account][redemption_timestamp] -= amount;
-    _totalSupply -= amount;
+    _total_supply -= amount;
     _number_of_bonds[account] -= amount;
     if (_bonds[account][redemption_timestamp] == 0) {
       _redemption_timestamps[account].remove(redemption_timestamp);
@@ -303,7 +309,7 @@ contract JohnLawBond is Ownable {
   // Public getter: Return the total bond supply.
   function totalSupply()
       public view returns (uint) {
-    return _totalSupply;
+    return _total_supply;
   }
 }
 

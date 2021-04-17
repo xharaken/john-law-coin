@@ -57,9 +57,8 @@ function parameterized_test(accounts,
     assert.isTrue(0 <= _other_level && _other_level < _level_max);
     assert.isTrue(_mode_level != _other_level);
 
-    let _coin = await JohnLawCoin.new();
-    let _oracle = await deployProxy(
-        OracleForTesting, [], {unsafeAllowCustomTypes: true});
+    let _coin = await deployProxy(JohnLawCoin, []);
+    let _oracle = await deployProxy(OracleForTesting, []);
     await _oracle.overrideConstants(_level_max, _reclaim_threshold,
                                      _proportional_reward_rate);
     common.print_contract_size(_oracle, "OracleForTesting");
@@ -2097,6 +2096,7 @@ function parameterized_test(accounts,
     }, "Ownable");
 
     _coin = await JohnLawCoin.new({from: accounts[2]});
+    await _coin.initialize({from: accounts[2]});
     // Cannot use deployProxy because {from: ...} is not supported.
     _oracle = await OracleForTesting.new({from: accounts[2]});
     await _oracle.initialize({from: accounts[2]});

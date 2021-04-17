@@ -13,10 +13,11 @@
 # limitations under the License.
 
 cd `dirname $0`
-python3 coin_bond_unittest.py
-python3 logging_unittest.py
-python3 oracle_unittest.py
-python3 oracle_simulator.py
-python3 acb_unittest.py
-python3 acb_simulator.py
+mkdir ../log
+./coin_bond_unittest.py > ../log/coin_bond_unittest.log
+./logging_unittest.py > ../log/logging_unittest.log
+./oracle_unittest.py > ../log/oracle_unittest.log
+./oracle_simulator.py > ../log/oracle_simulator.log
+./acb_unittest.py > ../log/acb_unittest.log
+./acb_simulator.py > ../log/acb_simulator.log
 

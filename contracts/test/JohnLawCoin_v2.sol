@@ -19,6 +19,304 @@ pragma solidity ^0.8.0;
 import "../JohnLawCoin.sol";
 
 //------------------------------------------------------------------------------
+// [JohnLawCoin contract]
+//
+// JohnLawCoin is implemented as ERC20 tokens.
+//
+// Permission: Only the ACB and its oracle can mint, burn and transfer the
+// coins. Only the ACB can pause and unpause the contract. Coin holders can
+// transfer their coins using ERC20's APIs.
+
+//------------------------------------------------------------------------------
+contract JohnLawCoin_v2 is ERC20PausableUpgradeable, OwnableUpgradeable {
+  // Constants.
+
+  // Name of the ERC20 token.
+  string public constant NAME = "JohnLawCoin";
+  
+  // Symbol of the ERC20 token.
+  string public constant SYMBOL = "JLC";
+
+  // The initial coin supply.
+  uint public constant INITIAL_COIN_SUPPLY = 2100000;
+  
+  // Attributes.
+  
+  // The tax rate set by the ACB.
+  uint public tax_rate_;
+
+  // The account to which the tax is sent.
+  address public tax_account_;
+
+  uint public tax_rate_v2_;
+  address public tax_account_v2_;
+  mapping (address => uint) public dummy_;
+
+  function upgrade()
+      public onlyOwner {
+    tax_rate_v2_ = tax_rate_;
+    tax_account_v2_ = tax_account_;
+  }
+
+  // Mint coins to one account. Only the ACB and its oracle can call this
+  // method.
+  //
+  // Parameters
+  // ----------------
+  // |account|: The account to which the coins are minted.
+  // |amount|: The amount to be minted.
+  //
+  // Returns
+  // ----------------
+  // None.
+  function mint(address account, uint amount)
+      public onlyOwner {
+    mint_v2(account, amount);
+  }
+
+  function mint_v2(address account, uint amount)
+      public onlyOwner {
+    _mint(account, amount);
+    dummy_[account] = amount;
+  }
+
+  // Burn coins from one account. Only the ACB and its oracle can call this
+  // method.
+  //
+  // Parameters
+  // ----------------
+  // |account|: The account from which the coins are burned.
+  // |amount|: The amount to be burned.
+  //
+  // Returns
+  // ----------------
+  // None.
+  function burn(address account, uint amount)
+      public onlyOwner {
+    burn_v2(account, amount);
+  }
+
+  function burn_v2(address account, uint amount)
+      public onlyOwner {
+    _burn(account, amount);
+    dummy_[account] = amount;
+  }
+
+  // Move coins from one account to another account. Only the ACB and its
+  // oracle can call this method. Coin holders should use ERC20's transfer
+  // method instead.
+  //
+  // Parameters
+  // ----------------
+  // |sender|: The sender account.
+  // |receiver|: The receiver account.
+  // |amount|: The amount to be moved.
+  //
+  // Returns
+  // ----------------
+  // None.
+  function move(address sender, address receiver, uint amount)
+      public onlyOwner {
+    move_v2(sender, receiver, amount);
+  }
+
+  function move_v2(address sender, address receiver, uint amount)
+      public onlyOwner {
+    _transfer(sender, receiver, amount);
+    dummy_[receiver] = amount;
+  }
+
+  // Pause the contract. Only the ACB can call this method.
+  function pause()
+      public onlyOwner {
+    _pause();
+  }
+  
+  // Unpause the contract. Only the ACB can call this method.
+  function unpause()
+      public onlyOwner {
+    _unpause();
+  }
+
+  // Override decimals.
+  function decimals()
+      public pure override returns (uint8) {
+    return 18;
+  }
+
+  // Set the tax rate. Only the ACB can call this method.
+  function setTaxRate(uint tax_rate)
+      public onlyOwner {
+    setTaxRate_v2(tax_rate);
+  }
+
+  function setTaxRate_v2(uint tax_rate)
+      public onlyOwner {
+    require(0 <= tax_rate && tax_rate <= 100, "st1");
+    tax_rate_v2_ = tax_rate;
+  }
+
+  // Override ERC20's transfer method to impose a tax set by the ACB.
+  function transfer(address account, uint amount)
+      public override returns (bool) {
+    return transfer_v2(account, amount);
+  }
+
+  function transfer_v2(address account, uint amount)
+      public returns (bool) {
+    uint tax = amount * tax_rate_v2_ / 100;
+    if (tax > 0) {
+      _transfer(_msgSender(), tax_account_v2_, tax);
+    }
+    _transfer(_msgSender(), account, amount - tax);
+    return true;
+  }
+}
+
+//------------------------------------------------------------------------------
+// [JohnLawBond contract]
+//
+// JohnLawBond is an implementation of the bonds to control the total coin
+// supply. The bonds are not transferable.
+//
+// Permission: Only the ACB can mint and burn the bonds. 
+//------------------------------------------------------------------------------
+contract JohnLawBond_v2 is OwnableUpgradeable {
+  using EnumerableSet for EnumerableSet.UintSet;
+
+  // Attributes.
+  
+  // A mapping from a user account to the redemption timestamps of the bonds
+  // owned by the user.
+  mapping (address => EnumerableSet.UintSet) private _redemption_timestamps;
+
+  // A mapping from a user account to the number of bonds owned by the account.
+  mapping (address => uint) private _number_of_bonds;
+  
+  // _bonds[account][redemption_timestamp] stores the number of the bonds
+  // owned by the |account| and has the |redemption_timestamp|.
+  mapping (address => mapping (uint => uint)) private _bonds;
+
+  // The total bond supply.
+  uint private _total_supply;
+
+  uint private _total_supply_v2;
+  mapping (address => EnumerableSet.UintSet) private _redemption_timestamps_v2;
+  mapping (address => uint) private _number_of_bonds_v2;
+  mapping (address => mapping (uint => uint)) private _bonds_v2;
+
+  // Events.
+  event MintEvent(address indexed account,
+                  uint redemption_timestamp, uint amount);
+  event BurnEvent(address indexed account,
+                  uint redemption_timestamp, uint amount);
+
+  function upgrade()
+      public onlyOwner {
+    _total_supply_v2 = _total_supply;
+  }
+  
+  // Mint bonds to one account. Only the ACB can call this method.
+  //
+  // Parameters
+  // ----------------
+  // |account|: The account to which the bonds are minted.
+  // |redemption_timestamp|: The redemption timestamp of the bonds.
+  // |amount|: The amount to be minted.
+  //
+  // Returns
+  // ----------------
+  // None.
+  function mint(address account, uint redemption_timestamp, uint amount)
+      public onlyOwner {
+    mint_v2(account, redemption_timestamp, amount);
+  }
+
+  function mint_v2(address account, uint redemption_timestamp, uint amount)
+      public onlyOwner {
+    _bonds[account][redemption_timestamp] += amount;
+    _bonds_v2[account][redemption_timestamp] += amount;
+    _total_supply_v2 += amount;
+    _number_of_bonds[account] += amount;
+    _number_of_bonds_v2[account] += amount;
+    if (_bonds[account][redemption_timestamp] > 0) {
+      _redemption_timestamps[account].add(redemption_timestamp);
+      _redemption_timestamps_v2[account].add(redemption_timestamp);
+    }
+    emit MintEvent(account, redemption_timestamp, amount);
+  }
+
+  // Burn bonds from one account. Only the ACB can call this method.
+  //
+  // Parameters
+  // ----------------
+  // |account|: The account from which the bonds are burned.
+  // |redemption_timestamp|: The redemption timestamp of the bonds.
+  // |amount|: The amount to be burned.
+  //
+  // Returns
+  // ----------------
+  // None.
+  function burn(address account, uint redemption_timestamp, uint amount)
+      public onlyOwner {
+    burn_v2(account, redemption_timestamp, amount);
+  }
+
+  function burn_v2(address account, uint redemption_timestamp, uint amount)
+      public onlyOwner {
+    _bonds[account][redemption_timestamp] -= amount;
+    _bonds_v2[account][redemption_timestamp] += amount;
+    _total_supply_v2 -= amount;
+    _number_of_bonds[account] -= amount;
+    _number_of_bonds_v2[account] += amount;
+    if (_bonds[account][redemption_timestamp] == 0) {
+      _redemption_timestamps[account].remove(redemption_timestamp);
+      _redemption_timestamps_v2[account].remove(redemption_timestamp);
+    }
+    emit BurnEvent(account, redemption_timestamp, amount);
+  }
+
+  // Public getter: Return the number of bonds owned by the |account|.
+  function numberOfBondsOwnedBy(address account)
+      public view returns (uint) {
+    return _number_of_bonds[account];
+  }
+
+  // Public getter: Return the number of redemption timestamps of the bonds
+  // owned by the |account|.
+  function numberOfRedemptionTimestampsOwnedBy(address account)
+      public view returns (uint) {
+    return _redemption_timestamps[account].length();
+  }
+
+  // Public getter: Return the |index|-th redemption timestamp of the bonds
+  // owned by the |account|. |index| must be smaller than the value returned by
+  // numberOfRedemptionTimestampsOwnedBy(account).
+  function getRedemptionTimestampOwnedBy(address account, uint index)
+      public view returns (uint) {
+    return _redemption_timestamps[account].at(index);
+  }
+
+  // Public getter: Return the number of the bonds that is owned by the
+  // |account| and has the |redemption_timestamp|.
+  function balanceOf(address account, uint redemption_timestamp)
+      public view returns (uint) {
+    return balanceOf_v2(account, redemption_timestamp);
+  }
+
+  function balanceOf_v2(address account, uint redemption_timestamp)
+      public view returns (uint) {
+    return _bonds[account][redemption_timestamp];
+  }
+
+  // Public getter: Return the total bond supply.
+  function totalSupply()
+      public view returns (uint) {
+    return _total_supply_v2;
+  }
+}
+
+//------------------------------------------------------------------------------
 // [Oracle contract]
 //
 // The oracle is a decentralized mechanism to determine one "truth" level
@@ -162,13 +460,13 @@ contract Oracle_v2 is OwnableUpgradeable {
   // Returns
   // ----------------
   // True if the commit succeeded. False otherwise.
-  function commit(JohnLawCoin coin, address sender,
+  function commit(JohnLawCoin_v2 coin, address sender,
                   bytes32 committed_hash, uint deposit)
       public onlyOwner returns (bool) {
     return commit_v2(coin, sender, committed_hash, deposit);
   }
   
-  function commit_v2(JohnLawCoin coin, address sender,
+  function commit_v2(JohnLawCoin_v2 coin, address sender,
                      bytes32 committed_hash, uint deposit)
       public onlyOwner returns (bool) {
     Epoch storage epoch = epochs_[epoch_timestamp_v2_ % 3];
@@ -258,12 +556,12 @@ contract Oracle_v2 is OwnableUpgradeable {
   //    the voter is eligible to reclaim their deposited coins.
   //  - uint: The amount of reward. This becomes a positive number when the
   //    voter voted for the "truth" oracle level.
-  function reclaim(JohnLawCoin coin, address sender)
+  function reclaim(JohnLawCoin_v2 coin, address sender)
       public onlyOwner returns (uint, uint) {
     return reclaim_v2(coin, sender);
   }
   
-  function reclaim_v2(JohnLawCoin coin, address sender)
+  function reclaim_v2(JohnLawCoin_v2 coin, address sender)
       public onlyOwner returns (uint, uint) {
     Epoch storage epoch = epochs_[(epoch_timestamp_v2_ - 2) % 3];
     require(epoch.phase_v2 == Phase.RECLAIM, "rc1");
@@ -328,12 +626,12 @@ contract Oracle_v2 is OwnableUpgradeable {
   // Returns
   // ----------------
   // None.
-  function advance(JohnLawCoin coin, uint mint)
+  function advance(JohnLawCoin_v2 coin, uint mint)
       public onlyOwner returns (uint) {
     return advance_v2(coin, mint);
   }
   
-  function advance_v2(JohnLawCoin coin, uint mint)
+  function advance_v2(JohnLawCoin_v2 coin, uint mint)
       public onlyOwner returns (uint) {
     // Step 1: Move the commit phase to the reveal phase.
     Epoch storage epoch = epochs_[epoch_timestamp_v2_ % 3];
@@ -469,12 +767,12 @@ contract Oracle_v2 is OwnableUpgradeable {
   // Returns
   // ----------------
   // None.
-  function revokeOwnership(JohnLawCoin coin)
+  function revokeOwnership(JohnLawCoin_v2 coin)
       public onlyOwner {
     return revokeOwnership_v2(coin);
   }
   
-  function revokeOwnership_v2(JohnLawCoin coin)
+  function revokeOwnership_v2(JohnLawCoin_v2 coin)
       public onlyOwner {
     coin.transferOwnership(msg.sender);
   }
@@ -840,8 +1138,8 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
   uint public oracle_level_;
   uint public current_phase_start_;
 
-  JohnLawCoin public coin_v2_;
-  JohnLawBond public bond_v2_;
+  JohnLawCoin_v2 public coin_v2_;
+  JohnLawBond_v2 public bond_v2_;
   Oracle_v2 public oracle_v2_;
   Logging_v2 public logging_v2_;
   int public bond_budget_v2_;
@@ -860,16 +1158,19 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
                          uint[] redemption_timestamps, uint count);
   event ControlSupplyEvent(int delta, int bond_budget, uint mint);
 
-  function upgrade(Oracle_v2 oracle, Logging_v2 logging)
+  function upgrade(JohnLawCoin_v2 coin, JohnLawBond_v2 bond,
+                   Oracle_v2 oracle, Logging_v2 logging)
       public onlyOwner {
-    coin_v2_ = coin_;
-    bond_v2_ = bond_;
+    coin_v2_ = coin;
+    bond_v2_ = bond;
     bond_budget_v2_ = bond_budget_;
     oracle_v2_ = oracle;
     oracle_level_v2_ = oracle_level_;
     current_phase_start_v2_ = current_phase_start_;
     logging_v2_ = logging;
 
+    coin_v2_.upgrade();
+    bond_v2_.upgrade();
     oracle_v2_.upgrade();
     logging_v2_.upgrade();
   }
@@ -978,7 +1279,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
 
       // Burn the tax. This is fine because the purpose of the tax is to
       // decrease the total coin supply.
-      address tax_account = coin_v2_.tax_account_();
+      address tax_account = coin_v2_.tax_account_v2_();
       uint burned_tax = coin_v2_.balanceOf(tax_account);
       coin_v2_.burn(tax_account, burned_tax);
       coin_v2_.setTaxRate(tax_rate);
@@ -990,7 +1291,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
       oracle_v2_.revokeOwnership(coin_v2_);
       
       logging_v2_.phaseUpdated(mint, burned, delta, bond_budget_,
-                               coin_.totalSupply(), bond_.totalSupply(),
+                               coin_v2_.totalSupply(), bond_v2_.totalSupply(),
                                oracle_level_, current_phase_start_, burned_tax);
     }
     
@@ -1100,10 +1401,12 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
     return redeemBonds_v2(redemptions);
   }
 
+  event DebugEvent(uint);
+
   function redeemBonds_v2(uint[] memory redemptions)
       public whenNotPaused returns (uint) {
     address sender = msg.sender;
-    
+
     uint count_total = 0;
     for (uint i = 0; i < redemptions.length; i++) {
       uint redemption = redemptions[i];
@@ -1118,7 +1421,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
           count = (-bond_budget_).toUint256();
         }
       }
-
+      
       // Mint the corresponding coins to the user's balance.
       uint amount = count * BOND_REDEMPTION_PRICE;
       coin_v2_.mint(sender, amount);

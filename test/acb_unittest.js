@@ -67,16 +67,17 @@ function parameterized_test(accounts,
     let _level_max = _level_to_exchange_rate.length;
 
     // Cannot use deployProxy because {from: ...} is not supported.
-    let _oracle = await OracleForTesting.new(
-        {from: accounts[1]});
+    let _oracle = await OracleForTesting.new({from: accounts[1]});
     common.print_contract_size(_oracle, "OracleForTesting");
     await _oracle.initialize({from: accounts[1]});
 
     // Cannot use deployProxy because {from: ...} is not supported.
     let _coin = await JohnLawCoin.new({from: accounts[1]});
     common.print_contract_size(_coin, "JohnLawCoin");
+    await _coin.initialize({from: accounts[1]});
     let _bond = await JohnLawBond.new({from: accounts[1]});
     common.print_contract_size(_bond, "JohnLawBond");
+    await _bond.initialize({from: accounts[1]});
     let _logging = await Logging.new({from: accounts[1]});
     await _logging.initialize({from: accounts[1]});
     common.print_contract_size(_logging, "Logging");
