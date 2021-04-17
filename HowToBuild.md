@@ -5,7 +5,7 @@
 This project uses [Truffle](https://www.trufflesuite.com/truffle) and [Openzeppelin](https://openzeppelin.com/). You can install necessary packages as follows:
 
 ```
-$ git clone https://github.com/xharaken/john-law-coin/
+$ git clone git@github.com:xharaken/john-law-coin.git
 $ cd john-law-coin
 $ sudo apt-get install nodejs npm
 $ sudo npm install -g truffle
