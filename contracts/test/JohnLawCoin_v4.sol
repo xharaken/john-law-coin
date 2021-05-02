@@ -22,7 +22,7 @@ import "./JohnLawCoin_v3.sol";
 // [ACB contract]
 //
 // The ACB stabilizes the coin price with algorithmically defined monetary
-// policies without holding any collateral. The ACB stabilizes the coin / USD
+// policies without holding any collateral. The ACB stabilizes the JLC / USD
 // exchange rate to 1.0 as follows:
 //
 // 1. The ACB obtains the exchange rate from the oracle.
@@ -30,16 +30,16 @@ import "./JohnLawCoin_v3.sol";
 // 3. If the exchange rate is larger than 1.0, the ACB increases the total coin
 //    supply by redeeming issued bonds (regardless of their redemption dates).
 //    If that is not enough to supply sufficient coins, the ACB mints new coins
-//    and provides the coins to the oracle as the reward.
+//    and provides the coins to the oracle as a reward.
 // 4. If the exchange rate is smaller than 1.0, the ACB decreases the total coin
-//    supply by issuing new bonds.
+//    supply by issuing new bonds and imposing tax on coin transfers.
 //
 // Permission: All methods are public. No one (including the genesis account)
-// has the privileges of influencing the monetary policies of the ACB. The ACB
+// is privileged to influence the monetary policies of the ACB. The ACB
 // is fully decentralized and there is truly no gatekeeper. The only exceptions
-// are initialize(), deprecate(), pause() and unpause(). These methods can be
-// called only by the genesis account. This is needed for the genesis account
-// to upgrade the smart contract and fix bugs in a development phase.
+// are a few methods that can be called only by the genesis account. They are
+// needed for the genesis account to upgrade the smart contract and fix bugs
+// in a development phase.
 //------------------------------------------------------------------------------
 contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
   using SafeCast for uint;
@@ -47,21 +47,21 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
   bytes32 public constant NULL_HASH = 0;
 
   // Constants. The values are defined in initialize(). The values never
-  // change during the contract execution but use 'internal' (instead of
+  // change during the contract execution but use 'public' (instead of
   // 'constant') because tests want to override the values.
-  uint internal BOND_REDEMPTION_PRICE;
-  uint internal BOND_REDEMPTION_PERIOD;
-  uint[] internal LEVEL_TO_EXCHANGE_RATE;
-  uint internal EXCHANGE_RATE_DIVISOR;
-  uint[] internal LEVEL_TO_BOND_PRICE;
-  uint[] internal LEVEL_TO_TAX_RATE;
-  uint internal PHASE_DURATION;
-  uint internal DEPOSIT_RATE;
-  uint internal DAMPING_FACTOR;
+  uint public BOND_REDEMPTION_PRICE;
+  uint public BOND_REDEMPTION_PERIOD;
+  uint[] public LEVEL_TO_EXCHANGE_RATE;
+  uint public EXCHANGE_RATE_DIVISOR;
+  uint[] public LEVEL_TO_BOND_PRICE;
+  uint[] public LEVEL_TO_TAX_RATE;
+  uint public PHASE_DURATION;
+  uint public DEPOSIT_RATE;
+  uint public DAMPING_FACTOR;
 
   // Used only in testing. This cannot be put in a derived contract due to
   // a restriction of @openzeppelin/truffle-upgrades.
-  uint internal _timestamp_for_testing;
+  uint public _timestamp_for_testing;
 
   // Attributes. See the comment in initialize().
   JohnLawCoin_v2 public coin_;
@@ -73,6 +73,7 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
   uint public current_phase_start_;
 
   // Events.
+  event PayableEvent(address indexed sender, uint value);
   event VoteEvent(address indexed sender, bytes32 committed_hash,
                   uint revealed_level, uint revealed_salt,
                   bool commit_result, bool reveal_result,
@@ -84,7 +85,7 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
   event ControlSupplyEvent(int delta, int bond_budget, uint mint);
 
   // Initializer. The ownership of the contracts needs to be transferred to the
-  // ACB before the initializer is invoked.
+  // ACB just after the initializer is invoked.
   //
   // Parameters
   // ----------------
@@ -137,8 +138,8 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
     // LEVEL_TO_EXCHANGE_RATE is the mapping from the oracle levels to the
     // exchange rates. The real exchange rate is obtained by dividing the values
     // by EXCHANGE_RATE_DIVISOR. For example, 11 corresponds to the exchange
-    // rate of 1.1. This translation is needed to avoid using decimal numbers in
-    // the smart contract.
+    // rate of 1.1. This translation is needed to avoid using float numbers in
+    // Solidity.
     LEVEL_TO_EXCHANGE_RATE = [6, 7, 8, 9, 10, 11, 12, 13, 14];
     EXCHANGE_RATE_DIVISOR = 10;
 
@@ -147,7 +148,7 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
     LEVEL_TO_BOND_PRICE = [970, 978, 986, 992, 997, 997, 997, 997, 997];
 
     // The bond redemption price and the redemption period.
-    BOND_REDEMPTION_PRICE = 1000; // One bond is redeemed for 1000 USD.
+    BOND_REDEMPTION_PRICE = 1000; // One bond is redeemed for 1000 coins.
     BOND_REDEMPTION_PERIOD = 84 * 24 * 60 * 60; // 12 weeks.
 
     // LEVEL_TO_TAX_RATE is the mapping from the oracle levels to the tax rate.
@@ -157,10 +158,10 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
     // once per phase. Voters can vote once per phase.
     PHASE_DURATION = 60; // 1 week.
 
-    // The percentage of the coin balance the voter needs to deposit.
+    // The percentage of the coin balance voters need to deposit.
     DEPOSIT_RATE = 10; // 10%.
 
-    // The damping factor to avoid minting or burning too many coins in one
+    // A damping factor to avoid minting or burning too many coins in one
     // phase.
     DAMPING_FACTOR = 10; // 10%.
 
@@ -168,7 +169,7 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
 
     // The JohnLawCoin contract.
     //
-    // Note that 2100000 coins (corresponding to 2.1 MB) are given to the
+    // Note that 10000000 coins (corresponding to 10 M USD) are given to the
     // genesis account initially. This is important to make sure that the
     // genesis account can have power to determine the exchange rate until
     // the ecosystem stabilizes. Once real-world currency exchangers start
@@ -179,10 +180,10 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
     // bootstrap the ecosystem successfully.
     //
     // Specifically, the genesis account votes for the oracle level 5 until
-    // real-world currency exchangers appear. Once real-world currency
+    // real-world currency exchangers appear. When real-world currency
     // exchangers appear, the genesis account votes for the oracle level
     // corresponding to the real-world exchange rate. Other voters are
-    // expected to follow the genesis account. Once the oracle gets enough
+    // expected to follow the genesis account. When the oracle gets enough
     // honest voters, the genesis account decreases its coin balance and loses
     // its power, moving the oracle to a fully decentralized system.
     coin_ = coin;
@@ -196,9 +197,9 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
     // The Logging contract.
     logging_ = logging;
 
-    // If |bond_budget_| is positive, it indicates the number of bonds the ACM
-    // wants to issue to decrease the total coin supply. If |bond_budget_| is
-    // negative, it indicates the number of bonds the ACB wants to redeem to
+    // If |bond_budget_| is positive, it indicates the number of bonds the ACB
+    // can issue to decrease the total coin supply. If |bond_budget_| is
+    // negative, it indicates the number of bonds the ACB can redeem to
     // increase the total coin supply.
     bond_budget_ = bond_budget;
     
@@ -215,7 +216,7 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
     */
   }
 
-  // Deprecate the ACB.
+  // Deprecate the ACB. Only the owner can call this method.
   function deprecate()
       public whenNotPaused onlyOwner {
     coin_.transferOwnership(msg.sender);
@@ -224,18 +225,32 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
     logging_.transferOwnership(msg.sender);
   }
 
-  // Pause the ACB in emergency cases.
+  // Pause the ACB in emergency cases. Only the owner can call this method.
   function pause()
       public whenNotPaused onlyOwner {
     _pause();
     coin_.pause();
   }
 
-  // Unpause the ACB.
+  // Unpause the ACB. Only the owner can call this method.
   function unpause()
       public whenPaused onlyOwner {
     _unpause();
     coin_.unpause();
+  }
+
+  // Payable fallback to receive and store ETH. Give us a tip :)
+  fallback() external payable {
+    emit PayableEvent(msg.sender, msg.value);
+  }
+  receive() external payable {
+    emit PayableEvent(msg.sender, msg.value);
+  }
+
+  // Withdraw the tips. Only the owner can call this method.
+  function withdrawTips()
+      public whenNotPaused onlyOwner {
+    payable(msg.sender).transfer(address(this).balance);
   }
 
   // A struct to pack local variables. This is needed to avoid a stack-too-deep
@@ -249,17 +264,18 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
     uint rewarded;
   }
 
-  // Vote to the oracle. The voter can commit a vote in the current phase,
-  // reveal their vote in the prior phase, and reclaim the deposited coins and
-  // get a reward for their vote in the next prior phase at the same time.
+  // Vote for the exchange rate. The voter can commit a vote to the current
+  // phase, reveal their vote in the previous phase, and reclaim the deposited
+  // coins and get a reward for their vote in the phase before the previous
+  // phase at the same time.
   //
   // Parameters
   // ----------------
   // |committed_hash|: The hash to be committed in the current phase. Specify
-  // ACB.NULL_HASH if you only want to reveal and reclaim previous votes and
-  // do not want to commit.
-  // |revealed_level|: The oracle level to be revealed in the prior phase.
-  // |revealed_salt|: The voter's salt to be revealed in the prior phase.
+  // ACB.NULL_HASH if you do not want to commit and only want to reveal and
+  // reclaim previous votes.
+  // |revealed_level|: The oracle level you voted for in the previous phase.
+  // |revealed_salt|: The salt you used in the previous phase.
   //
   // Returns
   // ----------------
@@ -287,11 +303,11 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
       if (oracle_level_ != oracle_.getLevelMax()) {
         require(0 <= oracle_level_ && oracle_level_ < oracle_.getLevelMax(),
                 "vo1");
-        // Translate the mode level to the exchange rate.
+        // Translate the oracle level to the exchange rate.
         uint exchange_rate = LEVEL_TO_EXCHANGE_RATE[oracle_level_];
 
         // Calculate the amount of coins to be minted or burned based on the
-        // Quantity Theory of Money. If the exchnage rate is 1.1 (i.e., 1 coin
+        // Quantity Theory of Money. If the exchange rate is 1.1 (i.e., 1 coin
         // = 1.1 USD), the total coin supply is increased by 10%. If the
         // exchange rate is 0.8 (i.e., 1 coin = 0.8 USD), the total coin supply
         // is decreased by 20%.
@@ -306,7 +322,7 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
         // Increase or decrease the total coin supply.
         mint = _controlSupply(delta);
 
-        // Translate the mode level to the tax rate.
+        // Translate the oracle level to the tax rate.
         tax_rate = LEVEL_TO_TAX_RATE[oracle_level_];
       }
 
@@ -381,7 +397,7 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
       return 0;
     }
     if (bond_budget_ < count.toInt256()) {
-      // ACB does not have enough bonds to issue.
+      // The ACB does not have enough bonds to issue.
       return 0;
     }
 
@@ -398,7 +414,7 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
     // Set the redemption timestamp of the bonds.
     uint redemption_timestamp = getTimestamp() + BOND_REDEMPTION_PERIOD;
 
-    // Issue new bonds
+    // Issue new bonds.
     bond_.mint(sender, redemption_timestamp, count);
     bond_budget_ -= count.toInt256();
     require(bond_budget_ >= 0, "pb1");
@@ -417,8 +433,8 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
   //
   // Parameters
   // ----------------
-  // |redemption_timestmaps|: A list of bonds the user wants to redeem. Bonds
-  // are identified by their redemption timestamps.
+  // |redemption_timestamps|: An array of bonds to be redeemed. Bonds are
+  // identified by their redemption timestamps.
   //
   // Returns
   // ----------------
@@ -442,7 +458,7 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
         }
       }
 
-      // Mint the corresponding coins to the user's balance.
+      // Mint the corresponding coins to the user account.
       uint amount = count * BOND_REDEMPTION_PRICE;
       coin_.mint(sender, amount);
 
@@ -462,9 +478,7 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
   //
   // Parameters
   // ----------------
-  // |delta|: If |delta| is positive, it indicates the amount of coins to be
-  // minted. If |delta| is negative, it indicates the amount of coins to be
-  // burned.
+  // |delta|: The target increase or decrease to the total coin supply.
   //
   // Returns
   // ----------------

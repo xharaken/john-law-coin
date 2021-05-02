@@ -39,12 +39,12 @@ def kill_ganache():
 def reset_network(voters):
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
     kill_ganache()
-    time.sleep(2)
+    time.sleep(6)
     network = subprocess.Popen(
         "ganache-cli -l 1200000000 -a " + str(voters), shell=True,
         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL)
-    time.sleep(4)
+    time.sleep(6)
 
 def run_test(command):
     print(command, file=sys.stderr)

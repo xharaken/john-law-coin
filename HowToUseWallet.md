@@ -1,1 +1,96 @@
-(will write soon)
+# Overview
+
+This page explains how to use the [JohnLawCoin wallet](https://xharaken.github.io/john-law-coin/wallet/wallet.html). If you are not familiar with the basic concepts of JohnLawCoin (e.g., ACB, Oracle, voting, bonds), read [the whitepaper](./docs/whitepaper.pdf).
+
+JohnLawCoin is simple. You can only do the following operations using the wallet:
+
+* Check the status of your account and the ACB
+* Send coins
+* Vote
+* Purchase bonds
+* Redeem bonds
+
+# Operations
+
+## Check the status of your account and the ACB
+
+You can check the status at the top of the wallet. This includes your coin balance, your bond balance, the current oracle level, the current bond price, the ACB's bond budget, when the current phase started etc. Please refer to the information before performing the operations explained below.
+
+## Send coins
+
+You can send coins to your friend.
+
+A tax may be imposed on the coin transfer depending on the current oracle level. The following table shows the mapping between the oracle level and the tax rate:
+
+| oracle level | exchange rate | tax rate |
+| ---: | ---: | ---: |
+| 0 | 1 coin = 0.6 USD | 30% |
+| 1 | 1 coin = 0.7 USD | 20% |
+| 2 | 1 coin = 0.8 USD | 12% |
+| 3 | 1 coin = 0.9 USD | 5% |
+| 4 | 1 coin = 1.0 USD | 0% |
+| 5 | 1 coin = 1.1 USD | 0% |
+| 6 | 1 coin = 1.2 USD | 0% |
+| 7 | 1 coin = 1.3 USD | 0% |
+| 8 | 1 coin = 1.4 USD | 0% |
+
+For example, imagine the current oracle level is 2. If you send 100 coins, 12 coins are collected as a tax and 88 coins are transferred to your friend. The collected tax is burned by the ACB to decrease the total coin supply and thus move the exchange rate toward 1 coin = 1 USD.
+
+## Vote
+
+Voting is probably the most complex concept of JohnLawCoin but what you need to do in practice is simple:
+
+1. Look up the current exchange rate using some real-world currency exchanger. Strictly speaking, the current exchange rate is defined as the exchange rate at the point when the ACB's current phase started.
+1. Vote for the oracle level that is the closest to the current exchange rate. In a bootstrap phase where no currency exchanger is available, vote for the oracle level 5. When voting, you are asked to set a salt number (which works as a password to protect your vote). Please use different salt numbers every time and keep the numbers secret until you reveal the vote in the next phase.
+1. When the ACB starts the next phase, reveal your vote by disclosing the oracle level and the salt number you used in the previous phase.
+
+You can vote in the current phase and reveal your vote in the previous phase in one operation. You are expected to fill in the following four fields:
+
+* The oracle level you vote for in the current phase.
+* The salt number to protect your vote in the current phase.
+* The oracle level you voted for in the previous phase.
+* The salt number you used in the previous phase.
+
+Remember that 10% of your coin balance is deposited to the ACB when you vote. The ACB weights your vote by the amount of the deposited coins and determines the ``truth`` oracle level by weighted majority votes. Due to the weighting, the more coins you possess, the more power your vote has.
+
+The deposited coins are returned to your wallet later only if 1) you voted for an oracle level that is within one level from the ``truth`` oracle level and 2) you revealed the vote correctly. Otherwise, you will lose the deposited coins.
+
+In addition, you can get a reward later if 1) you voted for the ``truth`` oracle level and 2) you revealed the vote correctly. The more coins you deposited, the more reward you can get.
+
+You should read [the whitepaper](./docs/whitepaper.pdf) for the detailed calculation, but in summary, it is important to vote for the ``truth`` oracle level and reveal your previous vote every phase. The ACB updates the phase every week, and you can vote once per phase. Therefore, you should vote for the ``truth`` oracle level and reveal your previous vote every week.
+
+## Purchase bonds
+
+You can purchase bonds as long as the ACB's bond budget is positive. The bonds are designed as zero-coupon bonds. One bond is redeemed for 1000 coins on the redemption date. The bond issue price varies depending on the current oracle level:
+
+| oracle level | exchange rate | bond issue price |
+| ---: | ---: | ---: |
+| 0 | 1 coin = 0.6 USD | 970 coins |
+| 1 | 1 coin = 0.7 USD | 978 coins |
+| 2 | 1 coin = 0.8 USD | 986 coins |
+| 3 | 1 coin = 0.9 USD | 992 coins |
+| 4 | 1 coin = 1.0 USD | 997 coins |
+| 5 | 1 coin = 1.1 USD | 997 coins |
+| 6 | 1 coin = 1.2 USD | 997 coins |
+| 7 | 1 coin = 1.3 USD | 997 coins |
+| 8 | 1 coin = 1.4 USD | 997 coins |
+
+For example, imagine the current oracle level is 2. You can purchase one bond with 986 coins. You can redeem the bond for 1000 coins on the redemption date.
+
+The ACB sets a positive bond budget when it needs to decrease the total coin supply by issuing bonds, thus moving the exchange rate toward 1 coin = 1 USD.
+
+## Redeem bonds
+
+You can redeem bonds whose redemption period is over. You can get 1000 coins by redeeming one bond.
+
+You can also redeem bonds regardless of their redemption dates as long as the ACB's bond budget is negative. The ACB sets a negative bond budget when it needs to increase the total coin supply by redeeming bonds proactively, thus moving the exchange rate toward 1 coin = 1 USD.
+
+# How can I get coins?
+
+Initially you have no coins. You can collect coins by contributing to the voting and getting the reward.
+
+When you have coins, you can increase the coins by purchasing and redeeming bonds.
+
+When the exchange rate is 1 coin = 1.2 USD and you believe the ACB has the ability of moving the exchange rate to 1 coin = 1 USD, you can earn money by selling coins at the currency exchanger now and buying them back later. When the exchange rate is 1 coin = 0.8 USD and you believe the ACB has the ability of moving the exchange rate to 1 coin = 1 USD, you can earn money by buying coins now and selling them back later.
+
+Remember that these activities are important not only to increase your coin balance but also to stabilize the exchange rate. The contribution to the voting helps the ACB determine the oracle level in a decentralized manner. The bond purchase / redemption helps the ACB adjust the total coin supply and thus move the exchange rate toward 1 coin = 1 USD. The arbitrage between coins and USD helps move the exchange rate toward 1 coin = 1 USD.

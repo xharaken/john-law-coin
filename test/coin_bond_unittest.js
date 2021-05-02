@@ -166,6 +166,14 @@ contract("CoinBondUnittest", function (accounts) {
     assert.equal(await coin.balanceOf(accounts[1]), 248);
     assert.equal(await coin.balanceOf(accounts[2]), 46);
     assert.equal(await coin.balanceOf(await coin.tax_account_()), 4);
+    let old_tax_account = await coin.tax_account_();
+    await coin.setTaxRate(20);
+    assert.equal(await coin.balanceOf(old_tax_account), 0);
+    assert.equal(await coin.balanceOf(await coin.tax_account_()), 4);
+    old_tax_account = await coin.tax_account_();
+    await coin.setTaxRate(0);
+    assert.equal(await coin.balanceOf(old_tax_account), 0);
+    assert.equal(await coin.balanceOf(await coin.tax_account_()), 4);
   });
 
   it("JohnLawBond", async function () {

@@ -7,7 +7,7 @@
 
 \title{\textbf{JohnLawCoin:\\A Stablecoin with an Algorithmic Central Bank}}
 \author{Kentaro Hara\footnote{Twitter: @johnlawcoin, GitHub: https://github.com/xharaken/john-law-coin. Opinions are my own and not the views of my employer.}}
-\date{2021 April 11}
+\date{2021 May}
 
 \begin{document}
 
@@ -17,9 +17,9 @@
 
 \textbf{JohnLawCoin} is a stablecoin realized by an \textbf{Algorithmic Central Bank (ACB)}. The system is fully decentralized and there is truly no gatekeeper. No gatekeeper means there is no entity to be regulated.
 
-JohnLawCoin is a real-world experiment to verify the following assumption: It is possible to stabilize the currency price with fully algorithmically defined monetary policies without holding any collateral.
+JohnLawCoin is a real-world experiment to verify one assumption: \textbf{There is a way to stabilize the currency price with algorithmically defined monetary policies without holding any collateral.}
 
-If JohnLawCoin is successful and proves the assumption is correct, it will provide interesting insights for both non-fiat currencies and fiat currencies; i.e., 1) there is a way for non-fiat cryptocurrencies to stabilize their currency price without having any gatekeeper, and 2) there is a way for central banks of developing countries to implement a fixed exchange rate system without holding adequate USD reserves. This will upgrade human's understanding about money.
+If JohnLawCoin is successful and proves the assumption is correct, it will provide interesting insights for both non-fiat currencies and fiat currencies; i.e., 1) there is a way for non-fiat cryptocurrencies to implement a stablecoin without having any gatekeeper that holds collateral, and 2) there is a way for developing countries to implement a fixed exchange rate system for their fiat currencies without holding adequate USD reserves. This will upgrade human's understanding about money.
 
 \end{abstract}
 
@@ -27,33 +27,33 @@ If JohnLawCoin is successful and proves the assumption is correct, it will provi
 
 \subsection{Stablecoin}
 
-The high volatility of Bitcoin, Ethereum and other cryptocurrencies has limited their use cases in real-world transactions. For example, the price of ETH (Ethereum's currency) dropped from \$1300 to \$84 in 2018. Cryptocurrencies are recognized as speculative assets, not money. In theory, the main functions of money are distinguished as: a medium of exchange, a unit of account, and a store of value~\cite{davies2010history,ferguson2008ascent}. For cryptocurrencies to realize these functions and become money, price stability is a mandatory requirement. Stablecoins have explored ways to ensure the price stability, including Tether~\cite{tether}, Libra / Diem~\cite{libra}, MakerDAO~\cite{makerdao} and Synthetix~\cite{synthetix}). JohnLawCoin is one of the efforts.
+The high volatility of Bitcoin, Ethereum and other cryptocurrencies has limited their use cases in real-world transactions. For example, the price of ETH (Ethereum's currency) dropped from \$1300 to \$84 in 2018 and went up to \$2400 in 2021. Cryptocurrencies are recognized as speculative assets, not money. In theory, the main functions of money are distinguished as: a medium of exchange, a unit of account, and a store of value~\cite{davies2010history,ferguson2008ascent}. For cryptocurrencies to meet these functions as money, price stability is a mandatory requirement. Stablecoins have explored ways to ensure the price stability, including Tether~\cite{tether}, Libra / Diem~\cite{libra}, MakerDAO~\cite{makerdao} and Synthetix~\cite{synthetix}. JohnLawCoin is one of the stablecoins.
 
 \subsection{No entity to be regulated}
 
-The fundamental difference between JohnLawCoin and other stablecoins is that JohnLawCoin has no gatekeeper. A gatekeeper means an entity that has control and intention about the ecosystem. For example, Tether is issued by Tether Limited, which is subject to be regulated as a gatekeeper when something inappropriate happens in the ecosystem. On the other hand, JohnLawCoin is fully decentralized by defining open protocols that stabilize the currency price algorithmically. This eliminates the need to create a gatekeeper in the ecosystem. There is no entity to be regulated.
+The fundamental difference between JohnLawCoin and other stablecoins is that JohnLawCoin has no gatekeeper. A gatekeeper means an entity that has control and intention about the ecosystem. For example, Tether is issued by Tether Limited, which is subject to be regulated as a gatekeeper when something inappropriate happens in the ecosystem. On the other hand, JohnLawCoin is fully decentralized by defining open protocols that stabilize the currency price algorithmically. This eliminates the need to introduce a gatekeeper in the ecosystem. There is no entity to be regulated.
 
 \subsection{No collateral}
 
-JohnLawCoin stabilizes the currency price without holding any collateral (e.g., USD, gold, other cryptocurrencies). This is important to eliminate a gatekeeper that holds the collateral from the ecosystem.
+JohnLawCoin stabilizes the currency price without holding any collateral (e.g., USD, gold, other cryptocurrencies). JohnLawCoin does not need any gatekeeper that holds collateral.
 
-In ancient times~\cite{davies2010history,ferguson2008ascent}, it was believed that the value of money derives from the purchasing power of the commodity upon which it is based. This is known as metalism. Later the metalism was replaced with chartalism, where it was believed that the value of money derives from the sovereign power to enforce the circulation and levy taxes. The shift from metalism to chartalism was a fundamental improvement because chartalism enabled the government to issue more money than the amount of metal the government held. Even in this case, however, it was long believed that the government has to hold gold reserves to back the circulating money. This is the gold standard, which was a standard currency system in the 19th and 20th centuries. It was 1973 when the United States unilaterally terminated the convertibility of USD to gold by bringing the Bretton Woods system to an end. At this point, which was only 50 years ago, humans finally understood that floating fiat currencies that are not backed by gold work. Humans are slowly getting to understand that money works as money without being backed by collateral.
+In ancient times~\cite{davies2010history,ferguson2008ascent}, it was believed that the value of money derives from the purchasing power of the commodity upon which it is based. This is known as metalism. Later the metalism was replaced with chartalism, where it was believed that the value of money derives from the sovereign power to enforce the circulation and levy taxes. The shift from metalism to chartalism was a fundamental improvement because chartalism enabled the government to issue more money than the amount of metal the government held. Even in this case, however, it was long believed that the government has to hold gold reserves to back the circulating money. This is the gold standard, which had worked as a standard currency system in the 19th and 20th centuries. It was 1973 when the United States unilaterally terminated the convertibility of USD to gold by bringing the Bretton Woods system to an end. At this point, which was only 50 years ago, humans finally understood that floating fiat currencies that are not backed by gold work. Humans are slowly getting to understand that money works as money without being backed by collateral.
 
-As Katsuhito Iwai pointed out~\cite{iwai1996boostrap,iwai1997evolution}, money works as money simply because it is used as money. Money is accepted as money by everybody merely because it is accepted as money by everybody else. This infinite incentive recursion is the origin of the value of money. Collateral like gold and the sovereign power is indeed useful to establish the infinite incentive recursion but is not the essence to make something work as money.
+As Katsuhito Iwai pointed out~\cite{iwai1996boostrap,iwai1997evolution}, money works as money simply because it is used as money. Money is accepted as money by everybody merely because it is accepted as money by everybody else. This infinite incentive recursion is the origin of the value of money. Collateral like gold and the sovereign power are indeed useful to establish the infinite incentive recursion but are not the essence to make something work as money.
 
 However, it seems like that existing stablecoins still believe the myth that money must be backed by collateral (e.g., Tether, Libra, Maker) and are hitting challenges:
 
 \begin{itemize}
 \item Tether~\cite{tether} is backed by USD. Tether Limited works as a gatekeeper and holds the USD reserves. However, it is pointed out that Tether is controversial because of the company's failure to provide a promised audit about the USD reserves and also its alleged role in manipulating the price of Bitcoin. Tether's centralized model brings counterparty risks.
-\item Libra~\cite{libra} is backed by various fiat currencies and financial assets. The Libra Association works as a gatekeeper and holds the assets. Even though the Libra Association is established as an open foundation, it was regulated. The fact that there is a gatekeeper to hold collateral enabled the governments to regulate the gatekeeper.
-\item Maker~\cite{makerdao} uses ETH as reserves. However, the price of ETH is unstable and Maker needs to ask users to keep a 150+\% collateralization ratio for ETH (e.g., when a user reserves 150 ETHs, the user can issue up to 100 coins). If the collateralization ratio drops to less than 150\%, the reserved ETHs are forced to default and liquidated. This actually happened when the price of ETH dropped from \$1300 to \$84 in 2018 and many users lost their reserved ETHs.
+\item Libra~\cite{libra} is backed by various fiat currencies and financial assets. The Libra Association works as a gatekeeper and holds the assets. Even though the Libra Association is established as an open foundation, it was regulated. The fact that there is a gatekeeper holding collateral enabled the governments to regulate the gatekeeper.
+\item Maker~\cite{makerdao} uses ETH as reserves. However, the price of ETH is unstable and Maker needs to ask users to keep a 150+\% collateralization ratio for ETH (e.g., when a user reserves 150 ETH, the user can issue up to 100 coins). If the collateralization ratio drops to less than 150\%, the reserved ETH is forced to default and liquidated. This actually happened when the price of ETH dropped from \$1300 to \$84 in 2018 and many users lost their reserved ETH.
 \end{itemize}
 
 These complexities come from the collateral. The goal of JohnLawCoin is to demonstrate that ``money must be backed by collateral'' is a myth. JohnLawCoin is a real-world experiment to verify the assumption that \textbf{there is a way to establish the infinite incentive recursion and stabilize the currency price without holding any collateral}.
 
 \subsection{Modern Monetary Theory}
 
-JohnLawCoin is inspired by Modern Monetary Theory (MMT)~\cite{kelton2020deficit,mmt2016wray}. Specifically, JohnLawCoin is designed based on the following monetary principles of MMT:\footnote{MMT is controversial when it comes to its political implications about fiscal policies and taxing~\cite{palley2015money}, but digging into the political implications is out of the scope of this experiment. In the first place, JohnLawCoin does not have any gatekeeper that can enforce fiscal policies. JohnLawCoin only depends on the monetary principles [MMT-I], [MMT-II] and [MMT-III], which do not contradict the standard economic theories.}
+JohnLawCoin is inspired by Modern Monetary Theory (MMT)~\cite{kelton2020deficit,mmt2016wray}. Specifically, JohnLawCoin is designed based on the following monetary principles of MMT:\footnote{MMT is controversial when it comes to its political implications about fiscal policies and taxing~\cite{palley2015money}, but digging into the political implications is out of the scope of this paper. In the first place, JohnLawCoin does not have any gatekeeper that can enforce fiscal policies. JohnLawCoin only depends on the monetary principles [MMT-I], [MMT-II] and [MMT-III], which do not contradict the view of the standard economic theories and are not controversial.}
 
 \begin{description}
 \item{\textbf{[MMT-I]}} A government that issues its own fiat currency is never forced to default on debt denominated by the fiat currency because the government can always redeem the debt by creating money.
@@ -67,7 +67,7 @@ JohnLawCoin is a real-world experiment to upgrade human's understanding about mo
 
 \begin{itemize}
 \item \textbf{Non-fiat cryptocurrencies can use the algorithm to stabilize their currency price without holding collateral}. This releases the non-fiat cryptocurrencies from the counterparty risks and the regulation risks.
-\item \textbf{Real-world central banks of developing countries can use the algorithm to implement a fixed exchange rate system without holding adequate USD reserves}. This could have helped to prevent historical financial crises~\cite{ferguson2008ascent} caused by speculative attacks that attempted to exhaust government's USD reserves and thus break the fixed exchange rate (e.g., Black Wednesday in 1992, Asian financial crisis in 1997). JohnLawCoin will have interesting implications to the international currency systems.
+\item \textbf{Real-world central banks of developing countries can use the algorithm to implement a fixed exchange rate system without holding adequate USD reserves}. This could have helped to prevent historical financial crises~\cite{ferguson2008ascent} caused by speculative attacks that attempted to exhaust government's USD reserves and thus break the fixed exchange system (e.g., Black Wednesday in 1992, Asian financial crisis in 1997). JohnLawCoin will provide interesting implications to the international currency systems.
 \item \textbf{Real-world central banks can use the algorithm to implement rule-based monetary policies}.
 \end{itemize}
 
@@ -83,7 +83,7 @@ To the best of the author's knowledge, there is no large-scale real-world experi
 
 \subsection{Overview}
 
-First of all, JohnLawCoin needs to define what its value is bound to. In theory, this can be anything (e.g., USD, a currency basket, Consumer Price Index), but JohnLawCoin binds one coin to one USD.
+First of all, JohnLawCoin needs to define what its value should be bound to. In theory, this can be anything (e.g., USD, a currency basket, Consumer Price Index), but JohnLawCoin binds one coin to one USD.
 
 JohnLawCoin consists of the four components:
 
@@ -98,7 +98,7 @@ The following sections describe how the oracle and the ACB work.
 
 \subsection{Oracle}
 
-Since the information about the JohnLawCoin / USD exchange rate is external to a blockchain on which the ACB runs, the system needs a fully decentralized mechanism to feed the external information to the blockchain. This mechanism is called an oracle and multiple solutions have been proposed~\cite{chainlink,adler2018astraea}. JohnLawCoin uses a combination of the commit-reveal scheme~\cite{wohrer2018design} and Schelling Point~\cite{shellingpoint}. Table \ref{table0} shows an overview of how it works.
+Since the information about the JohnLawCoin / USD exchange rate is external to a blockchain on which the ACB runs, the system needs a fully decentralized mechanism to feed the external information to the blockchain. This mechanism is known as an oracle and multiple solutions have been proposed~\cite{chainlink,adler2018astraea}. JohnLawCoin uses a combination of the commit-reveal scheme~\cite{wohrer2018design} and Schelling Point~\cite{shellingpoint}. Table \ref{table0} shows an overview of how it works.
 
 \begin{table}[htb]
 \begin{center}
@@ -108,7 +108,7 @@ Since the information about the JohnLawCoin / USD exchange rate is external to a
 A voter deposits $D$\% of their coin balance. The voter commits hash(\textit{quantized exchange rate}, \textit{salt}).
 \end{tabular}\\\hline
 2. Reveal phase & \begin{tabular}{p{22em}}
-The voter reveals \textit{quantized exchange rate} and \textit{salt}.
+The voter reveals the \textit{quantized exchange rate} and the \textit{salt}.
 \end{tabular}\\\hline
 3. Reclaim phase & \begin{tabular}{p{22em}}
 Category-1 and Category-2 voters can reclaim the coins they deposited in the commit phase. In addition, Category-1 voters can get a reward.
@@ -120,55 +120,55 @@ Category-1 and Category-2 voters can reclaim the coins they deposited in the com
 
 \subsubsection{Commit phase}
 
-In the commit phase, anyone can vote for what they think the JohnLawCoin / USD exchange rate is. The voter is expected to obtain the information from real-world currency exchangers. Since the oracle accepts only discrete values (e.g., 0.6, 0.7, ..., 1.3, 1.4), the voter needs to quantize the exchange rate to the closest discrete value accepted by the oracle. The voter submits hash(\textit{quantized exchange rate}, \textit{salt}) to the oracle. The hash function is public and shared with all the voters. The \textit{quantized exchange rate} and the \textit{salt} are secret to each voter. The voter deposits $D$\% of their coin balance to the oracle.
+In the commit phase, anyone can vote for what they think the JohnLawCoin / USD exchange rate is. The voter is expected to obtain the information from real-world currency exchangers. Since the oracle accepts only discrete values (e.g., 0.6, 0.7, ..., 1.3, 1.4), the voter needs to quantize the exchange rate to the closest discrete value accepted by the oracle. The voter submits hash(\textit{quantized exchange rate}, \textit{salt}) to the oracle. The hash function is public and shared among all the voters. The \textit{quantized exchange rate} and the \textit{salt} are secret to each voter. The voter deposits $D$\% of their coin balance to the oracle.
 
 \subsubsection{Reveal phase}
 
-In the reveal phase, the voter reveals the \textit{quantized exchange rate} and the \textit{salt} they used in the commit phase. The oracle weights the revealed votes by the amount of the coins deposited in the commit phase and calculates the mode of the votes. The mode is defined as the ``truth'' exchange rate. Due to the weighting, the more coins you possess, the more power your vote has.
+In the reveal phase, the voter reveals the \textit{quantized exchange rate} and the \textit{salt} they used in the commit phase. The oracle weights the revealed votes by the amount of the deposited coins and determines the ``truth'' exchange rate by weighted majority votes. Due to the weighting, the more coins you possess, the more power your vote has.
 
 \subsubsection{Reclaim phase}
 
 There are three kinds of voters:
 
 \begin{description}
-\item{Category-1 voters} Voters who voted for the exact ``truth'' exchange rate.
-\item{Category-2 voters} Voters who voted for the exchange rates before and after the ``truth'' exchange rate. A \textit{Category-2 threshold} determines what exchange rates are considered as before and after  the ``truth'' exchange rate. For example, if the ``truth'' exchange rate is 1.1 and the Category-2 threshold is 0.1, Category-2 voters are the ones who voted for 1.0 and 1.2.
-\item{Category-3 voters} Voters who voted for other exchange rates.
+\item{Category-1 voters}: Voters who voted for the exact ``truth'' exchange rate.
+\item{Category-2 voters}: Voters who didn't vote for the exact ``truth'' exchange rate but voted for the exchange rates around the ``truth'' exchange rate. A \textit{Category-2 threshold} determines what exchange rates are considered as around the ``truth'' exchange rate. For example, if the ``truth'' exchange rate is 1.1 and the Category-2 threshold is 0.1, Category-2 voters are the ones who voted for 1.0 and 1.2.
+\item{Category-3 voters}: Voters who voted for other exchange rates.
 \end{description}
 
 In the reclaim phase, Category-1 and Category-2 voters can reclaim the coins they deposited in the commit phase. For example, if the ``truth'' exchange rate is 1.1 and the Category-2 threshold is 0.1, the voters who voted for 1.0, 1.1 and 1.2 can reclaim the coins they deposited. Category-3 voters lose the coins they deposited.
 
-In addition, the Category-1 voters can get a reward. The source of the reward is the coins lost by the Category-3 voters and the coins the ACB decided to mint to expand the total coin supply (explained below). $C$\% of the reward is evenly distributed to the Category-1 voters. $100-C$\% of the reward is distributed to the Category-1 voters in proportion to the coins they deposited.\footnote{You may think $C$ can be 0 (i.e., all of the reward is distributed to the Category-1 voters in proportion to the coins they deposited). However, it is important to set a positive value to $C$ to bootstrap the system. Initially, all voters except the genesis account have 0 coins. If $C$ is 0, the voters do not have any incentive to contribute to the oracle because they can get no reward by doing so (even worse, they lose the transaction fee for Ethereum). $C$ needs to be a positive value to bootstrap the system.}\footnote{$C$ should be set to a small value. If $C$ is large, it will work as an incentive to create many dummy accounts. This may happen with a small $C$ to some extent but it will not have a terrible impact to the system. The ACB's ability of controlling the total coin supply and adjusting the currency price is not affected by how many accounts are created in the system.}
+In addition, the Category-1 voters can get a reward. The source of the reward is the coins lost by the Category-3 voters and the coins the ACB decided to mint to expand the total coin supply (explained below). $C$\% of the reward is evenly distributed to the Category-1 voters. $(100-C)$\% of the reward is distributed to the Category-1 voters in proportion to the amount of the coins they deposited.\footnote{You may think $C$ can be 0 (i.e., all of the reward is distributed to the Category-1 voters in proportion to the amount of the coins they deposited). However, it is important to set a positive value to $C$ to bootstrap the system. Initially, voters except the genesis account have 0 coins. If $C$ is 0, the voters do not have any incentive to contribute to the oracle because they can get no reward by doing so (even worse, they lose the transaction fee for Ethereum). $C$ needs to be a positive value to incentivize the voters to join the voting.}\footnote{$C$ should be set to a small value. If $C$ is large, it will mis-incentivize voters to create many dummy accounts. This may happen with a small $C$ to some extent but it will not have a terrible impact to the system. The ACB's ability of controlling the total coin supply and adjusting the currency price is not affected by how many accounts are created in the system.}
 
-This reward mechanism incentivizes voters to vote for the ``truth'' exchange rate.\footnote{In essence, the oracle creates a Keynesian beauty contest~\cite{gao2008keynesian}.}\footnote{Coin holders are incentivized to increase the value of the coins. What happens if a subset of users who hold 50+\% coins intentionally vote for a wrong exchange rate to let the ACB mint or burn coins as they like? Two things should be noted. First, no decentralized algorithm works if 50+\% of the participants behave dishonestly (so JohnLawCoin assumes 50+\% of the participants behave honestly). Second, if they do that, JohnLawCoin will lose trust and the value of the coins will drop. The coin holders are not likely to have incentives to manipulate the exchange rate dishonestly.} The voting to the oracle can be viewed as coin mining but remember that the oracle is neutral to the total coin supply. The oracle does not mint any coins. The oracle only redistributes the deposited coins and the coins the ACB decided to mint to expand the total coin supply.
+This reward mechanism incentivizes voters to vote for the ``truth'' exchange rate.\footnote{In essence, the oracle creates a Keynesian beauty contest~\cite{gao2008keynesian}.}\footnote{Coin holders are incentivized to increase the value of the coins. What happens if a subset of users who hold 50+\% coins intentionally vote for a wrong exchange rate to let the ACB mint or burn coins as they like? Two things should be noted. First, no decentralized algorithm works if 50+\% of the participants behave dishonestly. (In other words, JohnLawCoin assumes 50+\% of the participants behave honestly.) Second, if they do that, JohnLawCoin will lose trust and the value of the coins will drop. The coin holders are not likely to have incentives to manipulate the exchange rate dishonestly.} Remember that the oracle is neutral to the total coin supply. The oracle does not mint any coins. The oracle only redistributes the deposited coins and the coins the ACB decided to mint to expand the total coin supply.
 
 \subsection{ACB}
 
 \subsubsection{Algorithm}
 
-The ACB obtains the quantized exchange rate from the oracle. The ACB adjusts the total coin supply so that the exchange rate becomes 1.0 with the following algorithm.
+The ACB obtains the quantized exchange rate from the oracle. The ACB adjusts the total coin supply so that the exchange rate moves toward 1.0 with the following algorithm.
 
 \noindent\hrulefill\\
 \textbf{struct} ACB:\\
-\tab \texttt{\# The total coin supply}\\
+\tab \texttt{\# The total coin supply.}\\
 \tab int \textit{coin\_supply};\\
-\tab \texttt{\# The mapping from a user to their coin balance}\\
+\tab \texttt{\# A mapping from a user to their coin balance.}\\
 \tab mapping$<$address, int$>$ \textit{coins};\\
-\tab \texttt{\# The total bond supply}\\
+\tab \texttt{\# The total bond supply.}\\
 \tab int \textit{bond\_supply};\\
-\tab \texttt{\# The mapping from a pair of user and the bond redemption timestamp}\\
-\tab \texttt{\# to the bond balance}\\
+\tab \texttt{\# A mapping from a pair of a user and a bond redemption timestamp}\\
+\tab \texttt{\# to the bond balance.}\\
 \tab mapping$<$(address, int), int$>$ \textit{bonds};\\
-\tab \texttt{\# If} \textit{bond\_budget} \texttt{is positive, the ACB is ready to issue} \textit{bond\_budget} \texttt{bonds.}\\
-\tab \texttt{\# If} \textit{bond\_budget} \texttt{is negative, the ACB is ready to redeem} \textit{bond\_budget} \texttt{bonds.}\\
+\tab \texttt{\# If} \textit{bond\_budget} \texttt{is positive, the ACB can issue} \textit{bond\_budget} \texttt{bonds.}\\
+\tab \texttt{\# If} \textit{bond\_budget} \texttt{is negative, the ACB can redeem} \textit{bond\_budget} \texttt{bonds.}\\
 \tab int \textit{bond\_budget};\\
-\tab \texttt{\# The oracle}\\
+\tab \texttt{\# The oracle.}\\
 \tab Oracle \textit{oracle};\\
 \\
-\texttt{\# The ACB calls this function every period.}\\
+\texttt{\# The ACB calls this function every phase.}\\
 \textbf{function} AdjustCoinSupply(ACB \textit{acb}):\\
 \tab float \textit{exchange\_rate} $=$ \textit{acb.oracle}.GetExchangeRate();\\
-\tab \texttt{\# Calculate the amount of coins to be minted or burned}\\
+\tab \texttt{\# Calculate the amount of coins to be minted or burned.}\\
 \tab int \textit{delta} $=$ int($k$ $*$ \textit{acb.coin\_supply} $*$ (\textit{exchange\_rate} $-$ 1.0));\\
 \tab \textbf{if} \textit{delta} $==$ 0:\\
 \tab\tab \textit{acb.bond\_budget} $=$ 0;\\
@@ -176,14 +176,15 @@ The ACB obtains the quantized exchange rate from the oracle. The ACB adjusts the
 \tab\tab int \textit{count} $=$ \textit{delta} / $B_{\mathrm{redemp}}$;\\
 \tab\tab \textbf{if} \textit{count} $<=$ \textit{acb.bond\_supply}:\\
 \tab\tab\tab \texttt{\# If there are enough bonds to redeem, increase the total coin}\\
-\tab\tab\tab \texttt{\# supply by redeeming bonds}\\
+\tab\tab\tab \texttt{\# supply by redeeming the bonds.}\\
 \tab\tab\tab \textit{acb.bond\_budget} $=$ $-$\textit{count};\\
 \tab\tab \textbf{else}:\\
-\tab\tab\tab \texttt{\# Otherwise, redeem all the issued bonds}\\
+\tab\tab\tab \texttt{\# Otherwise, redeem all the issued bonds.}\\
 \tab\tab\tab \textit{acb.bond\_budget} $=$ $-$\textit{acb.bond\_supply};\\
+\tab\tab\tab \texttt{\# Mint the remaining coins to achieve the target total coin supply.}\\
 \tab\tab\tab int \textit{mint} = (\textit{count} $-$ \textit{acb.bond\_supply}) * $B_\mathrm{redemp}$;\\
 \tab\tab\tab \textit{acb.coin\_supply} $=$ \textit{acb.coin\_supply} $+$ \textit{mint};\\
-\tab\tab\tab \texttt{\# Provide the remaining coins to the oracle as a reward}\\
+\tab\tab\tab \texttt{\# Provide the minted coins to the oracle as a reward.}\\
 \tab\tab\tab \textit{acb.oracle}.provideAsReward(\textit{mint});\\
 \tab \textbf{else}:\\
 \tab\tab \texttt{\# Issue new bonds to decrease the total coin supply.}\\
@@ -197,10 +198,10 @@ The ACB obtains the quantized exchange rate from the oracle. The ACB adjusts the
 \tab \textbf{if} \textit{acb.coins}[\textit{user}] $<$ \textit{amount}:\\
 \tab\tab \textbf{return};\\
 \\
-\tab \texttt{\# The redemption timestamp of the bonds.}\\
+\tab \texttt{\# The redemption timestamp of the issued bonds.}\\
 \tab int \textit{redemption} $=$ CurrentTimestamp() $+$ $T$;\\
 \\
-\tab \texttt{\# Issue new bonds}\\
+\tab \texttt{\# Issue new bonds.}\\
 \tab \textit{acb.bond\_supply} $=$ \textit{acb.bond\_supply} $+$ \textit{count};\\
 \tab \textit{acb.bonds}[(\textit{user}, \textit{redemption})] $=$ \textit{acb.bonds}[(\textit{user}, \textit{redemption})] $+$ \textit{count};\\
 \tab \textit{acb.bond\_budget} $=$ \textit{acb.bond\_budget} $-$ \textit{count};\\
@@ -215,11 +216,12 @@ The ACB obtains the quantized exchange rate from the oracle. The ACB adjusts the
 \tab int \textit{count} $=$ \textit{acb.bonds}[(\textit{user}, \textit{redemption})];\\
 \tab \textbf{if} \textit{redemption} $>$ CurrentTimestamp():\\
 \tab\tab \texttt{\# If the bonds have not yet hit their redemption timestamp, the ACB}\\
-\tab\tab \texttt{\# accepts the redemption as long as the budget is negative.}\\
+\tab\tab \texttt{\# accepts the redemption as long as the bond budget is negative.}\\
 \tab\tab \textbf{if} \textit{acb.bond\_budget} $>=$ 0:\\
-\tab\tab\tab \textbf{continue};\\
-\tab\tab \textbf{if} \textit{count} $>$ $-$\textit{acb.bond\_budget}:\\
+\tab\tab\tab \textit{count} $=$ $0$;\\
+\tab\tab \textbf{else if} \textit{count} $>$ $-$\textit{acb.bond\_budget}:\\
 \tab\tab\tab \textit{count} $=$ $-$\textit{acb.bond\_budget};\\
+\\
 \tab \texttt{\# Burn the redeemed bonds.}\\
 \tab \textit{acb.bond\_supply} $=$ \textit{acb.bond\_supply} $-$ \textit{count};\\
 \tab \textit{acb.bonds}[(\textit{user}, \textit{redemption})] $=$ \textit{acb.bonds}[(\textit{user}, \textit{redemption})] $-$ \textit{count};\\
@@ -233,27 +235,33 @@ The ACB obtains the quantized exchange rate from the oracle. The ACB adjusts the
 
 \subsubsection{Total coin supply}
 
-Let $M$ be the total coin supply and $E$ be the quantized exchange rate obtained from the oracle; i.e., one coin is convertible to $E$ USDs.
+Let $M$ be the total coin supply and $E$ be the quantized exchange rate obtained from the oracle; i.e., one coin is convertible to $E$ USD.
 
-If $E>1$, the ACB increases the total coin supply by $k\,M\,(E-1)$. If $E<1$, the ACB decreases the total coin supply by $k\,M\,(1-E)$. $k$ $(0<k<1)$ is a damping factor to avoid making an overly aggressive change to the total coin supply. According to the Quantity Theory of Money~\cite{mankiwmacro}, $k$ should be set to 1. For example, if $E$ is 2.0, the Quantity Theory of Money states that the total coin supply should be doubled and then $E$ is adjusted to 1.0. However, the Quantity Theory of Money oversimplifies the reality where velocity of money is not stable. Therefore the ACB sets $k$ to a lower value to avoid minting or burning too many coins in one period.
+If $E>1$, the ACB increases the total coin supply by $k\,M\,(E-1)$. If $E<1$, the ACB decreases the total coin supply by $k\,M\,(1-E)$. $k$ $(0<k<1)$ is a damping factor to avoid making an overly aggressive change to the total coin supply. According to the Quantity Theory of Money~\cite{mankiwmacro}, $k$ should be set to 1. For example, if $E$ is 2.0, the Quantity Theory of Money states that the total coin supply should be doubled and then $E$ is adjusted to 1.0. However, the Quantity Theory of Money oversimplifies the reality where velocity of money is not stable. Therefore the ACB sets $k$ to a lower value to avoid minting or burning too many coins in one phase.
 
 \subsubsection{Minting / burning coins}
 
 Now the ACB knows how many coins should be minted (when $E>1$) or burned (when $E<1$). The next question is how the ACB mints or burns the coins.
 
-The ACB mints coins by redeeming issued bonds regardless of their redemption dates. Specifically, the ACB redeems $k\,M\,(E-1)/B_{\mathrm{redemp}}$ bonds regardless of their redemption dates.\footnote{The ACB does not need to worry about what bonds should be redeemed first (e.g., first-issued-first-redeemed) because it is bondholder's responsibility to request the redemption. The ACB only needs to redeem bonds as requested until $k\,M\,(E-1)/B_{\mathrm{redemp}}$ bonds are redeemed. Note that bondholders are incentivized to redeem bonds as soon as possible to get the interest.} If $k\,M\,(E-1)/B_{\mathrm{redemp}}$ exceeds the number of issued bonds, the ACB mints the remaining coins and provides them to the oracle as a reward. As described above, the oracle distributes the reward to Category-1 voters.
+The ACB mints coins by redeeming issued bonds regardless of their redemption dates. Specifically, the ACB redeems $k\,M\,(E-1)/B_{\mathrm{redemp}}$ bonds regardless of their redemption dates.\footnote{The ACB does not need to worry about what bonds should be redeemed first (e.g., first-issued-first-redeemed) because it is bondholder's responsibility to request the redemption. The ACB only needs to redeem bonds as requested until $k\,M\,(E-1)/B_{\mathrm{redemp}}$ bonds are redeemed. Note that bondholders are incentivized to redeem bonds as soon as possible to maximize the interest.} If $k\,M\,(E-1)/B_{\mathrm{redemp}}$ exceeds the number of already issued bonds, the ACB mints the remaining coins and provides them to the oracle as a reward. As described above, the oracle distributes the reward to Category-1 voters.
 
 The ACB burns coins by issuing new bonds. Specifically, the ACB issues $k\,M\,(1-E)/B_{\mathrm{issue}}$ bonds.
 
-In this way, the ACB increases / decreases the total coin supply by redeeming / issuing bonds. The redeem / issue operations do not require an open market. The ACB redeems a bond at a price of $B_{\mathrm{redemp}}$ and issues a bond at a price of $B_{\mathrm{issue}}$. The ACB can always redeem / issue bonds without relying on an open market at all.\footnote{An open market may emerge but that's a separate discussion.}
+In this way, the ACB increases / decreases the total coin supply by redeeming / issuing bonds. The ACB redeems a bond at a price of $B_{\mathrm{redemp}}$ and issues a bond at a price of $B_{\mathrm{issue}}$. The ACB can always redeem / issue bonds without relying on an open market at all.\footnote{An open market to exchange already issued bonds may emerge but that's a separate discussion.}
 
 \subsubsection{Taxation}
 
-When $E<1$, the ACB decreases the total coin supply by issuing bonds. However, the ACB needs to redeem the bonds with the annual interest rate $R$ on their redemption date. This means that the bonds are useful to decrease the total coin supply in a short period of time but increase the total coin supply in the long run.
+When $E<1$, the ACB decreases the total coin supply by issuing bonds. However, the ACB needs to redeem the issued bonds with the annual interest rate $R$ on their redemption date. This means that the bonds are useful to decrease the total coin supply temporarily but increase the total coin supply in the long run.
 
-To stabilize the exchange rate, there must be a mechanism to \textit{really} decrease the total coin supply. The ACB imposes a consumption tax to all the coin transfers. The collected tax is simply burned by the ACB because the purpose of the tax is to decrease the total coin supply.\footnote{This is aligned with MMT's view that tax is not a tool for financing government's spending but a tool for controling the currency price.} The tax rate $t$ is set to 0\% when $E>=0$. $t$ is set to a positive number when $E<0$.
+To stabilize the exchange rate, there must be a mechanism to really decrease the total coin supply. To this end, the ACB imposes a consumption tax to all the coin transfers. The collected tax is simply burned by the ACB because the purpose of the tax is to decrease the total coin supply.\footnote{This is aligned with MMT's view that tax is not a tool for financing government's spending but a tool for controling the currency price.} The tax rate $t$ is set to 0\% when $E\ge 0$. $t$ is set to a positive value when $E<0$.
 
-\section{Incentive structure}
+\subsubsection{No exchange between ETH and JohnLawCoin}
+
+It is worth noting that the ACB does not have the ability to exchange ETH with JohnLawCoin. This is an intentional design because defining the conversion rate between fluctuating ETH and JohnLawCoin is not compatible with the goal of stabilizing the JohnLawCoin / USD exchange rate. Therefore JohnLawCoin does not conduct ICO (Initial Coin Offering). ICO does not make sense because JohnLawCoin's purpose is research, not profit.\footnote{Also ICO will not work well. The motivation of investors is to get a profit when the coin price increases. However, the ACB is implemented in a way that stabilizes the coin price to 1 coin = 1.0 USD. Rationale investors will sell their coins immediately when the coin price gets to 1 coin = 1.0 USD because they cannot expect any more price increase. This will end up with a situation where a ton of coins are sold when the coin price gets to 1 coin = 1.0 USD and the ACB needs to decrease the total coin supply by issuing a lot of bonds.}
+
+\section{Incentive analysis}
+
+\subsection{Incentive to purchase bonds}
 
 For the described algorithm to work, the following condition must be met:
 
@@ -263,7 +271,7 @@ For the described algorithm to work, the following condition must be met:
 
 If the [Condition] is met, the algorithm works. If the [Condition] is not met, the algorithm does not work because the ACB cannot decrease the total coin supply by issuing bonds. This section analyzes when the [Condition] is met or not met.
 
-Let $R$ be the annual interest rate of the bond and $G$ be the annual growth of the economy. The total coin supply is expected to grow with the annual growth rate of $G$. 
+Let $R$ be the annual interest rate of the bond and $G$ be the annual growth rate of the economy. The total coin supply is expected to grow with the annual growth rate of $G$. 
 
 It is important to understand that no matter what happens with $G$ and $R$, the following statements hold:
 
@@ -274,9 +282,9 @@ It is important to understand that no matter what happens with $G$ and $R$, the 
 \item If the [Condition] is met, inflation does not happen. One coin is convertible to one USD when the redemption date comes.
 \end{enumerate}
 
-(a) is obvious. According to [MMT-I], a government that issues its own fiat currency is never forced to default on debt denominated by the fiat currency because the government can always redeem the debt by minting the fiat currency. (b) is obvious per the bond definition. (c) holds because if the [Condition] is met, the ACB can continue running the algorithm and the algorithm adjusts the JohnLawCoin / USD exchange rate toward 1.0 (i.e., inflation does not happen).
+(a) is obvious. According to [MMT-I], a government that issues its own fiat currency is never forced to default on debt denominated by the fiat currency because the government can always redeem the debt by minting money. (b) is obvious per the bond definition. (c) holds because if the [Condition] is met, the ACB can continue running the algorithm and the algorithm adjusts the JohnLawCoin / USD exchange rate toward 1.0 (i.e., inflation does not happen).
 
-Therefore, rational users are incentivized to purchase bonds if the users believe the [Condition] is met when the redemption date comes. The question is when the users believe the [Condition] is met. The following three cases need to be analyzed: $G>R$, $G=R$, and $G<R$.
+Therefore, rational users are incentivized to purchase bonds if they believe the [Condition] is met when the redemption date comes. The question is when they believe the [Condition] is met. The following three cases need to be analyzed: $G>R$, $G=R$, and $G<R$.
 
 Case 1: $G>R$. In this case, the balance of the issued bonds decreases (and may go down to zero) over time because the ACB needs to redeem bonds faster than issuing bonds. The [Condition] is met.
 
@@ -284,27 +292,41 @@ Case 2: $G=R$. In this special case, the balance of the issued bonds does not ch
 
 Case 3: $G<R$. In this case, the balance of the issued bonds increases. The ACB needs to issue bonds faster than redeeming bonds because the expected annual growth of the total coin supply ($G$) is smaller than the annual interest rate of the bonds ($R$). If the balance of the issued bonds is likely to go to infinity, users will stop purchasing the bonds and thus the [Condition] breaks. However, $G<R$ does not break the [Condition] immediately. As demonstrated in Japan, the United States and other advanced countries, some degree of the increased balance of the government's debt does not lead to their bond price crash~\cite{elmendorf1999government}. Where is the threshold?
 
-The key observation is that if people believe that other people will have willingness to purchase bonds, they believe that the ACB has the ability of adjusting the exchange rate toward 1.0. Then they purchase bonds and thus the [Condition] is met (regardless of the balance of the issued bonds). The infinite incentive recursion plays a critical role here. Money is accepted as money by everybody merely because it is accepted as money by everybody else~\cite{iwai1996boostrap,iwai1997evolution}. Similarly, bonds are accepted as bonds by everybody merely because they are accepted as bonds by everybody else. If the gap between $G$ and $R$ is small, $G<R$ will not break the infinite incentive recursion and not break the [Condition] even when the balance of the issued bonds increases. As [MMT-II] states, the increased balance of the debt is not a problem as long as it does not lead to inflation (i.e., as long as it does not break the infinite incentive recursion).
+The key observation is that if users believe that other users will have willingness to purchase bonds, they believe that the ACB has the ability of adjusting the exchange rate toward 1.0. Then they purchase bonds and thus the [Condition] is met (regardless of the balance of the issued bonds). The infinite incentive recursion plays a critical role here. Money is accepted as money by everybody merely because it is accepted as money by everybody else~\cite{iwai1996boostrap,iwai1997evolution}. Similarly, bonds are accepted as bonds by everybody merely because they are accepted as bonds by everybody else. If the gap between $G$ and $R$ is small, $G<R$ will not break the infinite incentive recursion and not break the [Condition] even when the balance of the issued bonds increases. As [MMT-II] states, the increased balance of the debt is not a problem as long as it does not lead to inflation (i.e., as long as it does not break the infinite incentive recursion).\footnote{Strictly speaking, the analogy between the government's debt and JohnLawCoin's bond has some subtleties. The government's debt is issued when the economy is in deflation and the government needs to increase the total money supply. On the other hand, JohnLawCoin's bond is issued when the economy is in inflation and the ACB needs to decrease the total money supply. The difference comes from the fact that fiat currencies are designed as debt-based monetary systems whereas JohnLawCoin is designed as an asset-based monetary system. In any case, [MMT-I], [MMT-II], [MMT-III] and the discussion here hold for both the government's debt and JohnLawCoin's bond.}
 
 The conclusion is that \textbf{the [Condition] is met if $G>=R$, or $G<R$ but the gap is limited}. As long as the ACB sets a lower value to $R$ (e.g., 1\%), the [Condition] is likely to be met.\footnote{If $G$ is consistently lower than 1\%, it means that the economy is not growing. This is a far more fundamental problem before worrying about the incentive recursion.}
+
+\subsection{Incentive alignment}
+
+JohnLawCoin's incentive model is designed in a way in which user's behavior of pursuing their own self-interest helps stabilize the exchange rate.
+
+If you want to earn more coins, you may perform the following actions:
+
+\begin{description}
+\item{Action 1}: You can collect coins by contributing to the voting and getting the reward.
+\item{Action 2}: When you have coins, you can increase the coins by purchasing and redeeming bonds.
+\item{Action 3}: When the exchange rate is 1 coin = 1.2 USD and you believe the ACB has the ability of moving the exchange rate back to 1 coin = 1 USD, you can earn money by selling your coins now and buying them back later. When the exchange rate is 1 coin = 0.8 USD and you believe the ACB has the ability of moving the exchange rate back to 1 coin = 1 USD, you can earn money by buying coins now and selling them back later.
+\end{description}
+
+Action 1 helps the oracle determine the exchange rate in a decentralized manner. Action 2 helps the ACB adjust the total coin supply, moving the exchange rate toward 1 coin = 1 USD. Action 3 increases arbitrage between coins and USD, moving the exchange rate toward 1 coin = 1 USD. In this way, users are incentivized to take actions that help the ecosystem achieve the goal.
 
 \section{Implementation}
 
 \subsection{Smart contracts}
 
-JohnLawCoin is implemented as a smart contract on Ethereum.\footnote{The implementation is available on GitHub (https://github.com/xharaken/john-law-coin).} The smart contract is implemented to meet the following requirements:
+JohnLawCoin is implemented as smart contracts on Ethereum.\footnote{The implementation is available on GitHub (https://github.com/xharaken/john-law-coin).} The smart contracts are implemented to meet the following requirements:
 
 \begin{itemize}
-\item There is truly no gatekeeper. The ACB is fully automated and no one (including the author of the smart contract) has privileges to influence the ACB. This can be verified by the fact that the smart contract has no operations that need permissions.\footnote{The only exceptions are a few operations like upgrading / pausing / unpausing the smart contract, which is needed to fix bugs in a development phase.}
-\item The smart contract is self-contained. There are no dependencies on other smart contracts and external services.
-\item All operations are guaranteed to terminate in the time complexity of O(1). The time complexity of each operation is determined solely by the input size of the operation and not affected by the state of the smart contract.
+\item There is truly no gatekeeper. The ACB is fully automated and no one (including the author of the smart contracts) has privileges to influence the ACB. This can be verified by the fact that the smart contracts have no operations that need permissions.\footnote{The only exceptions are a few operations like upgrading / pausing / unpausing the smart contracts, which is needed to fix bugs in a development phase.}
+\item The smart contracts are self-contained. There are no dependencies on other smart contracts and external services.
+\item All operations are guaranteed to terminate in the time complexity of O(1). The time complexity of each operation is determined solely by the input size of the operation and not affected by the state of the smart contracts.
 \end{itemize}
 
 \subsection{Coins and bonds}
 
-The coins are implemented as ERC20 tokens~\cite{erc20token}. There are only three ways to get the coins; 1) ask someone to transfer coins to your account (e.g., by purchasing JohnLawCoin at an external currency exchanger), 2) contribute to the oracle and get the reward and 3) get an interest rate by holding bonds. It is worth noting that the ACB does not have the ability to exchange ETH with the coins. This is an intentional design because defining the conversion rate between fluctuating ETH and JohnLawCoin contradicts the goal of stabilizing the JohnLawCoin / USD exchange rate.
+The coins are implemented as ERC20 tokens~\cite{erc20token}. There are only three ways to get the coins; 1) ask someone to transfer coins to your account (e.g., by purchasing coins at an external currency exchanger), 2) contribute to the oracle and get the reward and 3) get an interest rate by purchasing and redeeming bonds.
 
-The bonds are implemented as non-transferable tokens. Bondholders can purchase and redeem the bonds at the ACB but cannot transfer the bonds to others.\footnote{ If the bonds are transferable, that produces a strange situation. If the bonds are transferable, no users will hold the coins because they cannot get any interest by holding the coins whereas they can get an interest by holding the bonds. For the bonds to work as a mechanism to adjust the total coin supply, their liquidity needs to be restricted.}\footnote{This is only saying that the bonds are not transferable at the layer of the ACB. An open market to exchange bonds may emerge.}
+The bonds are implemented as non-transferable tokens. Bondholders can purchase and redeem the bonds at the ACB but cannot transfer the bonds to others.\footnote{Bonds being transferable will lead to a strange situation. If bonds are transferable, no users will hold coins because they cannot get any interest by holding coins whereas they can get an interest by holding bonds. For the bonds to work as a mechanism to adjust the total coin supply, their liquidity needs to be restricted.}\footnote{This is only saying that bonds are not transferable at the layer of the ACB. An open market to exchange bonds may emerge.}
 
 \subsection{Constant values}
 
@@ -327,53 +349,55 @@ The bonds are implemented as non-transferable tokens. Bondholders can purchase a
 \end{center}
 \end{table}
 
-Table \ref{table1} shows the quantized exchange rates supported by the oracle.\footnote{You may wonder why bonds are issued when the exchange rate is 1.0 or above. In the ACB algorithm, it's possible that \textit{acb.bond\_budget} becomes positive when the exchange rate is 1.0 or above if the bond redemption happens too much. In this case, the ACB issues new bonds until \textit{acb.bond\_budget} goes down to zero.} The bond issue price $B_{\mathrm{issue}}$ depends on the exchange rates to reflect the risks. The bonds are designed as zero-coupon bonds, and $R$, $T$ (measured in days), $B_{\mathrm{redemp}}$ and $B_{\mathrm{issue}}$ meet $R=(B_{\mathrm{redemp}}/B_{\mathrm{issue}})^{365/T}-1$. The tax rate $t$ is set to 0\% when the exchange rate is 1.0 or above because there is no need to decrease the total coin supply. $t$ is set to a positive number when the exchange rate is below 1.0.\footnote{Imagine that the exchange rate is 1 coin = 0.6 USD. In this case, a 30\% consumption tax is imposed on all coin transfers. The tax rate might look high but users who believe that the ACB has the ability of stabilizing the exchange rate towards 1.0 are still incentivized to get the coins. For example, 1 USD is convertible to 1 / 0.6 * (1 - 0.3) = 1.16 coins. When the exchange rate is stabilized to 1.0 in the future, the coins are convertible to 1.16 USD.}
+Table \ref{table1} shows the quantized exchange rates supported by the oracle.\footnote{You may wonder why bonds are issued when the exchange rate is 1.0 or above. In the ACB algorithm, it's possible that \textit{acb.bond\_budget} becomes positive while the exchange rate is 1.0 or above if the bond redemption happens too much. In this case, the ACB issues new bonds until \textit{acb.bond\_budget} goes down to zero.} The bond issue price $B_{\mathrm{issue}}$ varies depending on the exchange rates to reflect the risks. The bonds are designed as zero-coupon bonds, and $R$, $T$ (measured in days), $B_{\mathrm{redemp}}$ and $B_{\mathrm{issue}}$ meet $R=(B_{\mathrm{redemp}}/B_{\mathrm{issue}})^{365/T}-1$. The tax rate $t$ is set to 0\% when the exchange rate is 1.0 or above because there is no need to decrease the total coin supply. $t$ is set to a positive value when the exchange rate is below 1.0.\footnote{Imagine that the exchange rate is 1 coin = 0.6 USD. In this case, a 30\% consumption tax is imposed on all coin transfers. The tax rate might look high but users who believe that the ACB has the ability of stabilizing the exchange rate towards 1.0 are still incentivized to get the coins for the following reason. 1 USD is convertible to $1 / 0.6 * (1 - 0.3) = 1.16$ coins. When the exchange rate is stabilized to 1.0 in the future, the coins become convertible to 1.16 USD. The user can earn 0.16 USD by doing this and thus is incentivized to get the coins.}
 
-These values are carefully chosen based on the author's simulation results. The simulation tested how the total coin supply, the bond supply and the exchange rate changes over time in the next 20 years using various parameters.
+These values are carefully chosen based on the author's simulation results. The simulation tested how the total coin supply, the total bond supply and the exchange rate will change over time in the next 20 years using various parameters.
 
 \begin{table}[htb]
 \begin{center}
 \caption{Constant values.}\vspace{2ex}
 \begin{tabular}{p{26em}|p{10em}}\hline
 $D$ (A voter needs to deposit $D$\% of their coin balance to the oracle.) & 10\%\\\hline
-$C$ (The oracle evenly distributes $C$\% of the reward to the Category-1 voters. $100-C$\% of the reward is distributed to the Category-1 voters in proportion to the coins they deposited.) & 10\%\\\hline
-Category-2 threshold (What exchange rates are considered as before and after the ``truth'' exchange rate to identify Category-2 voters?) & 0.1 (For example, if the ``truth'' exchange rate is 1.1, voters who voted for 1.0 and 1.2 are identified as Category-2 voters.)\\\hline
-The ACB obtains the exchange rate from the oracle and adjusts the total coin supply every period. What is the duration of the period? & 1 week\\\hline
-$k$ (A damping factor to avoid minting or burning too many coins in one period.) & 10\%\\\hline
-Initial coin supply & 2100000 coins\\\hline
+$C$ (The oracle evenly distributes $C$\% of the reward to the Category-1 voters. $(100-C)$\% of the reward is distributed to the Category-1 voters in proportion to the coins they deposited.) & 10\%\\\hline
+Category-2 threshold (What exchange rates are considered as around the ``truth'' exchange rate to identify Category-2 voters?) & 0.1 (For example, if the ``truth'' exchange rate is 1.1, voters who voted for 1.0 and 1.2 are identified as Category-2 voters.)\\\hline
+The ACB obtains the exchange rate from the oracle and adjusts the total coin supply every phase. What is the duration of the phase? & 1 week\\\hline
+$k$ (A damping factor to avoid minting or burning too many coins in one phase.) & 10\%\\\hline
+Initial coin supply & 10000000 coins\\\hline
 \end{tabular}
 \label{table2}
 \end{center}
 \end{table}
 
-Table \ref{table2} shows other constant values.\footnote{With these values, the maximum increase of the total coin supply per week is $k(1.4 - 1.0)=4$\%.} The initial coin supply is minted in the genesis account (created by the author of the smart contract). It is important to give a substantial amount of coins to the genesis account so that the genesis account can have power to determine the exchange rate until the ecosystem stabilizes. When real-world currency exchangers appear and the oracle gets a sufficient number of honest voters to agree on the real-world exchange rate consistently, the genesis account can lose its power by decreasing the coin balance, moving the oracle to a fully decentralized system.\footnote{Until a real-world currency exchanger appears, the genesis account will keep voting for the exchange rate of 1.1 and other voters are expected to follow. This means that the total coin supply will increase gradually in the bootstrap phase. Once a real-world currency exchanger appears, the genesis account will use the real-world exchange rate and other voters are expected to follow. When the oracle gets a sufficient number of honest voters to agree on the real-world exchange rate, the genesis account will decrease the coin balance and lose the power.} This mechanism is mandatory to bootstrap the ecosystem and stabilize the exchange rate successfully.
+Table \ref{table2} shows other constant values.\footnote{With these values, the maximum increase of the total coin supply per week is $k(1.4 - 1.0)=4$\%.} The initial coin supply is minted in the genesis account (created by the author of the smart contracts). It is important to give a substantial amount of coins to the genesis account so that the genesis account can have power to determine the exchange rate until the ecosystem stabilizes. Once real-world currency exchangers appear and the oracle gets a sufficient number of honest voters to agree on the real-world exchange rate consistently, the genesis account can lose its power by decreasing the coin balance, moving the oracle to a fully decentralized system.\footnote{Until a real-world currency exchanger appears, the genesis account will keep voting for the exchange rate of 1 coin = 1.1 USD and other voters are expected to follow. This means that the total coin supply will increase gradually in the bootstrap phase. When a real-world currency exchanger appears, the genesis account will use the real-world exchange rate and other voters are expected to follow. When the oracle gets a sufficient number of honest voters to agree on the real-world exchange rate, the genesis account no longer needs to have power to determine the exchange rate. The genesis account will decrease the coin balance and lose the power.} This mechanism is mandatory to bootstrap the ecosystem and stabilize the exchange rate successfully.
 
 \subsection{APIs}
 
-In contrast with all the complex mechanisms explained so far, the APIs exposed by the ACB contract are simple and easy to understand. The ACB contract exposes only three APIs:
+In contrast with all the complex mechanisms explained so far, the APIs exposed by the ACB smart contract are simple and easy to understand. The ACB smart contract exposes only three APIs:
 
 \begin{description}
 \item{\textbf{function vote(\textit{committed\_hash}, \textit{revealed\_exchange\_rate}, \textit{revealed\_salt})}}\\
-The message sender votes on the oracle. With this function, the message sender can commit a vote to the current phase, reveal their vote in the prior phase, and reclaim their deposited coins and get a reward for their vote in the next prior phase at the same time. \textit{committed\_hash} is the hash committed to the current phase. \textit{revleaed\_exchange\_rate} and \textit{revealed\_salt} reveal the quantized exchange rate and the salt for their vote in the prior phase. The reclaimed coins and the reward in the next prior phase are sent to the message sender's coin balance. The function returns a tuple of three values: 1) whether the commit succeeded or not, 2) whether the reveal succeeded or not and 3) the amount of the reclaimed coins and the reward. One message sender can make one vote per period (i.e., 1 week).
+The message sender votes for the exchange rate. With this function, the message sender can commit a vote to the current phase, reveal their vote in the previous phase, and reclaim their deposited coins and get a reward for their vote in the phase before the previous phase at the same time. \textit{committed\_hash} is the hash committed to the current phase. \textit{revealed\_exchange\_rate} and \textit{revealed\_salt} reveal the exchange rate and the salt for their vote in the previous phase. The reclaimed coins and the reward in the phase before the previous phase are sent to the message sender's account. The function returns a tuple of values: 1) whether the commit succeeded or not, 2) whether the reveal succeeded or not and 3) the amount of the reclaimed coins and the reward. The message sender can make one vote per phase (i.e., one vote per week).
 \item{\textbf{function purchaseBonds(\textit{count})}}\\
-The message sender purchases \textit{count} bonds from the ACB. The function returns the redemption timestamp of the purchased bonds (i.e., the current timestamp $+T$).
+The message sender purchases \textit{count} bonds from the ACB. The function returns the redemption timestamp of the purchased bonds (i.e., the current timestamp $+$ $T$).
 \item{\textbf{function redeemBonds(\textit{redemption\_timestamps})}}\\
-The message sender redeems bonds. \textit{redemption\_timestamps} is a list of redemption timestamps that specify the bonds. The function returns the number of bonds that are successfully redeemed.
+The message sender redeems bonds. \textit{redemption\_timestamps} is a list of redemption timestamps of the bonds to be redeemed. The function returns the number of bonds that were successfully redeemed.
 \end{description}
 
-As a result of calling these APIs, the message sender's coin balance and bond balance may change. The Coin contract exposes ERC20 token APIs. The message sender can query their coin balance and the total coin supply, and transfer their coins to others. The Bond contract only exposes APIs to query their bond balance and the total bond supply because bonds are not transferable.
+As a result of calling these APIs, the message sender's coin balance and bond balance may change. The JohnLawCoin smart contract exposes ERC20 token APIs. The message sender can query their coin balance and the total coin supply, and transfer their coins to others. The JohnLawBond smart contract only exposes APIs to query their bond balance and the total bond supply because bonds are not transferable.
+
+These smart contracts are carefully designed so that they can be upgraded in a way that does not break the state of the smart contracts. This is important to fix bugs and update APIs when necessary as the ecosystem evolves over time.
 
 \section{Conclusions}
 
 JohnLawCoin is a stablecoin realized by an Algorithmic Central Bank. The system is fully decentralized and there is truly no gatekeeper. No gatekeeper means there is no entity to be regulated.
 
-JohnLawCoin is a real-world experiment to verify the assumption that there is a way to establish the infinite incentive recursion and stabilize the currency price without holding any collateral. Some of the monetary protocols are inspired by MMT. If JohnLawCoin is successful and proves the assumption is correct, it will provide interesting insights for both non-fiat currencies and fiat currencies; i.e., 1) there is a way for non-fiat cryptocurrencies to stabilize their currency price without having any gatekeeper, and 2) there is a way for central banks of developing countries to implement a fixed exchange rate system without holding adequate USD reserves. This will upgrade human's understanding about money.
+JohnLawCoin is a real-world experiment to verify the assumption that there is a way to establish the infinite incentive recursion and stabilize the currency price without holding any collateral. JohnLawCoin's monetary protocols are backed by MMT. If JohnLawCoin is successful and proves the assumption is correct, it will provide interesting insights for both non-fiat currencies and fiat currencies; i.e., 1) there is a way for non-fiat cryptocurrencies to implement a stablecoin without having any gatekeeper that holds collateral, and 2) there is a way for developing countries to implement a fixed exchange rate system for their fiat currencies without holding adequate USD reserves. This will upgrade human's understanding about money.
 
-If you are interested in JohnLawCoin, please contribute to the oracle. Early adopters can get more coins. The more users the ecosystem gets, the more likely real-world currency exchangers for JohnLawCoin appear and thus the ecosystem bootstraps. If you have any questions, please add comments to the GitHub issues at https://github.com/xharaken/john-law-coin.
+If you are interested in JohnLawCoin, please contribute to the oracle. Early adopters can get more coins. The more users the ecosystem gets, the more likely real-world currency exchangers start accepting JohnLawCoin and thus the ecosystem bootstraps. If you have any questions, please file GitHub issues at https://github.com/xharaken/john-law-coin.
 
 \subsubsection*{}
 
-About the name of ``JohnLawCoin'': In the early 18th century, John Law~\cite{davies2010history,ferguson2008ascent,iwai1997evolution} invented a brand-new method to run a central bank with fiat currencies, which shifted the currency system in France from metalism to chartalism. In the end, Law's system failed and triggered an economic crisis in France. However, he was right. His system upgraded human's understanding about money and established the foundation of modern fiat currencies.
+About the name of \textit{JohnLawCoin}: In the early 18th century, John Law~\cite{davies2010history,ferguson2008ascent,iwai1997evolution} invented a brand-new method to run a central bank with fiat currencies, which shifted the currency system in France from metalism to chartalism. In the end, Law's system failed and triggered an economic crisis in France. However, he was right. His system upgraded human's understanding about money and established the foundation of modern fiat currencies.
 
 \bibliography{whitepaper.bib}
 \bibliographystyle{unsrt}

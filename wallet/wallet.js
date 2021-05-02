@@ -31,10 +31,11 @@ window.onload = async () => {
     console.log(web3);
     acb_contract = await new web3.eth.Contract(ACB_ABI, ACB_ADDRESS);
     console.log(acb_contract);
-    oracle_contract = await new web3.eth.Contract(ORACLE_ABI, ORACLE_ADDRESS);
+    const oracle = await acb_contract.methods.oracle_().call();
+    oracle_contract = await new web3.eth.Contract(ORACLE_ABI, oracle);
     console.log(oracle_contract);
-    logging_contract =
-        await new web3.eth.Contract(LOGGING_ABI, LOGGING_ADDRESS);
+    const logging = await acb_contract.methods.logging_().call();
+    logging_contract = await new web3.eth.Contract(LOGGING_ABI, logging);
     console.log(logging_contract);
     const coin = await acb_contract.methods.coin_().call();
     coin_contract = await new web3.eth.Contract(JOHNLAWCOIN_ABI, coin);
@@ -162,6 +163,7 @@ async function redeemBonds() {
     let message = "Redeemed " + ret.count + " bonds.";
     await showTransactionSuccessMessage(message, receipt);
   } catch (error) {
+    console.log(error);
     await showErrorMessage("Couldn't redeem bonds.", error);
     return;
   }
@@ -169,13 +171,15 @@ async function redeemBonds() {
 
 async function vote() {
   try {
-    const commit_level = $("vote_commit_level").value;
-    const commit_salt = $("vote_commit_salt").value;
-    const reveal_level = $("vote_reveal_level").value || 0;
+    const invalid_level = 100;
+    const commit_level = $("vote_commit_level").value || invalid_level;
+    const commit_salt = $("vote_commit_salt").value || 0;
+    const reveal_level = $("vote_reveal_level").value || invalid_level;
     const reveal_salt = $("vote_reveal_salt").value || 0;
 
-    const hash = await acb_contract.methods.hash(
-        commit_level, commit_salt).call();
+    const hash = commit_level == invalid_level ?
+          await acb_contract.NULL_HASH() :
+          await acb_contract.methods.hash(commit_level, commit_salt).call();
     const receipt = await acb_contract.methods.vote(
         hash, reveal_level, reveal_salt).send({from: ethereum.selectedAddress});
     console.log(receipt);
@@ -185,15 +189,15 @@ async function vote() {
     const ret = receipt.events.VoteEvent.returnValues;
     const message =
           (ret.commit_result ? "Commit succeeded. You voted for the oracle " +
-           "level " + commit_level + ". You deposited " +
-           ret.deposited + " coins." :
+           "level " + commit_level + ". You deposited " + ret.deposited +
+           " coins." :
            "Commit failed. You can vote only once per phase.") + "<br>" +
           (ret.reveal_result ? "Reveal succeeded." :
            "Reveal failed (probably because the specified oracle level " +
            "and/or the salt didn't match the oracle level and/or the salt " +
            "in your previous vote).") + "<br>" +
           "You reclaimed " + ret.reclaimed + " coins and got " +
-           ret.rewarded + " coins for the reward.";
+           ret.rewarded + " coins as a reward.";
     await showTransactionSuccessMessage(message, receipt);
   } catch (error) {
     console.log(error);
@@ -207,6 +211,7 @@ async function reloadInfo() {
 
   try {
     let html = "";
+
     html += "<table><tr><td>Account address</td><td class='right'>" +
         ethereum.selectedAddress + "</td></tr>";
     const coin_balance =
@@ -219,8 +224,14 @@ async function reloadInfo() {
               ethereum.selectedAddress).call());
     html += "<tr><td>Bond balance</td><td class='right'>" +
         bond_balance + "</td></tr></table>";
-    $("account_info").innerHTML = html;
+    const epoch_timestamp =
+          parseInt(await oracle_contract.methods.epoch_timestamp_().call());
+    const commit = await oracle_contract.methods.getCommit(
+        epoch_timestamp % 3, ethereum.selectedAddress).call();
+    html += "<tr><td>Voted</td><td class='right'>" +
+        (commit[0] == 0 ? "Not yet" : "Done") + "</td></tr></table>";
     $("account_info_loading").style.display = "none";
+    $("account_info").innerHTML = html;
 
     html = "<table><tr><td>Contract address</td><td class='right'>" +
         ACB_ADDRESS + "</td></tr>";
@@ -239,16 +250,20 @@ async function reloadInfo() {
               await acb_contract.methods.current_phase_start_().call()) * 1000;
     html += "<tr><td>Current phase started</td><td class='right'>" +
         getDateString(current_phase_start_ms) + "</td></tr>";
+    const phase_duration_ms =
+          parseInt(await acb_contract.PHASE_DURATION()) * 1000;
+    html += "<tr><td>Next phase will start</td><td class='right'>" +
+        getDateString(current_phase_start_ms + phase_duration_ms) +
+        "</td></tr>";
     html += "<tr><td>Oracle level</td><td class='right'>" +
         getOracleLevelString(
             parseInt(await acb_contract.methods.oracle_level_().call()))
         + "</td></tr>";
-    $("acb_info").innerHTML = html;
     $("acb_info_loading").style.display = "none";
+    $("acb_info").innerHTML = html;
 
     if (bond_budget > 0) {
       $("purchase_bonds_button").disabled = false;
-      $("purchase_bonds_button_disabled").innerText = "";
     } else {
       $("purchase_bonds_button").disabled = true;
       $("purchase_bonds_button_disabled").innerText =
@@ -256,15 +271,8 @@ async function reloadInfo() {
           "is positive. The current ACB's bond budget is " + bond_budget + ".]";
     }
 
-    const epoch_timestamp =
-          parseInt(await oracle_contract.methods.epoch_timestamp_().call());
-    const commit = await oracle_contract.methods.getCommit(
-        epoch_timestamp % 3, ethereum.selectedAddress).call();
-    const phase_duration_ms = 60 * 1000;
-    if (commit[0] == 0 ||
-        current_phase_start_ms + phase_duration_ms < Date.now()) {
+    if (commit[0] == 0) {
       $("vote_button").disabled = false;
-      $("vote_button_disabled").innerText = "";
     } else {
       $("vote_button").disabled = true;
       $("vote_button_disabled").innerText =
@@ -274,9 +282,9 @@ async function reloadInfo() {
     }
 
     let has_redeemable = false;
-    let bond_list_text = "You have " + bond_balance + " bonds in total.";
+    let bond_list_html = "You have " + bond_balance + " bonds in total.";
     if (bond_balance > 0) {
-      bond_list_text += "<br><br><table><tr><td>Redemption timestamp</td>" +
+      bond_list_html += "<br><br><table><tr><td>Redemption timestamp</td>" +
           "<td># of bonds</td><td>Redeemable?</td></tr>";
       const redemption_count =
             parseInt(await bond_contract.methods.
@@ -298,7 +306,7 @@ async function reloadInfo() {
               parseInt(await bond_contract.methods.balanceOf(
                   ethereum.selectedAddress, redemption_timestamp).call());
         const redemption_timestamp_ms = parseInt(redemption_timestamp) * 1000;
-        bond_list_text += "<tr><td>" + getDateString(redemption_timestamp_ms) +
+        bond_list_html += "<tr><td>" + getDateString(redemption_timestamp_ms) +
             "</td><td class='right'>" + balance + "</td><td>" +
             (redemption_timestamp_ms < Date.now() ? "Yes" :
              "As long as the ACB's bond budget is negative") + "</td></tr>";
@@ -309,9 +317,9 @@ async function reloadInfo() {
       if (bond_budget < 0) {
         has_redeemable = true;
       }
-      bond_list_text += "</table>";
+      bond_list_html += "</table>";
     }
-    $("bond_list").innerHTML = bond_list_text;
+    $("bond_list").innerHTML = bond_list_html;
     $("bond_list_loading").style.display = "none";
 
     if (has_redeemable) {
@@ -331,14 +339,14 @@ async function reloadInfo() {
 async function showAdvancedInfo() {
   await showOracleStatus();
   await showLoggingStatus();
-  await showHistory();
+  await showHistoryChart();
 }
 
 async function showOracleStatus() {
   let html = "";
   const epoch_timestamp =
         parseInt(await oracle_contract.methods.epoch_timestamp_().call());
-  const level_max = 9;
+  const level_max = parseInt(await oracle_contract.LEVEL_MAX());
   html += "<table><tr><td>epoch_timestamp_</td><td class='right'>" +
       epoch_timestamp + "</td></tr></table>";
   for (let index = 0; index < 3; index++) {
@@ -405,24 +413,27 @@ async function showLoggingStatus() {
         acb_log[2] + "</td></tr>";
     html += "<tr><td>bond_budget</td><td class='right'>" +
         acb_log[3] + "</td></tr>";
-    html += "<tr><td>purchased_bonds</td><td class='right'>" +
-        acb_log[4] + "</td></tr>";
-    html += "<tr><td>redeemed_bonds</td><td class='right'>" +
-        acb_log[5] + "</td></tr>";
     html += "<tr><td>coin_total_supply</td><td class='right'>" +
-        acb_log[6] + "</td></tr>";
+        acb_log[4] + "</td></tr>";
     html += "<tr><td>bond_total_supply</td><td class='right'>" +
-        acb_log[7] + "</td></tr>";
+        acb_log[5] + "</td></tr>";
     html += "<tr><td>oracle_level</td><td class='right'>" +
-        acb_log[8] + "</td></tr>";
+        acb_log[6] + "</td></tr>";
     html += "<tr><td>current_phase_start</td><td class='right'>" +
+        acb_log[7] + "</td></tr>";
+    html += "<tr><td>burned_tax</td><td class='right'>" +
+        acb_log[8] + "</td></tr>";
+    html += "<tr><td>purchased_bonds</td><td class='right'>" +
         acb_log[9] + "</td></tr>";
+    html += "<tr><td>redeemed_bonds</td><td class='right'>" +
+        acb_log[10] + "</td></tr>";
     html += "</table>"
   }
   $("logging_status_loading").style.display = "none";
   $("logging_status").innerHTML = html;
 }
-async function showHistory() {
+
+async function showHistoryChart() {
   google.load("visualization", "1", {packages:["corechart"]});
   google.setOnLoadCallback(drawChart);
 }
@@ -431,7 +442,7 @@ async function drawChart() {
   let logs = {};
   logs["vote"] = [];
   logs["deposited_reclaimed_rewarded"] = [];
-  logs["minted_burned"] = [];
+  logs["minted_burned_tax"] = [];
   logs["coin_supply_delta"] = [];
   logs["bond_budget"] = [];
   logs["purchased_redeemed"] = [];
@@ -445,7 +456,7 @@ async function drawChart() {
     const vote_log =
           await logging_contract.methods.getVoteLog(index).call();
     const acb_log = await logging_contract.methods.getACBLog(index).call();
-    const date = new Date(acb_log[9] * 1000);
+    const date = new Date(parseInt(acb_log[7]) * 1000);
     logs["vote"].push([date,
                        parseInt(vote_log[0]),
                        parseInt(vote_log[1]),
@@ -457,17 +468,18 @@ async function drawChart() {
                                                parseInt(vote_log[6]),
                                                parseInt(vote_log[7]),
                                                parseInt(vote_log[8])]);
-    logs["minted_burned"].push([date,
-                                parseInt(acb_log[0]),
-                                parseInt(acb_log[1])]);
+    logs["minted_burned_tax"].push([date,
+                                    parseInt(acb_log[0]),
+                                    parseInt(acb_log[1]),
+                                    parseInt(acb_log[8])]);
     logs["coin_supply_delta"].push([date, parseInt(acb_log[2])]);
     logs["bond_budget"].push([date, parseInt(acb_log[3])]);
     logs["purchased_redeemed"].push([date,
-                                     parseInt(acb_log[4]),
-                                     parseInt(acb_log[5])]);
-    logs["coin_total_supply"].push([date, parseInt(acb_log[6])]);
-    logs["bond_total_supply"].push([date, parseInt(acb_log[7])]);
-    logs["oracle_level"].push([date, parseInt(acb_log[8])]);
+                                     parseInt(acb_log[9]),
+                                     parseInt(acb_log[10])]);
+    logs["coin_total_supply"].push([date, parseInt(acb_log[4])]);
+    logs["bond_total_supply"].push([date, parseInt(acb_log[5])]);
+    logs["oracle_level"].push([date, parseInt(acb_log[6])]);
   }
 
   {
@@ -504,11 +516,12 @@ async function drawChart() {
     table.addColumn("datetime", "");
     table.addColumn("number", "minted_coins");
     table.addColumn("number", "burned_coins");
-    table.addRows(logs["minted_burned"]);
-    const options = {title: "ACB: minted / burned coins",
+    table.addColumn("number", "burned_tax");
+    table.addRows(logs["minted_burned_tax"]);
+    const options = {title: "ACB: minted coins / burned coins / burned tax",
                      legend: {position: "bottom"}};
     const chart = new google.visualization.LineChart(
-        $("chart_minted_burned"));
+        $("chart_minted_burned_tax"));
     chart.draw(table, options);
   }
   {
@@ -611,12 +624,16 @@ function getDateString(timestamp) {
 }
 
 function getOracleLevelString(level) {
-  const exchange_rates = [0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4];
-  const bond_prices = [950, 965, 978, 990, 997, 997, 997, 997, 997];
-  const level_max = 9;
+  const exchange_rates = await acb_contract.LEVEL_TO_EXCHANGE_RATE();
+  const exchange_rate_divisor = await acb_contract.EXCHANGE_RATE_DIVISOR();
+  const bond_prices = await acb_contract.LEVEL_TO_BOND_PRICE();
+  const tax_rates = await acb_contract.LEVEL_TO_TAX_RATE();
+  const level_max = parseInt(await oracle_contract.LEVEL_MAX());
   if (0 <= level && level < level_max) {
-    return level + " (1 coin = " + exchange_rates[level] +
-        " USD; Bond issue price = " + bond_prices[level] + " coins)";
+    return level + " (1 coin = " +
+        exchange_rates[level] / exchange_rate_divisor + " USD, " +
+        "Bond issue price = " + bond_prices[level] + " coins, " +
+        "Tax rate = " + tax_rates[level] + "%)";
   }
   return "undefined";
 }

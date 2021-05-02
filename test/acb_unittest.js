@@ -3047,6 +3047,25 @@ function parameterized_test(accounts,
                  _initial_coin_supply + deposit_4[mod(now - 2, 3)] +
                  deposit_4[mod(now - 1, 3)] + remainder[mod(now - 1, 3)]);
 
+    // Payable functions
+    assert.equal(await web3.eth.getBalance(_acb.address), 0);
+    await check_send_transaction(
+        {value: 100, from: accounts[0]}, accounts[0], 100);
+    assert.equal(await web3.eth.getBalance(_acb.address), 100);
+    await check_send_transaction(
+        {value: 100, from: accounts[1]}, accounts[1], 100);
+    assert.equal(await web3.eth.getBalance(_acb.address), 200);
+    await check_send_transaction(
+        {value: 100, from: accounts[0]}, accounts[0], 100);
+    assert.equal(await web3.eth.getBalance(_acb.address), 300);
+    let eth_balance =
+        parseInt((await web3.eth.getBalance(accounts[1])).substring(14));
+    await _acb.withdrawTips({from: accounts[1]});
+    assert.equal(await web3.eth.getBalance(_acb.address), 0);
+    assert.equal(
+        parseInt((await web3.eth.getBalance(accounts[1])).substring(14)) % 1000,
+        (eth_balance + 300) % 1000);
+
     // Initializable
     await should_throw(async () => {
       await _acb.initialize(_coin.address, _bond.address,
@@ -3085,6 +3104,14 @@ function parameterized_test(accounts,
 
     await should_throw(async () => {
       await _acb.deprecate({from: accounts[2]});
+    }, "Ownable");
+
+    await should_throw(async () => {
+      await _acb.withdrawTips();
+    }, "Ownable");
+
+    await should_throw(async () => {
+      await _acb.withdrawTips({from: accounts[2]});
     }, "Ownable");
 
     await should_throw(async () => {
@@ -3226,6 +3253,14 @@ function parameterized_test(accounts,
       assert.equal(current.bond_supply, 0);
       assert.equal(current.bond_budget, 0);
       return mint;
+    }
+
+    async function check_send_transaction(option, sender, value) {
+      let receipt = await _acb.sendTransaction(option);
+      let args = receipt.logs.filter(
+          e => e.event == 'PayableEvent')[0].args;
+      assert.equal(args.sender, option.from);
+      assert.equal(args.value, value);
     }
 
     async function check_vote(

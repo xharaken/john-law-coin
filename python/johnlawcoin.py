@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import hashlib
+import hashlib, random
 
 #-------------------------------------------------------------------------------
 # [Overview]
@@ -24,16 +24,16 @@ import hashlib
 #
 # JohnLawCoin is a real-world experiment to verify the following assumption:
 #
-# - It is possible to stabilize the coin price with fully algorithmically
-#   defined monetary policies without holding any collateral.
+# - There is a way to stabilize the coin price with algorithmically defined
+#   monetary policies without holding any collateral.
 #
 # If JohnLawCoin is successful and proves the assumption is correct, it will
 # provide interesting insights for both non-fiat currencies and fiat
 # currencies; i.e., 1) there is a way for non-fiat cryptocurrencies to
-# stabilize their currency price without having any gatekeeper, and 2) there
-# is a way for central banks of developing countries to implement a fixed
-# exchange rate system without holding adequate USD reserves. This will
-# upgrade human's understanding about money.
+# implement a stablecoin without having any gatekeeper that holds collateral,
+# and 2) there is a way for developing countries to implement a fixed exchange
+# rate system for their fiat currencies without holding adequate USD reserves.
+# This will upgrade human's understanding about money.
 #
 # JohnLawCoin has the following important properties:
 #
@@ -70,10 +70,10 @@ class JohnLawCoin:
         # The tax rate set by the ACB.
         self.tax_rate = 0
         # The account to which the tax is sent.
-        self.tax_account = "____tax_account_address"
+        self.tax_account = "tax" + str(random.random())
 
         # Mint the initial coins to the genesis account.
-        JohnLawCoin.INITIAL_COIN_SUPPLY = 2100000
+        JohnLawCoin.INITIAL_COIN_SUPPLY = 10000000
         self.mint(genesis_account, JohnLawCoin.INITIAL_COIN_SUPPLY)
 
     # Mint coins to one account.
@@ -141,6 +141,12 @@ class JohnLawCoin:
         assert(0 <= tax_rate and tax_rate <= 100)
         self.tax_rate = tax_rate
 
+        # Regenerate the account address just in case.
+        old_tax_account = self.tax_account
+        self.tax_account = "tax" + str(random.random())
+        self.move(old_tax_account, self.tax_account,
+                  self.balance_of(old_tax_account))
+
     # Override ERC20's transfer method to impose a tax set by the ACB.
     def transfer(self, sender, receiver, amount):
         tax = int(amount * self.tax_rate / 100)
@@ -167,7 +173,7 @@ class JohnLawBond:
         self.number_of_bonds = {}
 
         # bonds[account][redemption_timestamp] stores the number of the
-        # bonds owned by the |account| and has the |redemption_timestamp|.
+        # bonds owned by the |account| and have the |redemption_timestamp|.
         self.bonds = {}
 
         # The total bond supply.
@@ -295,7 +301,7 @@ class Oracle:
             # The timestamp when this commit entry is created.
             self.epoch_timestamp = epoch_timestamp
 
-    # Vote is a struct to count votes in each oracle level.
+    # Vote is a struct to count votes for each oracle level.
     class Vote:
         # Voting statitics are aggregated during the reveal phase and finalized
         # at the end of the reveal phase.
@@ -323,9 +329,9 @@ class Oracle:
             self.commits = {}
             # The voting statistics for all the oracle levels.
             self.votes = []
-            # A special account to store coins deposited by the voters.
+            # An account to store coins deposited by the voters.
             self.deposit_account = 0
-            # A special account to store the reward.
+            # An account to store the reward.
             self.reward_account = 0
             # The total amount of the reward.
             self.reward_total = 0
@@ -365,9 +371,9 @@ class Oracle:
                 self.epochs[epoch_index].votes.append(
                     Oracle.Vote(0, 0, False, False))
             self.epochs[epoch_index].deposit_account = (
-                "__deposit_account_for_epoch" + str(epoch_index))
+                "deposit" + str(epoch_index) + str(random.random()))
             self.epochs[epoch_index].reward_account = (
-                "__reward_account_for_epoch" + str(epoch_index))
+                "reward" + str(epoch_index) + str(random.random()))
             self.epochs[epoch_index].reward_total = 0
         self.epochs[0].phase = Oracle.Phase.COMMIT
         self.epochs[1].phase = Oracle.Phase.RECLAIM
@@ -421,7 +427,7 @@ class Oracle:
         if coin.balance_of(sender) < deposit:
             return False
 
-        # One voter can commit only once per epoch.
+        # One voter can commit only once per phase.
         if (sender in epoch.commits and
             epoch.commits[sender].epoch_timestamp == self.epoch_timestamp):
             return False
@@ -457,7 +463,7 @@ class Oracle:
             # The corresponding commit was not found.
             return False
 
-        # One voter can reveal only once per epoch.
+        # One voter can reveal only once per phase.
         if epoch.commits[sender].phase != Oracle.Phase.COMMIT:
             return False
         epoch.commits[sender].phase = Oracle.Phase.REVEAL
@@ -471,7 +477,7 @@ class Oracle:
         # Update the commit entry with the revealed level.
         epoch.commits[sender].revealed_level = revealed_level
 
-        # Count up votes and the deposited coins.
+        # Count up the vote.
         epoch.votes[revealed_level].deposit += epoch.commits[sender].deposit
         epoch.votes[revealed_level].count += 1
         return True
@@ -486,9 +492,9 @@ class Oracle:
     # Returns
     # ----------------
     # A tuple of two values:
-    #  - uint: The amount of reclaimed coins. This becomes a positive number
+    #  - uint: The amount of the reclaimed coins. This becomes a positive value
     #    when the voter is eligible to reclaim their deposited coins.
-    #  - uint: The amount of reward. This becomes a positive number when the
+    #  - uint: The amount of the reward. This becomes a positive value when the
     #    voter voted for the "truth" oracle level.
     def reclaim(self, coin, sender):
         epoch = self.epochs[(self.epoch_timestamp - 2) % 3]
@@ -498,7 +504,7 @@ class Oracle:
             # The corresponding commit was not found.
             return (0, 0)
 
-        # One voter can reclaim only once per epoch.
+        # One voter can reclaim only once per phase.
         if epoch.commits[sender].phase != Oracle.Phase.REVEAL:
             return (0, 0)
 
@@ -546,7 +552,7 @@ class Oracle:
     # Parameters
     # ----------------
     # |coin|: JohnLawCoin.
-    # |mint|: The amount of coins provided for the reward in the reclaim phase.
+    # |mint|: The amount of the coins minted for the reward.
     #
     # Returns
     # ----------------
@@ -563,7 +569,7 @@ class Oracle:
         epoch = self.epochs[(self.epoch_timestamp - 1) % 3]
         assert(epoch.phase == Oracle.Phase.REVEAL)
 
-        # The "truth" level is set to the mode of the votes.
+        # The "truth" level is set to the mode of the weighted majority votes.
         mode_level = self.get_mode_level()
         if 0 <= mode_level and mode_level < Oracle.LEVEL_MAX:
             deposit_voted = 0
@@ -605,7 +611,8 @@ class Oracle:
         epoch.phase = Oracle.Phase.RECLAIM
 
         # Step 3: Move the reclaim phase to the commit phase.
-        epoch = self.epochs[(self.epoch_timestamp - 2) % 3]
+        epoch_index = (self.epoch_timestamp - 2) % 3
+        epoch = self.epochs[epoch_index]
         assert(epoch.phase == Oracle.Phase.RECLAIM)
 
         burned = (coin.balance_of(epoch.deposit_account) +
@@ -615,15 +622,20 @@ class Oracle:
         # Burn the remaining reward.
         coin.burn(epoch.reward_account, coin.balance_of(epoch.reward_account))
 
-        # Initialize the epoch for the next commit phase.
+        # Initialize the Epoch object for the next commit phase.
         #
         # |epoch.commits_| cannot be cleared due to the restriction of Solidity.
-        # |epoch_timestamp_| ensures the stale commit entries are not used.
+        # |epoch_timestamp_| ensures the stale commit entries are not misused.
         epoch.votes = []
         for i in range(Oracle.LEVEL_MAX):
             epoch.votes.append(Oracle.Vote(0, 0, False, False))
+        # Regenerate the account addresses just in case.
         assert(coin.balance_of(epoch.deposit_account) == 0)
         assert(coin.balance_of(epoch.reward_account) == 0)
+        epoch.deposit_account = (
+            "deposit" + str(epoch_index) + str(random.random()))
+        epoch.reward_account = (
+            "reward" + str(epoch_index) + str(random.random()))
         epoch.reward_total = 0
         epoch.phase = Oracle.Phase.COMMIT
 
@@ -632,7 +644,7 @@ class Oracle:
         return burned
 
     # Return the oracle level that got the largest amount of deposited coins.
-    # In other words, return the mode of the votes weighted by their deposited
+    # In other words, return the mode of the votes weighted by the deposited
     # coins.
     #
     # Parameters
@@ -642,7 +654,7 @@ class Oracle:
     # Returns
     # ----------------
     # If there are multiple modes, return the mode that has the largest votes.
-    # If there are multiple modes that has the largest votes, return the
+    # If there are multiple modes that have the largest votes, return the
     # smallest mode. If there are no votes, return LEVEL_MAX.
     def get_mode_level(self):
         epoch = self.epochs[(self.epoch_timestamp - 1) % 3]
@@ -686,8 +698,7 @@ class Oracle:
 #-------------------------------------------------------------------------------
 # [Logging contract]
 #
-# The Logging contract records metrics about JohnLawCoin. The logs are useful
-# to analyze JohnLawCoin's historical trend.
+# The Logging contract records various metrics for analysis purpose.
 #-------------------------------------------------------------------------------
 class Logging:
     # A struct to record metrics about the voting.
@@ -708,15 +719,15 @@ class Logging:
     # A struct to record metrics about the ACB.
     class ACBLog:
       def __init__(self, minted_coins, burned_coins, coin_supply_delta,
-                   bond_budget, coin_total_supply, bond_total_supply,
+                   bond_budget, total_coin_supply, total_bond_supply,
                    oracle_level, current_phase_start, burned_tax,
                    purchased_bonds, redeemed_bonds):
           self.minted_coins = minted_coins
           self.burned_coins = burned_coins
           self.coin_supply_delta = coin_supply_delta
           self.bond_budget = bond_budget
-          self.coin_total_supply = coin_total_supply
-          self.bond_total_supply = bond_total_supply
+          self.total_coin_supply = total_coin_supply
+          self.total_bond_supply = total_bond_supply
           self.oracle_level = oracle_level
           self.current_phase_start = current_phase_start
           self.burned_tax = burned_tax
@@ -728,12 +739,12 @@ class Logging:
         # The index of the current log.
         self.log_index = 0
 
-        # The logs about the voting.
+        # Logs about the voting.
         self.vote_logs = []
         self.vote_logs.append(Logging.VoteLog(
             0, 0, 0, 0, 0, 0, 0, 0, 0))
 
-        # The logs about the ACB.
+        # Logs about the ACB.
         self.acb_logs = []
         self.acb_logs.append(Logging.ACBLog(
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
@@ -746,8 +757,8 @@ class Logging:
     # |burned|: The amount of the burned coins.
     # |delta|: The delta of the total coin supply.
     # |bond_budget|: ACB.bond_budget_.
-    # |coin_total_supply|: The total coin supply.
-    # |bond_total_supply|: The total bond supply.
+    # |total_coin_supply|: The total coin supply.
+    # |total_bond_supply|: The total bond supply.
     # |oracle_level|: ACB.oracle_level_.
     # |current_phase_start|: ACB.current_phase_start_.
     # |burned_tax|: The amount of the burned tax.
@@ -756,7 +767,7 @@ class Logging:
     # ----------------
     # None.
     def phase_updated(self, minted, burned, delta, bond_budget,
-                      coin_total_supply, bond_total_supply,
+                      total_coin_supply, total_bond_supply,
                       oracle_level, current_phase_start, burned_tax):
         self.log_index += 1
         self.vote_logs.append(Logging.VoteLog(
@@ -768,8 +779,8 @@ class Logging:
         self.acb_logs[self.log_index].burned_coins = burned
         self.acb_logs[self.log_index].coin_supply_delta = delta
         self.acb_logs[self.log_index].bond_budget = bond_budget
-        self.acb_logs[self.log_index].coin_total_supply = coin_total_supply
-        self.acb_logs[self.log_index].bond_total_supply = bond_total_supply
+        self.acb_logs[self.log_index].total_coin_supply = total_coin_supply
+        self.acb_logs[self.log_index].total_bond_supply = total_bond_supply
         self.acb_logs[self.log_index].oracle_level = oracle_level
         self.acb_logs[self.log_index].current_phase_start = current_phase_start
         self.acb_logs[self.log_index].burned_tax = burned_tax
@@ -779,8 +790,8 @@ class Logging:
     # Parameters
     # ----------------
     # |commit_result|: Whether the commit succeeded or not.
-    # |deposited|: The amount of the deposited coins.
     # |reveal_result|: Whether the reveal succeeded or not.
+    # |deposited|: The amount of the deposited coins.
     # |reclaimed|: The amount of the reclaimed coins.
     # |rewarded|: The amount of the reward.
     #
@@ -809,7 +820,7 @@ class Logging:
     #
     # Parameters
     # ----------------
-    # |count|: The number of purchased bonds.
+    # |count|: The number of the purchased bonds.
     #
     # Returns
     # ----------------
@@ -821,7 +832,7 @@ class Logging:
     #
     # Parameters
     # ----------------
-    # |count|: The number of redeemded bonds.
+    # |count|: The number of the redeemded bonds.
     #
     # Returns
     # ----------------
@@ -834,7 +845,7 @@ class Logging:
 # [ACB contract]
 #
 # The ACB stabilizes the coin price with algorithmically defined monetary
-# policies without holding any collateral. The ACB stabilizes the coin / USD
+# policies without holding any collateral. The ACB stabilizes the JLC / USD
 # exchange rate to 1.0 as follows:
 #
 # 1. The ACB obtains the exchange rate from the oracle.
@@ -842,9 +853,9 @@ class Logging:
 # 3. If the exchange rate is larger than 1.0, the ACB increases the total coin
 #    supply by redeeming issued bonds (regardless of their redemption dates).
 #    If that is not enough to supply sufficient coins, the ACB mints new coins
-#    and provides the coins to the oracle as the reward.
+#    and provides the coins to the oracle as a reward.
 # 4. If the exchange rate is smaller than 1.0, the ACB decreases the total coin
-#    supply by issuing new bonds.
+#    supply by issuing new bonds and imposing tax on coin transfers.
 #-------------------------------------------------------------------------------
 
 class ACB:
@@ -900,7 +911,7 @@ class ACB:
         # exchange rates. The real exchange rate is obtained by dividing the
         # values by EXCHANGE_RATE_DIVISOR. For example, 11 corresponds to the
         # exchange rate of 1.1. This translation is needed to avoid using
-        # decimal numbers in the smart contract.
+        # float numbers in Solidity.
         ACB.LEVEL_TO_EXCHANGE_RATE = [6, 7, 8, 9, 10, 11, 12, 13, 14]
         ACB.EXCHANGE_RATE_DIVISOR = 10
 
@@ -909,7 +920,7 @@ class ACB:
         ACB.LEVEL_TO_BOND_PRICE = [970, 978, 986, 992, 997, 997, 997, 997, 997]
 
         # The bond redemption price and the redemption period.
-        ACB.BOND_REDEMPTION_PRICE = 1000 # One bond is redeemed for 1000 USD.
+        ACB.BOND_REDEMPTION_PRICE = 1000 # One bond is redeemed for 1000 coins.
         ACB.BOND_REDEMPTION_PERIOD = 84 * 24 * 60 * 60 # 12 weeks.
 
         # LEVEL_TO_TAX_RATE is the mapping from the oracle levels to the tax
@@ -920,10 +931,10 @@ class ACB:
         # supply once per phase. Voters can vote once per phase.
         ACB.PHASE_DURATION = 7 * 24 * 60 * 60 # 1 week.
 
-        # The percentage of the coin balance the voter needs to deposit.
+        # The percentage of the coin balance voters need to deposit.
         ACB.DEPOSIT_RATE = 10 # 10%.
 
-        # The damping factor to avoid minting or burning too many coins in one
+        # A damping factor to avoid minting or burning too many coins in one
         # phase.
         ACB.DAMPING_FACTOR = 10 # 10%.
 
@@ -933,7 +944,7 @@ class ACB:
 
         # The JohnLawCoin contract.
         #
-        # Note that 2100000 coins (corresponding to 2.1 MB) are given to the
+        # Note that 10000000 coins (corresponding to 10 M USD) are given to the
         # genesis account initially. This is important to make sure that the
         # genesis account can have power to determine the exchange rate until
         # the ecosystem stabilizes. Once real-world currency exchangers start
@@ -955,9 +966,9 @@ class ACB:
         # The JohnLawBond contract.
         self.bond = bond
 
-        # If |bond_budget| is positive, it indicates the number of bonds the ACM
-        # wants to issue to decrease the total coin supply. If |bond_budget| is
-        # negative, it indicates the number of bonds the ACB wants to redeem to
+        # If |bond_budget| is positive, it indicates the number of bonds the ACB
+        # can issue to decrease the total coin supply. If |bond_budget| is
+        # negative, it indicates the number of bonds the ACB can redeem to
         # increase the total coin supply.
         self.bond_budget = 0
 
@@ -1012,17 +1023,18 @@ class ACB:
 
         self.oracle_level = Oracle.LEVEL_MAX
 
-    # Vote to the oracle. The voter can commit a vote in the current phase,
-    # reveal their vote in the prior phase, and reclaim the deposited coins and
-    # get a reward for their vote in the next prior phase at the same time.
+    # Vote for the exchange rate. The voter can commit a vote to the current
+    # phase, reveal their vote in the previous phase, and reclaim the deposited
+    # coins and get a reward for their vote in the phase before the previous
+    # phase at the same time.
     #
     # Parameters
     # ----------------
     # |committed_hash|: The hash to be committed in the current phase. Specify
-    # ACB.NULL_HASH if you only want to reveal and reclaim previous votes and
-    # do not want to commit.
-    # |revealed_level|: The oracle level to be revealed in the prior phase.
-    # |revealed_salt|: The voter's salt to be revealed in the prior phase.
+    # ACB.NULL_HASH if you do not want to commit and only want to reveal and
+    # reclaim previous votes.
+    # |revealed_level|: The oracle level you voted for in the previous phase.
+    # |revealed_salt|: The salt you used in the previous phase.
     #
     # Returns
     # ----------------
@@ -1048,11 +1060,11 @@ class ACB:
             if self.oracle_level != Oracle.LEVEL_MAX:
                 assert(0 <= self.oracle_level and
                        self.oracle_level < Oracle.LEVEL_MAX)
-                # Translate the mode level to the exchange rate.
+                # Translate the oracle level to the exchange rate.
                 exchange_rate = ACB.LEVEL_TO_EXCHANGE_RATE[self.oracle_level]
 
                 # Calculate the amount of coins to be minted or burned based on
-                # the Quantum Theory of Money. If the exchnage rate is 1.1
+                # the Quantum Theory of Money. If the exchange rate is 1.1
                 # (i.e., 1 coin = 1.1 USD), the total coin supply is increased
                 # by 10%. If the exchange rate is 0.8 (i.e., 1 coin = 0.8 USD),
                 # the total coin supply is decreased by 20%.
@@ -1067,7 +1079,7 @@ class ACB:
                 # Increase or decrease the total coin supply.
                 mint = self._control_supply(delta)
 
-                # Translate the mode level to the tax rate.
+                # Translate the oracle level to the tax rate.
                 tax_rate = ACB.LEVEL_TO_TAX_RATE[self.oracle_level]
 
             # Burn the tax. This is fine because the purpose of the tax is to
@@ -1126,7 +1138,7 @@ class ACB:
         if count <= 0:
             return 0
         if self.bond_budget < count:
-            # ACB does not have enough bonds to issue.
+            # The ACB does not have enough bonds to issue.
             return 0
 
         bond_price = ACB.LEVEL_TO_BOND_PRICE[Oracle.LEVEL_MAX - 1]
@@ -1140,7 +1152,7 @@ class ACB:
         # Set the redemption timestamp of the bonds.
         redemption_timestamp = self.get_timestamp() + ACB.BOND_REDEMPTION_PERIOD
 
-        # Issue new bonds
+        # Issue new bonds.
         self.bond.mint(sender, redemption_timestamp, count)
         self.bond_budget -= count
         assert(self.bond_budget >= 0)
@@ -1158,8 +1170,8 @@ class ACB:
     # Parameters
     # ----------------
     # |sender|: The sender account.
-    # |redemption_timestamps|: A list of bonds the user wants to redeem. Bonds
-    # are identified by their redemption timestamps.
+    # |redemption_timestamps|: An array of bonds to be redeemed. Bonds are
+    # identified by their redemption timestamps.
     #
     # Returns
     # ----------------
@@ -1177,7 +1189,7 @@ class ACB:
                 if count > -self.bond_budget:
                     count = -self.bond_budget
 
-            # Mint the corresponding coins to the user's balance.
+            # Mint the corresponding coins to the user account.
             amount = count * ACB.BOND_REDEMPTION_PRICE
             self.coin.mint(sender, amount)
 
@@ -1195,9 +1207,7 @@ class ACB:
     #
     # Parameters
     # ----------------
-    # |delta|: If |delta| is positive, it indicates the amount of coins to be
-    # minted. If |delta| is negative, it indicates the amount of coins to be
-    # burned.
+    # |delta|: The target increase or decrease to the total coin supply.
     #
     # Returns
     # ----------------
