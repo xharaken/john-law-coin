@@ -25,10 +25,9 @@
   <script src="wallet.js"></script>
 </head>
 <body>
-  <div>[<a href=""><span id="reload_button">Reload</span></a>] [<a href="https://github.com/xharaken/john-law-coin/blob/main/HowToUseWallet.md">Help</a>] [<a href="https://github.com/xharaken/john-law-coin/issues">Feedback</a>]</div>
-  <p id="message_box"></p>
+  <div>[<a href="">Reload</a>] [<a href="https://github.com/xharaken/john-law-coin/blob/main/HowToUseWallet.md" target="_blank" rel="noopener noreferrer">Help</a>] [<a href="https://github.com/xharaken/john-law-coin/issues" target="_blank" rel="noopener noreferrer">Feedback</a>]</div>
   <h1>JohnLawCoin Wallet</h1>
-
+  <p id="message_box"></p>
   <h2>Your account info
     <span class="tooltip">?<span class="tooltip-text">
         <span class="bold">Account address</span>: Your account address.<br>
@@ -68,40 +67,23 @@
   
   <h2>Vote
     <span class="tooltip">?<span class="tooltip-text">
-        You can get a reward by voting for the ``truth'' exchange rate every phase. See <a href="https://github.com/xharaken/john-law-coin/blob/main/HowToUseWallet.md">help</a> to learn more.<br>
-        <span class="bold">Current oracle level</span>: The oracle level you vote for in the current phase. Choose the oracle level that corresponds to the exchange rate as of when the current phase started. If you intend to not vote in the current phase, leave it empty.<br>
-        <span class="bold">Salt</span>: The salt number (a 256 bit unsigned integer) to protect your vote in the current phase. Use different salt numbers every vote and keep it confidential until you reveal the vote in the next phase. If you intend to not vote in the current phase, leave it empty.<br>
-        <span class="bold">Reveal the oracle level in your previous vote</span>: The oracle level you voted for in the previous phase. If you did not vote in the previous phase, leave it empty.<br>
-        <span class="bold">Reveal the salt in your previous vote</span>: The salt number you used in the previous phase. If you did not vote in the previous phase, leave it empty.<br>
-        As a result of voting, 10% of your coin balance is deposited to the ACB. The deposited coins will be returned to your wallet later only if 1) you voted for an oracle level that is within one level from the ``truth'' oracle level and 2) you revealed the vote correctly. Otherwise, you will lose the deposited coins. Therefore, it is important to vote and reveal every phase.</span><br>
+        You can get a reward by voting for a correct exchange rate every phase.<br>
+        <span class="bold">Current exchange rate</span>: Look up a real-world currency exchanger and choose the JLC <=> USD exchange rate at the point when the current phase started. If no currency exchangers support JLC <=> USD conversions yet, choose the oracle level 5.<br>
+          As a result of the voting, 10% of your coin balance is deposited to the oracle. The deposited coins will be returned to your wallet with some reward later as long as you vote for a correct exchange rate every phase. See <a href="https://github.com/xharaken/john-law-coin/blob/main/HowToUseWallet.md">help</a> to learn more.<br>
         <span class="italic">[This operation consumes some ETH as transaction fee.]</span>
   </span></span></h2>
-  <p>Current oracle level: <select name="vote_commit_level" id="vote_commit_level" size="1">
-      <option value=""></option>
-      <option value="0">Oracle level 0 (1 coin = 0.6 USD)</option>
-      <option value="1">Oracle level 1 (1 coin = 0.7 USD)</option>
-      <option value="2">Oracle level 2 (1 coin = 0.8 USD)</option>
-      <option value="3">Oracle level 3 (1 coin = 0.9 USD)</option>
-      <option value="4" selected>Oracle level 4 (1 coin = 1.0 USD)</option>
-      <option value="5">Oracle level 5 (1 coin = 1.1 USD)</option>
-      <option value="6">Oracle level 6 (1 coin = 1.2 USD)</option>
-      <option value="7">Oracle level 7 (1 coin = 1.3 USD)</option>
-      <option value="8">Oracle level 8 (1 coin = 1.4 USD)</option>
+  <p>Current exchange rate: <select name="vote_oracle_level" id="vote_oracle_level" size="1">
+      <option value="0">1 coin = 0.6 USD (Oracle level 0)</option>
+      <option value="1">1 coin = 0.7 USD (Oracle level 1)</option>
+      <option value="2">1 coin = 0.8 USD (Oracle level 2)</option>
+      <option value="3">1 coin = 0.9 USD (Oracle level 3)</option>
+      <option value="4" selected>1 coin = 1.0 USD (Oracle level 4)</option>
+      <option value="5">1 coin = 1.1 USD (Oracle level 5)</option>
+      <option value="6">1 coin = 1.2 USD (Oracle level 6)</option>
+      <option value="7">1 coin = 1.3 USD (Oracle level 7)</option>
+      <option value="8">1 coin = 1.4 USD (Oracle level 8)</option>
+      <option value="">Do not vote</option>
   </select></p>
-  <p>Salt: <input type="text" id="vote_commit_salt" size="56"></input></p>
-  <p>Reveal the oracle level in your previous vote: <select name="vote_reveal_level" id="vote_reveal_level" size="1">
-      <option value=""></option>
-      <option value="0">Oracle level 0 (1 coin = 0.6 USD)</option>
-      <option value="1">Oracle level 1 (1 coin = 0.7 USD)</option>
-      <option value="2">Oracle level 2 (1 coin = 0.8 USD)</option>
-      <option value="3">Oracle level 3 (1 coin = 0.9 USD)</option>
-      <option value="4">Oracle level 4 (1 coin = 1.0 USD)</option>
-      <option value="5">Oracle level 5 (1 coin = 1.1 USD)</option>
-      <option value="6">Oracle level 6 (1 coin = 1.2 USD)</option>
-      <option value="7">Oracle level 7 (1 coin = 1.3 USD)</option>
-      <option value="8">Oracle level 8 (1 coin = 1.4 USD)</option>
-  </select></p>
-  <p>Reveal the salt in your previous vote: <input type="text" id="vote_reveal_salt" size="56"></input></p>
   <p><input type="button" value="Vote" id="vote_button"></input><span class="disabled" id="vote_button_disabled"></span></p>
   
   <h2>Purchase bonds

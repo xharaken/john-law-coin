@@ -51,6 +51,10 @@ contract JohnLawCoin_v2 is ERC20PausableUpgradeable, OwnableUpgradeable {
   address public tax_account_v2_;
   mapping (address => uint) public dummy_;
 
+  // Events.
+  event TransferEvent(address indexed sender, address receiver,
+                      uint amount, uint tax);
+
   function upgrade()
       public onlyOwner {
     tax_rate_v2_ = tax_rate_;
@@ -175,6 +179,7 @@ contract JohnLawCoin_v2 is ERC20PausableUpgradeable, OwnableUpgradeable {
       _transfer(_msgSender(), tax_account_v2_, tax);
     }
     _transfer(_msgSender(), account, amount - tax);
+    emit TransferEvent(_msgSender(), account, amount - tax, tax);
     return true;
   }
 }

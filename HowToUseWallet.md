@@ -40,24 +40,20 @@ For example, imagine the current oracle level is 2. If you send 100 coins, 12 co
 
 Voting is probably the most complex concept of JohnLawCoin but what you need to do in practice is simple:
 
-1. Look up the current exchange rate using some real-world currency exchanger. Strictly speaking, the current exchange rate is defined as the exchange rate at the point when the ACB's current phase started.
-1. Vote for the oracle level that is the closest to the current exchange rate. In a bootstrap phase where no currency exchanger is available, vote for the oracle level 5. When voting, you are asked to set a salt number (which works as a password to protect your vote). Please use different salt numbers every time and keep the numbers secret until you reveal the vote in the next phase.
-1. When the ACB starts the next phase, reveal your vote by disclosing the oracle level and the salt number you used in the previous phase.
-
-You can vote in the current phase and reveal your vote in the previous phase in one operation. You are expected to fill in the following four fields:
-
-* The oracle level you vote for in the current phase.
-* The salt number to protect your vote in the current phase.
-* The oracle level you voted for in the previous phase.
-* The salt number you used in the previous phase.
+1. Look up the current exchange rate using some real-world currency exchanger. The current exchange rate is defined as the exchange rate at the point when the ACB's current phase started.
+1. Vote for the oracle level that is the closest to the current exchange rate. In a bootstrap phase where no currency exchanger is available, vote for the oracle level 5.
 
 Remember that 10% of your coin balance is deposited to the ACB when you vote. The ACB weights your vote by the amount of the deposited coins and determines the ``truth`` oracle level by weighted majority votes. Due to the weighting, the more coins you possess, the more power your vote has.
 
-The deposited coins are returned to your wallet later only if 1) you voted for an oracle level that is within one level from the ``truth`` oracle level and 2) you revealed the vote correctly. Otherwise, you will lose the deposited coins.
+The deposited coins are returned to your wallet later only if 1) you voted for an oracle level that is within one level from the ``truth`` oracle level and 2) you vote in the next two phases in a row. Otherwise, you will lose the deposited coins.
 
-In addition, you can get a reward later if 1) you voted for the ``truth`` oracle level and 2) you revealed the vote correctly. The more coins you deposited, the more reward you can get.
+In addition, you can get a reward later if 1) you voted for the ``truth`` oracle level and 2) you vote in the next two phases in a row. The more coins you deposited, the more reward you can get.
 
-You should read [the whitepaper](./docs/whitepaper.pdf) for the detailed calculation, but in summary, it is important to vote for the ``truth`` oracle level and reveal your previous vote every phase. The ACB updates the phase every week, and you can vote once per phase. Therefore, you should vote for the ``truth`` oracle level and reveal your previous vote every week.
+You should read [the whitepaper](./docs/whitepaper.pdf) for the detailed calculation, but in summary, it is important to vote for the ``truth`` oracle level every phase (i.e., every week).
+
+[Note for advanced readers: The vote operation commits a vote to the current phase, reveals a vote in the previous phase and reclaims a vote in the phase before the previous phase at the same time. If you forget to vote in the current phase, that also means 1) you forget to reveal your vote in the previous phase, losing the coins deposited to the previous phase, and 2) you forget to reclaim your vote in the phase before the previous phase, losing the coins deposited in the phase before the previous phase. This is why you must keep voting every phase.]
+
+[Note for advanced readers: If you intend to only reveal and reclaim your votes in the previous phases and do NOT intend to commit in the current phase, choose "Do not vote". Then no coins are deposited to the ACB.]
 
 ## Purchase bonds
 

@@ -12,7 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-const ACB_ADDRESS = "0x7203B17c50Fc00CF1805D0De82a6eE71D73f1FE0";
+const ACB_ADDRESS = "0xCC5e7388a50CA7f016F8dc41f708e1997912B80F";
+
+const EXCHANGE_RATES = [0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4];
+const BOND_PRICES = [970, 978, 986, 992, 997, 997, 997, 997, 997];
+const TAX_RATES = [30, 20, 12, 5, 0, 0, 0, 0, 0];
+const LEVEL_MAX = 9;
 
 const JOHNLAWCOIN_ABI = [
     {
@@ -934,6 +939,48 @@ const ORACLE_ABI = [
     },
     {
       "inputs": [],
+      "name": "LEVEL_MAX",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [],
+      "name": "PROPORTIONAL_REWARD_RATE",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [],
+      "name": "RECLAIM_THRESHOLD",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [],
       "name": "epoch_timestamp_",
       "outputs": [
         {
@@ -1383,12 +1430,12 @@ const LOGGING_ABI = [
         },
         {
           "internalType": "uint256",
-          "name": "coin_total_supply",
+          "name": "total_coin_supply",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "bond_total_supply",
+          "name": "total_bond_supply",
           "type": "uint256"
         },
         {
@@ -1690,12 +1737,12 @@ const LOGGING_ABI = [
         },
         {
           "internalType": "uint256",
-          "name": "coin_total_supply",
+          "name": "total_coin_supply",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "bond_total_supply",
+          "name": "total_bond_supply",
           "type": "uint256"
         },
         {
@@ -1850,6 +1897,25 @@ const ACB_ABI = [
         {
           "indexed": false,
           "internalType": "uint256",
+          "name": "value",
+          "type": "uint256"
+        }
+      ],
+      "name": "PayableEvent",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "sender",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
           "name": "count",
           "type": "uint256"
         },
@@ -1963,6 +2029,141 @@ const ACB_ABI = [
       "type": "event"
     },
     {
+      "stateMutability": "payable",
+      "type": "fallback",
+      "payable": true
+    },
+    {
+      "inputs": [],
+      "name": "BOND_REDEMPTION_PERIOD",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [],
+      "name": "BOND_REDEMPTION_PRICE",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [],
+      "name": "DAMPING_FACTOR",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [],
+      "name": "DEPOSIT_RATE",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [],
+      "name": "EXCHANGE_RATE_DIVISOR",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "LEVEL_TO_BOND_PRICE",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "LEVEL_TO_EXCHANGE_RATE",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "LEVEL_TO_TAX_RATE",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
       "inputs": [],
       "name": "NULL_HASH",
       "outputs": [
@@ -1970,6 +2171,34 @@ const ACB_ABI = [
           "internalType": "bytes32",
           "name": "",
           "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [],
+      "name": "PHASE_DURATION",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [],
+      "name": "_timestamp_for_testing",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
         }
       ],
       "stateMutability": "view",
@@ -2123,6 +2352,11 @@ const ACB_ABI = [
       "type": "function"
     },
     {
+      "stateMutability": "payable",
+      "type": "receive",
+      "payable": true
+    },
+    {
       "inputs": [
         {
           "internalType": "contract JohnLawCoin",
@@ -2167,6 +2401,13 @@ const ACB_ABI = [
     {
       "inputs": [],
       "name": "unpause",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "withdrawTips",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
