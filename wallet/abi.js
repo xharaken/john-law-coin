@@ -13,6 +13,7 @@
 // limitations under the License.
 
 const ACB_ADDRESS = "0xCC5e7388a50CA7f016F8dc41f708e1997912B80F";
+const ETHERSCAN_ADDRESS = "https://etherscan.io/tx/";
 
 const EXCHANGE_RATES = [0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4];
 const BOND_PRICES = [970, 978, 986, 992, 997, 997, 997, 997, 997];

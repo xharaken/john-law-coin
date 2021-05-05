@@ -67,9 +67,8 @@
   
   <h2>Vote
     <span class="tooltip">?<span class="tooltip-text">
-        You can get a reward by voting for a correct exchange rate every phase.<br>
-        <span class="bold">Current exchange rate</span>: Look up a real-world currency exchanger and choose the JLC <=> USD exchange rate at the point when the current phase started. If no currency exchangers support JLC <=> USD conversions yet, choose the oracle level 5.<br>
-          As a result of the voting, 10% of your coin balance is deposited to the oracle. The deposited coins will be returned to your wallet with some reward later as long as you vote for a correct exchange rate every phase. See <a href="https://github.com/xharaken/john-law-coin/blob/main/HowToUseWallet.md">help</a> to learn more.<br>
+        Look up a real-world currency exchanger and choose the JLC <=> USD exchange rate at the point when the current phase started. If no currency exchanger supports the JLC <=> USD conversion yet, choose the oracle level 5.<br>
+            As a result of the voting, 10% of your coin balance is deposited to the ACB. The deposited coins will be returned to your wallet with some reward later as long as you vote for a correct exchange rate every phase. See <a href="https://github.com/xharaken/john-law-coin/blob/main/HowToUseWallet.md">help</a> to learn the mechanism more.<br>
         <span class="italic">[This operation consumes some ETH as transaction fee.]</span>
   </span></span></h2>
   <p>Current exchange rate: <select name="vote_oracle_level" id="vote_oracle_level" size="1">
@@ -88,7 +87,7 @@
   
   <h2>Purchase bonds
     <span class="tooltip">?<span class="tooltip-text">
-        You can purchase bonds as long as the ACB's bond budget is positive. The bond issue price changes depending on the oracle level and is shown in the above ACB info. The purchased bond can be redeemed for 1000 coins on the redemption date or when the ACB's bond budget is negative.<br>
+        You can purchase bonds as long as the ACB's bond budget is positive. The bond issue price varies depending on the oracle level and is displayed in the ACB info. The purchased bond can be redeemed for 1000 coins on the redemption date or when the ACB's bond budget is negative.<br>
         <span class="italic">[This operation consumes some ETH as transaction fee.]</span>
   </span></span></h2>
   <p>Amount of bonds: <input type="number" min="1" id="purchase_bonds_amount"></input></p>
@@ -108,6 +107,8 @@
   <h1></h1>
   <p>Show <a href=""><span id="advanced_button">advanced information</span></a>.</p>
 
+  <div id="advanced_information" style="display:none">
+    
   <h2>Oracle status
     <span class="tooltip">?<span class="tooltip-text">
         This shows the internal stats of the Oracle contract.
@@ -128,7 +129,7 @@
 
   <h2>History of JohnLawCoin
     <span class="tooltip">?<span class="tooltip-text">
-        This shows the historical stats of key system-wide parameters.
+        This shows the historical stats of key system parameters.
   </span></span></h2>
   <div class="info">
     <p><div id="chart_oracle_level"></div></p>
@@ -142,7 +143,6 @@
     <p><div id="chart_deposited_reclaimed_rewarded"></div></p>
   </div>
 
-  <div id="advanced_information" style="display:none">
   </div>
 
 </body>

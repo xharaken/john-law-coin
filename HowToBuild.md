@@ -21,7 +21,7 @@ $ sudo npm init -y
 john-law-coin/
 |
 |---- contracts/        # Smart contracts.
-|     |---- JohnLawCoin.sol     # The smart contract of JohnLawCoin.
+|     |---- JohnLawCoin.sol     # Smart contracts of JohnLawCoin.
 |     |---- Migrations.sol      # A smart contract to deploy JohnLawCoin.sol.
 |     |---- test/               # Smart contracts for testing.
 |
@@ -37,6 +37,7 @@ john-law-coin/
 
 ```
 $ ./test/run_coin_bond_unittest.py  # Run unittests for the JohnLawCoin contract and the JohnLawBond contract.
+$ ./test/run_logging_unittest.py  # Run unittests for the Logging contract.
 $ ./test/run_oracle_unittest.py  # Run unittests for the Oracle contract.
 $ ./test/run_acb_unittest.py  # Run unittests for the ACB contract.
 $ ./test/run_oracle_simulator.py  # Run a simulator for the Oracle contract.
@@ -44,7 +45,7 @@ $ ./test/run_acb_simulator.py  # Run a simulator for the ACB contract.
 $ ./test/run_acb_upgrade.py  # Run upgrade tests for the Oracle contract and the ACB contract.
 ```
 
-## Deploying smart contracts on a private network.
+## Deploying smart contracts on a private network
 
 Launch a private network in one console.
 

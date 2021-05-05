@@ -26,12 +26,13 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 // [Overview]
 //
 // JohnLawCoin is a stablecoin realized by an Algorithmic Central Bank (ACB).
+// The monetary policies are backed by MMT (Modern Monetary Theory).
 // The system is fully decentralized and there is truly no gatekeeper.
 //
 // JohnLawCoin is a real-world experiment to verify the following assumption:
 //
 // - There is a way to stabilize the coin price with algorithmically defined
-//   monetary policies without holding any collateral.
+//   monetary policies without holding any collateral like USD.
 //
 // If JohnLawCoin is successful and proves the assumption is correct, it will
 // provide interesting insights for both non-fiat currencies and fiat

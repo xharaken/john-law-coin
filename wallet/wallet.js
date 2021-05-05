@@ -693,12 +693,15 @@ async function showTransactionSuccessMessage(message, receipt) {
 
   setTimeout(async () => {
     await reloadInfo();
+    const etherscan_url = ETHERSCAN_ADDRESS + receipt.transactionHash;
     div.innerHTML =
         "<span class='bold'>Transaction succeeded</span>:<br>" + message +
         "<br><br>" +
         "It will take some time to commit the transaction. " +
         "<a href=''>Reload the wallet</a> and " +
-        "check EtherScan in a few minutes.<br>";
+        "check <a href='" + etherscan_url +
+        "' target='_blank' rel='noopener noreferrer'>EtherScan</a> " +
+        "in a few minutes.<br>";
   }, 3000);
 }
 
