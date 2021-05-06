@@ -19,5 +19,5 @@ mkdir -f ../log
 ./run_oracle_simulator.py > ../log/run_oracle_simulator.log
 ./run_oracle_unittest.py > ../log/run_oracle_unittest.log
 ./run_acb_unittest.py > ../log/run_acb_unittest.log
-./run_acb_simulator.py > ../log/run_acb_simulator.log
 ./run_acb_upgrade.py > ../log/run_acb_upgrade.log
+./run_acb_simulator.py > ../log/run_acb_simulator.log
