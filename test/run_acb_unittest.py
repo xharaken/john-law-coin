@@ -16,7 +16,7 @@
 
 import common
 
-# Need 9 parameters:
+# Need 10 parameters:
 # - bond_redemption_price
 # - bond_redemption_period
 # - phase_duration
@@ -26,6 +26,7 @@ import common
 # - reclaim_threshold
 # - level_to_exchange_rate
 # - level_to_bond_price
+# - level_to_tax_rate
 
 common.reset_network(8)
 command = ("truffle test acb_unittest.js " +

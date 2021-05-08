@@ -16,7 +16,7 @@
 
 import common
 
-# Need 12 parameters:
+# Need 13 parameters:
 # - bond_redemption_price
 # - bond_redemption_period
 # - phase_duration
@@ -25,6 +25,7 @@ import common
 # - damping_factor
 # - level_to_exchange_rate
 # - level_to_bond_price
+# - level_to_tax_rate
 # - reclaim_threshold
 # - voter_count
 # - iteration
@@ -35,7 +36,7 @@ command = ("truffle test acb_simulator.js " +
            "'1000 84 7 90 10 10 [6, 7, 8, 9, 10, 11, 12, 13, 14] " +
            "[970, 978, 986, 992, 997, 997, 997, 997, 997] " +
            "[30, 20, 12, 5, 0, 0, 0, 0, 0] 1 40 100 0'")
-#common.run_test(command)
+common.run_test(command)
 
 iteration = 100
 for bond_redemption_price in [1000]:

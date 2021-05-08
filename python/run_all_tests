@@ -13,7 +13,7 @@
 # limitations under the License.
 
 cd `dirname $0`
-mkdir -f ../log
+mkdir -p ../log
 ./coin_bond_unittest.py > ../log/coin_bond_unittest.log
 ./logging_unittest.py > ../log/logging_unittest.log
 ./oracle_unittest.py > ../log/oracle_unittest.log

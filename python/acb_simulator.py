@@ -208,8 +208,8 @@ class ACBSimulator(unittest.TestCase):
             self.assertEqual(acb_log.burned_coins, self.metrics.lost)
             self.assertEqual(acb_log.coin_supply_delta, self.metrics.delta)
             self.assertEqual(acb_log.bond_budget, bond_budget)
-            self.assertEqual(acb_log.coin_total_supply, coin_supply2)
-            self.assertEqual(acb_log.bond_total_supply, bond_supply)
+            self.assertEqual(acb_log.total_coin_supply, coin_supply2)
+            self.assertEqual(acb_log.total_bond_supply, bond_supply)
             self.assertEqual(acb_log.oracle_level, self.metrics.oracle_level)
             self.assertEqual(acb_log.current_phase_start, acb.get_timestamp())
             self.assertEqual(acb_log.burned_tax, burned_tax)
@@ -716,8 +716,8 @@ def main():
 
     test = ACBSimulator(
         1000,
-        12,
-        1,
+        84,
+        7,
         90,
         10,
         10,
