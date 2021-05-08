@@ -112,7 +112,7 @@ contract Oracle_v5 is OwnableUpgradeable {
                           uint minted, uint burned);
 
   // Initializer.
-  function initialize()
+  function initialize(uint epoch_timestamp)
       public initializer {
     __Ownable_init();
 
@@ -159,7 +159,7 @@ contract Oracle_v5 is OwnableUpgradeable {
     // The Epoch object at |(epoch_timestamp_ - 2) % 3| is in the reclaim phase.
     // The timestamp starts with 3 because 0 in the commit entry is not
     // distinguishable from an uninitialized commit entry in Solidity.
-    epoch_timestamp_ = 3;
+    epoch_timestamp_ = epoch_timestamp;
   }
 
   // Do commit.
@@ -565,7 +565,7 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
   JohnLawCoin_v2 public coin_;
   JohnLawBond_v2 public bond_;
   Oracle_v2 public old_oracle_;
-  Oracle_v2 public oracle_;
+  Oracle_v5 public oracle_;
   Logging public logging_;
   int public bond_budget_;
   uint public oracle_level_;
@@ -594,7 +594,7 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
   // |oracle|: The Oracle contract.
   // |logging|: The Logging contract.
   function initialize(JohnLawCoin_v2 coin, JohnLawBond_v2 bond,
-                      Oracle_v2 old_oracle, Oracle_v2 oracle, Logging logging,
+                      Oracle_v2 old_oracle, Oracle_v5 oracle, Logging logging,
                       int bond_budget, uint oracle_level,
                       uint current_phase_start)
       public initializer {
@@ -770,12 +770,20 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
     uint rewarded;
   }
 
-  function _currentOracle()
-      internal whenNotPaused view returns (Oracle_v2) {
+  function _getLevelMax()
+      internal whenNotPaused view returns (uint) {
     if (epoch_timestamp_ <= 2) {
-      return old_oracle_;
+      return old_oracle_.getLevelMax();
     }
-    return oracle_;
+    return oracle_.getLevelMax();
+  }
+
+  function _getModeLevel()
+      internal whenNotPaused view returns (uint) {
+    if (epoch_timestamp_ <= 2) {
+      return old_oracle_.getModeLevel();
+    }
+    return oracle_.getModeLevel();
   }
 
   // Vote for the exchange rate. The voter can commit a vote to the current
@@ -814,10 +822,10 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
       uint mint = 0;
       int delta = 0;
       uint tax_rate = 0;
-      oracle_level_ = _currentOracle().getModeLevel();
-      if (oracle_level_ != _currentOracle().getLevelMax()) {
+      oracle_level_ = _getModeLevel();
+      if (oracle_level_ != _getLevelMax()) {
         require(0 <= oracle_level_ &&
-                oracle_level_ < _currentOracle().getLevelMax(), "vo1");
+                oracle_level_ < _getLevelMax(), "vo1");
         // Translate the oracle level to the exchange rate.
         uint exchange_rate = LEVEL_TO_EXCHANGE_RATE[oracle_level_];
 
@@ -966,8 +974,8 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
       return 0;
     }
 
-    uint bond_price = LEVEL_TO_BOND_PRICE[_currentOracle().getLevelMax() - 1];
-    if (0 <= oracle_level_ && oracle_level_ < _currentOracle().getLevelMax()) {
+    uint bond_price = LEVEL_TO_BOND_PRICE[_getLevelMax() - 1];
+    if (0 <= oracle_level_ && oracle_level_ < _getLevelMax()) {
       bond_price = LEVEL_TO_BOND_PRICE[oracle_level_];
     }
     uint amount = bond_price * count;
@@ -1070,7 +1078,7 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
       require(bond_budget_ <= 0, "cs1");
     } else {
       require(0 <= oracle_level_ &&
-              oracle_level_ < _currentOracle().getLevelMax(), "cs2");
+              oracle_level_ < _getLevelMax(), "cs2");
       // Issue new bonds to decrease the total coin supply.
       bond_budget_ = -delta / LEVEL_TO_BOND_PRICE[oracle_level_].toInt256();
       require(bond_budget_ >= 0, "cs3");
@@ -1095,7 +1103,10 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
   function hash(uint level, uint salt)
       public view returns (bytes32) {
     address sender = msg.sender;
-    return _currentOracle().hash(sender, level, salt);
+    if (epoch_timestamp_ <= 2) {
+      return old_oracle_.hash(sender, level, salt);
+    }
+    return oracle_.hash(sender, level, salt);
   }
 
   // Public getter: Return the current timestamp in seconds.

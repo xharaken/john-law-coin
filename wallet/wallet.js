@@ -185,11 +185,19 @@ async function redeemBonds() {
 }
 
 async function getCommit(epoch_timestamp) {
-  const ret = await oracle_contract.methods.getCommit(
+  const EPOCH_TIMESTAMP_THAT_UPGRADED_ORACLE = 0;
+  const OLD_ORACLE_ADDRESS = "...";
+  const OLD_ORACLE_ABI = ORACLE_ABI;
+
+  let target_oracle_contract = oracle_contract;
+  if (epoch_timestamp < EPOCH_TIMESTAMP_THAT_UPGRADED_ORACLE) {
+    target_oracle_contract =
+          await new web3.eth.Contract(OLD_ORACLE_ABI, OLD_ORACLE_ADDRESS);
+  }
+  const ret = await target_oracle_contract.methods.getCommit(
       epoch_timestamp % 3, ethereum.selectedAddress).call();
-  let commit = {voted: ret[4] == epoch_timestamp,
-                hash: ret[4] == epoch_timestamp ? ret[0] : ""};
-  return commit;
+  return {voted: ret[4] == epoch_timestamp,
+          hash: ret[4] == epoch_timestamp ? ret[0] : ""};
 }
 
 async function getSalt(epoch_timestamp) {
@@ -229,8 +237,6 @@ async function vote() {
 
     const current_salt = await getSalt(current_epoch_timestamp);
     console.log("current_salt: ", current_salt);
-    const previous_salt = await getSalt(current_epoch_timestamp - 1);
-    console.log("previous_salt: ", previous_salt);
     const current_commit = await getCommit(current_epoch_timestamp);
     const previous_commit = await getCommit(current_epoch_timestamp - 1);
 
@@ -242,16 +248,26 @@ async function vote() {
 
     const null_hash = await acb_contract.methods.NULL_HASH().call();
     let previous_level = LEVEL_MAX;
+    let previous_salt = 0;
     if (previous_commit.voted && previous_commit.hash != null_hash) {
-      for (let level = 0; level < LEVEL_MAX; level++) {
-        const hash = await acb_contract.methods.hash(
-            level, previous_salt).call({from: ethereum.selectedAddress});
-        if (hash == previous_commit.hash) {
-          previous_level = level;
-          break;
-        }
-      }
-      if (previous_level == LEVEL_MAX) {
+      let found = false;
+      let retry = 0;
+      for (let previous_epoch_timestamp = current_epoch_timestamp - 1;
+           previous_epoch_timestamp >= 0 && retry < 3 && !found;
+           previous_epoch_timestamp--) {
+             previous_salt = await getSalt(previous_epoch_timestamp);
+             for (let level = 0; level < LEVEL_MAX; level++) {
+               const hash = await acb_contract.methods.hash(
+                   level, previous_salt).call({from: ethereum.selectedAddress});
+               if (hash == previous_commit.hash) {
+                 previous_level = level;
+                 found = true;
+                 break;
+               }
+             }
+             retry++;
+           }
+      if (!found) {
         const ret = confirm(
             "We couldn't find the oracle level and the salt that match " +
               "your previous vote. Please check that you are using " +
@@ -266,6 +282,7 @@ async function vote() {
         }
       }
     }
+    console.log("previous_salt: ", previous_salt);
     console.log("previous_level: ", previous_level);
 
     const hash = current_level == LEVEL_MAX ? null_hash :

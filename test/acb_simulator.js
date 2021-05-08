@@ -942,7 +942,9 @@ function parameterized_test(accounts,
                                         _proportional_reward_rate);
 
         let old_oracle = _oracle;
-        _oracle = await deployProxy(OracleForTesting_v5, []);
+        _oracle = await deployProxy(
+            OracleForTesting_v5,
+            [(await old_oracle.epoch_timestamp_()).toNumber() + 1]);
         common.print_contract_size(_oracle, "OracleForTesting_v5");
         await _oracle.overrideConstants(_level_max, _reclaim_threshold,
                                         _proportional_reward_rate);
