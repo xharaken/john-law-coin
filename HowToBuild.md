@@ -26,7 +26,7 @@ john-law-coin/
 |     |---- test/               # Smart contracts for testing.
 |
 |---- wallet/           # The wallet implementation.
-|---- docs/             # The whitepaper and documentation.
+|---- docs/             # The whitepaper, documentation and logo images.
 |---- migrations/       # Migration scripts to deploy the smart contracts.
 |---- test/             # Tests and simulators for JohnLawCoin.sol.
 |---- python/           # Tests and simulators for the JohnLawCoin algorithm written in Python (much faster than Truffle).
