@@ -379,7 +379,8 @@ function parameterized_test(accounts,
                     "/" + _metrics.supply_nochange +
                     "/" + _metrics.supply_decreased +
                     " coin_supply=" +
-                    ((await get_coin_supply()) / initial_coin_supply * 100) +
+                    divide_or_zero((await get_coin_supply()) /
+                                   initial_coin_supply * 100) +
                     "% mint=" + _metrics.total_mint +
                     " lost=" + _metrics.total_lost +
                     " bond_supply=" + await get_bond_supply()
@@ -944,7 +945,7 @@ function parameterized_test(accounts,
         let old_oracle = _oracle;
         _oracle = await deployProxy(
             OracleForTesting_v5,
-            [(await old_oracle.epoch_timestamp_()).toNumber() + 1]);
+            [(await old_oracle.phase_id_()).toNumber() + 1]);
         common.print_contract_size(_oracle, "OracleForTesting_v5");
         await _oracle.overrideConstants(_level_max, _reclaim_threshold,
                                         _proportional_reward_rate);

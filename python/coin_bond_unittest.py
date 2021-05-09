@@ -167,11 +167,11 @@ class CoinBondUnitTest(unittest.TestCase):
         self.assertEqual(coin.balance_of(coin.tax_account), 4)
         old_tax_account = coin.tax_account
         coin.set_tax_rate(20)
-        self.assertEqual(old_tax_account, 0)
+        self.assertEqual(coin.balance_of(old_tax_account), 0)
         self.assertEqual(coin.balance_of(coin.tax_account), 4)
         old_tax_account = coin.tax_account
         coin.set_tax_rate(0)
-        self.assertEqual(old_tax_account, 0)
+        self.assertEqual(coin.balance_of(old_tax_account), 0)
         self.assertEqual(coin.balance_of(coin.tax_account), 4)
 
         # JohnLawBond

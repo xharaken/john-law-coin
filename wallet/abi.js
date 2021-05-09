@@ -12,8 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-const ACB_ADDRESS = "0x1306D41E58D2C082b9f886991aCdE516C4d9551E";
-const ETHERSCAN_ADDRESS = "https://etherscan.io/tx/";
+const ACB_ADDRESS_ON_LOCAL = "0x88cD57330A1652748ABe1B67740b961a714dfD08";
+const ACB_ADDRESS_ON_ROPSTEN = "";
+const ACB_ADDRESS_ON_MAINNET = "";
+
+const ETHERSCAN_ADDRESS_ON_LOCAL = "";
+const ETHERSCAN_ADDRESS_ON_ROPSTEN = "https://ropsten.etherscan.io/tx/";
+const ETHERSCAN_ADDRESS_ON_MAINNET = "https://etherscan.io/tx/";
 
 const EXCHANGE_RATES = [0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4];
 const BOND_PRICES = [970, 978, 986, 992, 997, 997, 997, 997, 997];
@@ -158,7 +163,8 @@ const JOHNLAWCOIN_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [],
@@ -171,7 +177,8 @@ const JOHNLAWCOIN_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [],
@@ -184,7 +191,8 @@ const JOHNLAWCOIN_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [
@@ -208,7 +216,8 @@ const JOHNLAWCOIN_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [
@@ -251,7 +260,8 @@ const JOHNLAWCOIN_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [
@@ -312,7 +322,8 @@ const JOHNLAWCOIN_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [],
@@ -325,7 +336,8 @@ const JOHNLAWCOIN_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [],
@@ -338,7 +350,8 @@ const JOHNLAWCOIN_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [],
@@ -358,7 +371,8 @@ const JOHNLAWCOIN_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [],
@@ -371,7 +385,8 @@ const JOHNLAWCOIN_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [],
@@ -384,7 +399,8 @@ const JOHNLAWCOIN_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [],
@@ -397,7 +413,8 @@ const JOHNLAWCOIN_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [
@@ -532,7 +549,8 @@ const JOHNLAWCOIN_ABI = [
         }
       ],
       "stateMutability": "pure",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [
@@ -571,7 +589,7 @@ const JOHNLAWCOIN_ABI = [
       "stateMutability": "nonpayable",
       "type": "function"
     }
-];
+  ];
 
 const JOHNLAWBOND_ABI = [
     {
@@ -654,7 +672,8 @@ const JOHNLAWBOND_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [],
@@ -746,7 +765,8 @@ const JOHNLAWBOND_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [
@@ -765,7 +785,8 @@ const JOHNLAWBOND_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [
@@ -789,7 +810,8 @@ const JOHNLAWBOND_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [
@@ -813,7 +835,8 @@ const JOHNLAWBOND_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [],
@@ -826,7 +849,8 @@ const JOHNLAWBOND_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     }
 ];
 
@@ -837,7 +861,7 @@ const ORACLE_ABI = [
         {
           "indexed": true,
           "internalType": "uint256",
-          "name": "epoch_timestamp",
+          "name": "phase_id",
           "type": "uint256"
         },
         {
@@ -961,7 +985,8 @@ const ORACLE_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [],
@@ -974,7 +999,8 @@ const ORACLE_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [],
@@ -987,20 +1013,8 @@ const ORACLE_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "epoch_timestamp_",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [
@@ -1034,7 +1048,8 @@ const ORACLE_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [],
@@ -1047,7 +1062,22 @@ const ORACLE_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [],
+      "name": "phase_id_",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [],
@@ -1203,7 +1233,8 @@ const ORACLE_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [
@@ -1229,7 +1260,8 @@ const ORACLE_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [
@@ -1268,7 +1300,8 @@ const ORACLE_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [
@@ -1312,7 +1345,8 @@ const ORACLE_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [
@@ -1346,7 +1380,8 @@ const ORACLE_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [
@@ -1375,7 +1410,8 @@ const ORACLE_ABI = [
         }
       ],
       "stateMutability": "pure",
-      "type": "function"
+      "type": "function",
+      "constant": true
     }
 ];
 
@@ -2031,7 +2067,8 @@ const ACB_ABI = [
     },
     {
       "stateMutability": "payable",
-      "type": "fallback"
+      "type": "fallback",
+      "payable": true
     },
     {
       "inputs": [],
@@ -2044,7 +2081,8 @@ const ACB_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [],
@@ -2057,7 +2095,8 @@ const ACB_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [],
@@ -2070,7 +2109,8 @@ const ACB_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [],
@@ -2083,7 +2123,8 @@ const ACB_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [],
@@ -2096,7 +2137,8 @@ const ACB_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [
@@ -2115,7 +2157,8 @@ const ACB_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [
@@ -2134,7 +2177,8 @@ const ACB_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [
@@ -2153,7 +2197,8 @@ const ACB_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [],
@@ -2166,7 +2211,8 @@ const ACB_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [],
@@ -2179,7 +2225,8 @@ const ACB_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [],
@@ -2192,7 +2239,8 @@ const ACB_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [],
@@ -2205,7 +2253,8 @@ const ACB_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [],
@@ -2218,7 +2267,8 @@ const ACB_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [],
@@ -2231,7 +2281,8 @@ const ACB_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [],
@@ -2244,7 +2295,8 @@ const ACB_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [],
@@ -2257,7 +2309,8 @@ const ACB_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [],
@@ -2270,7 +2323,8 @@ const ACB_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [],
@@ -2283,7 +2337,8 @@ const ACB_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [],
@@ -2296,7 +2351,8 @@ const ACB_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [],
@@ -2309,7 +2365,8 @@ const ACB_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [],
@@ -2333,7 +2390,8 @@ const ACB_ABI = [
     },
     {
       "stateMutability": "payable",
-      "type": "receive"
+      "type": "receive",
+      "payable": true
     },
     {
       "inputs": [
@@ -2505,7 +2563,8 @@ const ACB_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     },
     {
       "inputs": [],
@@ -2518,6 +2577,7 @@ const ACB_ABI = [
         }
       ],
       "stateMutability": "view",
-      "type": "function"
+      "type": "function",
+      "constant": true
     }
 ];

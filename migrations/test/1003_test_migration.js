@@ -29,7 +29,7 @@ module.exports = async function (deployer) {
   const logging = await Logging.at(await old_acb.logging_());
   const oracle = await deployProxy(
       Oracle_v5,
-      [(await old_oracle.epoch_timestamp_()).toNumber() + 1]);
+      [(await old_oracle.phase_id_()).toNumber() + 1]);
   const acb = await deployProxy(
       ACB_v5, [coin.address, bond.address, old_oracle.address,
                oracle.address, logging.address,

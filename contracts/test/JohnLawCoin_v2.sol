@@ -361,13 +361,13 @@ contract Oracle_v2 is OwnableUpgradeable {
     uint revealed_level;
     // The phase of this commit entry.
     Phase phase;
-    // The timestamp when this commit entry is created.
-    uint epoch_timestamp;
+    // The phase ID when this commit entry is created.
+    uint phase_id;
 
     bytes32 committed_hash_v2;
     uint deposit_v2;
     uint revealed_level_v2;
-    uint epoch_timestamp_v2;
+    uint phase_id_v2;
   }
 
   // Vote is a struct to count votes for each oracle level.
@@ -424,9 +424,9 @@ contract Oracle_v2 is OwnableUpgradeable {
   // This can be an array of Epochs but is intentionally using a mapping to
   // make the Epoch struct upgradeable.
   mapping (uint => Epoch) public epochs_;
-  uint public epoch_timestamp_;
+  uint public phase_id_;
 
-  uint public epoch_timestamp_v2_;
+  uint public phase_id_v2_;
   
   // Events.
   event CommitEvent(address indexed sender,
@@ -434,12 +434,12 @@ contract Oracle_v2 is OwnableUpgradeable {
   event RevealEvent(address indexed sender,
                     uint revealed_level, uint revealed_salt);
   event ReclaimEvent(address indexed sender, uint deposited, uint rewarded);
-  event AdvancePhaseEvent(uint indexed epoch_timestamp,
+  event AdvancePhaseEvent(uint indexed phase_id,
                           uint minted, uint burned);
 
   function upgrade()
       public onlyOwner {
-    epoch_timestamp_v2_ = epoch_timestamp_;
+    phase_id_v2_ = phase_id_;
     for (uint epoch_index = 0; epoch_index < 3; epoch_index++) {
       epochs_[epoch_index].deposit_account_v2 =
           epochs_[epoch_index].deposit_account;
@@ -480,20 +480,20 @@ contract Oracle_v2 is OwnableUpgradeable {
   function commit_v2(JohnLawCoin_v2 coin, address sender,
                      bytes32 committed_hash, uint deposit)
       public onlyOwner returns (bool) {
-    Epoch storage epoch = epochs_[epoch_timestamp_v2_ % 3];
+    Epoch storage epoch = epochs_[phase_id_v2_ % 3];
     require(epoch.phase_v2 == Phase.COMMIT, "co1");
     if (coin.balanceOf(sender) < deposit) {
       return false;
     }
     // One voter can commit only once per phase.
-    if (epoch.commits[sender].epoch_timestamp == epoch_timestamp_v2_) {
+    if (epoch.commits[sender].phase_id == phase_id_v2_) {
       return false;
     }
 
     // Create a commit entry.
     epoch.commits[sender] = Commit(
-        committed_hash, deposit, LEVEL_MAX, Phase.COMMIT, epoch_timestamp_v2_,
-        committed_hash, deposit, LEVEL_MAX, epoch_timestamp_v2_);
+        committed_hash, deposit, LEVEL_MAX, Phase.COMMIT, phase_id_v2_,
+        committed_hash, deposit, LEVEL_MAX, phase_id_v2_);
     require(epoch.commits[sender].phase == Phase.COMMIT, "co2");
 
     // Move the deposited coins to the deposit account.
@@ -520,12 +520,12 @@ contract Oracle_v2 is OwnableUpgradeable {
   
   function reveal_v2(address sender, uint revealed_level, uint revealed_salt)
       public onlyOwner returns (bool) {
-    Epoch storage epoch = epochs_[(epoch_timestamp_v2_ - 1) % 3];
+    Epoch storage epoch = epochs_[(phase_id_v2_ - 1) % 3];
     require(epoch.phase_v2 == Phase.REVEAL, "rv1");
     if (LEVEL_MAX <= revealed_level) {
       return false;
     }
-    if (epoch.commits[sender].epoch_timestamp != epoch_timestamp_v2_ - 1) {
+    if (epoch.commits[sender].phase_id != phase_id_v2_ - 1) {
       // The corresponding commit was not found.
       return false;
     }
@@ -574,9 +574,9 @@ contract Oracle_v2 is OwnableUpgradeable {
   
   function reclaim_v2(JohnLawCoin_v2 coin, address sender)
       public onlyOwner returns (uint, uint) {
-    Epoch storage epoch = epochs_[(epoch_timestamp_v2_ - 2) % 3];
+    Epoch storage epoch = epochs_[(phase_id_v2_ - 2) % 3];
     require(epoch.phase_v2 == Phase.RECLAIM, "rc1");
-    if (epoch.commits[sender].epoch_timestamp != epoch_timestamp_v2_ - 2){
+    if (epoch.commits[sender].phase_id != phase_id_v2_ - 2){
       // The corresponding commit was not found.
       return (0, 0);
     }
@@ -645,12 +645,12 @@ contract Oracle_v2 is OwnableUpgradeable {
   function advance_v2(JohnLawCoin_v2 coin, uint mint)
       public onlyOwner returns (uint) {
     // Step 1: Move the commit phase to the reveal phase.
-    Epoch storage epoch = epochs_[epoch_timestamp_v2_ % 3];
+    Epoch storage epoch = epochs_[phase_id_v2_ % 3];
     require(epoch.phase_v2 == Phase.COMMIT, "ad1");
     epoch.phase_v2 = Phase.REVEAL;
 
     // Step 2: Move the reveal phase to the reclaim phase.
-    epoch = epochs_[(epoch_timestamp_v2_ - 1) % 3];
+    epoch = epochs_[(phase_id_v2_ - 1) % 3];
     require(epoch.phase_v2 == Phase.REVEAL, "ad2");
 
     // The "truth" level is set to the mode of the weighted majority votes.
@@ -700,7 +700,7 @@ contract Oracle_v2 is OwnableUpgradeable {
     epoch.phase_v2 = Phase.RECLAIM;
 
     // Step 3: Move the reclaim phase to the commit phase.
-    uint epoch_index = (epoch_timestamp_v2_ - 2) % 3;
+    uint epoch_index = (phase_id_v2_ - 2) % 3;
     epoch = epochs_[epoch_index];
     require(epoch.phase_v2 == Phase.RECLAIM, "ad7");
 
@@ -715,7 +715,7 @@ contract Oracle_v2 is OwnableUpgradeable {
     // Initialize the Epoch object for the next commit phase.
     //
     // |epoch.commits_| cannot be cleared due to the restriction of Solidity.
-    // |epoch_timestamp_| ensures the stale commit entries are not misused.
+    // |phase_id_| ensures the stale commit entries are not misused.
     for (uint level = 0; level < LEVEL_MAX; level++) {
       epoch.votes[level] = Vote(0, 0, false, false, false, false, 0, 0);
     }
@@ -732,9 +732,9 @@ contract Oracle_v2 is OwnableUpgradeable {
     epoch.phase_v2 = Phase.COMMIT;
 
     // Advance the phase.
-    epoch_timestamp_v2_ += 1;
+    phase_id_v2_ += 1;
 
-    emit AdvancePhaseEvent(epoch_timestamp_v2_, mint, burned);
+    emit AdvancePhaseEvent(phase_id_v2_, mint, burned);
     return burned;
   }
 
@@ -758,7 +758,7 @@ contract Oracle_v2 is OwnableUpgradeable {
   
   function getModeLevel_v2()
       public onlyOwner view returns (uint) {
-    Epoch storage epoch = epochs_[(epoch_timestamp_v2_ - 1) % 3];
+    Epoch storage epoch = epochs_[(phase_id_v2_ - 1) % 3];
     require(epoch.phase_v2 == Phase.REVEAL, "gm1");
     uint mode_level = LEVEL_MAX;
     uint max_deposit = 0;
@@ -818,7 +818,7 @@ contract Oracle_v2 is OwnableUpgradeable {
     require(0 <= epoch_index && epoch_index <= 2, "gc1");
     Commit memory entry = epochs_[epoch_index].commits[account];
     return (entry.committed_hash, entry.deposit, entry.revealed_level,
-            entry.phase, entry.epoch_timestamp);
+            entry.phase, entry.phase_id);
   }
 
   // Public getter: Return the Epoch object at |epoch_index|.

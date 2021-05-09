@@ -19,8 +19,13 @@ body {
 }
 
 h1 {
-  border-bottom: solid 3px #FFA500;
-  padding-bottom: 6px;
+  font-size: 36px;
+}
+
+hr {
+  background-color: #FFA500;
+  height: 3px;
+  border: 0;
 }
 
 table {
@@ -53,26 +58,26 @@ td {
 .info {
   background: #FFEE99;
   padding: 0.6rem;
-  border-radius: 0.6rem;
+  border-radius: 0.4rem;
 }
 
 .success {
   background: #CCFFCC;
   padding: 1rem;
-  border-radius: 1rem;
+  border-radius: 0.4rem;
 }
 
 .error {
   background: #FFCCCC;
   padding: 1rem;
-  border-radius: 1rem;
+  border-radius: 0.4rem;
 }
 
 .tooltip {
   position: relative;
   cursor: pointer;
   background: #DDDDDD;
-  border-radius: 1rem;
+  border-radius: 0.4rem;
   padding: 0.2rem 0.3rem 0.2rem 0.3rem;
   font-size: 1rem;
   font-weight: normal;
@@ -88,7 +93,7 @@ td {
   white-space: wrap;
   font-size: 1rem;
   background: #DDDDDD;
-  border-radius: 0.2rem;
+  border-radius: 0.4rem;
   transition: 0.3s;
 }
 

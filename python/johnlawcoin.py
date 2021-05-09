@@ -289,7 +289,7 @@ class Oracle:
     # scheme.
     class Commit:
         def __init__(self, committed_hash, deposit,
-                     revealed_level, phase, epoch_timestamp):
+                     revealed_level, phase, phase_id):
             # The committed hash (filled in the commit phase).
             self.committed_hash = committed_hash
             # The amount of deposited coins (filled in the commit phase).
@@ -298,8 +298,8 @@ class Oracle:
             self.revealed_level = revealed_level
             # The phase of this commit entry.
             self.phase = phase
-            # The timestamp when this commit entry is created.
-            self.epoch_timestamp = epoch_timestamp
+            # The phase ID when this commit entry is created.
+            self.phase_id = phase_id
 
     # Vote is a struct to count votes for each oracle level.
     class Vote:
@@ -379,14 +379,13 @@ class Oracle:
         self.epochs[1].phase = Oracle.Phase.RECLAIM
         self.epochs[2].phase = Oracle.Phase.REVEAL
 
-        # |epoch_timestamp_| is a monotonically increasing timestamp (3, 4, 5,
-        # ...). The Epoch object at |epoch_timestamp_ % 3| is in the commit
-        # phase. The Epoch object at |(epoch_timestamp_ - 1) % 3| is in the
-        # reveal phase. The Epoch object at |(epoch_timestamp_ - 2) % 3| is in
-        # the reclaim phase. The timestamp starts with 3 because 0 in the
-        # commit entry is not distinguishable from an uninitialized commit
-        # entry in Solidity.
-        self.epoch_timestamp = 3
+        # |phase_id_| is a monotonically increasing ID (3, 4, 5, ...).
+        # The Epoch object at |phase_id_ % 3| is in the commit phase.
+        # The Epoch object at |(phase_id_ - 1) % 3| is in the reveal phase.
+        # The Epoch object at |(phase_id_ - 2) % 3| is in the reclaim phase.
+        # The phase ID starts with 3 because 0 in the commit entry is not
+        # distinguishable from an uninitialized commit entry in Solidity.
+        self.phase_id = 3
 
     # Test only.
     def override_constants_for_testing(
@@ -421,7 +420,7 @@ class Oracle:
     # ----------------
     # True if the commit succeeded. False otherwise.
     def commit(self, coin, sender, committed_hash, deposit):
-        epoch = self.epochs[self.epoch_timestamp % 3]
+        epoch = self.epochs[self.phase_id % 3]
         assert(epoch.phase == Oracle.Phase.COMMIT)
         assert(deposit >= 0)
         if coin.balance_of(sender) < deposit:
@@ -429,13 +428,13 @@ class Oracle:
 
         # One voter can commit only once per phase.
         if (sender in epoch.commits and
-            epoch.commits[sender].epoch_timestamp == self.epoch_timestamp):
+            epoch.commits[sender].phase_id == self.phase_id):
             return False
 
         # Create a commit entry.
         epoch.commits[sender] = Oracle.Commit(
             committed_hash, deposit, Oracle.LEVEL_MAX,
-            Oracle.Phase.COMMIT, self.epoch_timestamp)
+            Oracle.Phase.COMMIT, self.phase_id)
         assert(epoch.commits[sender].phase == Oracle.Phase.COMMIT)
 
         # Move the deposited coins to the deposit account.
@@ -454,12 +453,12 @@ class Oracle:
     # ----------------
     # True if the reveal succeeded. False otherwise.
     def reveal(self, sender, revealed_level, revealed_salt):
-        epoch = self.epochs[(self.epoch_timestamp - 1) % 3]
+        epoch = self.epochs[(self.phase_id - 1) % 3]
         assert(epoch.phase == Oracle.Phase.REVEAL)
         if revealed_level < 0 or Oracle.LEVEL_MAX <= revealed_level:
             return False
         if (sender not in epoch.commits or
-            epoch.commits[sender].epoch_timestamp != self.epoch_timestamp - 1):
+            epoch.commits[sender].phase_id != self.phase_id - 1):
             # The corresponding commit was not found.
             return False
 
@@ -497,10 +496,10 @@ class Oracle:
     #  - uint: The amount of the reward. This becomes a positive value when the
     #    voter voted for the "truth" oracle level.
     def reclaim(self, coin, sender):
-        epoch = self.epochs[(self.epoch_timestamp - 2) % 3]
+        epoch = self.epochs[(self.phase_id - 2) % 3]
         assert(epoch.phase == Oracle.Phase.RECLAIM)
         if (sender not in epoch.commits or
-            epoch.commits[sender].epoch_timestamp != self.epoch_timestamp - 2):
+            epoch.commits[sender].phase_id != self.phase_id - 2):
             # The corresponding commit was not found.
             return (0, 0)
 
@@ -561,12 +560,12 @@ class Oracle:
         assert(mint >= 0)
 
         # Step 1: Move the commit phase to the reveal phase.
-        epoch = self.epochs[self.epoch_timestamp % 3]
+        epoch = self.epochs[self.phase_id % 3]
         assert(epoch.phase == Oracle.Phase.COMMIT)
         epoch.phase = Oracle.Phase.REVEAL
 
         # Step 2: Move the reveal phase to the reclaim phase.
-        epoch = self.epochs[(self.epoch_timestamp - 1) % 3]
+        epoch = self.epochs[(self.phase_id - 1) % 3]
         assert(epoch.phase == Oracle.Phase.REVEAL)
 
         # The "truth" level is set to the mode of the weighted majority votes.
@@ -611,7 +610,7 @@ class Oracle:
         epoch.phase = Oracle.Phase.RECLAIM
 
         # Step 3: Move the reclaim phase to the commit phase.
-        epoch_index = (self.epoch_timestamp - 2) % 3
+        epoch_index = (self.phase_id - 2) % 3
         epoch = self.epochs[epoch_index]
         assert(epoch.phase == Oracle.Phase.RECLAIM)
 
@@ -625,7 +624,7 @@ class Oracle:
         # Initialize the Epoch object for the next commit phase.
         #
         # |epoch.commits_| cannot be cleared due to the restriction of Solidity.
-        # |epoch_timestamp_| ensures the stale commit entries are not misused.
+        # |phase_id_| ensures the stale commit entries are not misused.
         epoch.votes = []
         for i in range(Oracle.LEVEL_MAX):
             epoch.votes.append(Oracle.Vote(0, 0, False, False))
@@ -640,7 +639,7 @@ class Oracle:
         epoch.phase = Oracle.Phase.COMMIT
 
         # Advance the phase.
-        self.epoch_timestamp += 1
+        self.phase_id += 1
         return burned
 
     # Return the oracle level that got the largest amount of deposited coins.
@@ -657,7 +656,7 @@ class Oracle:
     # If there are multiple modes that have the largest votes, return the
     # smallest mode. If there are no votes, return LEVEL_MAX.
     def get_mode_level(self):
-        epoch = self.epochs[(self.epoch_timestamp - 1) % 3]
+        epoch = self.epochs[(self.phase_id - 1) % 3]
         assert(epoch.phase == Oracle.Phase.REVEAL)
         mode_level = Oracle.LEVEL_MAX
         max_deposit = 0

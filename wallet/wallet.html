@@ -26,8 +26,10 @@
   <script src="wallet.js"></script>
 </head>
 <body>
-  <div><a href=""><img src="logo.png" width="48px"></img></a> [<a href="">Reload</a>] [<a href="https://github.com/xharaken/john-law-coin/blob/main/HowToUseWallet.md" target="_blank" rel="noopener noreferrer">Help</a>] [<a href="https://github.com/xharaken/john-law-coin/issues" target="_blank" rel="noopener noreferrer">Feedback</a>]</div>
-  <h1>JohnLawCoin Wallet</h1>
+  <h1><a href=""><img src="logo.png" width="36px"></img></a> JohnLawCoin Wallet</h1>
+  <hr>
+  <div>[<a href="">Reload</a>] [<a href="https://github.com/xharaken/john-law-coin/blob/main/HowToUseWallet.md" target="_blank" rel="noopener noreferrer">Help</a>] [<a href="https://github.com/xharaken/john-law-coin/issues" target="_blank" rel="noopener noreferrer">Feedback</a>]</div>
+  
   <p id="message_box"></p>
   <h2>Your account info
     <span class="tooltip">?<span class="tooltip-text">
@@ -47,10 +49,11 @@
         <span class="bold">Total coin supply</span>: The total coin supply.<br>
         <span class="bold">Total bond supply</span>: The total bond supply.<br>
         <span class="bold">Bond budget</span>: The current bond budget. If the budget is positive, it indicates the number of bonds the ACB can issue (so you can purchase the bonds). If the budget is negative, it indicates the number of bonds the ACB can redeem regardless of their redemption dates (so you can redeem your bonds regardless of their redemption dates).<br>
-        <span class="bold">Current time</span>: The current timestamp.<br>
+        <span class="bold">Oracle level</span>: The current oracle level.<br>
+        <span class="bold">Current phase ID</span>: The current phase ID.<br>
         <span class="bold">Current phase started</span>: The timestamp when the current phase started. <br>
         <span class="bold">Next phase will start</span>: The timestamp when the next phase will start.<br>
-        <span class="bold">Oracle level</span>: The current oracle level.
+        <span class="bold">Current time</span>: The current timestamp.
   </span></span></h2>
   <div class="info">
     <div id="acb_info_loading">Loading...</div>
@@ -105,7 +108,7 @@
   </div>
   <p><input type="button" value="Redeem as many bonds as possible" id="redeem_bonds_button"></input><span class="disabled" id="redeem_bonds_button_disabled"></span></p>
 
-  <h1></h1>
+  <hr>
   <p>Show <a href=""><span id="advanced_button">advanced information</span></a>.</p>
 
   <div id="advanced_information" style="display:none">

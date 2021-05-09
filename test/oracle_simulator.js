@@ -279,7 +279,7 @@ function parameterized_test(accounts,
       await _oracle.revokeOwnership(_coin.address);
       let args = receipt.logs.filter(
           e => e.event == 'AdvancePhaseEvent')[0].args;
-      assert.isTrue(args.epoch_timestamp >= 3);
+      assert.isTrue(args.phase_id >= 3);
       assert.equal(args.minted, mint);
       assert.equal(args.burned, burned);
     }
