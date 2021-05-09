@@ -200,14 +200,10 @@ async function redeemBonds() {
 }
 
 async function getCommit(phase_id) {
-  const PHASE_ID_THAT_UPGRADED_ORACLE = 0;
-  const OLD_ORACLE_ADDRESS = "...";
-  const OLD_ORACLE_ABI = ORACLE_ABI;
-
   let target_oracle_contract = oracle_contract;
   if (phase_id < PHASE_ID_THAT_UPGRADED_ORACLE) {
     target_oracle_contract =
-          await new web3.eth.Contract(OLD_ORACLE_ABI, OLD_ORACLE_ADDRESS);
+          await new web3.eth.Contract(ORACLE_ABI, OLD_ORACLE_ADDRESS);
   }
   const ret = await target_oracle_contract.methods.getCommit(
       phase_id % 3, ethereum.selectedAddress).call();

@@ -20,6 +20,10 @@ const ETHERSCAN_ADDRESS_ON_LOCAL = "";
 const ETHERSCAN_ADDRESS_ON_ROPSTEN = "https://ropsten.etherscan.io/tx/";
 const ETHERSCAN_ADDRESS_ON_MAINNET = "https://etherscan.io/tx/";
 
+// The ABI of Oracle::getCommit() must not change.
+const PHASE_ID_THAT_UPGRADED_ORACLE = 0;
+const OLD_ORACLE_ADDRESS = "";
+
 const EXCHANGE_RATES = [0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4];
 const BOND_PRICES = [970, 978, 986, 992, 997, 997, 997, 997, 997];
 const TAX_RATES = [30, 20, 12, 5, 0, 0, 0, 0, 0];
