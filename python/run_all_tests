@@ -1,3 +1,5 @@
+#! /usr/bin/sh
+
 # Copyright 2021 Kentaro Hara
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,10 +16,10 @@
 
 cd `dirname $0`
 mkdir -p ../log
-./coin_bond_unittest.py > ../log/coin_bond_unittest.log
-./logging_unittest.py > ../log/logging_unittest.log
-./oracle_unittest.py > ../log/oracle_unittest.log
-./oracle_simulator.py > ../log/oracle_simulator.log
-./acb_unittest.py > ../log/acb_unittest.log
-./acb_simulator.py > ../log/acb_simulator.log
+./coin_bond_unittest.py > ../log/python_coin_bond_unittest.log
+./logging_unittest.py > ../log/python_logging_unittest.log
+./oracle_unittest.py > ../log/python_oracle_unittest.log
+./oracle_simulator.py > ../log/python_oracle_simulator.log
+./acb_unittest.py > ../log/python_acb_unittest.log
+./acb_simulator.py > ../log/python_acb_simulator.log
 
