@@ -36,11 +36,20 @@
 
 const HDWalletProvider = require('@truffle/hdwallet-provider');
 
-const fs = require('fs');
-const mnemonic = fs.readFileSync(__dirname + "/.mnemonic").toString().trim();
-const infuraKey = fs.readFileSync(__dirname + "/.infuraKey").toString().trim();
-const ropstenEndPoint =
-      fs.readFileSync(__dirname + "/.ropstenEndPoint").toString().trim();
+let mnemonic;
+let infuraKey;
+let ropstenEndPoint;
+try {
+  const fs = require('fs');
+  mnemonic = fs.readFileSync(__dirname + "/.mnemonic").toString().trim();
+  infuraKey = fs.readFileSync(__dirname + "/.infuraKey").toString().trim();
+  ropstenEndPoint =
+    fs.readFileSync(__dirname + "/.ropstenEndPoint").toString().trim();
+} catch (e) {
+  mnemonic = "";
+  infuraKey = "";
+  ropstenEndPoint = "";
+}
 
 module.exports = {
   /**
