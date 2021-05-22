@@ -401,7 +401,7 @@ function parameterized_test(accounts,
         if (0 <= oracle_level && oracle_level < _level_max) {
           tax_rate = _level_to_tax_rate[oracle_level];
         }
-        let tax = parseInt(transfer * tax_rate / 100);
+        let tax = Math.floor(transfer * tax_rate / 100);
         let balance_sender = await get_balance(sender.address);
         let balance_receiver = await get_balance(receiver.address);
         let tax_account = await _coin.tax_account_();
@@ -441,7 +441,7 @@ function parameterized_test(accounts,
           bond_price = _level_to_bond_price[oracle_level];
         }
         let count = Math.min(
-            bond_budget, parseInt(0.3 * voter.balance / bond_price));
+            bond_budget, Math.floor(0.3 * voter.balance / bond_price));
         if (count <= 0) {
           continue;
         }
@@ -611,16 +611,16 @@ function parameterized_test(accounts,
       let bond_supply = await get_bond_supply();
       let delta = 0;
       if (mode_level != _level_max) {
-        delta = parseInt(coin_supply *
+        delta = Math.floor(coin_supply *
                            (_level_to_exchange_rate[mode_level] - 10) / 10);
-        delta = parseInt(delta * _damping_factor / 100);
+        delta = Math.floor(delta * _damping_factor / 100);
       }
 
       let mint = 0;
       let redeemable_bonds = 0;
       let issued_bonds = 0;
       if (delta >= 0) {
-        let necessary_bonds = parseInt(delta / _bond_redemption_price);
+        let necessary_bonds = Math.floor(delta / _bond_redemption_price);
         if (necessary_bonds <= bond_supply) {
           redeemable_bonds = necessary_bonds;
         } else {
@@ -629,7 +629,7 @@ function parameterized_test(accounts,
         }
       } else {
         assert.isTrue(mode_level != _level_max);
-        issued_bonds = parseInt(-delta / _level_to_bond_price[mode_level]);
+        issued_bonds = Math.floor(-delta / _level_to_bond_price[mode_level]);
       }
 
       let target_level = randint(0, _level_max - 1);
@@ -668,7 +668,7 @@ function parameterized_test(accounts,
         let committed_hash = await _acb.hash(
             _voters[i].committed_level[current],
             _voters[i].committed_salt[current], {from: _voters[i].address});
-        _voters[i].deposit[current] = parseInt(
+        _voters[i].deposit[current] = Math.floor(
             _voters[i].balance * _deposit_rate / 100);
 
         _voters[i].revealed[prev] = true;
@@ -719,12 +719,12 @@ function parameterized_test(accounts,
             mode_level == _voters[i].revealed_level[prev_prev]) {
           let proportional_reward = 0;
           if (revealed_deposits[mode_level] > 0) {
-            proportional_reward = parseInt(
+            proportional_reward = Math.floor(
                 _proportional_reward_rate * reward_total *
                   _voters[i].deposit[prev_prev] /
                   (100 * revealed_deposits[mode_level]));
           }
-          let constant_reward = parseInt(
+          let constant_reward = Math.floor(
               (100 - _proportional_reward_rate) * reward_total /
                 (100 * revealed_counts[mode_level]));
           reward = proportional_reward + constant_reward;
@@ -1076,5 +1076,5 @@ function divide_or_zero(a, b) {
   if (b == 0) {
     return 0;
   }
-  return parseInt(a / b);
+  return Math.floor(a / b);
 }

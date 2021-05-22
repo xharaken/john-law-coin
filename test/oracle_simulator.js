@@ -205,11 +205,11 @@ function parameterized_test(accounts,
                voters[i].revealed_level == mode_level)) {
             assert.notEqual(mode_level, _level_max);
             if (deposits[mode_level] > 0) {
-              reward += parseInt(
+              reward += Math.floor(
                   (_proportional_reward_rate * reward_total *
                    voters[i].deposit) / (100 * deposits[mode_level]));
             }
-            reward += parseInt(
+            reward += Math.floor(
                 ((100 - _proportional_reward_rate) * reward_total) /
                   (100 * counts[mode_level]));
             reclaimed = voters[i].deposit

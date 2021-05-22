@@ -2185,10 +2185,10 @@ function parameterized_test(accounts,
     function _reward(reward_total, count) {
       let proportional_reward = 0;
       if (_deposit > 0) {
-        proportional_reward = parseInt(
+        proportional_reward = Math.floor(
             (_proportional_reward_rate * reward_total) / (100 * count));
       }
-      constant_reward = parseInt(
+      constant_reward = Math.floor(
           ((100 - _proportional_reward_rate) * reward_total) /
             (100 * count));
       return proportional_reward + constant_reward;
