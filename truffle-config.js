@@ -37,6 +37,8 @@
 const HDWalletProvider = require('@truffle/hdwallet-provider');
 
 const fs = require('fs');
+process.chdir(__dirname);
+console.log(__dirname);
 const mnemonic = fs.readFileSync(".mnemonic").toString().trim();
 const infuraKey = fs.readFileSync(".infuraKey").toString().trim();
 const ropstenEndPoint = fs.readFileSync(".ropstenEndPoint").toString().trim();
