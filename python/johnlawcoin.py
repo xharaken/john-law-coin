@@ -1052,7 +1052,6 @@ class ACB:
             phase_updated = True
             self.current_phase_start = timestamp
 
-            mint = 0
             delta = 0
             tax_rate = 0
             self.oracle_level = self.oracle.get_mode_level()
@@ -1075,11 +1074,11 @@ class ACB:
                 # multiply the damping factor.
                 delta = int(delta * ACB.DAMPING_FACTOR / 100)
 
-                # Increase or decrease the total coin supply.
-                mint = self._control_supply(delta)
-
                 # Translate the oracle level to the tax rate.
                 tax_rate = ACB.LEVEL_TO_TAX_RATE[self.oracle_level]
+
+            # Increase or decrease the total coin supply.
+            mint = self._control_supply(delta)
 
             # Burn the tax. This is fine because the purpose of the tax is to
             # decrease the total coin supply.

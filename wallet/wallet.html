@@ -28,7 +28,7 @@
 <body>
   <h1><a href=""><img src="/docs/logo.png" width="48px"></img></a> JohnLawCoin Wallet</h1>
   <hr>
-  <div>[<a href="">Reload</a>] [<a href="/HowToUseWallet.md" target="_blank" rel="noopener noreferrer">Help</a>] [<a href="https://github.com/xharaken/john-law-coin/issues" target="_blank" rel="noopener noreferrer">Feedback</a>]</div>
+  <div>[<a href="">Reload</a>] [<a href="https://github.com/xharaken/john-law-coin/blob/main/HowToUseWallet.md" target="_blank" rel="noopener noreferrer">Help</a>] [<a href="https://github.com/xharaken/john-law-coin/issues" target="_blank" rel="noopener noreferrer">Feedback</a>]</div>
   
   <p id="message_box"></p>
   <h2>Your account info
@@ -39,7 +39,6 @@
         <span class="bold">Voted</span>: Whether you have voted in the current phase. You can vote only once per phase.
   </span></span></h2>
   <div class="info">
-    <div id="account_info_loading">Loading...</div>
     <div id="account_info"></div>
   </div>
 
@@ -56,7 +55,6 @@
         <span class="bold">Current time</span>: The current timestamp.
   </span></span></h2>
   <div class="info">
-    <div id="acb_info_loading">Loading...</div>
     <div id="acb_info"></div>
   </div>
 
@@ -72,7 +70,7 @@
   <h2>Vote
     <span class="tooltip">?<span class="tooltip-text">
         Look up a real-world currency exchanger and choose the JLC <=> USD exchange rate at the point when the current phase started. If no currency exchanger supports the JLC <=> USD conversion yet, choose the oracle level 5.<br>
-            As a result of the voting, 10% of your coin balance is deposited to the ACB. The deposited coins will be returned to your wallet with some reward later as long as you vote for a correct exchange rate every phase. See <a href="/HowToUseWallet.md">help</a> to learn the mechanism more.<br>
+            As a result of the voting, 10% of your coin balance is deposited to the ACB. The deposited coins will be returned to your wallet with some reward later as long as you vote for a correct exchange rate every phase. See <a href="https://github.com/xharaken/john-law-coin/blob/main/HowToUseWallet.md" target="_blank" rel="noopener noreferrer">help</a> to learn the mechanism more.<br>
         <span class="italic">[This operation consumes some ETH as transaction fee.]</span>
   </span></span></h2>
   <p>Current exchange rate: <select name="vote_oracle_level" id="vote_oracle_level" size="1">
@@ -103,7 +101,6 @@
         <span class="italic">[This operation consumes some ETH as transaction fee.]</span>
   </span></span></h2>
   <div class="info">
-    <div id="bond_list_loading">Loading...</div>
     <div id="bond_list"></div>
   </div>
   <p><input type="button" value="Redeem as many bonds as possible" id="redeem_bonds_button"></input><span class="disabled" id="redeem_bonds_button_disabled"></span></p>
@@ -118,7 +115,6 @@
         This shows the internal stats of the Oracle contract.
   </span></span></h2>
   <div class="info">
-    <div id="oracle_status_loading">Loading...</div>
     <div id="oracle_status"></div>
   </div>
 
@@ -127,7 +123,6 @@
         This shows the internal stats of the Logging contract.
   </span></span></h2>
   <div class="info">
-    <div id="logging_status_loading">Loading...</div>
     <div id="logging_status"></div>
   </div>
 

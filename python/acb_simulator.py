@@ -686,7 +686,7 @@ class ACBSimulator(unittest.TestCase):
             if not commit_observed:
                 self.assertEqual(acb.bond.total_supply, bond_supply)
                 if mode_level == Oracle.LEVEL_MAX:
-                    self.assertEqual(acb.bond_budget, bond_budget)
+                    self.assertEqual(acb.bond_budget, 0)
                 elif delta >= 0:
                     self.assertEqual(acb.bond_budget, -redeemable_bonds)
                 else:

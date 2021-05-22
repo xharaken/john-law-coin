@@ -770,7 +770,7 @@ function parameterized_test(accounts,
         if (commit_observed == false) {
           assert.equal(await get_bond_supply(), bond_supply);
           if (mode_level == _level_max) {
-            assert.equal(await _acb.bond_budget_(), bond_budget);
+            assert.equal(await _acb.bond_budget_(), 0);
           } else if (delta >= 0) {
             assert.equal(await _acb.bond_budget_(), -redeemable_bonds);
           } else {

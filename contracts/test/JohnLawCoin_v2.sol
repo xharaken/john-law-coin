@@ -1283,7 +1283,6 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
       result.phase_updated = true;
       current_phase_start_ = getTimestamp();
       
-      uint mint = 0;
       int delta = 0;
       uint tax_rate = 0;
       oracle_level_ = oracle_v2_.getModeLevel();
@@ -1306,12 +1305,12 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
         // multiply the damping factor.
         delta = delta * int(DAMPING_FACTOR) / 100;
 
-        // Increase or decrease the total coin supply.
-        mint = _controlSupply(delta);
-
         // Translate the oracle level to the tax rate.
         tax_rate = LEVEL_TO_TAX_RATE[oracle_level_];
       }
+
+      // Increase or decrease the total coin supply.
+      uint mint = _controlSupply(delta);
 
       // Burn the tax. This is fine because the purpose of the tax is to
       // decrease the total coin supply.
