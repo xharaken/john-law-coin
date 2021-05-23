@@ -733,6 +733,7 @@ contract Oracle_v2 is OwnableUpgradeable {
 
     // Advance the phase.
     phase_id_v2_ += 1;
+    phase_id_ += 1;
 
     emit AdvancePhaseEvent(phase_id_v2_, mint, burned);
     return burned;
@@ -1198,7 +1199,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
 
   // Deprecate the ACB. Only the owner can call this method.
   function deprecate()
-      public whenNotPaused onlyOwner {
+      public onlyOwner {
     coin_v2_.transferOwnership(msg.sender);
     bond_v2_.transferOwnership(msg.sender);
     oracle_v2_.transferOwnership(msg.sender);
@@ -1278,10 +1279,11 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
     VoteResult memory result;
     
     result.phase_updated = false;
-    if (getTimestamp() >= current_phase_start_ + PHASE_DURATION) {
+    if (getTimestamp() >= current_phase_start_v2_ + PHASE_DURATION) {
       // Start a new phase.
       result.phase_updated = true;
-      current_phase_start_ = getTimestamp();
+      current_phase_start_v2_ = getTimestamp();
+      current_phase_start_ = current_phase_start_v2_;
       
       int delta = 0;
       uint tax_rate = 0;
@@ -1327,7 +1329,8 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
       
       logging_v2_.phaseUpdated(mint, burned, delta, bond_budget_,
                                coin_v2_.totalSupply(), bond_v2_.totalSupply(),
-                               oracle_level_, current_phase_start_, burned_tax);
+                               oracle_level_, current_phase_start_v2_,
+                               burned_tax);
     }
     
     coin_v2_.transferOwnership(address(oracle_v2_));

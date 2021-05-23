@@ -11,6 +11,8 @@ $ sudo apt-get install nodejs npm
 $ sudo npm install -g truffle
 $ sudo npm install @openzeppelin/contracts
 $ sudo npm install @openzeppelin/contracts-upgradeable
+$ sudo npm install @truffle/hdwallet-provider
+$ sudo npm install dotenv --save
 $ sudo npm install -g ganache-cli
 $ sudo npm init -y
 ```

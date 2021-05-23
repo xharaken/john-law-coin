@@ -34,22 +34,9 @@
  *
  */
 
+require('dotenv').config();
 const HDWalletProvider = require('@truffle/hdwallet-provider');
-
-let mnemonic;
-let infuraKey;
-let ropstenEndPoint;
-try {
-  const fs = require('fs');
-  mnemonic = fs.readFileSync(__dirname + "/.mnemonic").toString().trim();
-  infuraKey = fs.readFileSync(__dirname + "/.infuraKey").toString().trim();
-  ropstenEndPoint =
-    fs.readFileSync(__dirname + "/.ropstenEndPoint").toString().trim();
-} catch (e) {
-  mnemonic = "";
-  infuraKey = "";
-  ropstenEndPoint = "";
-}
+const { API_URL, MNEMONIC } = process.env;
 
 module.exports = {
   /**
@@ -86,7 +73,7 @@ module.exports = {
     // Useful for deploying to a public network.
     // NB: It's important to wrap the provider as a function.
     ropsten: {
-      provider: () => new HDWalletProvider(mnemonic, ropstenEndPoint),
+      provider: () => new HDWalletProvider(MNEMONIC, API_URL),
       from: '0x65D0E8a5311A838EF6bE65A673e9F22573c3Deff',
       websocket: true,
       networkCheckTimeout: 1000000,

@@ -596,7 +596,7 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
 
   // Deprecate the ACB. Only the owner can call this method.
   function deprecate()
-      public whenNotPaused onlyOwner {
+      public onlyOwner {
     coin_v2_.transferOwnership(msg.sender);
     bond_v2_.transferOwnership(msg.sender);
     oracle_v3_.transferOwnership(msg.sender);

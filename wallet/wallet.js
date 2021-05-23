@@ -416,6 +416,7 @@ async function reloadInfo() {
     const next_phase_id =
           next_phase_start_ms < Date.now() ?
           phase_id + 1 : phase_id;
+    console.log(next_phase_id);
     const next_commit = await getCommit(next_phase_id);
     if (!next_commit.voted) {
       $("vote_button").disabled = false;
@@ -737,6 +738,7 @@ async function drawChart() {
 }
 
 function showLoading(div, message) {
+  div.innerHTML = "";
   div.appendChild(document.createTextNode(message));
   const dots = document.createTextNode("");
   div.appendChild(dots);

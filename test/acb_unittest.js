@@ -3207,10 +3207,6 @@ function parameterized_test(accounts,
       await _acb.controlSupply(0, {from: accounts[1]});
     }, "Pausable");
 
-    await should_throw(async () => {
-      await _acb.deprecate({from: accounts[1]});
-    }, "Pausable");
-
     await _acb.unpause({from: accounts[1]});
     await should_throw(async () => {
       await _acb.unpause({from: accounts[1]});
