@@ -784,8 +784,7 @@ async function showTransactionSuccessMessage(message, receipt) {
         "<span class='bold'>Transaction succeeded</span>:<br>" + message +
         "<br><br>" +
         "It will take some time to commit the transaction. " +
-        "<a href=''>Reload the wallet</a> and " +
-        "check <a href='" + etherscan_url +
+        "Check <a href='" + etherscan_url +
         "' target='_blank' rel='noopener noreferrer'>EtherScan</a> " +
         "in a few minutes.<br>";
   showMessage(div, html);
