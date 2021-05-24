@@ -3092,11 +3092,11 @@ function parameterized_test(accounts,
 
     await should_throw(async () => {
       await _acb.unpause();
-    }, "Pausable");
+    }, "Ownable");
 
     await should_throw(async () => {
       await _acb.unpause({from: accounts[2]});
-    }, "Pausable");
+    }, "Ownable");
 
     await should_throw(async () => {
       await _acb.deprecate();
@@ -3182,9 +3182,7 @@ function parameterized_test(accounts,
 
     // Pausable
     await _acb.pause({from: accounts[1]});
-    await should_throw(async () => {
-      await _acb.pause({from: accounts[1]});
-    }, "Pausable");
+    await _acb.pause({from: accounts[1]});
 
     await should_throw(async () => {
       await _acb.vote(await _acb.hash(0, 0, {from: accounts[1]}),
@@ -3208,9 +3206,7 @@ function parameterized_test(accounts,
     }, "Pausable");
 
     await _acb.unpause({from: accounts[1]});
-    await should_throw(async () => {
-      await _acb.unpause({from: accounts[1]});
-    }, "Pausable");
+    await _acb.unpause({from: accounts[1]});
 
     // deprecate
     await _acb.deprecate({from: accounts[1]});

@@ -132,13 +132,17 @@ contract JohnLawCoin_v2 is ERC20PausableUpgradeable, OwnableUpgradeable {
   // Pause the contract. Only the ACB can call this method.
   function pause()
       public onlyOwner {
-    _pause();
+    if (!paused()) {
+      _pause();
+    }
   }
   
   // Unpause the contract. Only the ACB can call this method.
   function unpause()
       public onlyOwner {
-    _unpause();
+    if (paused()) {
+      _unpause();
+    }
   }
 
   // Override decimals.
@@ -1208,15 +1212,19 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
 
   // Pause the ACB in emergency cases. Only the owner can call this method.
   function pause()
-      public whenNotPaused onlyOwner {
-    _pause();
+      public onlyOwner {
+    if (!paused()) {
+      _pause();
+    }
     coin_v2_.pause();
   }
 
   // Unpause the ACB. Only the owner can call this method.
   function unpause()
-      public whenPaused onlyOwner {
-    _unpause();
+      public onlyOwner {
+    if (paused()) {
+      _unpause();
+    }
     coin_v2_.unpause();
   }
 

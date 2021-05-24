@@ -40,17 +40,11 @@ window.onload = async () => {
     ethereum.on("chainChanged", (chainId) => {
       window.location.reload();
     });
-    const chainId = await ethereum.request({ method: 'eth_chainId' });
-    console.log("chainId: ", chainId);
-    let acb_address = ACB_ADDRESS_ON_LOCAL;
-    if (chainId == 1) {
-      acb_address = ACB_ADDRESS_ON_MAINNET;
-    } else if (chainId == 3) {
-      acb_address = ACB_ADDRESS_ON_ROPSTEN;
-    }
     
     web3 = new Web3(window.ethereum);
     console.log("web3: ", web3);
+    
+    const acb_address = await getACBAddress();
     acb_contract = await new web3.eth.Contract(ACB_ABI, acb_address);
     console.log("ACB contract: ", acb_contract);
     const oracle = await acb_contract.methods.oracle_().call();
@@ -75,6 +69,7 @@ window.onload = async () => {
   $("purchase_bonds_button").addEventListener("click", purchaseBonds);
   $("redeem_bonds_button").addEventListener("click", redeemBonds);
   $("vote_button").addEventListener("click", vote);
+  $("donate_button").addEventListener("click", donate);
   await showAdvancedInfo();
   $("advanced_button").addEventListener("click", async (event) => {
     $("advanced_information").style.display = "block";
@@ -109,7 +104,7 @@ async function sendCoins() {
     const receipt = await promise;
     console.log("receipt: ", receipt);
     if (!receipt.events.TransferEvent) {
-      throw null;
+      throw receipt;
     }
     const ret = receipt.events.TransferEvent.returnValues;
     const message = "Sent " + ret.amount + " coins to " + ret.to + ". " +
@@ -159,7 +154,7 @@ async function purchaseBonds() {
     const receipt = await promise;
     console.log("receipt: ", receipt);
     if (!receipt.events.PurchaseBondsEvent) {
-      throw null;
+      throw receipt;
     }
     const ret = receipt.events.PurchaseBondsEvent.returnValues;
     const message = "Purchased " + ret.count +
@@ -213,7 +208,7 @@ async function redeemBonds() {
     const receipt = await promise;
     console.log("receipt: ", receipt);
     if (!receipt.events.RedeemBondsEvent) {
-      throw null;
+      throw receipt;
     }
     const ret = receipt.events.RedeemBondsEvent.returnValues;
     let message = "Redeemed " + ret.count + " bonds.";
@@ -319,7 +314,7 @@ async function vote() {
     }
     console.log("previous_salt: ", previous_salt);
     console.log("previous_level: ", previous_level);
-    
+
     const hash = current_level == LEVEL_MAX ? null_hash :
           await acb_contract.methods.hash(current_level, current_salt).call(
             {from: ethereum.selectedAddress});
@@ -330,7 +325,7 @@ async function vote() {
     const receipt = await promise;
     console.log("receipt: ", receipt);
     if (!receipt.events.VoteEvent) {
-      throw null;
+      throw receipt;
     }
     const ret = receipt.events.VoteEvent.returnValues;
     const message =
@@ -349,7 +344,37 @@ async function vote() {
   }
 }
 
+async function donate() {
+  try {
+    const amount = $("donate_amount").value;
+    if (amount <= 0) {
+      await showErrorMessage(
+        "You need to donate at least one wei.", null);
+      return;
+    }
+    
+    const acb_address = await getACBAddress();
+    const promise = web3.eth.sendTransaction(
+      {from: ethereum.selectedAddress, to: acb_address, value: amount});
+    showProcessingMessage();
+    const receipt = await promise;
+    console.log("receipt: ", receipt);
+    const message = "Donated " + amount + " weis. Thank you very much!!";
+    await showTransactionSuccessMessage(message, receipt);
+  } catch (error) {
+    await showErrorMessage("Couldn't donate.", error);
+    return;
+  } 
+}
+
 async function reloadInfo() {
+  if (!ethereum.selectedAddress) {
+    await showErrorMessage(
+      "Please click the Metamask extension and log in. Then reload the page.",
+      null);
+    return;
+  }
+  
   try {
     let html = "";
     
@@ -416,7 +441,7 @@ async function reloadInfo() {
     const next_phase_id =
           next_phase_start_ms < Date.now() ?
           phase_id + 1 : phase_id;
-    console.log(next_phase_id);
+    console.log("next_phase_id:", next_phase_id);
     const next_commit = await getCommit(next_phase_id);
     if (!next_commit.voted) {
       $("vote_button").disabled = false;
@@ -768,26 +793,18 @@ function showProcessingMessage() {
 }
 
 async function showTransactionSuccessMessage(message, receipt) {
-  const chainId = await ethereum.request({ method: 'eth_chainId' });
-  console.log("chainId: ", chainId);
-  let etherscan_address = ETHERSCAN_ADDRESS_ON_LOCAL;
-  if (chainId == 1) {
-    etherscan_address = ETHERSCAN_ADDRESS_ON_MAINNET;
-  } else if (chainId == 3) {
-    etherscan_address = ETHERSCAN_ADDRESS_ON_ROPSTEN;
-  }
-  const etherscan_url = etherscan_address + receipt.transactionHash;
-  
+  const etherscan_url = await getEtherScanURL();  
   let div = $("message_box");
   div.className = "success";
   const html =
         "<span class='bold'>Transaction succeeded</span>:<br>" + message +
         "<br><br>" +
         "It will take some time to commit the transaction. " +
-        "Check <a href='" + etherscan_url +
+        "Check <a href='" + etherscan_url + receipt.transactionHash +
         "' target='_blank' rel='noopener noreferrer'>EtherScan</a> " +
         "in a few minutes.<br>";
   showMessage(div, html);
+  document.body.scrollIntoView({behavior: "smooth", block: "start"});
 
   setTimeout(async () => {
     await reloadInfo();
@@ -796,11 +813,48 @@ async function showTransactionSuccessMessage(message, receipt) {
 
 async function showErrorMessage(message, object) {
   console.log("error: ", object);
+  const etherscan_url = await getEtherScanURL();  
   let div = $("message_box");
   div.className = "error";
   div.innerHTML = "<span class='bold'>Error</span>: " + message +
-    (object ? "<br><br>Details: " + JSON.stringify(object) : "");
+    (object ? "<br><br>Details: " +
+     (object.transactionHash ?
+      " Check the transaction in " +
+      "<a href='" + etherscan_url + object.transactionHash +
+      "' target='_blank' rel='noopener noreferrer'>EtherScan</a> " +
+      "in a few minutes. The transaction may be marked as success but " +
+      "it couldn't fulfill your order." : "") +
+     "<br>" + object.toString() +
+     "<br>" + JSON.stringify(object) : "");
   document.body.scrollIntoView({behavior: "smooth", block: "start"});
+
+  setTimeout(async () => {
+    await reloadInfo();
+  }, 3000);
+}
+
+async function getEtherScanURL() {
+  const chainId = await ethereum.request({ method: 'eth_chainId' });
+  console.log("chainId: ", chainId);
+  let etherscan_address = "";
+  if (chainId == 1) {
+    etherscan_address = ETHERSCAN_ADDRESS_ON_MAINNET;
+  } else if (chainId == 3) {
+    etherscan_address = ETHERSCAN_ADDRESS_ON_ROPSTEN;
+  }
+  return etherscan_address;
+}
+
+async function getACBAddress() {
+  const chainId = await ethereum.request({ method: 'eth_chainId' });
+  console.log("chainId: ", chainId);
+  let acb_address = ACB_ADDRESS_ON_LOCAL;
+  if (chainId == 1) {
+    acb_address = ACB_ADDRESS_ON_MAINNET;
+  } else if (chainId == 3) {
+    acb_address = ACB_ADDRESS_ON_ROPSTEN;
+  }
+  return acb_address;
 }
 
 function getDateString(timestamp) {

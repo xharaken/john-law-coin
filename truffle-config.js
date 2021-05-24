@@ -75,6 +75,7 @@ module.exports = {
     ropsten: {
       provider: () => new HDWalletProvider(MNEMONIC, API_URL),
       from: '0x65D0E8a5311A838EF6bE65A673e9F22573c3Deff',
+      websocket: true,
       networkCheckTimeout: 1000000,
       network_id: 3,       // Ropsten's id
       gas: 5500000,        // Ropsten has a lower block limit than mainnet

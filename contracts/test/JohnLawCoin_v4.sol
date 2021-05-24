@@ -66,8 +66,8 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
   // Attributes. See the comment in initialize().
   JohnLawCoin_v2 public coin_;
   JohnLawBond_v2 public bond_;
-  Oracle_v2 public oracle_;
-  Logging public logging_;
+  Oracle_v3 public oracle_;
+  Logging_v2 public logging_;
   int public bond_budget_;
   uint public oracle_level_;
   uint public current_phase_start_;
@@ -94,7 +94,7 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
   // |oracle|: The Oracle contract.
   // |logging|: The Logging contract.
   function initialize(JohnLawCoin_v2 coin, JohnLawBond_v2 bond,
-                      Oracle_v2 oracle, Logging logging,
+                      Oracle_v3 oracle, Logging_v2 logging,
                       int bond_budget, uint oracle_level,
                       uint current_phase_start)
       public initializer {
@@ -227,15 +227,19 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
 
   // Pause the ACB in emergency cases. Only the owner can call this method.
   function pause()
-      public whenNotPaused onlyOwner {
-    _pause();
+      public onlyOwner {
+    if (!paused()) {
+      _pause();
+    }
     coin_.pause();
   }
 
   // Unpause the ACB. Only the owner can call this method.
   function unpause()
-      public whenPaused onlyOwner {
-    _unpause();
+      public onlyOwner {
+    if (paused()) {
+      _unpause();
+    }
     coin_.unpause();
   }
 
