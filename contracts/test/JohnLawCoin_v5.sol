@@ -149,9 +149,9 @@ contract Oracle_v5 is OwnableUpgradeable {
               "reward_v5", epoch_index, block.number)))));
       epochs_[epoch_index].reward_total = 0;
     }
-    epochs_[0].phase = Phase.COMMIT;
-    epochs_[1].phase = Phase.RECLAIM;
-    epochs_[2].phase = Phase.REVEAL;
+    epochs_[phase_id % 3].phase = Phase.COMMIT;
+    epochs_[(phase_id + 1) % 3].phase = Phase.RECLAIM;
+    epochs_[(phase_id + 2) % 3].phase = Phase.REVEAL;
 
     // |phase_id_| is a monotonically increasing ID (3, 4, 5, ...).
     // The Epoch object at |phase_id_ % 3| is in the commit phase.

@@ -13,15 +13,15 @@
 // limitations under the License.
 
 const ACB_ADDRESS_ON_LOCAL = "0x88cD57330A1652748ABe1B67740b961a714dfD08";
-const ACB_ADDRESS_ON_ROPSTEN = "";
+const ACB_ADDRESS_ON_ROPSTEN = "0x41C7c78cDEcc2937B72d4a83b9b4a453B756d341";
 const ACB_ADDRESS_ON_MAINNET = "";
 
 const ETHERSCAN_ADDRESS_ON_ROPSTEN = "https://ropsten.etherscan.io/tx/";
 const ETHERSCAN_ADDRESS_ON_MAINNET = "https://etherscan.io/tx/";
 
 // The ABI of Oracle::getCommit() must not change.
-const PHASE_ID_THAT_UPGRADED_ORACLE = 35;
-const OLD_ORACLE_ADDRESS = "0x8C1c35BabCfeb9A3B2788aF352D65c1814742fd9";
+const PHASE_ID_THAT_UPGRADED_ORACLE = 41;
+const OLD_ORACLE_ADDRESS = "0x1ec8353f6cD52052aEF60880D41F721c75Ce48B9";
 
 const EXCHANGE_RATES = [0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4];
 const BOND_PRICES = [970, 978, 986, 992, 997, 997, 997, 997, 997];

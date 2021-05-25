@@ -827,10 +827,6 @@ async function showErrorMessage(message, object) {
      "<br>" + object.toString() +
      "<br>" + JSON.stringify(object) : "");
   document.body.scrollIntoView({behavior: "smooth", block: "start"});
-
-  setTimeout(async () => {
-    await reloadInfo();
-  }, 3000);
 }
 
 async function getEtherScanURL() {
