@@ -1,19 +1,10 @@
-// Copyright 2021 Kentaro Hara
+// Copyright (c) 2021 Kentaro Hara
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// This software is released under the MIT License.
+// http://opensource.org/licenses/mit-license.php
 
 const ACB_ADDRESS_ON_LOCAL = "0x88cD57330A1652748ABe1B67740b961a714dfD08";
-const ACB_ADDRESS_ON_ROPSTEN = "0x41C7c78cDEcc2937B72d4a83b9b4a453B756d341";
+const ACB_ADDRESS_ON_ROPSTEN = "0xfD80254B359a72F4bC2E2cE7c21BE32D6f71ae3E";
 const ACB_ADDRESS_ON_MAINNET = "";
 
 const ETHERSCAN_ADDRESS_ON_ROPSTEN = "https://ropsten.etherscan.io/tx/";

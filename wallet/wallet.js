@@ -1,16 +1,7 @@
-// Copyright 2021 Kentaro Hara
+// Copyright (c) 2021 Kentaro Hara
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    https://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// This software is released under the MIT License.
+// http://opensource.org/licenses/mit-license.php
 
 var acb_contract = null;
 var oracle_contract = null;
@@ -69,7 +60,9 @@ window.onload = async () => {
   $("purchase_bonds_button").addEventListener("click", purchaseBonds);
   $("redeem_bonds_button").addEventListener("click", redeemBonds);
   $("vote_button").addEventListener("click", vote);
-  $("donate_button").addEventListener("click", donate);
+  $("donate_button_001").addEventListener("click", donate001);
+  $("donate_button_01").addEventListener("click", donate01);
+  $("donate_button_1").addEventListener("click", donate1);
   await showAdvancedInfo();
   $("advanced_button").addEventListener("click", async (event) => {
     $("advanced_information").style.display = "block";
@@ -344,15 +337,21 @@ async function vote() {
   }
 }
 
-async function donate() {
+async function donate001() {
+  await donate("0.01");
+}
+
+async function donate01() {
+  await donate("0.1");
+}
+
+async function donate1() {
+  await donate("1");
+}
+
+async function donate(eth) {
   try {
-    const amount = $("donate_amount").value;
-    if (amount <= 0) {
-      await showErrorMessage(
-        "You need to donate at least one wei.", null);
-      return;
-    }
-    
+    const amount = web3.utils.toWei(eth);
     const acb_address = await getACBAddress();
     const promise = web3.eth.sendTransaction(
       {from: ethereum.selectedAddress, to: acb_address, value: amount});
