@@ -1,5 +1,7 @@
 # What is JohnLawCoin?
 
+***This software is now under testing. The wallet is not ready to use.***
+
 <img src="./docs/logo.png" width=120px>
 
 ***JohnLawCoin*** is a stablecoin realized by an ***Algorithmic Central Bank (ACB)***. The monetary policies are backed by MMT (Modern Monetary Theory). The system is fully decentralized and there is truly no gatekeeper. No gatekeeper means there is no entity to be regulated.
