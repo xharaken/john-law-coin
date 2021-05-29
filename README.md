@@ -1,6 +1,6 @@
 # What is JohnLawCoin?
 
-***This software is now under testing. The wallet is not ready to use.***
+<span style="color: red;">***This software is now under testing. The wallet is not ready to use.***</span>
 
 <img src="./docs/logo.png" width=120px>
 

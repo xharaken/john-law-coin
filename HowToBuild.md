@@ -8,13 +8,13 @@ This project uses [Truffle](https://www.trufflesuite.com/truffle) and [Openzeppe
 $ git clone git@github.com:xharaken/john-law-coin.git
 $ cd john-law-coin
 $ sudo apt-get install nodejs npm
-$ sudo npm install -g truffle
-$ sudo npm install @openzeppelin/contracts
-$ sudo npm install @openzeppelin/contracts-upgradeable
-$ sudo npm install @truffle/hdwallet-provider
-$ sudo npm install dotenv --save
-$ sudo npm install -g ganache-cli
-$ sudo npm init -y
+$ npm install -g truffle
+$ npm install @openzeppelin/contracts
+$ npm install @openzeppelin/contracts-upgradeable
+$ npm install @truffle/hdwallet-provider
+$ npm install dotenv --save
+$ npm install -g ganache-cli
+$ npm init -y
 ```
 
 ## Directory structure

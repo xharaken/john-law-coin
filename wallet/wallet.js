@@ -86,7 +86,7 @@ async function sendCoins() {
     const coin_balance =
           parseInt(await coin_contract.methods.balanceOf(
             ethereum.selectedAddress).call());
-    if (amount >= coin_balance) {
+    if (amount > coin_balance) {
       await showErrorMessage("You don't have enough coin balance.", null);
       return;
     }
@@ -225,14 +225,14 @@ async function getCommit(phase_id) {
 }
 
 async function getSalt(phase_id) {
-  const key = ethereum.selectedAddress + "-" + phase_id;
+  const message = "Vote (Phase ID = " + phase_id + ")";
+  const key = ethereum.selectedAddress + "-" + message;
   let salt = localStorage[key];
   if (salt) {
     return salt;
   }
   salt = await web3.utils.sha3(await web3.eth.personal.sign(
-    "You are voting (Phase ID = " + phase_id + ")",
-    ethereum.selectedAddress));
+    message, ethereum.selectedAddress));
   localStorage[key] = salt;
   return salt;
 }
@@ -358,7 +358,7 @@ async function donate(eth) {
     showProcessingMessage();
     const receipt = await promise;
     console.log("receipt: ", receipt);
-    const message = "Donated " + amount + " weis. Thank you very much!!";
+    const message = "Donated " + eth + " ETH. Thank you very much!!";
     await showTransactionSuccessMessage(message, receipt);
   } catch (error) {
     await showErrorMessage("Couldn't donate.", error);
@@ -812,18 +812,31 @@ async function showTransactionSuccessMessage(message, receipt) {
 
 async function showErrorMessage(message, object) {
   console.log("error: ", object);
-  const etherscan_url = await getEtherScanURL();  
+  const etherscan_url = await getEtherScanURL();
+  let transactionHash = "";
+  if (object) {
+    transactionHash = object.transactionHash;
+    const matched = object.toString().match(/"transactionHash":\s*"([^"]+)"/);
+    if (matched) {
+      transactionHash = matched[1];
+    }
+  }
   let div = $("message_box");
   div.className = "error";
   div.innerHTML = "<span class='bold'>Error</span>: " + message +
     (object ? "<br><br>Details: " +
-     (object.transactionHash ?
-      " Check the transaction in " +
-      "<a href='" + etherscan_url + object.transactionHash +
+     (transactionHash ?
+      "Check the transaction in " +
+      "<a href='" + etherscan_url + transactionHash +
       "' target='_blank' rel='noopener noreferrer'>EtherScan</a> " +
-      "in a few minutes. The transaction may be marked as success but " +
-      "it couldn't fulfill your order." : "") +
-     "<br>" + object.toString() +
+      "in a few minutes. " +
+      (object.transactionHash ? "The transaction may be marked as success " +
+      "but it couldn't fulfill your order. This may happen when the status " +
+      "of the ACB or your account changed between when you ordered and when " +
+       "the transaction was processed (e.g., the ACB's bond budget was " +
+       "enough when you ordered but was not enough when the transaction was " +
+       "processed.) Please try again." : "") : "") +
+     "<br><br>" + object.toString() +
      "<br>" + JSON.stringify(object) : "");
   document.body.scrollIntoView({behavior: "smooth", block: "start"});
 }
@@ -863,7 +876,7 @@ function getOracleLevelString(level) {
       "<br>Bond issue price = " + BOND_PRICES[level] + " coins" +
       "<br>Tax rate = " + TAX_RATES[level] + "%";
   } else if (level == LEVEL_MAX) {
-    return "Oracle level = undefined (no vote was made)" +
+    return "Oracle level = undefined (no vote was found)" +
       "<br>Bond issue price = " + BOND_PRICES[LEVEL_MAX - 1] + " coins" +
       "<br>Tax rate = 0%";
   }
