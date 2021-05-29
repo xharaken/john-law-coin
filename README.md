@@ -10,7 +10,7 @@ JohnLawCoin is a real-world experiment to verify one assumption: ***There is a w
 
 If JohnLawCoin is successful and proves the assumption is correct, it will provide interesting insights for both non-fiat currencies and fiat currencies; i.e., 1) there is a way for non-fiat cryptocurrencies to implement a stablecoin without having any gatekeeper that holds collateral, and 2) there is a way for developing countries to implement a fixed exchange rate system for their fiat currencies without holding adequate USD reserves. This will upgrade human's understanding about money.
 
-See [the whitepaper](./docs/whitepaper.pdf) for more details. See [the smart contract](./contracts/JohnLawCoin.sol) for the implementation.
+See [the whitepaper](./docs/whitepaper.pdf) for more details. See [the smart contract](https://github.com/xharaken/john-law-coin/blob/main/contracts/JohnLawCoin.sol) for the implementation.
 
 # Three steps to start
 
@@ -20,7 +20,7 @@ Install [MetaMask](https://metamask.io/). MetaMask is a crypto wallet that enabl
 
 ## Step 2
 
-Open a [wallet](https://xharaken.github.io/john-law-coin/wallet/wallet.html) from your browser and enjoy! See [this page](./HowToUseWallet.md) to learn how to use the wallet.
+Open a [wallet](./wallet/wallet.html) from your browser and enjoy! See [this page](./HowToUseWallet.md) to learn how to use the wallet.
 
 *[Note for advanced readers: If you are interested in connecting to the smart contracts directly without using the wallet, see [this page](./HowToUseConsole.md).]*
 

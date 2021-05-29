@@ -8,7 +8,7 @@ APIs exposed by JohnLawCoin are simple. You can only do the following operations
 * Vote on the oracle.
 * Purchase and redeem bonds.
 
-The [JohnLawCoin wallet](https://xharaken.github.io/john-law-coin/wallet/wallet.html) is implemented using the APIs. You can implement an even nicer wallet using the APIs :)
+The [JohnLawCoin wallet](./wallet/wallet.html) is implemented using the APIs. You can implement an even nicer wallet using the APIs :)
 
 # Transfer coins
 
@@ -205,5 +205,5 @@ truffle> (await acb.bond_budget_()).toNumber()
 
 The parameter of `redeemBonds()` is an array of redemption timestamps of the bonds you want to redeem. `redeemBonds()` returns the total number of bonds that have been successfully redeemded. As a result of redeeming, your coin balance increases. One bond is redeemed for 1000 coins. For bonds whose redemption period is over, you can redeem them anytime regardless of the ACB's bond budget.
 
-For more details, see the comments in [the smart contract](./contracts/JohnLawCoin.sol).
+For more details, see the comments in [the smart contract](https://github.com/xharaken/john-law-coin/blob/main/contracts/JohnLawCoin.sol).
 
