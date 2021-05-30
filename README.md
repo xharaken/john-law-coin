@@ -20,7 +20,7 @@ Install [MetaMask](https://metamask.io/). MetaMask is a crypto wallet that enabl
 
 ## Step 2
 
-Open a [wallet](./wallet/wallet.html) from your browser and enjoy! See [this page](./HowToUseWallet.md) to learn how to use the wallet.
+Open a [wallet](https://xharaken.github.io/john-law-coin/wallet/wallet.html) from your browser and enjoy! See [this page](./HowToUseWallet.md) to learn how to use the wallet.
 
 *[Note for advanced readers: If you are interested in connecting to the smart contracts directly without using the wallet, see [this page](./HowToUseConsole.md).]*
 

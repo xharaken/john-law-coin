@@ -8,7 +8,7 @@ APIs exposed by JohnLawCoin are simple. You can only do the following operations
 * Vote on the oracle.
 * Purchase and redeem bonds.
 
-The [JohnLawCoin wallet](./wallet/wallet.html) is implemented using the APIs. You can implement an even nicer wallet using the APIs :)
+The JohnLawCoin wallet is implemented using the APIs. You can implement an even nicer wallet using the APIs :)
 
 # Transfer coins
 
