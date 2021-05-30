@@ -3,6 +3,8 @@
 // This software is released under the MIT License.
 // http://opensource.org/licenses/mit-license.php
 
+// Global variables.
+
 var _acb_contract = null;
 var _oracle_contract = null;
 var _logging_contract = null;
@@ -11,6 +13,8 @@ var _bond_contract = null;
 var _web3 = null;
 var _chain_id = null;
 var _selected_address = null;
+
+// Functions to set up the wallet.
 
 window.onload = async () => {
   try {
@@ -28,6 +32,14 @@ window.onload = async () => {
           "Click the Metamask extension and log in to the right account. " +
           "Then reload the wallet.");
     }
+    
+    ethereum.on("accountsChanged", (accounts) => {
+      window.location.reload();
+    });
+    ethereum.on("chainChanged", (chainId) => {
+      window.location.reload();
+    });
+    
     await ethereum.request({ method: 'eth_requestAccounts' });
     const accounts = await ethereum.request({ method: 'eth_accounts' });
     if (accounts.length == 0) {
@@ -57,13 +69,6 @@ window.onload = async () => {
         "<span class='warning'>You are connected to " +
         "an unknown network.</span>";
     }
-    
-    ethereum.on("accountsChanged", (accounts) => {
-      window.location.reload();
-    });
-    ethereum.on("chainChanged", (chainId) => {
-      window.location.reload();
-    });
   } catch (error) {
     console.log(error);
     await showErrorMessage(
@@ -75,8 +80,7 @@ window.onload = async () => {
     _web3 = new Web3(window.ethereum);
     console.log("_web3: ", _web3);
 
-    const acb_address = await getACBAddress();
-    _acb_contract = await new _web3.eth.Contract(ACB_ABI, acb_address);
+    _acb_contract = await new _web3.eth.Contract(ACB_ABI, getACBAddress());
     console.log("ACB contract: ", _acb_contract);
     const oracle = await _acb_contract.methods.oracle_().call();
     _oracle_contract = await new _web3.eth.Contract(ORACLE_ABI, oracle);
@@ -120,6 +124,8 @@ window.onload = async () => {
   await reloadInfo();
 };
 
+// Functions to handle JohnLawCoin's operations.
+
 async function sendCoins() {
   try {
     const address = $("send_coins_address").value;
@@ -141,23 +147,32 @@ async function sendCoins() {
     const receipt = await promise;
     console.log("receipt: ", receipt);
     if (!receipt.events.TransferEvent) {
-      const etherscan_url = await getEtherScanURL();  
       throw("The transaction (<a href='" +
-            etherscan_url + receipt.transactionHash +
+            getEtherScanURL() + receipt.transactionHash +
             "' target='_blank' rel='noopener noreferrer'>EtherScan</a>) " +
-            "couldn't fulfill your order. This may happen due to timing " +
-            "issues when the status changed between when you ordered and " +
-            "when the transaction was processed " +
-            "(e.g., your coin balance was enough when you ordered " +
-            "but was not enough when the transaction was processed.) " +
-            "Please try again.");
+            "couldn't fulfill your order. Please try again.");
     }
     const ret = receipt.events.TransferEvent.returnValues;
     const message = "Sent " + ret.amount + " coins to " + ret.to + ". " +
           "Paid " + ret.tax + " coins as a tax.";
     await showTransactionSuccessMessage(message, receipt);
   } catch (error) {
-    await showErrorMessage("Couldn't send coins.", error);
+    const transactionHash = extractTransactionHash(error);
+    if (transactionHash) {
+      await showErrorMessage(
+        "Couldn't send coins.",
+        "The transaction (<a href='" +
+          getEtherScanURL() + transactionHash +
+          "' target='_blank' rel='noopener noreferrer'>EtherScan</a>) " +
+          "couldn't fulfill your order. This may happen due to timing " +
+          "issues when the status changed between when you ordered and " +
+          "when the transaction was processed " +
+          "(e.g., your coin balance was enough when you ordered " +
+          "but was not enough when the transaction was processed.) " +
+          "Please try again.");
+    } else {
+      await showErrorMessage("Couldn't send coins.", error);
+    }
     return;
   }
 }
@@ -194,9 +209,8 @@ async function purchaseBonds() {
     const receipt = await promise;
     console.log("receipt: ", receipt);
     if (!receipt.events.PurchaseBondsEvent) {
-      const etherscan_url = await getEtherScanURL();  
       throw("The transaction (<a href='" +
-            etherscan_url + receipt.transactionHash +
+            getEtherScanURL() + receipt.transactionHash +
             "' target='_blank' rel='noopener noreferrer'>EtherScan</a>) " +
             "couldn't fulfill your order. This may happen due to timing " +
             "issues when the status changed between when you ordered and " +
@@ -211,7 +225,17 @@ async function purchaseBonds() {
           getDateString(parseInt(ret.redemption_timestamp) * 1000) + ".";
     await showTransactionSuccessMessage(message, receipt);
   } catch (error) {
-    await showErrorMessage("Couldn't purchase bonds.", error);
+    const transactionHash = extractTransactionHash(error);
+    if (transactionHash) {
+      await showErrorMessage(
+        "Couldn't purchase bonds.",
+        "The transaction (<a href='" +
+          getEtherScanURL() + transactionHash +
+          "' target='_blank' rel='noopener noreferrer'>EtherScan</a>) " +
+          "failed. Please try again.");
+    } else {
+      await showErrorMessage("Couldn't purchase bonds.", error);
+    }
     return;
   }
 }
@@ -257,9 +281,8 @@ async function redeemBonds() {
     const receipt = await promise;
     console.log("receipt: ", receipt);
     if (!receipt.events.RedeemBondsEvent) {
-      const etherscan_url = await getEtherScanURL();  
       throw("The transaction (<a href='" +
-            etherscan_url + receipt.transactionHash +
+            getEtherScanURL() + receipt.transactionHash +
             "' target='_blank' rel='noopener noreferrer'>EtherScan</a>) " +
             "couldn't fulfill your order. This may happen due to timing " +
             "issues when the status changed between when you ordered and " +
@@ -272,43 +295,19 @@ async function redeemBonds() {
     let message = "Redeemed " + ret.count + " bonds.";
     await showTransactionSuccessMessage(message, receipt);
   } catch (error) {
-    await showErrorMessage("Couldn't redeem bonds.", error);
+    const transactionHash = extractTransactionHash(error);
+    if (transactionHash) {
+      await showErrorMessage(
+        "Couldn't redeem bonds.",
+        "The transaction (<a href='" +
+          getEtherScanURL() + transactionHash +
+          "' target='_blank' rel='noopener noreferrer'>EtherScan</a>) " +
+          "failed. Please try again.");
+    } else {
+      await showErrorMessage("Couldn't redeem bonds.", error);
+    }
     return;
   }
-}
-
-async function getCommit(phase_id) {
-  let target__oracle_contract = _oracle_contract;
-  if (phase_id < PHASE_ID_THAT_UPGRADED_ORACLE) {
-    target__oracle_contract =
-      await new _web3.eth.Contract(ORACLE_ABI, OLD_ORACLE_ADDRESS);
-  }
-  const ret = await target__oracle_contract.methods.getCommit(
-    phase_id % 3, _selected_address).call();
-  return {voted: ret[4] == phase_id,
-          hash: ret[4] == phase_id ? ret[0] : ""};
-}
-
-async function getSalt(phase_id) {
-  const message = "Vote (Phase ID = " + phase_id + ")";
-  const key = _selected_address + "-" + message;
-  let salt = localStorage[key];
-  if (salt) {
-    return salt;
-  }
-  salt = await _web3.utils.sha3(await _web3.eth.personal.sign(
-    message, _selected_address));
-  localStorage[key] = salt;
-  return salt;
-}
-
-async function getNextPhaseStart() {
-  const current_phase_start_ms =
-        parseInt(
-          await _acb_contract.methods.current_phase_start_().call()) * 1000;
-  const phase_duration_ms =
-        parseInt(await _acb_contract.methods.PHASE_DURATION().call()) * 1000;
-  return current_phase_start_ms + phase_duration_ms;
 }
 
 async function vote() {
@@ -381,20 +380,15 @@ async function vote() {
     const receipt = await promise;
     console.log("receipt: ", receipt);
     if (!receipt.events.VoteEvent) {
-      const etherscan_url = await getEtherScanURL();  
       throw("The transaction (<a href='" +
-            etherscan_url + receipt.transactionHash +
+            getEtherScanURL() + receipt.transactionHash +
             "' target='_blank' rel='noopener noreferrer'>EtherScan</a>) " +
-            "failed due to out of gas. Voting may require more gas than " +
-            "what Metamask estimates. You can adjust the gas limit when " +
-            "you confirm the transaction. Please increase the gas limit " +
-            "and try again.");
+            "couldn't commit your vote. Please try again.");
     }
     const ret = receipt.events.VoteEvent.returnValues;
     if (!ret.commit_result) {
-      const etherscan_url = await getEtherScanURL();  
       throw("The transaction (<a href='" +
-            etherscan_url + receipt.transactionHash +
+            getEtherScanURL() + receipt.transactionHash +
             "' target='_blank' rel='noopener noreferrer'>EtherScan</a>) " +
             "couldn't commit your vote because you have already voted " +
             "in the current phase. Please wait until the next phase starts " +
@@ -409,7 +403,20 @@ async function vote() {
           ret.rewarded + " coins as a reward.";
     await showTransactionSuccessMessage(message, receipt);
   } catch (error) {
-    await showErrorMessage("Couldn't vote.", error);
+    const transactionHash = extractTransactionHash(error);
+    if (transactionHash) {
+      await showErrorMessage(
+        "Couldn't vote.",
+        "The transaction (<a href='" +
+          getEtherScanURL() + transactionHash +
+          "' target='_blank' rel='noopener noreferrer'>EtherScan</a>) " +
+          "failed due to out of gas. Voting may require more gas than " +
+          "what Metamask estimates. You can adjust the gas limit when " +
+          "you confirm the transaction. Please increase the gas limit " +
+          "and try again.");
+    } else {
+      await showErrorMessage("Couldn't vote.", error);
+    }
     return;
   }
 }
@@ -429,9 +436,8 @@ async function donate1() {
 async function donate(eth) {
   try {
     const amount = _web3.utils.toWei(eth);
-    const acb_address = await getACBAddress();
     const promise = _web3.eth.sendTransaction(
-      {from: _selected_address, to: acb_address, value: amount});
+      {from: _selected_address, to: getACBAddress(), value: amount});
     showProcessingMessage();
     const receipt = await promise;
     console.log("receipt: ", receipt);
@@ -442,6 +448,8 @@ async function donate(eth) {
     return;
   } 
 }
+
+// Functions to render HTML.
 
 async function reloadInfo() {
   try {
@@ -862,14 +870,13 @@ function showProcessingMessage() {
 }
 
 async function showTransactionSuccessMessage(message, receipt) {
-  const etherscan_url = await getEtherScanURL();  
   let div = $("message_box");
   div.className = "success";
   const html =
         "<span class='bold'>Transaction succeeded</span>:<br>" + message +
         "<br><br>" +
         "It will take some time to commit the transaction. " +
-        "Check <a href='" + etherscan_url + receipt.transactionHash +
+        "Check <a href='" + getEtherScanURL() + receipt.transactionHash +
         "' target='_blank' rel='noopener noreferrer'>EtherScan</a> " +
         "in a few minutes.<br>";
   showMessage(div, html);
@@ -885,7 +892,7 @@ async function showErrorMessage(message, object) {
   let div = $("message_box");
   div.className = "error";
   div.innerHTML = "<span class='bold'>Error</span>: " + message +
-    "<br><br>Details: " +
+    "<br><br><span class='bold'>Details</span>: " +
     (typeof(object) == "string" ? object.toString() : JSON.stringify(object)) +
     "<br><br>If this is considered to be a bug of JohnLawCoin, " +
     "please file a bug " +
@@ -894,7 +901,48 @@ async function showErrorMessage(message, object) {
   document.body.scrollIntoView({behavior: "smooth", block: "start"});
 }
 
-async function getEtherScanURL() {
+// Helper functions.
+
+async function getCommit(phase_id) {
+  let target__oracle_contract = _oracle_contract;
+  if (phase_id < PHASE_ID_THAT_UPGRADED_ORACLE) {
+    target__oracle_contract =
+      await new _web3.eth.Contract(ORACLE_ABI, OLD_ORACLE_ADDRESS);
+  }
+  const ret = await target__oracle_contract.methods.getCommit(
+    phase_id % 3, _selected_address).call();
+  return {voted: ret[4] == phase_id,
+          hash: ret[4] == phase_id ? ret[0] : ""};
+}
+
+async function getSalt(phase_id) {
+  const message = "Vote (Phase ID = " + phase_id + ")";
+  const key = _selected_address + "-" + message;
+  let salt = localStorage[key];
+  if (salt) {
+    return salt;
+  }
+  salt = await _web3.utils.sha3(await _web3.eth.personal.sign(
+    message, _selected_address));
+  localStorage[key] = salt;
+  return salt;
+}
+
+async function getNextPhaseStart() {
+  const current_phase_start_ms =
+        parseInt(
+          await _acb_contract.methods.current_phase_start_().call()) * 1000;
+  const phase_duration_ms =
+        parseInt(await _acb_contract.methods.PHASE_DURATION().call()) * 1000;
+  return current_phase_start_ms + phase_duration_ms;
+}
+
+function extractTransactionHash(error) {
+  const matched = error.toString().match(/"transactionHash":\s*"([^"]+)"/);
+  return matched ? matched[1] : null;
+}
+
+function getEtherScanURL() {
   let etherscan_address = "";
   if (_chain_id == 1) {
     etherscan_address = ETHERSCAN_ADDRESS_ON_MAINNET;
@@ -904,7 +952,7 @@ async function getEtherScanURL() {
   return etherscan_address;
 }
 
-async function getACBAddress() {
+function getACBAddress() {
   let acb_address = ACB_ADDRESS_ON_LOCAL;
   if (_chain_id == 1) {
     acb_address = ACB_ADDRESS_ON_MAINNET;

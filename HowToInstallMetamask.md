@@ -14,7 +14,7 @@ Click the Metamask extension and connect to the Ethereum Mainnet.
 
 Open [the wallet](https://xharaken.github.io/john-law-coin/wallet/wallet.html). It will automatically pop up the Metamask extension. Follow the instructions and connect your account with the wallet.
 
-<img src="./docs/metamask_connect.png" width=360px>
+<img src="./docs/metamask_connect.png" width=240px>
 
 Click the Metamask extension and make sure that your account is marked as "Connected".
 
