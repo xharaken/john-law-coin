@@ -871,7 +871,8 @@ async function showErrorMessage(message, object) {
     (typeof(object) == "string" ? object.toString() : JSON.stringify(object)) +
     "<br><br>If this is considered to be a bug of JohnLawCoin, " +
     "please file a bug " +
-    "<a href='https://github.com/xharaken/john-law-coin/issues'>here</a>.";
+    "<a href='https://github.com/xharaken/john-law-coin/issues' " +
+    "' target='_blank' rel='noopener noreferrer'>here</a>.";
   document.body.scrollIntoView({behavior: "smooth", block: "start"});
 }
 

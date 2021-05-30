@@ -1,6 +1,6 @@
 # What is JohnLawCoin?
 
-***Currently JohnLawCoin is being tested on the Ropsten Testnet. Your feedback is critical to improve the system before it's launched to the Ethereum Mainnet (planned in 2021 Summer).***
+***[Note: Currently JohnLawCoin is being tested on the Ropsten Testnet. Your feedback is critical to improve the system before it's launched to the Ethereum Mainnet (planned in 2021 Summer).]***
 
 <img src="./docs/logo.png" width=120px>
 
