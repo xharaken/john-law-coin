@@ -37,6 +37,11 @@ td {
   font-weight: bold;
 }
 
+.bold_red {
+  font-weight: bold;
+  color: red;
+}
+
 .italic {
   font-style: italic;
 }

@@ -9,22 +9,49 @@ var logging_contract = null;
 var coin_contract = null;
 var bond_contract = null;
 var web3 = null;
+var chain_id = null;
+var selected_address = null;
 
 window.onload = async () => {
-  $("message_box").innerHTML = "";
-  showLoading($("account_info"), "Loading.");
-  showLoading($("acb_info"), "Loading.");
-  showLoading($("bond_list"), "Loading.");
-  showLoading($("oracle_status"), "Loading.");
-  showLoading($("logging_status"), "Loading.");
-    
-  if (typeof window.ethereum === 'undefined') {
-    await showErrorMessage(
-      "You need to install Metamask. See https://metamask.io/download.html.",
-      null);
-    return;
-  }
   try {
+    $("message_box").innerHTML = "";
+    showLoading($("account_info"), "Loading.");
+    showLoading($("acb_info"), "Loading.");
+    showLoading($("bond_list"), "Loading.");
+    showLoading($("oracle_status"), "Loading.");
+    showLoading($("logging_status"), "Loading.");
+    
+    if (typeof window.ethereum === 'undefined') {
+      throw(
+        "You need to <a href='https://github.com/xharaken/john-law-coin/blob/main/HowToInstallMetamask.md' " +
+          "target='_blank'>install Metamask and set up correctly</a>.");
+    }
+    const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+    if (accounts.length == 0) {
+      throw(
+        "Please <a href='https://github.com/xharaken/john-law-coin/blob/main/HowToInstallMetamask.md' " +
+          "target='_blank'>set up Metamask correctly</a>. " +
+          "Click the Metamask extension and log in to the right account. " +
+          "Then reload the wallet.");
+    }
+  
+    const chain_id = await ethereum.request({ method: 'eth_chainId' });
+    console.log("chainId: ", chain_id);
+    if (chain_id == 1) {
+      throw(
+        "Currently JohnLawCoin is being tested on the Ropsten Testnet. " +
+          "It is not yet launched to the Ethereum Mainnet.");
+    } else if (chain_id == 3) {
+      $("network").innerHTML =
+        "<span class='bold_red'>You are connected to " +
+        "the Ropsten Testnet. Note that the duration of one phase is " +
+        "set to 1 min (instead of 1 week) for testing purposes.</span>";
+    } else {
+      $("network").innerHTML =
+        "<span class='bold_red'>You are connected to " +
+        "an unknown network.</span>";
+    }
+    
     ethereum.on("accountsChanged", (accounts) => {
       window.location.reload();
     });
@@ -50,18 +77,10 @@ window.onload = async () => {
     const bond = await acb_contract.methods.bond_().call();
     bond_contract = await new web3.eth.Contract(JOHNLAWBOND_ABI, bond);
     console.log("JohnLawBond contract: ", bond_contract);
-    console.log("selectedAddress: ", ethereum.selectedAddress);
+    console.log("selectedAddress: ", selected_address);
   } catch (error) {
     await showErrorMessage(
-      "Cannot connect to the smart contracts. " +
-        "Please click the Metamask extension and check the following " +
-        "points.<br>" +
-        "<ul><li>You logged in to the right account.</li>" +
-        "<li>Metamask is connected to the Ethereum Mainnet.</li>" +
-        "<li>Your account is connected to the wallet " +
-        "(https://xharaken.github.io/).</li>" +
-        "</ul>",
-      error);
+      "Couldn't connect to Ethereum.", error);
     return;
   }
   
@@ -89,24 +108,31 @@ async function sendCoins() {
     const amount = $("send_coins_amount").value;
     
     if (amount <= 0) {
-      await showErrorMessage("You need to send at least one coin.", null);
-      return;
+      throw("You need to send at least one coin.");
     }
     const coin_balance =
           parseInt(await coin_contract.methods.balanceOf(
-            ethereum.selectedAddress).call());
+            selected_address).call());
     if (amount > coin_balance) {
-      await showErrorMessage("You don't have enough coin balance.", null);
-      return;
+      throw("You don't have enough coin balance to send the coins.")
     }
     
     const promise = coin_contract.methods.transfer(address, amount).send(
-      {from: ethereum.selectedAddress});
+      {from: selected_address});
     showProcessingMessage();
     const receipt = await promise;
     console.log("receipt: ", receipt);
     if (!receipt.events.TransferEvent) {
-      throw receipt;
+      const etherscan_url = await getEtherScanURL();  
+      throw("The transaction (<a href='" +
+            etherscan_url + receipt.transactionHash +
+            "' target='_blank' rel='noopener noreferrer'>EtherScan</a>) " +
+            "couldn't fulfill your order. This may happen due to timing " +
+            "issues when the status changed between when you ordered and " +
+            "when the transaction was processed " +
+            "(e.g., your coin balance was enough when you ordered " +
+            "but was not enough when the transaction was processed.) " +
+            "Please try again.");
     }
     const ret = receipt.events.TransferEvent.returnValues;
     const message = "Sent " + ret.amount + " coins to " + ret.to + ". " +
@@ -123,20 +149,17 @@ async function purchaseBonds() {
     const amount = $("purchase_bonds_amount").value;
     
     if (amount <= 0) {
-      await showErrorMessage("You need to purchase at least one bond.", null);
-      return;
+      throw("You need to purchase at least one bond.");
     }
     const bond_budget =
           parseInt(await acb_contract.methods.bond_budget_().call());
     if (amount > bond_budget) {
-      await showErrorMessage(
-        "The ACB's current bond budget is " + bond_budget +
-          ". You cannot purchase bonds larger than this budget.", null);
-      return;
+      throw("The ACB's current bond budget is " + bond_budget +
+            ". You cannot purchase bonds larger than this budget.");
     }
     const coin_balance =
           parseInt(await coin_contract.methods.balanceOf(
-            ethereum.selectedAddress).call());
+            selected_address).call());
     let bond_price = BOND_PRICES[LEVEL_MAX - 1];
     const oracle_level =
           parseInt(await acb_contract.methods.oracle_level_().call());
@@ -144,19 +167,25 @@ async function purchaseBonds() {
       bond_price = BOND_PRICES[oracle_level];
     }
     if (coin_balance < amount * bond_price) {
-      await showErrorMessage(
-        "You don't have enough coin balance to purchase the bonds.",
-        null);
-      return;
+      throw("You don't have enough coin balance to purchase the bonds.");
     }
     
     const promise = acb_contract.methods.purchaseBonds(amount).send(
-      {from: ethereum.selectedAddress});
+      {from: selected_address});
     showProcessingMessage();
     const receipt = await promise;
     console.log("receipt: ", receipt);
     if (!receipt.events.PurchaseBondsEvent) {
-      throw receipt;
+      const etherscan_url = await getEtherScanURL();  
+      throw("The transaction (<a href='" +
+            etherscan_url + receipt.transactionHash +
+            "' target='_blank' rel='noopener noreferrer'>EtherScan</a>) " +
+            "couldn't fulfill your order. This may happen due to timing " +
+            "issues when the status changed between when you ordered and " +
+            "when the transaction was processed " +
+            "(e.g., the ACB bond budget was enough when you ordered " +
+            "but was not enough when the transaction was processed.) " +
+            "Please try again.");
     }
     const ret = receipt.events.PurchaseBondsEvent.returnValues;
     const message = "Purchased " + ret.count +
@@ -176,13 +205,13 @@ async function redeemBonds() {
     const redemption_count =
           parseInt(await bond_contract.methods.
                    numberOfRedemptionTimestampsOwnedBy(
-                     ethereum.selectedAddress).call());
+                     selected_address).call());
     let redemption_timestamps = [];
     for (let index = 0; index < redemption_count; index++) {
       const redemption_timestamp =
             parseInt(await bond_contract.methods.
                      getRedemptionTimestampOwnedBy(
-                       ethereum.selectedAddress, index).call());
+                       selected_address, index).call());
       redemption_timestamps.push(redemption_timestamp);
     }
     redemption_timestamps =
@@ -198,19 +227,28 @@ async function redeemBonds() {
         redeemable_timestamps.push(redemption_timestamp);
         const balance =
               parseInt(await bond_contract.methods.balanceOf(
-                ethereum.selectedAddress, redemption_timestamp).call());
+                selected_address, redemption_timestamp).call());
         bond_count += balance;
       }
     }
     console.log("redeemable_timestamps: ", redeemable_timestamps);
     
     const promise = acb_contract.methods.redeemBonds(
-      redeemable_timestamps).send({from: ethereum.selectedAddress});
+      redeemable_timestamps).send({from: selected_address});
     showProcessingMessage();
     const receipt = await promise;
     console.log("receipt: ", receipt);
     if (!receipt.events.RedeemBondsEvent) {
-      throw receipt;
+      const etherscan_url = await getEtherScanURL();  
+      throw("The transaction (<a href='" +
+            etherscan_url + receipt.transactionHash +
+            "' target='_blank' rel='noopener noreferrer'>EtherScan</a>) " +
+            "couldn't fulfill your order. This may happen due to timing " +
+            "issues when the status changed between when you ordered and " +
+            "when the transaction was processed " +
+            "(e.g., the ACB bond budget was enough when you ordered " +
+            "but was not enough when the transaction was processed.) " +
+            "Please try again.");
     }
     const ret = receipt.events.RedeemBondsEvent.returnValues;
     let message = "Redeemed " + ret.count + " bonds.";
@@ -228,20 +266,20 @@ async function getCommit(phase_id) {
       await new web3.eth.Contract(ORACLE_ABI, OLD_ORACLE_ADDRESS);
   }
   const ret = await target_oracle_contract.methods.getCommit(
-    phase_id % 3, ethereum.selectedAddress).call();
+    phase_id % 3, selected_address).call();
   return {voted: ret[4] == phase_id,
           hash: ret[4] == phase_id ? ret[0] : ""};
 }
 
 async function getSalt(phase_id) {
   const message = "Vote (Phase ID = " + phase_id + ")";
-  const key = ethereum.selectedAddress + "-" + message;
+  const key = selected_address + "-" + message;
   let salt = localStorage[key];
   if (salt) {
     return salt;
   }
   salt = await web3.utils.sha3(await web3.eth.personal.sign(
-    message, ethereum.selectedAddress));
+    message, selected_address));
   localStorage[key] = salt;
   return salt;
 }
@@ -273,9 +311,8 @@ async function vote() {
     const previous_commit = await getCommit(current_phase_id - 1);
     
     if (current_commit.voted) {
-      await showErrorMessage("You have already voted in this phase. " +
-                             "You can vote only once per phase.");
-      return;
+      throw("You have already voted in this phase. " +
+            "You can vote only once per phase.");
     }
     
     const null_hash = await acb_contract.methods.NULL_HASH().call();
@@ -290,7 +327,7 @@ async function vote() {
         previous_salt = await getSalt(previous_phase_id);
         for (let level = 0; level < LEVEL_MAX; level++) {
           const hash = await acb_contract.methods.hash(
-            level, previous_salt).call({from: ethereum.selectedAddress});
+            level, previous_salt).call({from: selected_address});
           if (hash == previous_commit.hash) {
             previous_level = level;
             found = true;
@@ -303,14 +340,13 @@ async function vote() {
         const ret = confirm(
           "We couldn't find the oracle level and the salt that match " +
             "your previous vote. Please check that you are using " +
-            "the same Ethereum address for the current vote and " +
+            "the same Ethereum account for the current vote and " +
             "the previous vote. This may also happen when your browser's " +
             "local storage is broken.\n\n" +
             "Do you want to forcibly proceed? Then you will lose " +
-            "the deposited coins for your previous vote.\n");
+            "the coins you deposited in the previous vote.\n");
         if (!ret) {
-          await showErrorMessage("Vote cancelled.");
-          return;
+          throw("Vote cancelled.");
         }
       }
     }
@@ -319,22 +355,36 @@ async function vote() {
 
     const hash = current_level == LEVEL_MAX ? null_hash :
           await acb_contract.methods.hash(current_level, current_salt).call(
-            {from: ethereum.selectedAddress});
+            {from: selected_address});
     const promise = acb_contract.methods.vote(
       hash, previous_level, previous_salt).send(
-        {from: ethereum.selectedAddress});
+        {from: selected_address});
     showProcessingMessage();
     const receipt = await promise;
     console.log("receipt: ", receipt);
     if (!receipt.events.VoteEvent) {
-      throw receipt;
+      const etherscan_url = await getEtherScanURL();  
+      throw("The transaction (<a href='" +
+            etherscan_url + receipt.transactionHash +
+            "' target='_blank' rel='noopener noreferrer'>EtherScan</a>) " +
+            "failed due to out of gas. Voting may require more gas than " +
+            "what Metamask estimates. You can adjust the gas limit when " +
+            "you confirm the transaction. Please increase the gas limit " +
+            "and try again.");
     }
     const ret = receipt.events.VoteEvent.returnValues;
+    if (!ret.commit_result) {
+      const etherscan_url = await getEtherScanURL();  
+      throw("The transaction (<a href='" +
+            etherscan_url + receipt.transactionHash +
+            "' target='_blank' rel='noopener noreferrer'>EtherScan</a>) " +
+            "couldn't commit your vote because you have already voted " +
+            "in the current phase. Please wait until the next phase starts " +
+            "and try again.");
+    }
     const message =
-          (ret.commit_result ? "Commit succeeded. You voted for the oracle " +
-           "level " + current_level + ". You deposited " + ret.deposited +
-           " coins." :
-           "Commit failed. You can vote only once per phase.") + "<br>" +
+          "Commit succeeded. You voted for the oracle level " +
+          current_level + ". You deposited " + ret.deposited + " coins.<br>" +
           (ret.reveal_result ? "Reveal succeeded." :
            "Reveal failed. Your vote in the previous phase was not found.") +
           "<br>" + "You reclaimed " + ret.reclaimed + " coins and got " +
@@ -363,7 +413,7 @@ async function donate(eth) {
     const amount = web3.utils.toWei(eth);
     const acb_address = await getACBAddress();
     const promise = web3.eth.sendTransaction(
-      {from: ethereum.selectedAddress, to: acb_address, value: amount});
+      {from: selected_address, to: acb_address, value: amount});
     showProcessingMessage();
     const receipt = await promise;
     console.log("receipt: ", receipt);
@@ -376,32 +426,19 @@ async function donate(eth) {
 }
 
 async function reloadInfo() {
-  if (!ethereum.selectedAddress) {
-    await showErrorMessage(
-      "Your account is not connected to the wallet. Please click the " +
-        "Metamask extension and check the following points.<br>" +
-        "<ul><li>You logged in to the right account.</li>" +
-        "<li>Metamask is connected to the Ethereum Mainnet.</li>" +
-        "<li>Your account is connected to the wallet " +
-        "(https://xharaken.github.io/).</li>" +
-        "</ul>",
-      null);
-    return;
-  }
-  
   try {
     let html = "";
     
     html += "<table><tr><td>Account address</td><td class='right'>" +
-      ethereum.selectedAddress + "</td></tr>";
+      selected_address + "</td></tr>";
     const coin_balance =
           parseInt(await coin_contract.methods.balanceOf(
-            ethereum.selectedAddress).call());
+            selected_address).call());
     html += "<tr><td>Coin balance</td><td class='right'>" +
       coin_balance + "</td></tr>";
     const bond_balance =
           parseInt(await bond_contract.methods.numberOfBondsOwnedBy(
-            ethereum.selectedAddress).call());
+            selected_address).call());
     html += "<tr><td>Bond balance</td><td class='right'>" +
       bond_balance + "</td></tr>";
     const phase_id =
@@ -476,13 +513,13 @@ async function reloadInfo() {
       const redemption_count =
             parseInt(await bond_contract.methods.
                      numberOfRedemptionTimestampsOwnedBy(
-                       ethereum.selectedAddress).call());
+                       selected_address).call());
       let redemption_timestamps = [];
       for (let index = 0; index < redemption_count; index++) {
         const redemption_timestamp =
               parseInt(await bond_contract.methods.
                        getRedemptionTimestampOwnedBy(
-                         ethereum.selectedAddress, index).call());
+                         selected_address, index).call());
         redemption_timestamps.push(redemption_timestamp);
       }
       redemption_timestamps =
@@ -491,7 +528,7 @@ async function reloadInfo() {
       for (let redemption_timestamp of redemption_timestamps) {
         const balance =
               parseInt(await bond_contract.methods.balanceOf(
-                ethereum.selectedAddress, redemption_timestamp).call());
+                selected_address, redemption_timestamp).call());
         const redemption_timestamp_ms = parseInt(redemption_timestamp) * 1000;
         bond_list_html += "<tr><td>" + getDateString(redemption_timestamp_ms) +
           "</td><td class='right'>" + balance + "</td><td>" +
@@ -517,7 +554,7 @@ async function reloadInfo() {
         " [You don't have any redeemable bonds.]";
     }
   } catch (error) {
-    await showErrorMessage("Cannot reload infomation.", error);
+    await showErrorMessage("Couldn't reload infomation.", error);
     return;
   }
 }
@@ -827,54 +864,32 @@ async function showTransactionSuccessMessage(message, receipt) {
 
 async function showErrorMessage(message, object) {
   console.log("error: ", object);
-  const etherscan_url = await getEtherScanURL();
-  let transactionHash = "";
-  if (object) {
-    transactionHash = object.transactionHash;
-    const matched = object.toString().match(/"transactionHash":\s*"([^"]+)"/);
-    if (matched) {
-      transactionHash = matched[1];
-    }
-  }
   let div = $("message_box");
   div.className = "error";
   div.innerHTML = "<span class='bold'>Error</span>: " + message +
-    (object ? "<br><br>Details: " +
-     (transactionHash ?
-      "Check the transaction in " +
-      "<a href='" + etherscan_url + transactionHash +
-      "' target='_blank' rel='noopener noreferrer'>EtherScan</a> " +
-      "in a few minutes. " +
-      (object.transactionHash ? "The transaction may be marked as success " +
-      "but it couldn't fulfill your order. This may happen when the status " +
-      "of the ACB or your account changed between when you ordered and when " +
-       "the transaction was processed (e.g., the ACB's bond budget was " +
-       "enough when you ordered but was not enough when the transaction was " +
-       "processed.) Please try again." : "") : "") +
-     "<br><br>" + object.toString() +
-     "<br>" + JSON.stringify(object) : "");
+    "<br><br>Details: " +
+    (typeof(object) == "string" ? object.toString() : JSON.stringify(object)) +
+    "<br><br>If this is considered to be a bug of JohnLawCoin, " +
+    "please file a bug " +
+    "<a href='https://github.com/xharaken/john-law-coin/issues'>here</a>.";
   document.body.scrollIntoView({behavior: "smooth", block: "start"});
 }
 
 async function getEtherScanURL() {
-  const chainId = await ethereum.request({ method: 'eth_chainId' });
-  console.log("chainId: ", chainId);
   let etherscan_address = "";
-  if (chainId == 1) {
+  if (chain_id == 1) {
     etherscan_address = ETHERSCAN_ADDRESS_ON_MAINNET;
-  } else if (chainId == 3) {
+  } else if (chain_id == 3) {
     etherscan_address = ETHERSCAN_ADDRESS_ON_ROPSTEN;
   }
   return etherscan_address;
 }
 
 async function getACBAddress() {
-  const chainId = await ethereum.request({ method: 'eth_chainId' });
-  console.log("chainId: ", chainId);
   let acb_address = ACB_ADDRESS_ON_LOCAL;
-  if (chainId == 1) {
+  if (chain_id == 1) {
     acb_address = ACB_ADDRESS_ON_MAINNET;
-  } else if (chainId == 3) {
+  } else if (chain_id == 3) {
     acb_address = ACB_ADDRESS_ON_ROPSTEN;
   }
   return acb_address;
@@ -895,7 +910,7 @@ function getOracleLevelString(level) {
       "<br>Bond issue price = " + BOND_PRICES[LEVEL_MAX - 1] + " coins" +
       "<br>Tax rate = 0%";
   }
-  throw null;
+  throw("Undefined oracle level.");
 }
 
 function getPhaseString(phase) {

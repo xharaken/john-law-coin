@@ -51,9 +51,9 @@ In addition, you can get a reward later if 1) you voted for the "truth" oracle l
 
 The detailed calculation is described the whitepaper, but in summary, **you just need to vote for the "truth" oracle level every phase (i.e., every week)**.
 
-[Note for advanced readers: The vote operation commits a vote to the current phase, reveals a vote in the previous phase and reclaims coins deposited in the phase before the previous phase at the same time. If you forget to vote in the current phase, that also means 1) you forget to reveal your vote in the previous phase, losing the coins deposited to the previous phase, and 2) you forget to reclaim the coins you deposited in the phase before the previous phase. This is why you should keep voting every phase.]
+*[Note for advanced readers: The vote operation commits a vote to the current phase, reveals a vote in the previous phase and reclaims coins deposited in the phase before the previous phase at the same time. If you forget to vote in the current phase, that also means 1) you forget to reveal your vote in the previous phase, losing the coins deposited to the previous phase, and 2) you forget to reclaim the coins you deposited in the phase before the previous phase. This is why you should keep voting every phase.]*
 
-[Note for advanced readers: If you intend to only reveal and reclaim your votes in the previous phases and do NOT intend to commit a vote in the current phase, choose "Do not vote". Then no coins are deposited to the ACB. This is useful when you want to stop keeping voting.]
+*[Note for advanced readers: If you intend to only reveal and reclaim your votes in the previous phases and do NOT intend to commit a vote in the current phase, choose "Do not vote". Then no coins are deposited to the ACB. This is useful when you want to stop keeping voting.]*
 
 ## Purchase bonds
 
@@ -91,5 +91,6 @@ Once real-world currency exchangers support the JLC <=> USD conversion, you can 
 
 Remember that these activities are important not only to increase your coin balance but also to stabilize the exchange rate. The contribution to the voting helps the ACB determine the oracle level in a decentralized manner. The bond purchasing / redeeming helps the ACB adjust the total coin supply and thus move the exchange rate toward 1 coin = 1.0 USD. The arbitrage between JLC and USD helps move the exchange rate toward 1 coin = 1.0 USD. JohnLawCoin's incentive model is designed in a way in which user's behavior of pursuing their own self-interest helps stabilize the exchange rate.
 
-[Note: JohnLawCoin does not conduct ICO (Initial Coin Offering) because the purpose is purely research, not profit.]
+Note that JohnLawCoin does not conduct ICO (Initial Coin Offering) because the purpose is purely research, not profit.
 
+*[Note for advanced readers: If you are interested in connecting to the smart contracts directly without using the wallet, see [this page](./HowToUseConsole.md).]*

@@ -1221,16 +1221,19 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
 
   // Payable fallback to receive and store ETH. Give us a tip :)
   fallback() external payable {
+    require(msg.data.length == 0, "fb1");
     emit PayableEvent(msg.sender, msg.value);
   }
   receive() external payable {
+    require(msg.data.length == 0, "rv1");
     emit PayableEvent(msg.sender, msg.value);
   }
 
   // Withdraw the tips. Only the owner can call this method.
   function withdrawTips()
       public whenNotPaused onlyOwner {
-    payable(msg.sender).transfer(address(this).balance);
+    (bool success,) = payable(msg.sender).call.value(address(this).balance)("");
+    require(success, "wt1");
   }
 
   // A struct to pack local variables. This is needed to avoid a stack-too-deep
