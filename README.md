@@ -26,7 +26,7 @@ Open a [wallet](https://xharaken.github.io/john-law-coin/wallet/wallet.html) fro
 
 ## Step 3
 
-Follow [@johnlawcoin on Twitter](https://twitter.com/johnlawcoin){:target="_blank"} to get updates about JohnLawCoin.
+Follow <a href="https://twitter.com/johnlawcoin" target="_blank">@johnlawcoin on Twitter</a> to get updates about JohnLawCoin.
 
 # How to contribute
 
