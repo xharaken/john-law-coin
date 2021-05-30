@@ -1222,14 +1222,14 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
     emit PayableEvent(msg.sender, msg.value);
   }
   receive() external payable {
-    require(msg.data.length == 0, "rv1");
     emit PayableEvent(msg.sender, msg.value);
   }
 
   // Withdraw the tips. Only the owner can call this method.
   function withdrawTips()
       public whenNotPaused onlyOwner {
-    (bool success,) = payable(msg.sender).call.value(address(this).balance)("");
+    (bool success,) =
+        payable(msg.sender).call{value: address(this).balance}("");
     require(success, "wt1");
   }
 

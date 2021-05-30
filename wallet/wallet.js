@@ -26,7 +26,8 @@ window.onload = async () => {
         "You need to <a href='https://github.com/xharaken/john-law-coin/blob/main/HowToInstallMetamask.md' " +
           "target='_blank'>install Metamask and set up correctly</a>.");
     }
-    const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+    await ethereum.request({ method: 'eth_requestAccounts' });
+    const accounts = await ethereum.request({ method: 'eth_accounts' });
     if (accounts.length == 0) {
       throw(
         "Please <a href='https://github.com/xharaken/john-law-coin/blob/main/HowToInstallMetamask.md' " +
