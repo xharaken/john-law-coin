@@ -23,8 +23,10 @@ window.onload = async () => {
     
     if (typeof window.ethereum === 'undefined') {
       throw(
-        "You need to <a href='https://github.com/xharaken/john-law-coin/blob/main/HowToInstallMetamask.md' " +
-          "target='_blank'>install Metamask and set up correctly</a>.");
+        "Please <a href='https://github.com/xharaken/john-law-coin/blob/main/HowToInstallMetamask.md' " +
+          "target='_blank'>set up Metamask correctly</a>. " +
+          "Click the Metamask extension and log in to the right account. " +
+          "Then reload the wallet.");
     }
     await ethereum.request({ method: 'eth_requestAccounts' });
     const accounts = await ethereum.request({ method: 'eth_accounts' });
@@ -62,10 +64,17 @@ window.onload = async () => {
     ethereum.on("chainChanged", (chainId) => {
       window.location.reload();
     });
+  } catch (error) {
+    console.log(error);
+    await showErrorMessage(
+      "Couldn't connect to Ethereum.", error);
+    return;
+  }
     
+  try {
     _web3 = new Web3(window.ethereum);
     console.log("_web3: ", _web3);
-    
+
     const acb_address = await getACBAddress();
     _acb_contract = await new _web3.eth.Contract(ACB_ABI, acb_address);
     console.log("ACB contract: ", _acb_contract);
@@ -85,7 +94,7 @@ window.onload = async () => {
   } catch (error) {
     console.log(error);
     await showErrorMessage(
-      "Couldn't connect to Ethereum.",
+      "Couldn't connect to the smart contracts.",
       "Please <a href='https://github.com/xharaken/john-law-coin/blob/main/HowToInstallMetamask.md' " +
         "target='_blank'>set up Metamask correctly</a>. " +
         "Click the Metamask extension and log in to the right account. " +
