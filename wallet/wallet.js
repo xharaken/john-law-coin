@@ -38,7 +38,7 @@ window.onload = async () => {
     console.log("accounts:", accounts);
     console.log("_selected_address:", _selected_address);
   
-    const _chain_id = await ethereum.request({ method: 'eth_chainId' });
+    _chain_id = await ethereum.request({ method: 'eth_chainId' });
     console.log("_chain_id: ", _chain_id);
     if (_chain_id == 1) {
       throw(
@@ -82,8 +82,13 @@ window.onload = async () => {
     console.log("JohnLawBond contract: ", _bond_contract);
     console.log("selectedAddress: ", _selected_address);
   } catch (error) {
+    console.log(error);
     await showErrorMessage(
-      "Couldn't connect to Ethereum.", error);
+      "Couldn't connect to Ethereum.",
+      "Please <a href='https://github.com/xharaken/john-law-coin/blob/main/HowToInstallMetamask.md' " +
+        "target='_blank'>set up Metamask correctly</a>. " +
+        "Click the Metamask extension and log in to the right account. " +
+        "Then reload the wallet.");
     return;
   }
   
