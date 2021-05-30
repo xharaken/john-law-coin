@@ -52,7 +52,16 @@ window.onload = async () => {
     console.log("JohnLawBond contract: ", bond_contract);
     console.log("selectedAddress: ", ethereum.selectedAddress);
   } catch (error) {
-    await showErrorMessage("Cannot connect to the smart contracts.", error);
+    await showErrorMessage(
+      "Cannot connect to the smart contracts. " +
+        "Please click the Metamask extension and check the following " +
+        "points.<br>" +
+        "<ul><li>You logged in to the right account.</li>" +
+        "<li>Metamask is connected to the Ethereum Mainnet.</li>" +
+        "<li>Your account is connected to the wallet " +
+        "(https://xharaken.github.io/).</li>" +
+        "</ul>",
+      error);
     return;
   }
   
@@ -369,8 +378,13 @@ async function donate(eth) {
 async function reloadInfo() {
   if (!ethereum.selectedAddress) {
     await showErrorMessage(
-      "Please click the Metamask extension and check that your account is " +
-        "connected to JohnLawCoin. Then reload the wallet.",
+      "Your account is not connected to the wallet. Please click the " +
+        "Metamask extension and check the following points.<br>" +
+        "<ul><li>You logged in to the right account.</li>" +
+        "<li>Metamask is connected to the Ethereum Mainnet.</li>" +
+        "<li>Your account is connected to the wallet " +
+        "(https://xharaken.github.io/).</li>" +
+        "</ul>",
       null);
     return;
   }
