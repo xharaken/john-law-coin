@@ -20,7 +20,7 @@ See [the whitepaper](./docs/whitepaper.pdf) for more details. See [the smart con
 
 ## Step 2
 
-Open a [wallet](https://xharaken.github.io/john-law-coin/wallet/wallet.html) from your browser and enjoy! See [this page](./HowToUseWallet.md) to learn how to use the wallet.
+Open a [wallet](https://xharaken.github.io/john-law-coin/wallet/wallet.html) from your browser and enjoy! See [how to use the wallet](./HowToUseWallet.md).
 
 ## Step 3
 

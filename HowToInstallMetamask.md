@@ -10,15 +10,19 @@ Click the Metamask extension and connect to the Ethereum Mainnet.
 
 *[Note for advanced readers: If you are testing JohnLawCoin on the Ropsten Testnet, connect to the Ropsten Testnet instead.]*
 
-# Step 3: Connect your account with the JohnLawCoin wallet
+# Step 3: Connect your account with the wallet
 
-Open the wallet and then click the Metamask extension. Make sure that your account is marked as "Connected".
+Open [the wallet](https://xharaken.github.io/john-law-coin/wallet/wallet.html). It will automatically pop up the Metamask extension. Follow the instructions and connect your account with the wallet.
+
+<img src="./docs/metamask_connect.png" width=360px>
+
+Click the Metamask extension and make sure that your account is marked as "Connected".
 
 <img src="./docs/metamask_connected.png" width=360px>
 
 If it's marked as "Not connected", click it and then connect your account.
 
-<img src="./docs/metamask_connect.png" width=360px>
+<img src="./docs/metamask_not_connected.png" width=360px>
 
 # Step 4: Deposit ETH
 

@@ -37,8 +37,9 @@ td {
   font-weight: bold;
 }
 
-.bold_red {
+.warning {
   font-weight: bold;
+  font-style: italic;
   color: red;
 }
 
