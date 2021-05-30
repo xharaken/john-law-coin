@@ -369,7 +369,8 @@ async function donate(eth) {
 async function reloadInfo() {
   if (!ethereum.selectedAddress) {
     await showErrorMessage(
-      "Please click the Metamask extension and log in. Then reload the page.",
+      "Please click the Metamask extension and check that your account is " +
+        "connected to JohnLawCoin. Then reload the wallet.",
       null);
     return;
   }

@@ -49,7 +49,7 @@ The deposited coins are returned to your wallet later only if 1) you voted for a
 
 In addition, you can get a reward later if 1) you voted for the "truth" oracle level and 2) you vote in the next two phases in a row. The more coins you deposited, the more reward you can get.
 
-The detailed calculation is described [the whitepaper](./docs/whitepaper.pdf), but in summary, **you just need to vote for the "truth" oracle level every phase (i.e., every week)**.
+The detailed calculation is described the whitepaper, but in summary, **you just need to vote for the "truth" oracle level every phase (i.e., every week)**.
 
 [Note for advanced readers: The vote operation commits a vote to the current phase, reveals a vote in the previous phase and reclaims coins deposited in the phase before the previous phase at the same time. If you forget to vote in the current phase, that also means 1) you forget to reveal your vote in the previous phase, losing the coins deposited to the previous phase, and 2) you forget to reclaim the coins you deposited in the phase before the previous phase. This is why you should keep voting every phase.]
 
