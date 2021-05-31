@@ -437,11 +437,6 @@ function parameterized_test(accounts,
           continue;
         }
 
-        assert.equal(await _acb.purchaseBonds.call(
-            0, {from: voter.address}), 0);
-        assert.equal(await _acb.purchaseBonds.call(
-            bond_budget + 1, {from: voter.address}), 0);
-
         let coin_supply = await get_coin_supply();
         let bond_supply = await get_bond_supply();
         let redemption = (await _acb.getTimestamp()).toNumber() +

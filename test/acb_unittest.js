@@ -123,17 +123,17 @@ function parameterized_test(accounts,
 
       // transfer
       await should_throw(async () => {
-        assert.equal(await _coin.transfer.call(
-            accounts[1], 1, {from: accounts[4]}), 0);
+        await _coin.transfer.call(
+          accounts[1], 1, {from: accounts[4]});
       }, "ERC20");
       await _coin.transfer(accounts[2], 0, {from: accounts[1]});
       await should_throw(async () => {
-        assert.equal(await _coin.transfer.call(
-            accounts[1], 1, {from: accounts[2]}), 0);
+        await _coin.transfer.call(
+          accounts[1], 1, {from: accounts[2]});
       }, "ERC20");
       await should_throw(async () => {
-        assert.equal(await _coin.transfer.call(
-            accounts[2], _initial_coin_supply + 1, {from: accounts[1]}), 0);
+        await _coin.transfer.call(
+          accounts[2], _initial_coin_supply + 1, {from: accounts[1]});
       }, "ERC20");
       await _coin.transfer(accounts[2], 1, {from: accounts[1]});
       await _coin.transfer(accounts[3], 10, {from: accounts[1]});
@@ -150,8 +150,8 @@ function parameterized_test(accounts,
       assert.equal(current.balances[accounts[3]], 5);
       await _coin.transfer(accounts[3], 0, {from: accounts[2]});
       await should_throw(async () => {
-        assert.equal(await _coin.transfer.call(
-            accounts[3], 7, {from: accounts[2]}), 0);
+        await _coin.transfer.call(
+          accounts[3], 7, {from: accounts[2]});
       }, "ERC20");
       await _coin.transfer(accounts[3], 6, {from: accounts[2]});
       current = await get_current(sub_accounts, []);
@@ -325,16 +325,36 @@ function parameterized_test(accounts,
           accounts[2], bond_price * 30, {from: accounts[1]});
       await _coin.transfer(
           accounts[3], bond_price * 50, {from: accounts[1]});
-      assert.equal(await _acb.purchaseBonds.call(1, {from: accounts[4]}), 0);
-      assert.equal(await _acb.purchaseBonds.call(1, {from: accounts[5]}), 0);
-      assert.equal(await _acb.purchaseBonds.call(0, {from: accounts[1]}), 0);
-      assert.equal(await _acb.purchaseBonds.call(81, {from: accounts[1]}), 0);
-      assert.equal(await _acb.purchaseBonds.call(0, {from: accounts[2]}), 0);
-      assert.equal(await _acb.purchaseBonds.call(81, {from: accounts[2]}), 0);
-      assert.equal(await _acb.purchaseBonds.call(31, {from: accounts[2]}), 0);
-      assert.equal(await _acb.purchaseBonds.call(0, {from: accounts[3]}), 0);
-      assert.equal(await _acb.purchaseBonds.call(81, {from: accounts[3]}), 0);
-      assert.equal(await _acb.purchaseBonds.call(51, {from: accounts[3]}), 0);
+      await should_throw(async () => {
+        await _acb.purchaseBonds.call(1, {from: accounts[4]});
+      }, "PurchaseBonds");
+      await should_throw(async () => {
+        await _acb.purchaseBonds.call(1, {from: accounts[5]});
+      }, "PurchaseBonds");
+      await should_throw(async () => {
+        await _acb.purchaseBonds.call(0, {from: accounts[1]});
+      }, "PurchaseBonds");
+      await should_throw(async () => {
+        await _acb.purchaseBonds.call(81, {from: accounts[1]});
+      }, "PurchaseBonds");
+      await should_throw(async () => {
+        await _acb.purchaseBonds.call(0, {from: accounts[2]});
+      }, "PurchaseBonds");
+      await should_throw(async () => {
+        await _acb.purchaseBonds.call(81, {from: accounts[2]});
+      }, "PurchaseBonds");
+      await should_throw(async () => {
+        await _acb.purchaseBonds.call(31, {from: accounts[2]});
+      }, "PurchaseBonds");
+      await should_throw(async () => {
+        await _acb.purchaseBonds.call(0, {from: accounts[3]});
+      }, "PurchaseBonds");
+      await should_throw(async () => {
+        await _acb.purchaseBonds.call(81, {from: accounts[3]});
+      }, "PurchaseBonds");
+      await should_throw(async () => {
+        await _acb.purchaseBonds.call(51, {from: accounts[3]});
+      }, "PurchaseBonds");
 
       await check_purchase_bonds(1, {from: accounts[2]}, t1);
       current = await get_current(sub_accounts, redemptions);
@@ -354,10 +374,12 @@ function parameterized_test(accounts,
       assert.equal(current.coin_supply,
                    coin_supply - bond_price * 11);
 
-      assert.equal(await _acb.purchaseBonds.call(
-          70, {from: accounts[1]}), 0);
-      assert.equal(await _acb.purchaseBonds.call(
-          70, {from: accounts[3]}), 0);
+      await should_throw(async () => {
+        await _acb.purchaseBonds.call(70, {from: accounts[1]});
+      }, "PurchaseBonds");
+      await should_throw(async () => {
+        await _acb.purchaseBonds.call(70, {from: accounts[3]});
+      }, "PurchaseBonds");
 
       await _acb.setTimestamp(
           (await _acb.getTimestamp()).toNumber() + _phase_duration,
@@ -384,10 +406,12 @@ function parameterized_test(accounts,
       assert.equal(current.coin_supply,
                    coin_supply - bond_price * 22);
 
-      assert.equal(await _acb.purchaseBonds.call(
-          59, {from: accounts[1]}), 0);
-      assert.equal(await _acb.purchaseBonds.call(
-          59, {from: accounts[3]}), 0);
+      await should_throw(async () => {
+        await _acb.purchaseBonds.call(59, {from: accounts[1]});
+      }, "PurchaseBonds");
+      await should_throw(async () => {
+        await _acb.purchaseBonds.call(59, {from: accounts[3]});
+      }, "PurchaseBonds");
 
       await check_purchase_bonds(10, {from: accounts[1]}, t2);
       current = await get_current(sub_accounts, redemptions);
@@ -405,8 +429,9 @@ function parameterized_test(accounts,
           (await _acb.getTimestamp()).toNumber() + _bond_redemption_period;
       redemptions = [t3];
 
-      assert.equal(await _acb.purchaseBonds.call(
-          49, {from: accounts[3]}), 0);
+      await should_throw(async () => {
+        await _acb.purchaseBonds.call(49, {from: accounts[3]});
+      }, "PurchaseBonds");
       await check_purchase_bonds(48, {from: accounts[3]}, t3);
       current = await get_current(sub_accounts, redemptions);
       assert.equal(current.bond_supply, 80);
@@ -418,8 +443,9 @@ function parameterized_test(accounts,
 
       await _coin.transfer(accounts[2], bond_price * 10, {from: accounts[1]});
       await _coin.transfer(accounts[3], bond_price * 10, {from: accounts[1]});
-      assert.equal(await _acb.purchaseBonds.call(
-          1, {from: accounts[2]}), 0);
+      await should_throw(async () => {
+        await _acb.purchaseBonds.call(1, {from: accounts[2]});
+      }, "PurchaseBonds");
       current = await get_current(sub_accounts, redemptions);
       assert.equal(current.bond_supply, 80);
       assert.equal(current.bond_budget, 0);
@@ -427,8 +453,9 @@ function parameterized_test(accounts,
       check_redemption_timestamps(current, accounts[3], [t3]);
       assert.equal(current.coin_supply,
                    coin_supply - bond_price * 80);
-      assert.equal(await _acb.purchaseBonds.call(
-          1, {from: accounts[3]}), 0);
+      await should_throw(async () => {
+        await _acb.purchaseBonds.call(1, {from: accounts[3]});
+      }, "PurchaseBonds");
       current = await get_current(sub_accounts, redemptions);
       assert.equal(current.bond_supply, 80);
       assert.equal(current.bond_budget, 0);

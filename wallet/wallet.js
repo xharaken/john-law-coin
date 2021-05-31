@@ -3,8 +3,6 @@
 // This software is released under the MIT License.
 // http://opensource.org/licenses/mit-license.php
 
-// Global variables.
-
 var _acb_contract = null;
 var _oracle_contract = null;
 var _logging_contract = null;
@@ -61,8 +59,8 @@ window.onload = async () => {
           "Click the Metamask extension and choose the Ropsten Testnet.");
     } else if (_chain_id == 3) {
       $("network").innerHTML =
-        "<span class='warning'>You are connected to " +
-        "the Ropsten Testnet. Note that the duration of one phase is " +
+        "<span class='warning'>Note: You are connected to " +
+        "the Ropsten Testnet. The duration of one phase is " +
         "set to 1 min (instead of 1 week) for testing purposes.</span>";
     } else {
       $("network").innerHTML =
@@ -147,10 +145,7 @@ async function sendCoins() {
     const receipt = await promise;
     console.log("receipt: ", receipt);
     if (!receipt.events.TransferEvent) {
-      throw("The transaction (<a href='" +
-            getEtherScanURL() + receipt.transactionHash +
-            "' target='_blank' rel='noopener noreferrer'>EtherScan</a>) " +
-            "couldn't fulfill your order. Please try again.");
+      throw(receipt);
     }
     const ret = receipt.events.TransferEvent.returnValues;
     const message = "Sent " + ret.amount + " coins to " + ret.to + ". " +
@@ -209,15 +204,7 @@ async function purchaseBonds() {
     const receipt = await promise;
     console.log("receipt: ", receipt);
     if (!receipt.events.PurchaseBondsEvent) {
-      throw("The transaction (<a href='" +
-            getEtherScanURL() + receipt.transactionHash +
-            "' target='_blank' rel='noopener noreferrer'>EtherScan</a>) " +
-            "couldn't fulfill your order. This may happen due to timing " +
-            "issues when the status changed between when you ordered and " +
-            "when the transaction was processed " +
-            "(e.g., the ACB bond budget was enough when you ordered " +
-            "but was not enough when the transaction was processed.) " +
-            "Please try again.");
+      throw(receipt);
     }
     const ret = receipt.events.PurchaseBondsEvent.returnValues;
     const message = "Purchased " + ret.count +
@@ -232,7 +219,12 @@ async function purchaseBonds() {
         "The transaction (<a href='" +
           getEtherScanURL() + transactionHash +
           "' target='_blank' rel='noopener noreferrer'>EtherScan</a>) " +
-          "failed. Please try again.");
+          "couldn't fulfill your order. This may happen due to timing " +
+          "issues when the status changed between when you ordered and " +
+          "when the transaction was processed " +
+          "(e.g., the ACB bond budget was enough when you ordered " +
+          "but was not enough when the transaction was processed.) " +
+          "Please try again.");
     } else {
       await showErrorMessage("Couldn't purchase bonds.", error);
     }
@@ -281,15 +273,7 @@ async function redeemBonds() {
     const receipt = await promise;
     console.log("receipt: ", receipt);
     if (!receipt.events.RedeemBondsEvent) {
-      throw("The transaction (<a href='" +
-            getEtherScanURL() + receipt.transactionHash +
-            "' target='_blank' rel='noopener noreferrer'>EtherScan</a>) " +
-            "couldn't fulfill your order. This may happen due to timing " +
-            "issues when the status changed between when you ordered and " +
-            "when the transaction was processed " +
-            "(e.g., the ACB bond budget was enough when you ordered " +
-            "but was not enough when the transaction was processed.) " +
-            "Please try again.");
+      throw(receipt);
     }
     const ret = receipt.events.RedeemBondsEvent.returnValues;
     let message = "Redeemed " + ret.count + " bonds.";
@@ -302,7 +286,12 @@ async function redeemBonds() {
         "The transaction (<a href='" +
           getEtherScanURL() + transactionHash +
           "' target='_blank' rel='noopener noreferrer'>EtherScan</a>) " +
-          "failed. Please try again.");
+          "couldn't fulfill your order. This may happen due to timing " +
+          "issues when the status changed between when you ordered and " +
+          "when the transaction was processed " +
+          "(e.g., the ACB bond budget was enough when you ordered " +
+          "but was not enough when the transaction was processed.) " +
+          "Please try again.");
     } else {
       await showErrorMessage("Couldn't redeem bonds.", error);
     }
@@ -380,10 +369,7 @@ async function vote() {
     const receipt = await promise;
     console.log("receipt: ", receipt);
     if (!receipt.events.VoteEvent) {
-      throw("The transaction (<a href='" +
-            getEtherScanURL() + receipt.transactionHash +
-            "' target='_blank' rel='noopener noreferrer'>EtherScan</a>) " +
-            "couldn't commit your vote. Please try again.");
+      throw(receipt);
     }
     const ret = receipt.events.VoteEvent.returnValues;
     if (!ret.commit_result) {
@@ -395,8 +381,10 @@ async function vote() {
             "and try again.");
     }
     const message =
-          "Commit succeeded. You voted for the oracle level " +
-          current_level + ". You deposited " + ret.deposited + " coins.<br>" +
+          (ret.commit_result ? "Commit succeeded. " +
+           "You voted for the oracle level " +
+           current_level + ". You deposited " + ret.deposited + " coins." :
+          "Commit failed. You can vote only once per phase.") + "<br>" +
           (ret.reveal_result ? "Reveal succeeded." :
            "Reveal failed. Your vote in the previous phase was not found.") +
           "<br>" + "You reclaimed " + ret.reclaimed + " coins and got " +

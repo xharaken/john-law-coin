@@ -970,23 +970,17 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
       public whenNotPaused returns (uint) {
     address sender = msg.sender;
     
-    if (count <= 0) {
-      return 0;
-    }
-    if (bond_budget_ < count.toInt256()) {
-      // The ACB does not have enough bonds to issue.
-      return 0;
-    }
+    require(count > 0, "PurchaseBonds: You must purchase at least one bond.");
+    require(bond_budget_ >= count.toInt256(),
+            "PurchaseBonds: The ACB's bond budget is not enough.");
 
     uint bond_price = LEVEL_TO_BOND_PRICE[_getLevelMax() - 1];
     if (0 <= oracle_level_ && oracle_level_ < _getLevelMax()) {
       bond_price = LEVEL_TO_BOND_PRICE[oracle_level_];
     }
     uint amount = bond_price * count;
-    if (coin_.balanceOf(sender) < amount) {
-      // The user does not have enough coins to purchase the bonds.
-      return 0;
-    }
+    require(coin_.balanceOf(sender) >= amount,
+            "PurchaseBonds: Your coin balance is not enough.");
 
     // Set the redemption timestamp of the bonds.
     uint redemption_timestamp = getTimestamp() + BOND_REDEMPTION_PERIOD;

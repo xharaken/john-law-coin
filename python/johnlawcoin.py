@@ -1124,19 +1124,17 @@ class ACB:
     # The redemption timestamp of the purchased bonds if it succeeds.
     # 0 otherwise.
     def purchase_bonds(self, sender, count):
-        if count <= 0:
-            return 0
-        if self.bond_budget < count:
-            # The ACB does not have enough bonds to issue.
-            return 0
+        # The user must purchase at least one bond.
+        assert(count > 0)
+        # The ACB does not have enough bonds to issue.
+        assert(self.bond_budget >= count)
 
         bond_price = ACB.LEVEL_TO_BOND_PRICE[Oracle.LEVEL_MAX - 1]
         if 0 <= self.oracle_level and self.oracle_level < Oracle.LEVEL_MAX:
             bond_price = ACB.LEVEL_TO_BOND_PRICE[self.oracle_level]
         amount = bond_price * count
-        if self.coin.balance_of(sender) < amount:
-            # The user does not have enough coins to purchase the bonds.
-            return 0
+        # The user does not have enough coins to purchase the bonds.
+        assert(self.coin.balance_of(sender) >= amount)
 
         # Set the redemption timestamp of the bonds.
         redemption_timestamp = self.get_timestamp() + ACB.BOND_REDEMPTION_PERIOD

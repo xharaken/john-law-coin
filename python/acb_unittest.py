@@ -248,16 +248,26 @@ class ACBUnitTest(unittest.TestCase):
 
         acb.coin.move(accounts[1], accounts[2], bond_price * 30)
         acb.coin.move(accounts[1], accounts[3], bond_price * 50)
-        self.assertEqual(acb.purchase_bonds(accounts[4], 1), 0)
-        self.assertEqual(acb.purchase_bonds(accounts[5], 1), 0)
-        self.assertEqual(acb.purchase_bonds(accounts[1], 0), 0)
-        self.assertEqual(acb.purchase_bonds(accounts[1], 81), 0)
-        self.assertEqual(acb.purchase_bonds(accounts[2], 0), 0)
-        self.assertEqual(acb.purchase_bonds(accounts[2], 81), 0)
-        self.assertEqual(acb.purchase_bonds(accounts[2], 31), 0)
-        self.assertEqual(acb.purchase_bonds(accounts[3], 0), 0)
-        self.assertEqual(acb.purchase_bonds(accounts[3], 81), 0)
-        self.assertEqual(acb.purchase_bonds(accounts[3], 51), 0)
+        with self.assertRaises(Exception):
+            acb.purchase_bonds(accounts[4], 1)
+        with self.assertRaises(Exception):
+            acb.purchase_bonds(accounts[5], 1)
+        with self.assertRaises(Exception):
+            acb.purchase_bonds(accounts[1], 0)
+        with self.assertRaises(Exception):
+            acb.purchase_bonds(accounts[1], 81)
+        with self.assertRaises(Exception):
+            acb.purchase_bonds(accounts[2], 0)
+        with self.assertRaises(Exception):
+            acb.purchase_bonds(accounts[2], 81)
+        with self.assertRaises(Exception):
+            acb.purchase_bonds(accounts[2], 31)
+        with self.assertRaises(Exception):
+            acb.purchase_bonds(accounts[3], 0)
+        with self.assertRaises(Exception):
+            acb.purchase_bonds(accounts[3], 81)
+        with self.assertRaises(Exception):
+            acb.purchase_bonds(accounts[3], 51)
 
         self.assertEqual(acb.purchase_bonds(accounts[2], 1), t1)
         self.assertEqual(acb.bond.total_supply, 1)
@@ -275,8 +285,10 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply - bond_price * 11)
 
-        self.assertEqual(acb.purchase_bonds(accounts[1], 70), 0)
-        self.assertEqual(acb.purchase_bonds(accounts[3], 70), 0)
+        with self.assertRaises(Exception):
+            acb.purchase_bonds(accounts[1], 70)
+        with self.assertRaises(Exception):
+            acb.purchase_bonds(accounts[3], 70)
 
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
         t2 = acb.get_timestamp() + ACB.BOND_REDEMPTION_PERIOD
@@ -297,8 +309,10 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply - bond_price * 22)
 
-        self.assertEqual(acb.purchase_bonds(accounts[1], 59), 0)
-        self.assertEqual(acb.purchase_bonds(accounts[3], 59), 0)
+        with self.assertRaises(Exception):
+            acb.purchase_bonds(accounts[1], 59)
+        with self.assertRaises(Exception):
+            acb.purchase_bonds(accounts[3], 59)
 
         self.assertEqual(acb.purchase_bonds(accounts[1], 10), t2)
         self.assertEqual(acb.bond.total_supply, 32)
@@ -311,7 +325,8 @@ class ACBUnitTest(unittest.TestCase):
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
         t3 = acb.get_timestamp() + ACB.BOND_REDEMPTION_PERIOD
 
-        self.assertEqual(acb.purchase_bonds(accounts[3], 49), 0)
+        with self.assertRaises(Exception):
+            acb.purchase_bonds(accounts[3], 49)
         self.assertEqual(acb.purchase_bonds(accounts[3], 48), t3)
         self.assertEqual(acb.bond.total_supply, 80)
         self.assertEqual(acb.bond_budget, 0)
@@ -322,14 +337,16 @@ class ACBUnitTest(unittest.TestCase):
 
         acb.coin.move(accounts[1], accounts[2], bond_price * 10)
         acb.coin.move(accounts[1], accounts[3], bond_price * 10)
-        self.assertEqual(acb.purchase_bonds(accounts[2], 1), 0)
+        with self.assertRaises(Exception):
+            acb.purchase_bonds(accounts[2], 1)
         self.assertEqual(acb.bond.total_supply, 80)
         self.assertEqual(acb.bond_budget, 0)
         self.assertEqual(acb.bond.balance_of(accounts[3], t3), 48)
         self.check_redemption_timestamps(acb.bond, accounts[3], [t3])
         self.assertEqual(acb.coin.total_supply,
                          coin_supply - bond_price * 80)
-        self.assertEqual(acb.purchase_bonds(accounts[3], 1), 0)
+        with self.assertRaises(Exception):
+            acb.purchase_bonds(accounts[3], 1)
         self.assertEqual(acb.bond.total_supply, 80)
         self.assertEqual(acb.bond_budget, 0)
         self.assertEqual(acb.bond.balance_of(accounts[3], t3), 48)

@@ -376,9 +376,11 @@ class ACBSimulator(unittest.TestCase):
             if count <= 0:
                 continue
 
-            self.assertEqual(acb.purchase_bonds(voter.address, 0), 0)
-            self.assertEqual(acb.purchase_bonds(voter.address,
-                                                acb.bond_budget + 1), 0)
+            with self.assertRaises(Exception):
+                acb.purchase_bonds(voter.address, 0)
+            with self.assertRaises(Exception):
+                acb.purchase_bonds(voter.address,
+                                   acb.bond_budget + 1)
 
             coin_supply = acb.coin.total_supply
             bond_supply = acb.bond.total_supply
