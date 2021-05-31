@@ -4,15 +4,15 @@
 // http://opensource.org/licenses/mit-license.php
 
 const ACB_ADDRESS_ON_LOCAL = "0x88cD57330A1652748ABe1B67740b961a714dfD08";
-const ACB_ADDRESS_ON_ROPSTEN = "0xDa61f0b03f971210919b78155324b9CdE351dE0B";
+const ACB_ADDRESS_ON_ROPSTEN = "0x9FaDe9D25F5AC8Fd52bbd7b207a54683af1492fc";
 const ACB_ADDRESS_ON_MAINNET = "";
 
 const ETHERSCAN_ADDRESS_ON_ROPSTEN = "https://ropsten.etherscan.io/tx/";
 const ETHERSCAN_ADDRESS_ON_MAINNET = "https://etherscan.io/tx/";
 
 // The ABI of Oracle::getCommit() must not change.
-const PHASE_ID_THAT_UPGRADED_ORACLE = 0;
-const OLD_ORACLE_ADDRESS = "";
+const PHASE_ID_THAT_UPGRADED_ORACLE = 31;
+const OLD_ORACLE_ADDRESS = "0xFAC5cE9aCC708D688d813b7f684c60f1703A1Cf4";
 
 const EXCHANGE_RATES = [0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4];
 const BOND_PRICES = [970, 978, 986, 992, 997, 997, 997, 997, 997];
