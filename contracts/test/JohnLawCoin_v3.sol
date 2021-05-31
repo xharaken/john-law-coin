@@ -571,8 +571,7 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
                   bool phase_updated);
   event PurchaseBondsEvent(address indexed sender, uint count,
                            uint redemption_timestamp);
-  event RedeemBondsEvent(address indexed sender,
-                         uint[] redemption_timestamps, uint count);
+  event RedeemBondsEvent(address indexed sender, uint count);
   event ControlSupplyEvent(int delta, int bond_budget, uint mint);
 
   function upgrade(Oracle_v3 oracle)
@@ -842,7 +841,7 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
     require(bond_v2_.totalSupply().toInt256() + bond_budget_ >= 0, "rb1");
     
     logging_v2_.redeemedBonds(count_total);
-    emit RedeemBondsEvent(sender, redemption_timestamps, count_total);
+    emit RedeemBondsEvent(sender, count_total);
     return count_total;
   }
 
