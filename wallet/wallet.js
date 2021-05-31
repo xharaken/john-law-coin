@@ -148,7 +148,7 @@ async function sendCoins() {
       throw(receipt);
     }
     const ret = receipt.events.TransferEvent.returnValues;
-    const message = "Sent " + ret.amount + " coins to " + ret.to + ". " +
+    const message = "Sent " + ret.amount + " coins to " + ret.receiver + ". " +
           "Paid " + ret.tax + " coins as a tax.";
     await showTransactionSuccessMessage(message, receipt);
   } catch (error) {
@@ -372,14 +372,6 @@ async function vote() {
       throw(receipt);
     }
     const ret = receipt.events.VoteEvent.returnValues;
-    if (!ret.commit_result) {
-      throw("The transaction (<a href='" +
-            getEtherScanURL() + receipt.transactionHash +
-            "' target='_blank' rel='noopener noreferrer'>EtherScan</a>) " +
-            "couldn't commit your vote because you have already voted " +
-            "in the current phase. Please wait until the next phase starts " +
-            "and try again.");
-    }
     const message =
           (ret.commit_result ? "Commit succeeded. " +
            "You voted for the oracle level " +
