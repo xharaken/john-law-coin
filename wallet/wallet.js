@@ -328,7 +328,7 @@ async function vote() {
       let found = false;
       let retry = 0;
       for (let previous_phase_id = current_phase_id;
-           previous_phase_id >= 0 && retry < 4 && !found;
+           previous_phase_id >= 0 && retry < 6 && !found;
            previous_phase_id--) {
         previous_salt = await getSalt(previous_phase_id);
         for (let level = 0; level < LEVEL_MAX; level++) {
