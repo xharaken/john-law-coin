@@ -23,6 +23,10 @@ window.onload = async () => {
     showLoading($("oracle_status"), "Loading.");
     showLoading($("logging_status"), "Loading.");
     
+    $("vote_button").disabled = true;
+    $("purchase_bonds_button").disabled = true;
+    $("redeem_bonds_button").disabled = true;
+    
     if (typeof window.ethereum === 'undefined') {
       throw(
         "Please <a href='https://github.com/xharaken/john-law-coin/blob/main/HowToInstallMetamask.md' " +
