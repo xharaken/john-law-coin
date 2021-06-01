@@ -828,6 +828,7 @@ async function drawChart() {
 }
 
 function showLoading(div, message) {
+  div.className = "loading";
   div.innerHTML = "";
   div.appendChild(document.createTextNode(message));
   const dots = document.createTextNode("");
@@ -846,20 +847,19 @@ function showMessage(div, html) {
   if (div.loadingTimer) {
     clearInterval(div.loadingTimer);
     div.loadingTimer = null;
+    div.className = null;
   }
   div.innerHTML = html;
 }
 
 function showProcessingMessage() {
   let div = $("message_box");
-  div.className = "success";
   showLoading(div, "Transaction processing. This may take a few minutes.");
   document.body.scrollIntoView({behavior: "smooth", block: "start"});
 }
 
 async function showTransactionSuccessMessage(message, receipt) {
   let div = $("message_box");
-  div.className = "success";
   const html =
         "<span class='bold'>Transaction succeeded</span>:<br>" + message +
         "<br><br>" +
@@ -869,6 +869,7 @@ async function showTransactionSuccessMessage(message, receipt) {
         "' target='_blank' rel='noopener noreferrer'>EtherScan</a> " +
         "in a few minutes.<br>";
   showMessage(div, html);
+  div.className = "success";
   document.body.scrollIntoView({behavior: "smooth", block: "start"});
 
   setTimeout(async () => {

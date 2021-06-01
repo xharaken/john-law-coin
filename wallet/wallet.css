@@ -24,9 +24,14 @@ table {
   border-collapse: collapse;
 }
 
+tr {
+  border-top: solid 1.2px #FFA500;
+  border-bottom: solid 1.2px #FFA500;
+}
+
 td {
-  border: solid 1px;
-  padding: 0.2rem;
+  padding: 0.4rem 1rem 0.4rem 1rem;
+  background: #FFFFBB;
 }
 
 .right {
@@ -52,22 +57,20 @@ td {
   color: #888888;
 }
 
-.info {
-  background: #FFEE99;
-  padding: 0.6rem;
-  border-radius: 0.4rem;
+.success {
+  background: #FFFFBB;
+  padding: 1rem;
 }
 
-.success {
-  background: #CCFFCC;
+.loading {
+  font-style: italic;
+  background: #FFFFBB;
   padding: 1rem;
-  border-radius: 0.4rem;
 }
 
 .error {
-  background: #FFCCCC;
+  background: #FFDDDD;
   padding: 1rem;
-  border-radius: 0.4rem;
 }
 
 .tooltip {
