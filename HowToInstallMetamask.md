@@ -1,5 +1,5 @@
 # Step 1: Install Metamask
-<a href="https://metamask.io/" target="_blank">Metamask</a>
+
 [MetaMask](https://metamask.io/) is a crypto wallet that enables you to connect to Ethereum's blockchain from your browser. MetaMask supports Chrome, Firefox, Opera and Brave. See [this step-by-step guide](https://levelup.gitconnected.com/how-to-use-metamask-a-step-by-step-guide-f380a3943fb1) for installing Metamask.
 
 # Step 2: Connect to the Ethereum network
