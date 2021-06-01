@@ -161,7 +161,7 @@ async function sendCoins() {
       await showErrorMessage(
         "Couldn't send coins.",
         "The transaction (<a href='" +
-          getEtherScanURL() + transactionHash +
+          getEtherScanURL() + "tx/" + transactionHash +
           "' target='_blank' rel='noopener noreferrer'>EtherScan</a>) " +
           "couldn't fulfill your order. This may happen due to timing " +
           "issues when the status changed between when you ordered and " +
@@ -221,7 +221,7 @@ async function purchaseBonds() {
       await showErrorMessage(
         "Couldn't purchase bonds.",
         "The transaction (<a href='" +
-          getEtherScanURL() + transactionHash +
+          getEtherScanURL() + "tx/" + transactionHash +
           "' target='_blank' rel='noopener noreferrer'>EtherScan</a>) " +
           "couldn't fulfill your order. This may happen due to timing " +
           "issues when the status changed between when you ordered and " +
@@ -288,7 +288,7 @@ async function redeemBonds() {
       await showErrorMessage(
         "Couldn't redeem bonds.",
         "The transaction (<a href='" +
-          getEtherScanURL() + transactionHash +
+          getEtherScanURL() + "tx/" + transactionHash +
           "' target='_blank' rel='noopener noreferrer'>EtherScan</a>) " +
           "couldn't fulfill your order. This may happen due to timing " +
           "issues when the status changed between when you ordered and " +
@@ -392,7 +392,7 @@ async function vote() {
       await showErrorMessage(
         "Couldn't vote.",
         "The transaction (<a href='" +
-          getEtherScanURL() + transactionHash +
+          getEtherScanURL() + "tx/" + transactionHash +
           "' target='_blank' rel='noopener noreferrer'>EtherScan</a>) " +
           "failed due to out of gas. Voting may require more gas than " +
           "what Metamask estimates. You can adjust the gas limit when " +
@@ -864,7 +864,8 @@ async function showTransactionSuccessMessage(message, receipt) {
         "<span class='bold'>Transaction succeeded</span>:<br>" + message +
         "<br><br>" +
         "It will take some time to commit the transaction. " +
-        "Check <a href='" + getEtherScanURL() + receipt.transactionHash +
+        "Check <a href='" + getEtherScanURL() + "tx/" +
+        receipt.transactionHash +
         "' target='_blank' rel='noopener noreferrer'>EtherScan</a> " +
         "in a few minutes.<br>";
   showMessage(div, html);

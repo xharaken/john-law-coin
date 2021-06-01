@@ -7,8 +7,8 @@ const ACB_ADDRESS_ON_LOCAL = "0x88cD57330A1652748ABe1B67740b961a714dfD08";
 const ACB_ADDRESS_ON_ROPSTEN = "0x2f0A7D39DedBb873364Ae9E8aB2794e446432c7a";
 const ACB_ADDRESS_ON_MAINNET = "";
 
-const ETHERSCAN_ADDRESS_ON_ROPSTEN = "https://ropsten.etherscan.io/tx/";
-const ETHERSCAN_ADDRESS_ON_MAINNET = "https://etherscan.io/tx/";
+const ETHERSCAN_ADDRESS_ON_ROPSTEN = "https://ropsten.etherscan.io/";
+const ETHERSCAN_ADDRESS_ON_MAINNET = "https://etherscan.io/";
 
 // The ABI of Oracle::getCommit() must not change.
 const PHASE_ID_THAT_UPGRADED_ORACLE = 0;
