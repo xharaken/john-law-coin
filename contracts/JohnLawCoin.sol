@@ -1131,6 +1131,9 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
 
     // The duration of the oracle phase. The ACB adjusts the total coin supply
     // once per phase. Voters can vote once per phase.
+    //
+    // TODO: Change the value to 7 * 24 * 60 * 60 before launching to the
+    // mainnet. It's set to 1 min for the Ropsten Testnet.
     PHASE_DURATION = 60; // 1 week.
 
     // The percentage of the coin balance voters need to deposit.
