@@ -440,7 +440,9 @@ async function reloadInfo() {
     let html = "";
     
     html += "<table><tr><td>Account address</td><td class='right'>" +
-      _selected_address + "</td></tr>";
+      "<a href='" + getEtherScanURL() + "address/" + _selected_address +
+      "' target='_blank' rel='noopener noreferrer'>"
+      _selected_address + "</a></td></tr>";
     const coin_balance =
           parseInt(await _coin_contract.methods.balanceOf(
             _selected_address).call());
@@ -460,7 +462,9 @@ async function reloadInfo() {
     showMessage($("account_info"), html);
     
     html = "<table><tr><td>Contract address</td><td class='right'>" +
-      _acb_contract._address.toLowerCase() + "</td></tr>";
+      "<a href='" + getEtherScanURL() + "address/" + _acb_contract._address +
+      "' target='_blank' rel='noopener noreferrer'>"
+      _acb_contract._address.toLowerCase() + "</a></td></tr>";
     html += "<tr><td>Total coin supply</td><td class='right'>" +
       (await _coin_contract.methods.totalSupply().call()) + "</td></tr>";
     html += "<tr><td>Total bond supply</td><td class='right'>" +
