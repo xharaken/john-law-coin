@@ -17,8 +17,7 @@ http://opensource.org/licenses/mit-license.php
   <script src="wallet.js"></script>
 </head>
 <body>
-  <h1><a href=""><img src="/john-law-coin/docs/logo.png" width="48px"></img></a> JohnLawCoin Wallet</h1>
-  <hr>
+  <h1><a href=""><img src="/john-law-coin/docs/logo.png" width="28px"></img></a> JohnLawCoin Wallet</h1>
   <div id="network"></div>
   <div>[<a href="">Reload</a>]
     [<a href="https://github.com/xharaken/john-law-coin/blob/main/HowToUseWallet.md" target="_blank" rel="noopener noreferrer">Help</a>]
@@ -50,7 +49,7 @@ http://opensource.org/licenses/mit-license.php
 
   <h2>Send coins
     <span class="tooltip">?<span class="tooltip-text">
-        You can send coins to your friend's account address.<br>
+        You can send coins to your friend's account address.<br><br>
         <span class="italic">[This operation consumes some ETH as transaction fee.]</span>
   </span></span></h2>
   <p>Your friend address: <input type="text" id="send_coins_address" size="56"></input></p>
@@ -59,8 +58,8 @@ http://opensource.org/licenses/mit-license.php
   
   <h2>Vote
     <span class="tooltip">?<span class="tooltip-text">
-        Look up a real-world currency exchanger and choose the JLC <=> USD exchange rate at the point when the current phase started. If no currency exchanger supports the JLC <=> USD conversion yet, choose the oracle level 5.<br>
-            As a result of the voting, 10% of your coin balance is deposited to the ACB. The deposited coins will be returned to your wallet with some reward later as long as you vote for a correct exchange rate every phase. See <a href="https://github.com/xharaken/john-law-coin/blob/main/HowToUseWallet.md" target="_blank" rel="noopener noreferrer">help</a> to learn the mechanism more.<br>
+        Look up a real-world currency exchanger (e.g., Uniswap) and choose the JLC <=> USD exchange rate at the point when the current phase started. If no currency exchanger supports the JLC <=> USD conversion yet, choose the oracle level 5.<br><br>
+            As a result of the voting at phase N, 10% of your coin balance is deposited to the ACB. The deposited coins will be returned to your wallet with some reward at phase N+2 as long as you vote for a correct exchange rate at phase N+1 and phase N+2. See <a href="https://github.com/xharaken/john-law-coin/blob/main/HowToUseWallet.md" target="_blank" rel="noopener noreferrer">help</a> to learn the mechanism more.<br><br>
         <span class="italic">[This operation consumes some ETH as transaction fee.]</span>
   </span></span></h2>
   <p>Current exchange rate: <select name="vote_oracle_level" id="vote_oracle_level" size="1">
@@ -79,7 +78,7 @@ http://opensource.org/licenses/mit-license.php
   
   <h2>Purchase bonds
     <span class="tooltip">?<span class="tooltip-text">
-        You can purchase bonds as long as the ACB's bond budget is positive. The bond issue price varies depending on the oracle level and is displayed in the ACB info. The purchased bond can be redeemed for 1000 coins on the redemption date or when the ACB's bond budget is negative.<br>
+        You can purchase bonds as long as the ACB's bond budget is positive. The bond issue price varies depending on the oracle level and is displayed in the ACB info. The purchased bond can be redeemed for 1000 coins on the redemption date or when the ACB's bond budget is negative.<br><br>
         <span class="italic">[This operation consumes some ETH as transaction fee.]</span>
   </span></span></h2>
   <p>Amount of bonds: <input type="number" min="1" id="purchase_bonds_amount"></input></p>
@@ -87,7 +86,7 @@ http://opensource.org/licenses/mit-license.php
   
   <h2>Redeem bonds
     <span class="tooltip">?<span class="tooltip-text">
-        You can redeem bonds whose redemption period is over. You can also redeem bonds regardless of their redemption dates as long as the ACB's bond budget is nevative.<br>
+        You can redeem bonds whose redemption period is over. You can also redeem bonds regardless of their redemption dates as long as the ACB's bond budget is nevative.<br><br>
         <span class="italic">[This operation consumes some ETH as transaction fee.]</span>
   </span></span></h2>
   <div id="bond_list"></div>

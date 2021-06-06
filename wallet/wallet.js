@@ -65,7 +65,9 @@ window.onload = async () => {
       $("network").innerHTML =
         "<span class='warning'>Note: You are connected to " +
         "the Ropsten Testnet. The duration of one phase is " +
-        "set to 1 min (instead of 1 week) for testing purposes.</span>";
+        "set to 1 min (instead of 1 week) for testing purposes. " +
+        "Please test whatever you want to experiment with and give us " +
+        "feedback!</span>";
     } else {
       $("network").innerHTML =
         "<span class='warning'>You are connected to " +
@@ -312,8 +314,8 @@ async function vote() {
     const current_phase_id =
           (await getNextPhaseStart()) < Date.now() ?
           phase_id + 1 : phase_id;
-    console.log("current_phase_id: ", current_phase_id);
     console.log("phase_id: ", phase_id);
+    console.log("current_phase_id: ", current_phase_id);
     
     const current_salt = await getSalt(current_phase_id);
     console.log("current_salt: ", current_salt);
@@ -376,15 +378,25 @@ async function vote() {
       throw(receipt);
     }
     const ret = receipt.events.VoteEvent.returnValues;
+    const updated_phase_id = parseInt(
+      await _oracle_contract.methods.phase_id_().call());
     const message =
-          (ret.commit_result ? "Commit succeeded. " +
-           "You voted for the oracle level " +
-           current_level + ". You deposited " + ret.deposited + " coins." :
-          "Commit failed. You can vote only once per phase.") + "<br>" +
-          (ret.reveal_result ? "Reveal succeeded." :
-           "Reveal failed. Your vote in the previous phase was not found.") +
-          "<br>" + "You reclaimed " + ret.reclaimed + " coins and got " +
-          ret.rewarded + " coins as a reward.";
+          (ret.commit_result ? "Commit for phase " + updated_phase_id +
+           " succeeded. You voted for the oracle level " + current_level +
+           ". You deposited " + ret.deposited + " coins. " +
+           "The coins will be reclaimed at phase " + (updated_phase_id + 2) +
+           " as long as you vote at phase " + (updated_phase_id + 1) +
+           " and phase " + (updated_phase_id + 2) + ".":
+           "Commit for phase " + updated_phase_id + " failed. "+
+           "You can vote only once per phase.") + "<br><br>" +
+          (ret.reveal_result ? "Reveal for phase " + (updated_phase_id - 1) +
+           " succeeded." :
+           "Reveal for phase " + (updated_phase_id - 1) +
+           " failed because your vote in phase " + (updated_phase_id - 1) +
+           " was not found.") +
+          "<br><br>" + "You reclaimed " + ret.reclaimed +
+          " coins you deposited at phase " + (updated_phase_id - 2) +
+          ". You got " + ret.rewarded + " coins as a reward.";
     await showTransactionSuccessMessage(message, receipt);
   } catch (error) {
     const transactionHash = extractTransactionHash(error);

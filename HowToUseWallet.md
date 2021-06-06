@@ -40,18 +40,18 @@ For example, imagine the current oracle level is 2. If you send 100 coins, 12 co
 
 Voting is probably the most complex concept of JohnLawCoin but what you need to do in practice is simple:
 
-1. Look up the current JLC <=> USD exchange rate using some real-world currency exchanger. The current exchange rate is defined as the exchange rate at the point when the ACB's current phase started.
+1. Look up the current JLC <=> USD exchange rate using some real-world currency exchanger (e.g., Uniswap). The current exchange rate is defined as the exchange rate at the point when the ACB's current phase started.
 1. Vote for the oracle level that is the closest to the current exchange rate. In a bootstrap phase where no currency exchanger is available, vote for the oracle level 5.
 
 Remember that 10% of your coin balance is deposited to the ACB when you vote. The ACB weights your vote by the amount of the deposited coins and determines the "truth" oracle level by weighted majority votes. Due to the weighting, the more coins you possess, the more power your vote has.
 
-The deposited coins are returned to your wallet later only if 1) you voted for an oracle level that is within one level from the "truth" oracle level and 2) you vote in the next two phases in a row. Otherwise, you will lose the deposited coins.
+Let N be the current phase ID. The coins you deposited at phase N are returned to your wallet at phase N+2 only when 1) you voted for an oracle level that is within one level from the "truth" oracle level at phase N and 2) you vote at phase N+1 and phase N+2. Otherwise, you will lose the deposited coins.
 
-In addition, you can get a reward later if 1) you voted for the "truth" oracle level and 2) you vote in the next two phases in a row. The more coins you deposited, the more reward you can get.
+In addition, you can get a reward at phase N+2 when 1) you voted for the "truth" oracle level at phase N and 2) you vote at phase N+1 and phase N+2. The more coins you deposited, the more reward you can get.
 
 The detailed calculation is described the whitepaper, but in summary, **you just need to vote for the "truth" oracle level every phase (i.e., every week)**.
 
-*[Note for advanced readers: The vote operation commits a vote to the current phase, reveals a vote in the previous phase and reclaims coins deposited in the phase before the previous phase at the same time. If you forget to vote in the current phase, that also means 1) you forget to reveal your vote in the previous phase, losing the coins deposited to the previous phase, and 2) you forget to reclaim the coins you deposited in the phase before the previous phase. This is why you should keep voting every phase.]*
+*[Note for advanced readers: The vote operation commits a vote to phase N, reveals a vote at phase N-1 and reclaims coins deposited at phase N-2 at the same time. If you forget to vote at phase N, that also means 1) you forget to reveal your vote at phase N-1, losing the coins deposited at phase N-1, and 2) you forget to reclaim the coins you deposited at phase N-2. This is why you should keep voting every phase.]*
 
 *[Note for advanced readers: If you intend to only reveal and reclaim your votes in the previous phases and do NOT intend to commit a vote in the current phase, choose "Do not vote". Then no coins are deposited to the ACB. This is useful when you want to stop keeping voting.]*
 
