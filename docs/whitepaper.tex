@@ -5,7 +5,7 @@
 \renewcommand\arraystretch{1.4}
 \sloppy
 
-\title{\textbf{JohnLawCoin: A Stablecoin with\\ an MMT-based Algorithmic Central Bank}}
+\title{\textbf{JohnLawCoin: A Non-Collateralized Stablecoin\\ with an Algorithmic Central Bank}}
 \author{Kentaro Hara\footnote{Twitter: @johnlawcoin, GitHub: https://github.com/xharaken/john-law-coin. Opinions are my own and not the views of my employer.}}
 \date{2021 May}
 
@@ -15,11 +15,13 @@
 
 \begin{abstract}
 
-\textbf{JohnLawCoin} is a stablecoin realized by an \textbf{Algorithmic Central Bank (ACB)}. The monetary policies are backed by Modern Monetary Theory. The system is fully decentralized and there is truly no gatekeeper. No gatekeeper means there is no entity to be regulated.
+\textbf{JohnLawCoin} is a non-collateralized stablecoin realized by an \textbf{Algorithmic Central Bank (ACB)}. The monetary policies are backed by Modern Monetary Theory. The system is fully decentralized and there is truly no gatekeeper. No gatekeeper means there is no entity to be regulated.
 
 JohnLawCoin is a real-world experiment to verify one assumption: \textbf{There is a way to stabilize the currency price with algorithmically defined monetary policies without holding any collateral like USD.}
 
 If JohnLawCoin is successful and proves the assumption is correct, it will provide interesting insights for both non-fiat currencies and fiat currencies; i.e., 1) there is a way for non-fiat cryptocurrencies to implement a stablecoin without having any gatekeeper that holds collateral, and 2) there is a way for developing countries to implement a fixed exchange rate system for their fiat currencies without holding adequate USD reserves. This will upgrade human's understanding about money.
+
+There are a couple of preceding examples of non-collateralized stablecoins like BasisCoin~\cite{basiscoin} and Empty Set Dollar~\cite{emptysetdollar} but none of the coins has succeeded in stabilizing the currency price in the long run. JohnLawCoin is yet another experiment that attempts to stabilize the currency price by addressing issues of the existing stablecoins.
 
 \end{abstract}
 
@@ -27,11 +29,11 @@ If JohnLawCoin is successful and proves the assumption is correct, it will provi
 
 \subsection{Stablecoin}
 
-The high volatility of Bitcoin, Ethereum and other cryptocurrencies has limited their use cases in real-world transactions. For example, the price of ETH (Ethereum's currency) dropped from \$1300 to \$84 in 2018 and went up to \$2400 in 2021. Cryptocurrencies are recognized as speculative assets, not money. In theory, the main functions of money are distinguished as: a medium of exchange, a unit of account, and a store of value~\cite{davies2010history,ferguson2008ascent}. For cryptocurrencies to meet these functions as money, price stability is a mandatory requirement. Stablecoins have explored ways to ensure the price stability, including Tether~\cite{tether}, Libra / Diem~\cite{libra}, MakerDAO~\cite{makerdao} and Synthetix~\cite{synthetix}. JohnLawCoin is one of the stablecoins.
+The high volatility of Bitcoin, Ethereum and other cryptocurrencies has limited their use cases in real-world transactions. For example, the price of ETH (Ethereum's currency) dropped from \$1300 to \$84 in 2018 and went up to \$2400 in 2021. Cryptocurrencies are recognized as speculative assets, not money. In theory, the main functions of money are distinguished as: a medium of exchange, a unit of account, and a store of value~\cite{davies2010history,ferguson2008ascent}. For cryptocurrencies to meet these functions as money, price stability is a mandatory requirement. Stablecoins~\cite{mita2019stablecoin,klages2020stablecoins} have explored ways to ensure the price stability, including Tether~\cite{tether}, Libra / Diem~\cite{libra}, MakerDAO~\cite{makerdao} and Synthetix~\cite{synthetix}. JohnLawCoin is one of the stablecoins.
 
 \subsection{No entity to be regulated}
 
-The fundamental difference between JohnLawCoin and other stablecoins is that JohnLawCoin has no gatekeeper. A gatekeeper means an entity that has control and intention about the ecosystem. For example, Tether is issued by Tether Limited, which is subject to be regulated as a gatekeeper when something inappropriate happens in the ecosystem. On the other hand, JohnLawCoin is fully decentralized by defining open protocols that stabilize the currency price algorithmically. This eliminates the need to introduce a gatekeeper in the ecosystem. There is no entity to be regulated.
+JohnLawCoin has no gatekeeper. A gatekeeper means an entity that has control and intention about the ecosystem. For example, Tether is issued by Tether Limited, which is subject to be regulated as a gatekeeper when something inappropriate happens in the ecosystem. On the other hand, JohnLawCoin is fully decentralized and stabilizes the currency price algorithmically. This eliminates the need to introduce a gatekeeper in the ecosystem. There is no entity to be regulated.
 
 \subsection{No collateral}
 
@@ -41,7 +43,7 @@ In ancient times~\cite{davies2010history,ferguson2008ascent}, it was believed th
 
 As Katsuhito Iwai pointed out~\cite{iwai1996boostrap,iwai1997evolution}, money works as money simply because it is used as money. Money is accepted as money by everybody merely because it is accepted as money by everybody else. This infinite incentive recursion is the origin of the value of money. Collateral like gold and the sovereign power are indeed useful to establish the infinite incentive recursion but are not the essence to make something work as money.
 
-However, it seems like that existing stablecoins still believe the myth that money must be backed by collateral (e.g., Tether, Libra, Maker) and are hitting challenges:
+However, many existing stablecoins still believe the myth that money must be backed by collateral (e.g., Tether, Libra, Maker) and are hitting challenges:
 
 \begin{itemize}
 \item Tether~\cite{tether} is backed by USD. Tether Limited works as a gatekeeper and holds the USD reserves. However, it is pointed out that Tether is controversial because of the company's failure to provide a promised audit about the USD reserves and also its alleged role in manipulating the price of Bitcoin. Tether's centralized model brings counterparty risks.
@@ -53,7 +55,7 @@ These complexities come from the collateral. The goal of JohnLawCoin is to demon
 
 \subsection{MMT}
 
-JohnLawCoin is inspired by MMT (Modern Monetary Theory)~\cite{kelton2020deficit,mmt2016wray}. Specifically, JohnLawCoin is designed based on the following monetary principles of MMT:\footnote{MMT is controversial when it comes to its political implications about fiscal policies and taxing~\cite{palley2015money}, but digging into the political implications is out of the scope of this paper. In the first place, JohnLawCoin does not have any gatekeeper that can enforce fiscal policies. JohnLawCoin only depends on the monetary principles [MMT-I], [MMT-II] and [MMT-III], which do not contradict the view of the standard economic theories and are not controversial.}
+JohnLawCoin is inspired by MMT (Modern Monetary Theory)~\cite{kelton2020deficit,mmt2016wray}. Specifically, JohnLawCoin is designed based on the following monetary principles of MMT:\footnote{MMT is controversial when it comes to its political implications about fiscal policies and taxing~\cite{palley2015money}, but digging into the political implications is out of the scope of this paper. JohnLawCoin only depends on the monetary principles [MMT-I], [MMT-II] and [MMT-III], which do not contradict the view of the standard economic theories and are not controversial.}
 
 \begin{description}
 \item{\textbf{[MMT-I]}} A government that issues its own fiat currency is never forced to default on debt denominated by the fiat currency because the government can always redeem the debt by creating money.
@@ -73,11 +75,35 @@ JohnLawCoin is a real-world experiment to upgrade human's understanding about mo
 
 \section{Related work}
 
-Historically, there were a couple of efforts that attempted to implement stablecoins with no collateral. Examples are BasisCoin~\cite{basiscoin}, Seigniorage Shares~\cite{seigniorage} and Kowala~\cite{kowala}. BasisCoin is the most popular and invested one. BasisCoin secured \$133 million in funding but shut down before launching because the company could not find any way to pass regulatory constraints.
+There are a couple of preceding examples of non-collateralized stablecoins~\cite{mita2019stablecoin,klages2020stablecoins}. Examples are BasisCoin~\cite{basiscoin}, Empty Set Dollar~\cite{emptysetdollar}, AMPL~\cite{ampl}, Seigniorage Shares~\cite{seigniorage} and Kowala~\cite{kowala}. However, none of the coins has succeeded in stabilizing the currency price in the long run. JohnLawCoin is yet another experiment that attempts to stabilize the currency price by addressing issues of the existing stablecoins.
 
-JohnLawCoin has commonalities with BasisCoin in the sense that it uses bonds to control the total coin supply. However, there is a fundamental difference in the launch strategy. In case of BasisCoin, a start-up company attempted to launch the system and was in charge of the issued tokens and bonds. Thus the company was regulated as a gatekeeper. In case of JohnLawCoin, it is fully decentralized and there is no entity to be regulated. Another difference is in the protocol. BasisCoin used three types of tokens: shares, coins and bonds. JohnLawCoin uses only two types of tokens: coins and bonds. JohnLawCoin's protocol is simpler and easier to understand.
+\subsection{BasisCoin}
 
-To the best of the author's knowledge, there is no large-scale real-world experiment that has explored stablecoins with no collateral. BasisCoin looked like the most promising experiment but shut down before launching.
+BasisCoin is probably the first popular non-collateralized stablecoin. The idea is to expand or contract the total coin supply so that the coin price measured by USD gets stabilized. When the coin price is larger than \$1.0, it expands the total coin supply by minting new coins. When the coin price is smaller than \$1.0, it contracts the total coin supply by issuing bonds.
+
+JohnLawCoin uses the same idea to control the total coin supply but there is a fundamental difference in the launch strategy. BasisCoin attempted to launch the system by creating a start-up company and the company was in charge of the issued coins and bonds. Thus the company was regulated as a gatekeeper. BasisCoin secured \$133 million in funding but had to shut down before the launch due to the regulations. On the other hand, JohnLawCoin issues its coins and bonds in a fully decentralized manner and there is no entity to be regulated.
+
+Another difference is in the protocol. BasisCoin uses three types of tokens: shares, coins and bonds. JohnLawCoin uses only two types of tokens: coins and bonds. JohnLawCoin's protocol is simpler and easier to understand.
+
+\subsection{Empty Set Dollar}
+
+Empty Set Dollar (ESD) expands on the pioneering work of BasisCoin. ESD addressed the regulation problem by launching it with an anonymous team and implementing a fully decentralized community-based governance. ESD had succeeded in stabilizing the coin price to mostly \$1.0 from 2020 September to 2021 January but then the coin price dropped to \$0.1 or less. As of 2021 June, the coin price is \$0.05 and it is hard to say that ESD is working as a stablecoin.
+
+Conceptually JohnLawCoin and ESD are similar because both are bond-based non-collateralized stablecoins but have the following differences.~\footnote{Coincidentally the author came up with JohnLawCoin independently from Empty Set Dollar.}
+
+First, ESD's protocol can be updated by the community-based governance. Any person who holds a certain percentage of the total coin supply can propose changes to the protocol. When the proposal obtains a certain amount of votes, the protocol is accepted. Actually a couple of fundamental changes were made to the ESD's protocol since its launch. The community-based governance is good as long as it is making good changes but has a risk of moving the protocol in an undesirable direction. More importantly, the existence of the community-based governance  makes the future shape of the protocol unpredictable, increasing the risk of holding ESD. On the other hand, JohnLawCoin's protocol is fully algorithmically defined and immutable.
+
+Second, ESD's bonds (they are called coupons in ESD) are redeemable only when the coin price becomes larger than \$1.0 and expire in 90 days. This design looks problematic. A bond-based non-collateralized stablecoin works only when it can find users who are willing to purchase bonds when the total coin supply needs to be contracted (i.e., the coin price is smaller than \$1.0). If the current coin price is \$0.05 (this is the actual ESD price as of 2021 June) and the bonds expire if the coin price does not go up to \$1.0 in 90 days, who will take the risk of purchasing the bonds? ESD sets a high risk premium in these cases but it is really questionable whether it can find users who are willing to purchase the bonds. On the other hand, JohnLawCoin guarantees that issued bonds can be redeemed at their redemption dates.
+
+Third, ESD depends on the price oracle of Uniswap~\cite{uniswap}, assuming that Uniswap can provide a non-manipulated exchange rate between ESD and USD. On the other hand, JohnLawCoin implements a fully decentralized price oracle. JohnLawCoin does not have any dependencies on external smart contracts like Uniswap.
+
+Fourth, ESD is more elastic than JohnLawCoin. For example, ESD adjusts the total coin supply every 8 hours while JohnLawCoin adjusts it only every 1 week. The maximum increase of the total coin supply of ESD is set to 6\% per 8 hours while that of JohnLawCoin is set to 4\% per week. The risk premium of ESD's bonds is set much higher than that of JohnLawCoin. JohnLawCoin is more conservative about making changes in the total coin supply. JohnLawCoin will be less interesting for speculators but more robust to stabilize the coin price in the long run.
+
+Finally, ESD implements cryptocurrency-specific incentives like the community-based governance and treasury. JohnLawCoin does not implement cryptocurrency-specific incentives because its goal is to experiment with an algorithm that can be applied to real-world central banks.
+
+\subsection{AMPL}
+
+AMPL does not use bonds to control the total coin supply. Alternatively, AMPL expands and contracts the total coin supply simply by expanding and contracting users' wallet balances. The problem of this approach is that it only stabilizes the coin price and does not stabilize the purchasing power of a user's wallet balance. It merely trades a fixed wallet balance with a fluctuating coin price for a fixed coin price with a fluctuating wallet balance. From the perspective of the purchasing power, it will be as volatile as non-stablecoins.
 
 \section{Algorithm}
 
@@ -389,11 +415,11 @@ These smart contracts are carefully designed so that they can be upgraded in a w
 
 \section{Conclusions}
 
-JohnLawCoin is a stablecoin realized by an Algorithmic Central Bank. The system is fully decentralized and there is truly no gatekeeper. No gatekeeper means there is no entity to be regulated.
+JohnLawCoin is a non-collateralized stablecoin realized by an Algorithmic Central Bank. The system is fully decentralized and there is truly no gatekeeper. No gatekeeper means there is no entity to be regulated.
 
 JohnLawCoin is a real-world experiment to verify the assumption that there is a way to establish the infinite incentive recursion and stabilize the currency price without holding any collateral. JohnLawCoin's monetary protocols are backed by MMT. If JohnLawCoin is successful and proves the assumption is correct, it will provide interesting insights for both non-fiat currencies and fiat currencies; i.e., 1) there is a way for non-fiat cryptocurrencies to implement a stablecoin without having any gatekeeper that holds collateral, and 2) there is a way for developing countries to implement a fixed exchange rate system for their fiat currencies without holding adequate USD reserves. This will upgrade human's understanding about money.
 
-If you are interested in JohnLawCoin, please contribute to the oracle. Early adopters can get more coins. The more users the ecosystem gets, the more likely real-world currency exchangers start accepting JohnLawCoin and thus the ecosystem bootstraps. If you have any questions, please file GitHub issues at https://github.com/xharaken/john-law-coin.
+If you are interested in JohnLawCoin, please contribute to the oracle. Early adopters can get more coins. The more users the ecosystem obtains, the more likely real-world currency exchangers start accepting JohnLawCoin and thus the ecosystem bootstraps. If you have any questions, please file GitHub issues at https://github.com/xharaken/john-law-coin.
 
 \subsubsection*{}
 

@@ -4,11 +4,13 @@
 
 <img src="./docs/logo.png" width=120px>
 
-***JohnLawCoin*** is a stablecoin realized by an ***Algorithmic Central Bank (ACB)***. The monetary policies are backed by Modern Monetary Theory. The system is fully decentralized and there is truly no gatekeeper. No gatekeeper means there is no entity to be regulated.
+***JohnLawCoin*** is a non-collateralized stablecoin realized by an ***Algorithmic Central Bank (ACB)***. The monetary policies are backed by Modern Monetary Theory. The system is fully decentralized and there is truly no gatekeeper. No gatekeeper means there is no entity to be regulated.
 
 JohnLawCoin is a real-world experiment to verify one assumption: ***There is a way to stabilize the currency price with algorithmically defined monetary policies without holding any collateral like USD.***
 
 If JohnLawCoin is successful and proves the assumption is correct, it will provide interesting insights for both non-fiat currencies and fiat currencies; i.e., 1) there is a way for non-fiat cryptocurrencies to implement a stablecoin without having any gatekeeper that holds collateral, and 2) there is a way for developing countries to implement a fixed exchange rate system for their fiat currencies without holding adequate USD reserves. This will upgrade human's understanding about money.
+
+There are a couple of preceding examples of non-collateralized stablecoins like BasisCoin and Empty Set Dollar but none of the coins has succeeded in stabilizing the currency price in the long run. JohnLawCoin is yet another experiment that attempts to stabilize the currency price by addressing issues of the existing stablecoins.
 
 See [the whitepaper](./docs/whitepaper.pdf) for more details. See [the smart contract](https://github.com/xharaken/john-law-coin/blob/main/contracts/JohnLawCoin.sol) for the implementation.
 
