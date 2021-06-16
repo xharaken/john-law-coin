@@ -95,7 +95,7 @@ function parameterized_test(accounts,
         }
       }
 
-      let mint = randint(0, 20);
+      let mint = randint(0, 200);
       await check_advance(mint, _prev_mint);
       _prev_mint = mint;
 
@@ -164,7 +164,7 @@ function parameterized_test(accounts,
 
       assert.equal(await _oracle.getModeLevel(), mode_level);
 
-      mint = randint(0, 20);
+      mint = randint(0, 200);
       let deposit_to_reclaim = 0;
       if (mode_level == _level_max) {
         reward_total = deposit_total + mint;
@@ -228,7 +228,7 @@ function parameterized_test(accounts,
 
       assert.equal(deposit_to_reclaim + reward_total, deposit_total + mint);
       let remainder = deposit_total + mint - reclaim_total;
-      mint = randint(0, 20);
+      mint = randint(0, 200);
       await check_advance(mint, remainder);
       _prev_mint = mint;
 

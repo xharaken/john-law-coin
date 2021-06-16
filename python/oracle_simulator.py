@@ -23,7 +23,7 @@ class OracleSimulator(unittest.TestCase):
 
         self.voter_count = voter_count
         self.iteration = iteration
-        self.prev_mint = 0
+        self.prev_tax = 0
 
     def teardown(self):
         pass
@@ -33,7 +33,7 @@ class OracleSimulator(unittest.TestCase):
         for i in range(self.iteration):
             self.run_cycle()
             self.assertEqual(self.coin.total_supply,
-                             self.prev_mint + initial_coin_supply)
+                             self.prev_tax + initial_coin_supply)
 
     def run_cycle(self):
 
@@ -80,10 +80,11 @@ class OracleSimulator(unittest.TestCase):
                                 voters[i].committed_level,
                                 voters[i].committed_salt), 0), False)
 
-        mint = random.randint(0, 20)
-        burned = self.oracle.advance(self.coin, mint)
-        self.assertEqual(burned, self.prev_mint)
-        self.prev_mint = mint
+        tax = random.randint(0, 200)
+        self.coin.mint(self.coin.tax_account, tax)
+        burned = self.oracle.advance(self.coin)
+        self.assertEqual(burned, self.prev_tax)
+        self.prev_tax = tax
 
         for i in range(len(voters)):
             self.assertEqual(voters[i].address, i + 1)
@@ -144,22 +145,23 @@ class OracleSimulator(unittest.TestCase):
 
         self.assertEqual(self.oracle.get_mode_level(), mode_level)
 
-        mint = random.randint(0, 20)
+        tax = random.randint(0, 200)
         deposit_to_reclaim = 0
         if mode_level == Oracle.LEVEL_MAX:
-            reward_total = deposit_total + mint
+            reward_total = deposit_total + tax
         else:
             for level in range(Oracle.LEVEL_MAX):
                 if (mode_level - Oracle.RECLAIM_THRESHOLD <= level and
                     level <= mode_level + Oracle.RECLAIM_THRESHOLD):
                     deposit_to_reclaim += deposits[level]
-            reward_total = deposit_total - deposit_to_reclaim + mint
+            reward_total = deposit_total - deposit_to_reclaim + tax
         self.assertEqual(deposit_to_reclaim + reward_total,
-                         deposit_total + mint)
+                         deposit_total + tax)
 
-        burned = self.oracle.advance(self.coin, mint)
-        self.assertEqual(burned, self.prev_mint)
-        self.prev_mint = mint
+        self.coin.mint(self.coin.tax_account, tax)
+        burned = self.oracle.advance(self.coin)
+        self.assertEqual(burned, self.prev_tax)
+        self.prev_tax = tax
 
         reclaim_total = 0
         for i in range(len(voters)):
@@ -202,12 +204,13 @@ class OracleSimulator(unittest.TestCase):
                     self.coin, -voters[i].address), (0, 0))
 
         self.assertEqual(deposit_to_reclaim + reward_total,
-                         deposit_total + mint)
-        remainder = deposit_total + mint - reclaim_total
-        mint = random.randint(0, 20)
-        burned = self.oracle.advance(self.coin, mint)
+                         deposit_total + tax)
+        remainder = deposit_total + tax - reclaim_total
+        tax = random.randint(0, 200)
+        self.coin.mint(self.coin.tax_account, tax)
+        burned = self.oracle.advance(self.coin)
         self.assertEqual(burned, remainder)
-        self.prev_mint = mint
+        self.prev_tax = tax
 
 
 def main():

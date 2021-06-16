@@ -134,36 +134,36 @@ class CoinBondUnitTest(unittest.TestCase):
         self.assertEqual(coin.balance_of(accounts[5]), 1)
 
         # tax
-        coin.set_tax_rate(0)
-        coin.transfer(accounts[1], accounts[2], 10)
-        self.assertEqual(coin.balance_of(accounts[1]), 280)
-        self.assertEqual(coin.balance_of(accounts[2]), 18)
-        self.assertEqual(coin.balance_of(coin.tax_account), 0)
-        coin.set_tax_rate(10)
-        coin.transfer(accounts[1], accounts[2], 10)
-        self.assertEqual(coin.balance_of(accounts[1]), 270)
-        self.assertEqual(coin.balance_of(accounts[2]), 27)
-        self.assertEqual(coin.balance_of(coin.tax_account), 1)
-        coin.transfer(accounts[1], accounts[2], 1)
-        self.assertEqual(coin.balance_of(accounts[1]), 269)
-        self.assertEqual(coin.balance_of(accounts[2]), 28)
-        self.assertEqual(coin.balance_of(coin.tax_account), 1)
-        coin.transfer(accounts[1], accounts[2], 19)
-        self.assertEqual(coin.balance_of(accounts[1]), 250)
-        self.assertEqual(coin.balance_of(accounts[2]), 46)
-        self.assertEqual(coin.balance_of(coin.tax_account), 2)
-        coin.transfer(accounts[1], accounts[1], 20)
-        self.assertEqual(coin.balance_of(accounts[1]), 248)
-        self.assertEqual(coin.balance_of(accounts[2]), 46)
-        self.assertEqual(coin.balance_of(coin.tax_account), 4)
+        coin.mint(accounts[1], 10000)
+        account1_balance = coin.balance_of(accounts[1])
+        account2_balance = coin.balance_of(accounts[2])
+        tax_balance = coin.balance_of(coin.tax_account)
+        for amount in [0, 1, 99, 100, 101, 999, 1000, 1001]:
+            tax = int(amount * JohnLawCoin.TAX_RATE / 100)
+            coin.reset_tax_account()
+            coin.transfer(accounts[1], accounts[2], amount)
+            self.assertEqual(coin.balance_of(accounts[1]),
+                             account1_balance - amount)
+            self.assertEqual(coin.balance_of(accounts[2]),
+                             account2_balance + amount - tax)
+            self.assertEqual(coin.balance_of(coin.tax_account),
+                             tax_balance + tax)
+            account1_balance = coin.balance_of(accounts[1])
+            account2_balance = coin.balance_of(accounts[2])
+            tax_balance = coin.balance_of(coin.tax_account)
+            
+        coin.transfer(accounts[1], accounts[1], 1000)
+        self.assertEqual(coin.balance_of(accounts[1]), account1_balance - 10)
+        self.assertEqual(coin.balance_of(accounts[2]), account2_balance)
+        self.assertEqual(coin.balance_of(coin.tax_account), tax_balance + 10)
         old_tax_account = coin.tax_account
-        coin.set_tax_rate(20)
+        coin.reset_tax_account()
         self.assertEqual(coin.balance_of(old_tax_account), 0)
-        self.assertEqual(coin.balance_of(coin.tax_account), 4)
+        self.assertEqual(coin.balance_of(coin.tax_account), tax_balance + 10)
         old_tax_account = coin.tax_account
-        coin.set_tax_rate(0)
+        coin.reset_tax_account()
         self.assertEqual(coin.balance_of(old_tax_account), 0)
-        self.assertEqual(coin.balance_of(coin.tax_account), 4)
+        self.assertEqual(coin.balance_of(coin.tax_account), tax_balance + 10)
 
         # JohnLawBond
         bond = JohnLawBond()

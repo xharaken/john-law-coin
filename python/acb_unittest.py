@@ -19,19 +19,20 @@ class ACBUnitTest(unittest.TestCase):
                  damping_factor,
                  level_to_exchange_rate,
                  level_to_bond_price,
-                 level_to_tax_rate,
-                 reclaim_threshold):
+                 reclaim_threshold,
+                 tax):
         super().__init__()
 
         print('redemp_price=%d redemp_period=%d phase_dur=%d '
-              'reward_rate=%d deposit_rate=%d damping=%d reclaim=%d' %
+              'reward_rate=%d deposit_rate=%d damping=%d reclaim=%d tax=%d' %
               (bond_redemption_price,
                bond_redemption_period,
                phase_duration,
                proportional_reward_rate,
                deposit_rate,
                damping_factor,
-               reclaim_threshold))
+               reclaim_threshold,
+               tax))
         print('exchange_rate=', end='')
         print(level_to_exchange_rate)
         print('bond_price=', end='')
@@ -51,9 +52,11 @@ class ACBUnitTest(unittest.TestCase):
         self.acb.override_constants_for_testing(
             bond_redemption_price, bond_redemption_period,
             phase_duration, deposit_rate, damping_factor,
-            level_to_exchange_rate, level_to_bond_price, level_to_tax_rate)
+            level_to_exchange_rate, level_to_bond_price)
 
-        self.initial_coin_supply = self.acb.coin.total_supply
+        self.initial_coin_supply = JohnLawCoin.INITIAL_COIN_SUPPLY
+        self.tax_rate = JohnLawCoin.TAX_RATE
+        self.tax = tax
 
         for level in range(Oracle.LEVEL_MAX):
             if (ACB.LEVEL_TO_EXCHANGE_RATE[level] ==
@@ -672,6 +675,7 @@ class ACBUnitTest(unittest.TestCase):
         deposit_5 = [0, 0, 0]
         deposit_6 = [0, 0, 0]
         now = 0
+        self.set_tax()
 
         acb.coin.move(accounts[1], accounts[4], 100)
         self.assertEqual(acb.coin.balance_of(accounts[4]), 100)
@@ -708,6 +712,7 @@ class ACBUnitTest(unittest.TestCase):
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
 
         balance = acb.coin.balance_of(accounts[4])
         deposit_4[now] = int(balance * ACB.DEPOSIT_RATE / 100)
@@ -731,15 +736,16 @@ class ACBUnitTest(unittest.TestCase):
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         mint = self.mint_at_default_level()
 
         balance = acb.coin.balance_of(accounts[4])
         reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
-                     mint / 100)
+                     self.tax / 100)
         if deposit_4[(now - 2) % 3] > 0:
             reward += int(Oracle.PROPORTIONAL_REWARD_RATE *
-                          mint / 100)
-        remainder[now] = mint - reward
+                          self.tax / 100)
+        remainder[now] = self.tax - reward
         deposit_4[now] = int(balance * ACB.DEPOSIT_RATE / 100)
         self.assertEqual(acb.current_phase_start,
                          acb.get_timestamp() - ACB.PHASE_DURATION)
@@ -764,11 +770,12 @@ class ACBUnitTest(unittest.TestCase):
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         mint = 0
 
         balance = acb.coin.balance_of(accounts[4])
         coin_supply = acb.coin.total_supply
-        remainder[now] = deposit_4[(now - 2) % 3] + mint
+        remainder[now] = deposit_4[(now - 2) % 3] + self.tax
         deposit_4[now] = int(balance * ACB.DEPOSIT_RATE / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.hash(
@@ -784,21 +791,22 @@ class ACBUnitTest(unittest.TestCase):
             self.default_level, 2), (False, False, 0, 0, 0, False))
         self.assertEqual(acb.coin.balance_of(accounts[4]), balance)
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply + mint -
+                         coin_supply -
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         mint = self.mint_at_default_level()
 
         balance = acb.coin.balance_of(accounts[4])
         coin_supply = acb.coin.total_supply
         reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
-                     mint / 100)
+                     self.tax / 100)
         if deposit_4[(now - 2) % 3] > 0:
             reward += int(Oracle.PROPORTIONAL_REWARD_RATE *
-                          mint / 100)
-        remainder[now] = mint - reward
+                          self.tax / 100)
+        remainder[now] = self.tax - reward
         deposit_4[now] = int(balance * ACB.DEPOSIT_RATE / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.hash(
@@ -817,21 +825,22 @@ class ACBUnitTest(unittest.TestCase):
             self.default_level, 4), (False, False, 0, 0, 0, False))
         self.assertEqual(acb.coin.balance_of(accounts[4]), balance)
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply + mint -
+                         coin_supply -
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         mint = self.mint_at_default_level()
 
         balance = acb.coin.balance_of(accounts[4])
         coin_supply = acb.coin.total_supply
         reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
-                     mint / 100)
+                     self.tax / 100)
         if deposit_4[(now - 2) % 3] > 0:
             reward += int(Oracle.PROPORTIONAL_REWARD_RATE *
-                          self.mint_at_default_level() / 100)
-        remainder[now] = mint - reward
+                          self.tax / 100)
+        remainder[now] = self.tax - reward
         deposit_4[now] = int(balance * ACB.DEPOSIT_RATE / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.hash(
@@ -849,22 +858,23 @@ class ACBUnitTest(unittest.TestCase):
             self.default_level, 5), (False, False, 0, 0, 0, False))
         self.assertEqual(acb.coin.balance_of(accounts[4]), balance)
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply + mint -
+                         coin_supply -
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         mint = self.mint_at_default_level()
 
         balance = acb.coin.balance_of(accounts[4])
         coin_supply = acb.coin.total_supply
         reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
-                     mint / 100)
+                     self.tax / 100)
         if deposit_4[(now - 2) % 3] > 0:
             reward += int(Oracle.PROPORTIONAL_REWARD_RATE *
-                          mint / 100)
-        remainder[now] = mint - reward
+                          self.tax / 100)
+        remainder[now] = self.tax - reward
         deposit_4[now] = int(balance * ACB.DEPOSIT_RATE / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.hash(
@@ -883,21 +893,22 @@ class ACBUnitTest(unittest.TestCase):
             self.default_level, 6), (False, False, 0, 0, 0, False))
         self.assertEqual(acb.coin.balance_of(accounts[4]), balance)
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply + mint -
+                         coin_supply -
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         mint = self.mint_at_default_level()
 
         balance = acb.coin.balance_of(accounts[4])
         coin_supply = acb.coin.total_supply
         reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
-                     mint / 100)
+                     self.tax / 100)
         if deposit_4[(now - 2) % 3] > 0:
             reward += int(Oracle.PROPORTIONAL_REWARD_RATE *
-                          mint / 100)
-        remainder[now] = mint - reward
+                          self.tax / 100)
+        remainder[now] = self.tax - reward
         deposit_4[now] = int(balance * ACB.DEPOSIT_RATE / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.hash(
@@ -916,17 +927,18 @@ class ACBUnitTest(unittest.TestCase):
             self.default_level, 6), (False, False, 0, 0, 0, False))
         self.assertEqual(acb.coin.balance_of(accounts[4]), balance)
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply + mint -
+                         coin_supply -
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         mint = 0
 
         balance = acb.coin.balance_of(accounts[4])
         coin_supply = acb.coin.total_supply
         reward = 0
-        remainder[now] = deposit_4[(now - 2) % 3] + mint - reward
+        remainder[now] = deposit_4[(now - 2) % 3] + self.tax - reward
         deposit_4[now] = 0
         self.assertEqual(acb.vote(
             accounts[4], ACB.NULL_HASH, self.default_level, 7),
@@ -942,7 +954,7 @@ class ACBUnitTest(unittest.TestCase):
             self.default_level, 6), (False, False, 0, 0, 0, False))
         self.assertEqual(acb.coin.balance_of(accounts[4]), balance)
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply + mint -
+                         coin_supply -
                          remainder[(now - 1) % 3])
 
         # 3 commits on the stable level.
@@ -955,10 +967,11 @@ class ACBUnitTest(unittest.TestCase):
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         mint = 0
 
         coin_supply = acb.coin.total_supply
-        remainder[now] = deposit_4[(now - 2) % 3] + mint
+        remainder[now] = deposit_4[(now - 2) % 3] + self.tax
         balance_4 = acb.coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * ACB.DEPOSIT_RATE / 100)
         self.assertEqual(acb.vote(
@@ -985,15 +998,16 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.balance_of(accounts[6]),
                          balance_6 - deposit_6[now])
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply + mint -
+                         coin_supply -
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         mint = 0
 
         coin_supply = acb.coin.total_supply
-        remainder[now] = deposit_4[(now - 2) % 3] + mint
+        remainder[now] = deposit_4[(now - 2) % 3] + self.tax
         balance_4 = acb.coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * ACB.DEPOSIT_RATE / 100)
         self.assertEqual(acb.vote(
@@ -1020,16 +1034,17 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.balance_of(accounts[6]),
                          balance_6 - deposit_6[now])
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply + mint -
+                         coin_supply -
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         mint = 0
 
         coin_supply = acb.coin.total_supply
         remainder[now] = (deposit_4[(now - 2) % 3] + deposit_5[(now - 2) % 3] +
-                          deposit_6[(now - 2) % 3] + mint)
+                          deposit_6[(now - 2) % 3] + self.tax)
         balance_4 = acb.coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * ACB.DEPOSIT_RATE / 100)
         self.assertEqual(acb.vote(
@@ -1056,15 +1071,16 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.balance_of(accounts[6]),
                          balance_6 - deposit_6[now])
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply + mint -
+                         coin_supply -
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
-        reward_total = 0 + mint
+        reward_total = 0 + self.tax
         constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (3 * 100))
         reward_4 = reward_5 = reward_6 = 0
@@ -1117,15 +1133,16 @@ class ACBUnitTest(unittest.TestCase):
                          balance_6 - deposit_6[now] + deposit_6[(now - 2) % 3] +
                          reward_6 + constant_reward)
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply + mint -
+                         coin_supply -
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
-        reward_total = 0 + mint
+        reward_total = 0 + self.tax
         constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (3 * 100))
         reward_4 = reward_5 = reward_6 = 0
@@ -1179,16 +1196,17 @@ class ACBUnitTest(unittest.TestCase):
                          reward_6 + constant_reward)
 
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply + mint -
+                         coin_supply -
                          remainder[(now - 1) % 3])
 
         self.reset_balances()
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
-        reward_total = 0 + mint
+        reward_total = 0 + self.tax
         constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (3 * 100))
         reward_4 = reward_5 = reward_6 = 0
@@ -1244,15 +1262,16 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(deposit_5[now], 0)
         self.assertEqual(deposit_6[now], 0)
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply + mint -
+                         coin_supply -
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
-        reward_total = 0 + mint
+        reward_total = 0 + self.tax
         constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (3 * 100))
         reward_4 = reward_5 = reward_6 = 0
@@ -1305,15 +1324,16 @@ class ACBUnitTest(unittest.TestCase):
                          balance_6 - deposit_6[now] + deposit_6[(now - 2) % 3] +
                          reward_6 + constant_reward)
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply + mint -
+                         coin_supply -
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
-        reward_total = 0 + mint
+        reward_total = 0 + self.tax
         constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (3 * 100))
         reward_4 = 0
@@ -1356,15 +1376,16 @@ class ACBUnitTest(unittest.TestCase):
                          balance_6 - deposit_6[now] + deposit_6[(now - 2) % 3] +
                          reward_6 + constant_reward)
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply + mint -
+                         coin_supply -
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
-        reward_total = deposit_6[(now - 2) % 3] + mint
+        reward_total = deposit_6[(now - 2) % 3] + self.tax
         constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (2 * 100))
         reward_4 = reward_5 = reward_6 = 0
@@ -1411,16 +1432,17 @@ class ACBUnitTest(unittest.TestCase):
                          balance_6 - deposit_6[now] +
                          reward_6)
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply + mint -
+                         coin_supply -
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
         reward_total = (deposit_4[(now - 2) % 3] + deposit_5[(now - 2) % 3] +
-                        mint)
+                        self.tax)
         constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (1 * 100))
         reward_4 = 0
@@ -1460,16 +1482,17 @@ class ACBUnitTest(unittest.TestCase):
                          balance_6 - deposit_6[now] + deposit_6[(now - 2) % 3] +
                          reward_6 + constant_reward)
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply + mint -
+                         coin_supply -
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         mint = 0
 
         coin_supply = acb.coin.total_supply
         reward_total = (deposit_4[(now - 2) % 3] + deposit_5[(now - 2) % 3] +
-                        deposit_6[(now - 2) % 3] + mint)
+                        deposit_6[(now - 2) % 3] + self.tax)
         constant_reward = 0
         reward_4 = 0
         reward_5 = 0
@@ -1501,15 +1524,16 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.balance_of(accounts[6]),
                          balance_6 - deposit_6[now])
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply + mint -
+                         coin_supply -
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
-        reward_total = 0 + mint
+        reward_total = 0 + self.tax
         constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (3 * 100))
         reward_4 = reward_5 = reward_6 = 0
@@ -1548,15 +1572,16 @@ class ACBUnitTest(unittest.TestCase):
                          balance_6 - deposit_6[now] + deposit_6[(now - 2) % 3] +
                          reward_6 + constant_reward)
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply + mint -
+                         coin_supply -
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
-        reward_total = deposit_4[(now - 2) % 3] + mint
+        reward_total = deposit_4[(now - 2) % 3] + self.tax
         constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (2 * 100))
         reward_4 = reward_5 = reward_6 = 0
@@ -1580,15 +1605,16 @@ class ACBUnitTest(unittest.TestCase):
                          balance_6 - deposit_6[now] + deposit_6[(now - 2) % 3] +
                          reward_6 + constant_reward)
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply + mint -
+                         coin_supply -
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
-        reward_total = deposit_5[(now - 2) % 3] + mint
+        reward_total = deposit_5[(now - 2) % 3] + self.tax
         constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (1 * 100))
         reward_4 = 0
@@ -1604,15 +1630,16 @@ class ACBUnitTest(unittest.TestCase):
             self.default_level, -1), (True, False, deposit13, 0, 0, True))
         self.assertEqual(acb.oracle_level, self.default_level)
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply + mint -
+                         coin_supply -
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         mint = 0
 
         coin_supply = acb.coin.total_supply
-        remainder[now] = deposit_6[(now - 2) % 3] + mint
+        remainder[now] = deposit_6[(now - 2) % 3] + self.tax
         deposit14 = int(
             acb.coin.balance_of(accounts[1]) * ACB.DEPOSIT_RATE / 100)
         self.assertEqual(acb.vote(
@@ -1621,7 +1648,7 @@ class ACBUnitTest(unittest.TestCase):
             self.default_level, -1), (True, True, deposit14, 0, 0, True))
         self.assertEqual(acb.oracle_level, Oracle.LEVEL_MAX)
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply + mint -
+                         coin_supply -
                          remainder[(now - 1) % 3])
 
         # 3 commits on the stable level and another level.
@@ -1629,6 +1656,7 @@ class ACBUnitTest(unittest.TestCase):
         # 0, stable, stable
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         self.reset_balances()
         mint = self.mint_at_default_level()
 
@@ -1637,7 +1665,7 @@ class ACBUnitTest(unittest.TestCase):
         acb.coin.move(accounts[1], accounts[5], 8100)
 
         coin_supply = acb.coin.total_supply
-        reward_total = deposit13 + mint
+        reward_total = deposit13 + self.tax
         constant_reward = 0
         reward_4 = 0
         reward_5 = 0
@@ -1669,15 +1697,16 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.balance_of(accounts[6]),
                          balance_6 - deposit_6[now])
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply + mint -
+                         coin_supply -
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         mint = 0
 
         coin_supply = acb.coin.total_supply
-        reward_total = deposit14 + mint
+        reward_total = deposit14 + self.tax
         constant_reward = 0
         reward_4 = 0
         reward_5 = 0
@@ -1709,11 +1738,12 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.balance_of(accounts[6]),
                          balance_6 - deposit_6[now])
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply + mint -
+                         coin_supply -
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
@@ -1723,7 +1753,7 @@ class ACBUnitTest(unittest.TestCase):
             in_threshold = True
             reclaim_4 = deposit_4[(now - 2) % 3]
         reward_total = (deposit_4[(now - 2) % 3] - reclaim_4 +
-                        mint)
+                        self.tax)
         constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (2 * 100))
         reward_4 = reward_5 = reward_6 = 0
@@ -1770,7 +1800,7 @@ class ACBUnitTest(unittest.TestCase):
                          balance_6 - deposit_6[now] + deposit_6[(now - 2) % 3] +
                          reward_6 + constant_reward)
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply + mint -
+                         coin_supply -
                          remainder[(now - 1) % 3])
 
         # 0, 0, stable
@@ -1780,6 +1810,7 @@ class ACBUnitTest(unittest.TestCase):
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         self.reset_balances()
         mint = self.mint_at_default_level()
 
@@ -1788,7 +1819,7 @@ class ACBUnitTest(unittest.TestCase):
         acb.coin.move(accounts[1], accounts[6], 10000)
 
         coin_supply = acb.coin.total_supply
-        reward_total = 0 + mint
+        reward_total = 0 + self.tax
         constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (3 * 100))
         reward_4 = reward_5 = reward_6 = 0
@@ -1838,17 +1869,18 @@ class ACBUnitTest(unittest.TestCase):
                          balance_6 - deposit_6[now] + deposit_6[(now - 2) % 3] +
                          reward_6 + constant_reward)
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply + mint -
+                         coin_supply -
                          remainder[(now - 1) % 3])
 
         ACB.DEPOSIT_RATE = tmp_deposit_rate
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
-        reward_total = 0 + mint
+        reward_total = 0 + self.tax
         constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (3 * 100))
         reward_4 = reward_5 = reward_6 = 0
@@ -1898,11 +1930,12 @@ class ACBUnitTest(unittest.TestCase):
                          balance_6 - deposit_6[now] + deposit_6[(now - 2) % 3] +
                          reward_6 + constant_reward)
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply + mint -
+                         coin_supply -
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
@@ -1914,7 +1947,7 @@ class ACBUnitTest(unittest.TestCase):
             reclaim_5 = deposit_5[(now - 2) % 3]
         reward_total = (deposit_4[(now - 2) % 3] - reclaim_4 +
                         deposit_5[(now - 2) % 3] - reclaim_5 +
-                        mint)
+                        self.tax)
         constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (1 * 100))
         reward_4 = reward_5 = reward_6 = 0
@@ -1953,12 +1986,13 @@ class ACBUnitTest(unittest.TestCase):
                          balance_6 - deposit_6[now] + deposit_6[(now - 2) % 3] +
                          reward_6 + constant_reward)
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply + mint -
+                         coin_supply -
                          remainder[(now - 1) % 3])
 
         # stable, stable, level_max - 1
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         self.reset_balances()
         mint = self.mint_at_default_level()
 
@@ -1967,7 +2001,7 @@ class ACBUnitTest(unittest.TestCase):
         acb.coin.move(accounts[1], accounts[6], 10000)
 
         coin_supply = acb.coin.total_supply
-        reward_total = 0 + mint
+        reward_total = 0 + self.tax
         constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (3 * 100))
         reward_4 = reward_5 = reward_6 = 0
@@ -2020,15 +2054,16 @@ class ACBUnitTest(unittest.TestCase):
                          balance_6 - deposit_6[now] + deposit_6[(now - 2) % 3] +
                          reward_6 + constant_reward)
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply + mint -
+                         coin_supply -
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
-        reward_total = 0 + mint
+        reward_total = 0 + self.tax
         constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (3 * 100))
         reward_4 = reward_5 = reward_6 = 0
@@ -2081,11 +2116,12 @@ class ACBUnitTest(unittest.TestCase):
                          balance_6 - deposit_6[now] + deposit_6[(now - 2) % 3] +
                          reward_6 + constant_reward)
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply + mint -
+                         coin_supply -
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
@@ -2096,7 +2132,7 @@ class ACBUnitTest(unittest.TestCase):
             in_threshold = True
             reclaim_6 = deposit_6[(now - 2) % 3]
         reward_total = (deposit_6[(now - 2) % 3] - reclaim_6 +
-                        mint)
+                        self.tax)
         constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (2 * 100))
         reward_4 = reward_5 = reward_6 = 0
@@ -2143,7 +2179,7 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.balance_of(accounts[6]),
                          balance_6 - deposit_6[now] + reclaim_6)
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply + mint -
+                         coin_supply -
                          remainder[(now - 1) % 3])
 
         # stable, level_max - 1, level_max - 1
@@ -2153,6 +2189,7 @@ class ACBUnitTest(unittest.TestCase):
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         self.reset_balances()
         mint = self.mint_at_default_level()
 
@@ -2161,7 +2198,7 @@ class ACBUnitTest(unittest.TestCase):
         acb.coin.move(accounts[1], accounts[6], 2900)
 
         coin_supply = acb.coin.total_supply
-        reward_total = 0 + mint
+        reward_total = 0 + self.tax
         constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (3 * 100))
         reward_4 = reward_5 = reward_6 = 0
@@ -2214,17 +2251,18 @@ class ACBUnitTest(unittest.TestCase):
                          balance_6 - deposit_6[now] + deposit_6[(now - 2) % 3] +
                          reward_6 + constant_reward)
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply + mint -
+                         coin_supply -
                          remainder[(now - 1) % 3])
 
         ACB.DEPOSIT_RATE = tmp_deposit_rate
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
-        reward_total = 0 + mint
+        reward_total = 0 + self.tax
         constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (3 * 100))
         reward_4 = reward_5 = reward_6 = 0
@@ -2277,11 +2315,12 @@ class ACBUnitTest(unittest.TestCase):
                          balance_6 - deposit_6[now] + deposit_6[(now - 2) % 3] +
                          reward_6 + constant_reward)
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply + mint -
+                         coin_supply -
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
@@ -2293,7 +2332,7 @@ class ACBUnitTest(unittest.TestCase):
             reclaim_6 = deposit_6[(now - 2) % 3]
         reward_total = (deposit_5[(now - 2) % 3] - reclaim_5 +
                         deposit_6[(now - 2) % 3] - reclaim_6 +
-                        mint)
+                        self.tax)
         constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (1 * 100))
         reward_4 = reward_5 = reward_6 = 0
@@ -2335,12 +2374,13 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.balance_of(accounts[6]),
                          balance_6 - deposit_6[now] + reclaim_6)
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply + mint -
+                         coin_supply -
                          remainder[(now - 1) % 3])
 
         # stable, stable, level_max - 1; deposit is the same
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         self.reset_balances()
         mint = self.mint_at_default_level()
 
@@ -2349,7 +2389,7 @@ class ACBUnitTest(unittest.TestCase):
         acb.coin.move(accounts[1], accounts[6], 3000)
 
         coin_supply = acb.coin.total_supply
-        reward_total = 0 + mint
+        reward_total = 0 + self.tax
         constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (3 * 100))
         reward_4 = reward_5 = reward_6 = 0
@@ -2402,15 +2442,16 @@ class ACBUnitTest(unittest.TestCase):
                          balance_6 - deposit_6[now] + deposit_6[(now - 2) % 3] +
                          reward_6 + constant_reward)
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply + mint -
+                         coin_supply -
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
-        reward_total = 0 + mint
+        reward_total = 0 + self.tax
         constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (3 * 100))
         reward_4 = reward_5 = reward_6 = 0
@@ -2463,11 +2504,12 @@ class ACBUnitTest(unittest.TestCase):
                          balance_6 - deposit_6[now] + deposit_6[(now - 2) % 3] +
                          reward_6 + constant_reward)
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply + mint -
+                         coin_supply -
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
@@ -2477,7 +2519,7 @@ class ACBUnitTest(unittest.TestCase):
             in_threshold = True
             reclaim_4 = deposit_4[(now - 2) % 3]
         reward_total = (deposit_4[(now - 2) % 3] - reclaim_4 +
-                        mint)
+                        self.tax)
         constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (2 * 100))
         reward_4 = reward_5 = reward_6 = 0
@@ -2524,17 +2566,18 @@ class ACBUnitTest(unittest.TestCase):
                          balance_6 - deposit_6[now] + deposit_6[(now - 2) % 3] +
                          reward_6 + constant_reward)
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply + mint -
+                         coin_supply -
                          remainder[(now - 1) % 3])
 
         # all levels
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         self.reset_balances()
         mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
-        reward_total = 0 + mint
+        reward_total = 0 + self.tax
         constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (3 * 100))
         reward_4 = reward_5 = reward_6 = 0
@@ -2560,16 +2603,17 @@ class ACBUnitTest(unittest.TestCase):
                          balance_4 - deposit_4[now] + deposit_4[(now - 2) % 3] +
                          reward_4 + constant_reward)
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply + mint -
+                         coin_supply -
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.set_tax()
         mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
         reward_total = (deposit_5[(now - 2) % 3] + deposit_6[(now - 2) % 3] +
-                        mint)
+                        self.tax)
         constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                               reward_total / (1 * 100))
         reward_4 = reward_5 = reward_6 = 0
@@ -2592,7 +2636,7 @@ class ACBUnitTest(unittest.TestCase):
                          balance_4 - deposit_4[now] + deposit_4[(now - 2) % 3] +
                          reward_4 + constant_reward)
         self.assertEqual(acb.coin.total_supply,
-                         coin_supply + mint -
+                         coin_supply -
                          remainder[(now - 1) % 3])
 
         self.assertEqual(acb.bond.total_supply, 0)
@@ -2605,7 +2649,7 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.purchase_bonds(accounts[1], 2), t12)
         self.assertEqual(acb.bond.total_supply, 2)
 
-        burned_tax = 0
+        tax_total = 0
         for level in range(2, Oracle.LEVEL_MAX + 2):
             now = (now + 1) % 3
             acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
@@ -2634,7 +2678,7 @@ class ACBUnitTest(unittest.TestCase):
                                   ACB.LEVEL_TO_BOND_PRICE[level - 2])
 
             coin_supply = acb.coin.total_supply
-            reward_total = mint
+            reward_total = tax_total
             constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
                                   reward_total / (1 * 100))
             reward_4 = 0
@@ -2661,16 +2705,15 @@ class ACBUnitTest(unittest.TestCase):
                              deposit_4[(now - 2) % 3] +
                              reward_4 + constant_reward)
             self.assertEqual(acb.coin.total_supply,
-                             coin_supply + mint -
-                             remainder[(now - 1) % 3] - burned_tax)
+                             coin_supply -
+                             remainder[(now - 1) % 3])
             self.assertEqual(acb.bond.total_supply, 2)
             self.assertEqual(acb.bond_budget, bond_budget)
 
-            burned_tax = 0
+            tax_total = 0
             self.assertEqual(acb.coin.balance_of(acb.coin.tax_account), 0)
             for transfer in [0, 1234, 1111]:
-                tax = int(transfer * ACB.LEVEL_TO_TAX_RATE[acb.oracle_level] /
-                          100)
+                tax = int(transfer * self.tax_rate / 100)
                 balance_1 = acb.coin.balance_of(accounts[1])
                 balance_2 = acb.coin.balance_of(accounts[2])
                 balance_tax = acb.coin.balance_of(acb.coin.tax_account)
@@ -2681,7 +2724,7 @@ class ACBUnitTest(unittest.TestCase):
                                  balance_2 + transfer - tax)
                 self.assertEqual(acb.coin.balance_of(acb.coin.tax_account),
                                  balance_tax + tax)
-                burned_tax += tax
+                tax_total += tax
 
         now += 1
         acb.set_timestamp(acb.get_timestamp() + ACB.BOND_REDEMPTION_PERIOD)
@@ -2691,7 +2734,8 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.bond.total_supply, 0)
         self.assertEqual(acb.coin.total_supply,
                          self.initial_coin_supply + deposit_4[(now - 2) % 3] +
-                         deposit_4[(now - 1) % 3] + remainder[(now - 1) % 3])
+                         deposit_4[(now - 1) % 3] + remainder[(now - 1) % 3] +
+                         tax_total)
 
 
     def check_redemption_timestamps(self, bond, account, expected):
@@ -2705,6 +2749,10 @@ class ACBUnitTest(unittest.TestCase):
             self.assertTrue(
                 bond.get_redemption_timestamp_owned_by(account, index)
                 in expected)
+
+    def set_tax(self):
+        self.assertEqual(self.acb.coin.balance_of(self.acb.coin.tax_account), 0)
+        self.acb.coin.mint(self.acb.coin.tax_account, self.tax)
 
     def mint_at_default_level(self):
         delta = int(self.acb.coin.total_supply * (11 - 10) / 10)
@@ -2730,9 +2778,9 @@ def main():
     deposit_rate = 10
     damping_factor = 10
     reclaim_threshold = 1
+    tax = 12345
     level_to_exchange_rate = [1, 11, 20]
     level_to_bond_price = [990, 997, 997]
-    level_to_tax_rate = [20, 10, 0]
 
     test = ACBUnitTest(
         bond_redemption_price,
@@ -2743,8 +2791,8 @@ def main():
         damping_factor,
         level_to_exchange_rate,
         level_to_bond_price,
-        level_to_tax_rate,
-        reclaim_threshold)
+        reclaim_threshold,
+        tax)
     test.run()
     test.teardown()
 
@@ -2756,36 +2804,33 @@ def main():
                         for damping_factor in [1, 10, 100]:
                             p = bond_redemption_price
                             for (level_to_exchange_rate,
-                                 level_to_bond_price,
-                                 level_to_tax_rate) in [
+                                 level_to_bond_price) in [
                                      ([9, 11, 12],
-                                      [max(1, p - 20), max(1, p - 10), p],
-                                      [20, 10, 0]),
+                                      [max(1, p - 20), max(1, p - 10), p]),
                                      ([0, 1, 10, 11, 12],
                                       [max(1, p - 20), max(1, p - 10),
-                                       p, p, p],
-                                      [20, 10, 10, 0, 0]),
+                                       p, p, p]),
                                      ([6, 7, 8, 9, 10, 11, 12, 13, 14],
                                       [max(1, p - 30),
                                        max(1, p - 20), max(1, p - 20),
                                        max(1, p - 10), max(1, p - 10),
-                                       p, p, p, p],
-                                      [30, 20, 12, 5, 0, 0, 0, 0, 0])]:
+                                       p, p, p, p])]:
                                 for reclaim_threshold in [0, 1, len(
                                     level_to_exchange_rate) - 1]:
-                                    test = ACBUnitTest(
-                                        bond_redemption_price,
-                                        bond_redemption_period,
-                                        phase_duration,
-                                        proportional_reward_rate,
-                                        deposit_rate,
-                                        damping_factor,
-                                        level_to_exchange_rate,
-                                        level_to_bond_price,
-                                        level_to_tax_rate,
-                                        reclaim_threshold)
-                                    test.run()
-                                    test.teardown()
+                                    for tax in [0, 12345]:
+                                        test = ACBUnitTest(
+                                            bond_redemption_price,
+                                            bond_redemption_period,
+                                            phase_duration,
+                                            proportional_reward_rate,
+                                            deposit_rate,
+                                            damping_factor,
+                                            level_to_exchange_rate,
+                                            level_to_bond_price,
+                                            reclaim_threshold,
+                                            tax)
+                                        test.run()
+                                        test.teardown()
 
 
 if __name__ == "__main__":

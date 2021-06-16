@@ -213,7 +213,7 @@ function parameterized_test(accounts,
     _metrics = new Metrics();
 
     for (let i = 0; i < _voter_count; i++) {
-      let amount = randint(0, _level_to_bond_price[_level_max - 1] * 10);
+      let amount = randint(0, _level_to_bond_price[_level_max - 1] * 100);
       if (randint(0, 9) >= 9) {
         amount = 0;
       }
@@ -386,7 +386,7 @@ function parameterized_test(accounts,
         let sender = _voters[(start_index + index) % _voter_count];
         let receiver = _voters[(start_index + index + 1) % _voter_count];
         let transfer = randint(
-            0, Math.min(await get_balance(sender.address), 100));
+            0, Math.min(await get_balance(sender.address), 10000));
         let tax_rate = 0;
         let oracle_level = (await _acb.oracle_level_()).toNumber();
         if (0 <= oracle_level && oracle_level < _level_max) {

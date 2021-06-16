@@ -27,7 +27,7 @@ class LoggingUnitTest(unittest.TestCase):
         self.assertEqual(acb_log.total_bond_supply, 0)
         self.assertEqual(acb_log.oracle_level, 0)
         self.assertEqual(acb_log.current_phase_start, 0)
-        self.assertEqual(acb_log.burned_tax, 0)
+        self.assertEqual(acb_log.tax, 0)
         self.assertEqual(acb_log.purchased_bonds, 0)
         self.assertEqual(acb_log.redeemed_bonds, 0)
         vote_log = logging.vote_logs[logging.log_index]
@@ -60,7 +60,7 @@ class LoggingUnitTest(unittest.TestCase):
             self.assertEqual(acb_log.total_bond_supply, 6)
             self.assertEqual(acb_log.oracle_level, 7)
             self.assertEqual(acb_log.current_phase_start, 8)
-            self.assertEqual(acb_log.burned_tax, 9)
+            self.assertEqual(acb_log.tax, 9)
             self.assertEqual(acb_log.purchased_bonds, 6)
             self.assertEqual(acb_log.redeemed_bonds, 10)
 
