@@ -26,15 +26,15 @@ truffle> (await coin.balanceOf(<<your address>>)).toNumber()  # Print your coin 
 
 # Vote on the oracle
 
-The ACB adjusts the total coin supply every phase based on the exchange rate obtained from the oracle. The oracle is a fully decentralized mechanism to agree on the exchange rate.
+The ACB adjusts the total coin supply every epoch based on the exchange rate obtained from the oracle. The oracle is a fully decentralized mechanism to agree on the exchange rate.
 
 You can vote for the exchange rate using `vote()`. `vote()` does the following three things:
 
-1. Vote for the exchange rate in the current phase. 10% of your coin balance is deposited to the oracle.
-1. Reveal your vote in the previous phase.
-1. Reclaim the deposited coins and get a reward for your vote in the phase before the previous phase.
+1. Vote for the exchange rate in the current epoch N. 10% of your coin balance is deposited to the oracle.
+1. Reveal your vote in the epoch N-1.
+1. Reclaim the deposited coins and get a reward for your vote in the epoch N-2.
 
-You can call `vote()` only once a phase. The phase duration is set to one week. You are expected to look up the current exchange rate using real-world currency exchangers and vote for the oracle level that corresponds to the exchange rate. If no currency exchanger is available (this is the case in a bootstrap phase), you are expected to vote for the oracle level 5.
+You can call `vote()` only once a epoch. The epoch duration is set to one week. You are expected to look up the current exchange rate using real-world currency exchangers and vote for the oracle level that corresponds to the exchange rate. If no currency exchanger is available (this is the case in a bootstrap phase), you are expected to vote for the oracle level 5.
 
 | oracle level | exchange rate | bond issue price | tax rate |
 | ---: | ---: | ---: | ---: |
@@ -48,10 +48,10 @@ You can call `vote()` only once a phase. The phase duration is set to one week. 
 | 7 | 1 coin = 1.3 USD | 997 coins | 0% |
 | 8 | 1 coin = 1.4 USD | 997 coins | 0% |
 
-Strictly speaking, the current exchange rate is defined as the exchange rate at the point when the current phase started. You can get the timestamp by calling `acb.current_phase_start_()`:
+Strictly speaking, the current exchange rate is defined as the exchange rate at the point when the current epoch started. You can get the timestamp by calling `acb.current_epoch_start_()`:
 
 ```
-truffle> (await acb.current_phase_start_()).toNumber()
+truffle> (await acb.current_epoch_start_()).toNumber()
 1612274145
 ```
 
@@ -61,7 +61,7 @@ Once you get the oracle level to vote, you need to create a hash of it. You can 
 truffle> hash = await acb.hash(5, 1234)  # Create a hash for the oracle level 5.
 ```
 
-The first parameter is the oracle level. The second parameter is a salt number (256 bit) to protect your vote. You must keep the salt number secret until you reveal it in the next phase. You must use different salt numbers every time.
+The first parameter is the oracle level. The second parameter is a salt number (256 bit) to protect your vote. You must keep the salt number secret until you reveal it in the next epoch. You must use different salt numbers every time.
 
 Now you call `vote()` with the hash. 10% of your coin balance is deposited to the oracle:
 
@@ -69,7 +69,7 @@ Now you call `vote()` with the hash. 10% of your coin balance is deposited to th
 truffle> tx = await acb.vote(hash, 4, 1111)  # Vote on the oracle
 ```
 
-The first parameter is the hash to be voted in the current phase. The second parameter is the oracle level you voted for in the previous phase. The third parameter is the salt number you used in the previous phase. The second parameter and the third parameter reveal your vote in the previous phase.
+The first parameter is the hash to be voted in the current epoch N. The second parameter is the oracle level you voted for in the epoch N-1. The third parameter is the salt number you used in the epoch N-1. The second parameter and the third parameter reveal your vote in the epoch N-1.
 
 You can look at the transaction receipt:
 
@@ -101,7 +101,7 @@ __length__: 10,
   },
   reclaimed: BN {
     negative: 0,
-    words: [ 209998, <1 empty item> ],  # The coins returned from the oracle. These are the coins you deposited in the phase before the previous phase.
+    words: [ 209998, <1 empty item> ],  # The coins returned from the oracle. These are the coins you deposited in the epoch N-2.
     length: 1,
     red: null
   },
@@ -111,7 +111,7 @@ __length__: 10,
     length: 1,
     red: null
   },
-  phase_updated: true
+  epoch_updated: true
 }
 ```
 

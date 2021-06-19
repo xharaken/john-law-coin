@@ -26,13 +26,13 @@ module.exports = async function (deployer) {
   const logging = await Logging_v2.at(await old_acb.logging_());
   const oracle = await deployProxy(
       Oracle_v5,
-      [(await old_oracle.phase_id_()).toNumber()]);
+      [(await old_oracle.epoch_id_()).toNumber()]);
   const acb = await deployProxy(
       ACB_v5, [coin.address, bond.address, old_oracle.address,
                oracle.address, logging.address,
                await old_acb.bond_budget_(),
                await old_acb.oracle_level_(),
-               await old_acb.current_phase_start_()]);
+               await old_acb.current_epoch_start_()]);
   await old_acb.deprecate();
 
   await coin.transferOwnership(acb.address);

@@ -14,7 +14,7 @@ JohnLawCoin is simple. You can only do the following operations with the wallet:
 
 ## Check the status of your account and the ACB
 
-You can check the status at the top of the wallet. This includes your coin balance, your bond balance, the current oracle level, the current bond price, the ACB's bond budget, when the current phase started etc. You can refer to the information when performing the operations explained below.
+You can check the status at the top of the wallet. This includes your coin balance, your bond balance, the current oracle level, the current bond price, the ACB's bond budget, when the current epoch started etc. You can refer to the information when performing the operations explained below.
 
 ## Send coins
 
@@ -40,20 +40,20 @@ For example, imagine the current oracle level is 2. If you send 100 coins, 12 co
 
 Voting is probably the most complex concept of JohnLawCoin but what you need to do in practice is simple:
 
-1. Look up the current JLC <=> USD exchange rate using some real-world currency exchanger (e.g., Uniswap). The current exchange rate is defined as the exchange rate at the point when the ACB's current phase started.
+1. Look up the current JLC <=> USD exchange rate using some real-world currency exchanger (e.g., Uniswap). The current exchange rate is defined as the exchange rate at the point when the ACB's current epoch started.
 1. Vote for the oracle level that is the closest to the current exchange rate. In a bootstrap phase where no currency exchanger is available, vote for the oracle level 5.
 
 Remember that 10% of your coin balance is deposited to the ACB when you vote. The ACB weights your vote by the amount of the deposited coins and determines the "truth" oracle level by weighted majority votes. Due to the weighting, the more coins you possess, the more power your vote has.
 
-Let N be the current phase ID. The coins you deposited at phase N are returned to your wallet at phase N+2 only when 1) you voted for an oracle level that is within one level from the "truth" oracle level at phase N and 2) you vote at phase N+1 and phase N+2. Otherwise, you will lose the deposited coins.
+Let N be the current epoch ID. The coins you deposited at epoch N are returned to your wallet at epoch N+2 only when 1) you voted for an oracle level that is within one level from the "truth" oracle level at epoch N and 2) you vote at epoch N+1 and epoch N+2. Otherwise, you will lose the deposited coins.
 
-In addition, you can get a reward at phase N+2 when 1) you voted for the "truth" oracle level at phase N and 2) you vote at phase N+1 and phase N+2. The more coins you deposited, the more reward you can get.
+In addition, you can get a reward at epoch N+2 when 1) you voted for the "truth" oracle level at epoch N and 2) you vote at epoch N+1 and epoch N+2. The more coins you deposited, the more reward you can get.
 
-The detailed calculation is described the whitepaper, but in summary, **you just need to vote for the "truth" oracle level every phase (i.e., every week)**.
+The detailed calculation is described the whitepaper, but in summary, **you just need to vote for the "truth" oracle level every epoch (i.e., every week)**.
 
-*[Note for advanced readers: The vote operation commits a vote to phase N, reveals a vote at phase N-1 and reclaims coins deposited at phase N-2 at the same time. If you forget to vote at phase N, that also means 1) you forget to reveal your vote at phase N-1, losing the coins deposited at phase N-1, and 2) you forget to reclaim the coins you deposited at phase N-2. This is why you should keep voting every phase.]*
+*[Note for advanced readers: The vote operation commits a vote to epoch N, reveals a vote at epoch N-1 and reclaims coins deposited at epoch N-2 at the same time. If you forget to vote at epoch N, that also means 1) you forget to reveal your vote at epoch N-1, losing the coins deposited at epoch N-1, and 2) you forget to reclaim the coins you deposited at epoch N-2. This is why you should keep voting every epoch.]*
 
-*[Note for advanced readers: If you intend to only reveal and reclaim your votes in the previous phases and do NOT intend to commit a vote in the current phase, choose "Do not vote". Then no coins are deposited to the ACB. This is useful when you want to stop keeping voting.]*
+*[Note for advanced readers: If you intend to only reveal and reclaim your votes in the previous epochs and do NOT intend to commit a vote in the current epoch, choose "Do not vote". Then no coins are deposited to the ACB. This is useful when you want to stop keeping voting.]*
 
 ## Purchase bonds
 

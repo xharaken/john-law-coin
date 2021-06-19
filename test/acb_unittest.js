@@ -33,7 +33,7 @@ contract("ACBUnittest", function (accounts) {
 function parameterized_test(accounts,
                             _bond_redemption_price,
                             _bond_redemption_period,
-                            _phase_duration,
+                            _epoch_duration,
                             _proportional_reward_rate,
                             _deposit_rate,
                             _damping_factor,
@@ -44,7 +44,7 @@ function parameterized_test(accounts,
   let test_name = "ACB parameters:" +
       " bond_redemp_price=" + _bond_redemption_price +
       " bond_redemp_period=" + _bond_redemption_period +
-      " phase_duration=" + _phase_duration +
+      " epoch_duration=" + _epoch_duration +
       " reward_rate=" + _proportional_reward_rate +
       " deposit_rate=" + _deposit_rate +
       " damping_factor=" + _damping_factor +
@@ -87,7 +87,7 @@ function parameterized_test(accounts,
     await _oracle.transferOwnership(_acb.address, {from: accounts[1]});
     await _acb.overrideConstants(_bond_redemption_price,
                                  _bond_redemption_period,
-                                 _phase_duration,
+                                 _epoch_duration,
                                  _deposit_rate,
                                  _damping_factor,
                                  _level_to_exchange_rate,
@@ -113,7 +113,7 @@ function parameterized_test(accounts,
     if (_level_to_bond_price[_level_max - 1] >= 2 &&
         _bond_redemption_price >= 2 &&
         _bond_redemption_period >= 3 &&
-        _phase_duration >= 2) {
+        _epoch_duration >= 2) {
 
       // initial coin supply
       current = await get_current(sub_accounts, []);
@@ -308,15 +308,15 @@ function parameterized_test(accounts,
       assert.equal(await _acb.getTimestamp(), 0);
       await _acb.setTimestamp(1, {from: accounts[1]});
       assert.equal(await _acb.getTimestamp(), 1);
-      await _acb.setTimestamp(_phase_duration, {from: accounts[1]});
-      assert.equal(await _acb.getTimestamp(), _phase_duration);
+      await _acb.setTimestamp(_epoch_duration, {from: accounts[1]});
+      assert.equal(await _acb.getTimestamp(), _epoch_duration);
 
       await should_throw(async () => {
-        await _acb.setTimestamp(_phase_duration - 1, {from: accounts[1]});
+        await _acb.setTimestamp(_epoch_duration - 1, {from: accounts[1]});
       }, "st1");
 
       await should_throw(async () => {
-        await _acb.setTimestamp(_phase_duration, {from: accounts[1]});
+        await _acb.setTimestamp(_epoch_duration, {from: accounts[1]});
       }, "st1");
 
       await should_throw(async () => {
@@ -332,7 +332,7 @@ function parameterized_test(accounts,
       coin_supply = current.coin_supply;
 
       await _acb.setTimestamp(
-          (await _acb.getTimestamp()).toNumber() + _phase_duration,
+          (await _acb.getTimestamp()).toNumber() + _epoch_duration,
           {from: accounts[1]});
       let t1 =
           (await _acb.getTimestamp()).toNumber() + _bond_redemption_period;
@@ -399,7 +399,7 @@ function parameterized_test(accounts,
       }, "PurchaseBonds");
 
       await _acb.setTimestamp(
-          (await _acb.getTimestamp()).toNumber() + _phase_duration,
+          (await _acb.getTimestamp()).toNumber() + _epoch_duration,
           {from: accounts[1]});
       let t2 =
           (await _acb.getTimestamp()).toNumber() + _bond_redemption_period;
@@ -440,7 +440,7 @@ function parameterized_test(accounts,
                    coin_supply - bond_price * 32);
 
       await _acb.setTimestamp(
-          (await _acb.getTimestamp()).toNumber() + _phase_duration,
+          (await _acb.getTimestamp()).toNumber() + _epoch_duration,
           {from: accounts[1]});
       let t3 =
           (await _acb.getTimestamp()).toNumber() + _bond_redemption_period;
@@ -852,7 +852,7 @@ function parameterized_test(accounts,
     }
 
     await _acb.setTimestamp(
-      (await _acb.getTimestamp()).toNumber() + _phase_duration,
+      (await _acb.getTimestamp()).toNumber() + _epoch_duration,
       {from: accounts[1]});
 
     let remainder = [0, 0, 0];
@@ -867,67 +867,67 @@ function parameterized_test(accounts,
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[4]], 100);
 
-    await check_vote(await _acb.hash(_default_level, 7777, {from: accounts[7]}),
+    await check_vote(await _acb.encrypt(_default_level, 7777, {from: accounts[7]}),
                      _default_level, 7777, {from: accounts[7]},
                      true, false, 0, 0, 0, true);
     current = await get_current(sub_accounts, []);
-    assert.equal(current.current_phase_start, await _acb.getTimestamp());
+    assert.equal(current.current_epoch_start, await _acb.getTimestamp());
 
     // 1 commit
     balance = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 1, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 1, {from: accounts[4]}),
                      _default_level, 1, {from: accounts[4]},
                      true, false, deposit_4[mod(now, 3)], 0, 0, false);
     current = await get_current(sub_accounts, []);
-    assert.equal(current.current_phase_start, await _acb.getTimestamp());
+    assert.equal(current.current_epoch_start, await _acb.getTimestamp());
     assert.equal(current.oracle_level, _level_max);
     assert.equal(current.balances[accounts[4]],
                  balance - deposit_4[mod(now, 3)]);
     balance = current.balances[accounts[4]];
-    await check_vote(await _acb.hash(_default_level, 1, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 1, {from: accounts[4]}),
                      _default_level, 1, {from: accounts[4]},
                      false, false, 0, 0, 0, false);
     current = await get_current(sub_accounts, []);
-    assert.equal(current.current_phase_start, await _acb.getTimestamp());
+    assert.equal(current.current_epoch_start, await _acb.getTimestamp());
     assert.equal(current.balances[accounts[4]], balance);
-    await check_vote(await _acb.hash(_default_level, 1, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 1, {from: accounts[4]}),
                      _default_level, 1, {from: accounts[4]},
                      false, false, 0, 0, 0, false);
     current = await get_current(sub_accounts, []);
-    assert.equal(current.current_phase_start, await _acb.getTimestamp());
+    assert.equal(current.current_epoch_start, await _acb.getTimestamp());
     assert.equal(current.balances[accounts[4]], balance);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
 
     current = await get_current(sub_accounts, []);
     balance = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance * _deposit_rate / 100);
-    assert.equal(current.current_phase_start,
-                 await _acb.getTimestamp() - _phase_duration);
-    await check_vote(await _acb.hash(_default_level, 2, {from: accounts[4]}),
+    assert.equal(current.current_epoch_start,
+                 await _acb.getTimestamp() - _epoch_duration);
+    await check_vote(await _acb.encrypt(_default_level, 2, {from: accounts[4]}),
                      _default_level, 1, {from: accounts[4]},
                      true, true, deposit_4[mod(now, 3)], 0, 0, true);
     current = await get_current(sub_accounts, []);
-    assert.equal(current.current_phase_start, await _acb.getTimestamp());
+    assert.equal(current.current_epoch_start, await _acb.getTimestamp());
     assert.equal(current.oracle_level, _level_max);
     assert.equal(current.balances[accounts[4]],
                  balance - deposit_4[mod(now, 3)]);
     balance = current.balances[accounts[4]];
-    await check_vote(await _acb.hash(_default_level, 2, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 2, {from: accounts[4]}),
                      _default_level, 1, {from: accounts[4]},
                      false, false, 0, 0, 0, false);
     current = await get_current(sub_accounts, []);
-    assert.equal(current.current_phase_start, await _acb.getTimestamp());
+    assert.equal(current.current_epoch_start, await _acb.getTimestamp());
     assert.equal(current.balances[accounts[4]], balance);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     let mint = await mint_at_default_level();
@@ -942,29 +942,29 @@ function parameterized_test(accounts,
     }
     remainder[mod(now, 3)] = _tax - reward;
     deposit_4[mod(now, 3)] = Math.trunc(balance * _deposit_rate / 100);
-    assert.equal(current.current_phase_start,
-                 await _acb.getTimestamp() - _phase_duration);
-    await check_vote(await _acb.hash(_default_level, 3, {from: accounts[4]}),
+    assert.equal(current.current_epoch_start,
+                 await _acb.getTimestamp() - _epoch_duration);
+    await check_vote(await _acb.encrypt(_default_level, 3, {from: accounts[4]}),
                      _default_level, 1, {from: accounts[4]},
                      true, false, deposit_4[mod(now, 3)],
                      deposit_4[mod(now - 2, 3)], reward, true);
     current = await get_current(sub_accounts, []);
-    assert.equal(current.current_phase_start, await _acb.getTimestamp());
+    assert.equal(current.current_epoch_start, await _acb.getTimestamp());
     assert.equal(current.oracle_level, _default_level);
     assert.equal(current.balances[accounts[4]],
                  balance - deposit_4[mod(now, 3)] +
                  deposit_4[mod(now - 2, 3)] + reward);
     balance = current.balances[accounts[4]];
-    await check_vote(await _acb.hash(_default_level, 3, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 3, {from: accounts[4]}),
                      _default_level, 1, {from: accounts[4]},
                      false, false, 0, 0, 0, false);
     current = await get_current(sub_accounts, []);
-    assert.equal(current.current_phase_start, await _acb.getTimestamp());
+    assert.equal(current.current_epoch_start, await _acb.getTimestamp());
     assert.equal(current.balances[accounts[4]], balance);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     mint = 0;
@@ -974,7 +974,7 @@ function parameterized_test(accounts,
     coin_supply = current.coin_supply;
     remainder[mod(now, 3)] = deposit_4[mod(now - 2, 3)] + _tax;
     deposit_4[mod(now, 3)] = Math.trunc(balance * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 4, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 4, {from: accounts[4]}),
                      _default_level, 3, {from: accounts[4]},
                      true, true, deposit_4[mod(now, 3)], 0, 0, true);
     current = await get_current(sub_accounts, []);
@@ -982,7 +982,7 @@ function parameterized_test(accounts,
     assert.equal(current.balances[accounts[4]],
                  balance - deposit_4[mod(now, 3)]);
     balance = current.balances[accounts[4]];
-    await check_vote(await _acb.hash(_default_level, 4, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 4, {from: accounts[4]}),
                      _default_level, 2, {from: accounts[4]},
                      false, false, 0, 0, 0, false);
     current = await get_current(sub_accounts, []);
@@ -993,7 +993,7 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     mint = await mint_at_default_level();
@@ -1009,7 +1009,7 @@ function parameterized_test(accounts,
     }
     remainder[mod(now, 3)] = _tax - reward;
     deposit_4[mod(now, 3)] = Math.trunc(balance * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 5, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 5, {from: accounts[4]}),
                      _default_level, 4, {from: accounts[4]},
                      true, true, deposit_4[mod(now, 3)],
                      deposit_4[mod(now - 2, 3)], reward, true);
@@ -1019,7 +1019,7 @@ function parameterized_test(accounts,
                  balance - deposit_4[mod(now, 3)] +
                  deposit_4[mod(now - 2, 3)] + reward);
     balance = current.balances[accounts[4]];
-    await check_vote(await _acb.hash(_default_level, 5, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 5, {from: accounts[4]}),
                      _default_level, 4, {from: accounts[4]},
                      false, false, 0, 0, 0, false);
     current = await get_current(sub_accounts, []);
@@ -1030,7 +1030,7 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     mint = await mint_at_default_level();
@@ -1046,7 +1046,7 @@ function parameterized_test(accounts,
     }
     remainder[mod(now, 3)] = _tax - reward;
     deposit_4[mod(now, 3)] = Math.trunc(balance * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 6, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 6, {from: accounts[4]}),
                      _default_level, 5, {from: accounts[4]},
                      true, true, deposit_4[mod(now, 3)],
                      deposit_4[mod(now - 2, 3)], reward, true);
@@ -1056,7 +1056,7 @@ function parameterized_test(accounts,
                  balance - deposit_4[mod(now, 3)] +
                  deposit_4[mod(now - 2, 3)] + reward);
     balance = current.balances[accounts[4]];
-    await check_vote(await _acb.hash(_default_level, 6, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 6, {from: accounts[4]}),
                      _default_level, 5, {from: accounts[4]},
                      false, false, 0, 0, 0, false);
     current = await get_current(sub_accounts, []);
@@ -1067,10 +1067,10 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     mint = await mint_at_default_level();
@@ -1086,7 +1086,7 @@ function parameterized_test(accounts,
     }
     remainder[mod(now, 3)] = _tax - reward;
     deposit_4[mod(now, 3)] = Math.trunc(balance * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 7, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 7, {from: accounts[4]}),
                      _default_level, 6, {from: accounts[4]},
                      true, true, deposit_4[mod(now, 3)],
                      deposit_4[mod(now - 2, 3)], reward, true);
@@ -1096,7 +1096,7 @@ function parameterized_test(accounts,
                  balance - deposit_4[mod(now, 3)] +
                  deposit_4[mod(now - 2, 3)] + reward);
     balance = current.balances[accounts[4]];
-    await check_vote(await _acb.hash(_default_level, 7, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 7, {from: accounts[4]}),
                      _default_level, 6, {from: accounts[4]},
                      false, false, 0, 0, 0, false);
     current = await get_current(sub_accounts, []);
@@ -1107,7 +1107,7 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     mint = await mint_at_default_level();
@@ -1123,7 +1123,7 @@ function parameterized_test(accounts,
     }
     remainder[mod(now, 3)] = _tax - reward;
     deposit_4[mod(now, 3)] = Math.trunc(balance * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 8, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 8, {from: accounts[4]}),
                      _default_level, 6, {from: accounts[4]},
                      true, false, deposit_4[mod(now, 3)],
                      deposit_4[mod(now - 2, 3)], reward, true);
@@ -1133,7 +1133,7 @@ function parameterized_test(accounts,
                  balance - deposit_4[mod(now, 3)] +
                  deposit_4[mod(now - 2, 3)] + reward);
     balance = current.balances[accounts[4]];
-    await check_vote(await _acb.hash(_default_level, 8, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 8, {from: accounts[4]}),
                      _default_level, 6, {from: accounts[4]},
                      false, false, 0, 0, 0, false);
     current = await get_current(sub_accounts, []);
@@ -1144,7 +1144,7 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     mint = 0;
@@ -1164,7 +1164,7 @@ function parameterized_test(accounts,
     assert.equal(current.balances[accounts[4]],
                  balance - deposit_4[mod(now, 3)] + reward);
     balance = current.balances[accounts[4]];
-    await check_vote(await _acb.hash(_default_level, 8, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 8, {from: accounts[4]}),
                      _default_level, 6, {from: accounts[4]},
                      false, false, 0, 0, 0, false);
     current = await get_current(sub_accounts, []);
@@ -1184,7 +1184,7 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     mint = 0;
@@ -1194,7 +1194,7 @@ function parameterized_test(accounts,
     remainder[mod(now, 3)] = deposit_4[mod(now - 2, 3)] + _tax;
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 1000, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 1000, {from: accounts[4]}),
                      _default_level, 1000, {from: accounts[4]},
                      true, false, deposit_4[mod(now, 3)], 0, 0, true);
     current = await get_current(sub_accounts, []);
@@ -1203,7 +1203,7 @@ function parameterized_test(accounts,
                  balance_4 - deposit_4[mod(now, 3)]);
     balance_5 = current.balances[accounts[5]];
     deposit_5[mod(now, 3)] = Math.trunc(balance_5 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 1000, {from: accounts[5]}),
+    await check_vote(await _acb.encrypt(_default_level, 1000, {from: accounts[5]}),
                      _default_level, 1000, {from: accounts[5]},
                      true, false, deposit_5[mod(now, 3)], 0, 0, false);
     current = await get_current(sub_accounts, []);
@@ -1211,7 +1211,7 @@ function parameterized_test(accounts,
                  balance_5 - deposit_5[mod(now, 3)]);
     balance_6 = current.balances[accounts[6]];
     deposit_6[mod(now, 3)] = Math.trunc(balance_6 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 1000, {from: accounts[6]}),
+    await check_vote(await _acb.encrypt(_default_level, 1000, {from: accounts[6]}),
                      _default_level, 1000, {from: accounts[6]},
                      true, false, deposit_6[mod(now, 3)], 0, 0, false);
     current = await get_current(sub_accounts, []);
@@ -1223,7 +1223,7 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     mint = 0;
@@ -1233,7 +1233,7 @@ function parameterized_test(accounts,
     remainder[mod(now, 3)] = deposit_4[mod(now - 2, 3)] + _tax;
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 1, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 1, {from: accounts[4]}),
                      _default_level, 0, {from: accounts[4]},
                      true, false, deposit_4[mod(now, 3)], 0, 0, true);
     current = await get_current(sub_accounts, []);
@@ -1242,7 +1242,7 @@ function parameterized_test(accounts,
                  balance_4 - deposit_4[mod(now, 3)]);
     balance_5 = current.balances[accounts[5]];
     deposit_5[mod(now, 3)] = Math.trunc(balance_5 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 1, {from: accounts[5]}),
+    await check_vote(await _acb.encrypt(_default_level, 1, {from: accounts[5]}),
                      _default_level, 0, {from: accounts[5]},
                      true, false, deposit_5[mod(now, 3)], 0, 0, false);
     current = await get_current(sub_accounts, []);
@@ -1250,7 +1250,7 @@ function parameterized_test(accounts,
                  balance_5 - deposit_5[mod(now, 3)]);
     balance_6 = current.balances[accounts[6]];
     deposit_6[mod(now, 3)] = Math.trunc(balance_6 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 1, {from: accounts[6]}),
+    await check_vote(await _acb.encrypt(_default_level, 1, {from: accounts[6]}),
                      _default_level, 0, {from: accounts[6]},
                      true, false, deposit_6[mod(now, 3)], 0, 0, false);
     current = await get_current(sub_accounts, []);
@@ -1262,7 +1262,7 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     mint = 0;
@@ -1274,7 +1274,7 @@ function parameterized_test(accounts,
                               deposit_6[mod(now - 2, 3)] + _tax);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 2, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 2, {from: accounts[4]}),
                      _default_level, 1, {from: accounts[4]},
                      true, true, deposit_4[mod(now, 3)], 0, 0, true);
     current = await get_current(sub_accounts, []);
@@ -1283,7 +1283,7 @@ function parameterized_test(accounts,
                  balance_4 - deposit_4[mod(now, 3)]);
     balance_5 = current.balances[accounts[5]];
     deposit_5[mod(now, 3)] = Math.trunc(balance_5 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 2, {from: accounts[5]}),
+    await check_vote(await _acb.encrypt(_default_level, 2, {from: accounts[5]}),
                      _default_level, 1, {from: accounts[5]},
                      true, true, deposit_5[mod(now, 3)], 0, 0, false);
     current = await get_current(sub_accounts, []);
@@ -1291,7 +1291,7 @@ function parameterized_test(accounts,
                  balance_5 - deposit_5[mod(now, 3)]);
     balance_6 = current.balances[accounts[6]];
     deposit_6[mod(now, 3)] = Math.trunc(balance_6 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 2, {from: accounts[6]}),
+    await check_vote(await _acb.encrypt(_default_level, 2, {from: accounts[6]}),
                      _default_level, 1, {from: accounts[6]},
                      true, true, deposit_6[mod(now, 3)], 0, 0, false);
     current = await get_current(sub_accounts, []);
@@ -1303,7 +1303,7 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     mint = await mint_at_default_level();
@@ -1331,7 +1331,7 @@ function parameterized_test(accounts,
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 3, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 3, {from: accounts[4]}),
                      _default_level, 2, {from: accounts[4]},
                      true, true, deposit_4[mod(now, 3)],
                      deposit_4[mod(now - 2, 3)],
@@ -1344,7 +1344,7 @@ function parameterized_test(accounts,
                  reward_4 + constant_reward);
     balance_5 = current.balances[accounts[5]];
     deposit_5[mod(now, 3)] = Math.trunc(balance_5 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 3, {from: accounts[5]}),
+    await check_vote(await _acb.encrypt(_default_level, 3, {from: accounts[5]}),
                      _default_level, 2, {from: accounts[5]},
                      true, true, deposit_5[mod(now, 3)],
                      deposit_5[mod(now - 2, 3)],
@@ -1356,7 +1356,7 @@ function parameterized_test(accounts,
                  reward_5 + constant_reward);
     balance_6 = current.balances[accounts[6]];
     deposit_6[mod(now, 3)] = Math.trunc(balance_6 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 3, {from: accounts[6]}),
+    await check_vote(await _acb.encrypt(_default_level, 3, {from: accounts[6]}),
                      _default_level, 2, {from: accounts[6]},
                      true, true, deposit_6[mod(now, 3)],
                      deposit_6[mod(now - 2, 3)],
@@ -1372,7 +1372,7 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     mint = await mint_at_default_level();
@@ -1400,7 +1400,7 @@ function parameterized_test(accounts,
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 4, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 4, {from: accounts[4]}),
                      _default_level, 3, {from: accounts[4]},
                      true, true, deposit_4[mod(now, 3)],
                      deposit_4[mod(now - 2, 3)],
@@ -1413,7 +1413,7 @@ function parameterized_test(accounts,
                  reward_4 + constant_reward);
     balance_5 = current.balances[accounts[5]];
     deposit_5[mod(now, 3)] = Math.trunc(balance_5 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 4, {from: accounts[5]}),
+    await check_vote(await _acb.encrypt(_default_level, 4, {from: accounts[5]}),
                      _default_level, 3, {from: accounts[5]},
                      true, true, deposit_5[mod(now, 3)],
                      deposit_5[mod(now - 2, 3)],
@@ -1425,7 +1425,7 @@ function parameterized_test(accounts,
                  reward_5 + constant_reward);
     balance_6 = current.balances[accounts[6]];
     deposit_6[mod(now, 3)] = Math.trunc(balance_6 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 4, {from: accounts[6]}),
+    await check_vote(await _acb.encrypt(_default_level, 4, {from: accounts[6]}),
                      _default_level, 3, {from: accounts[6]},
                      true, true, deposit_6[mod(now, 3)],
                      deposit_6[mod(now - 2, 3)],
@@ -1444,7 +1444,7 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     mint = await mint_at_default_level();
@@ -1472,7 +1472,7 @@ function parameterized_test(accounts,
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 5, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 5, {from: accounts[4]}),
                      _default_level, 4, {from: accounts[4]},
                      true, true, deposit_4[mod(now, 3)],
                      deposit_4[mod(now - 2, 3)],
@@ -1485,7 +1485,7 @@ function parameterized_test(accounts,
                  reward_4 + constant_reward);
     balance_5 = current.balances[accounts[5]];
     deposit_5[mod(now, 3)] = Math.trunc(balance_5 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 5, {from: accounts[5]}),
+    await check_vote(await _acb.encrypt(_default_level, 5, {from: accounts[5]}),
                      _default_level, 4, {from: accounts[5]},
                      true, true, deposit_5[mod(now, 3)],
                      deposit_5[mod(now - 2, 3)],
@@ -1497,7 +1497,7 @@ function parameterized_test(accounts,
                  reward_5 + constant_reward);
     balance_6 = current.balances[accounts[6]];
     deposit_6[mod(now, 3)] = Math.trunc(balance_6 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 5, {from: accounts[6]}),
+    await check_vote(await _acb.encrypt(_default_level, 5, {from: accounts[6]}),
                      _default_level, 4, {from: accounts[6]},
                      true, true, deposit_6[mod(now, 3)],
                      deposit_6[mod(now - 2, 3)],
@@ -1516,7 +1516,7 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     mint = await mint_at_default_level();
@@ -1544,7 +1544,7 @@ function parameterized_test(accounts,
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 6, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 6, {from: accounts[4]}),
                      _default_level, 5, {from: accounts[4]},
                      true, true, deposit_4[mod(now, 3)],
                      deposit_4[mod(now - 2, 3)],
@@ -1557,7 +1557,7 @@ function parameterized_test(accounts,
                  reward_4 + constant_reward);
     balance_5 = current.balances[accounts[5]];
     deposit_5[mod(now, 3)] = Math.trunc(balance_5 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 6, {from: accounts[5]}),
+    await check_vote(await _acb.encrypt(_default_level, 6, {from: accounts[5]}),
                      _default_level, 5, {from: accounts[5]},
                      true, true, deposit_5[mod(now, 3)],
                      deposit_5[mod(now - 2, 3)],
@@ -1569,7 +1569,7 @@ function parameterized_test(accounts,
                  reward_5 + constant_reward);
     balance_6 = current.balances[accounts[6]];
     deposit_6[mod(now, 3)] = Math.trunc(balance_6 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 6, {from: accounts[6]}),
+    await check_vote(await _acb.encrypt(_default_level, 6, {from: accounts[6]}),
                      _default_level, 5, {from: accounts[6]},
                      true, true, deposit_6[mod(now, 3)],
                      deposit_6[mod(now - 2, 3)],
@@ -1585,7 +1585,7 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     mint = await mint_at_default_level();
@@ -1602,7 +1602,7 @@ function parameterized_test(accounts,
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 7, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 7, {from: accounts[4]}),
                      _default_level, 6, {from: accounts[4]},
                      true, true, deposit_4[mod(now, 3)],
                      deposit_4[mod(now - 2, 3)],
@@ -1615,7 +1615,7 @@ function parameterized_test(accounts,
                  reward_4 + constant_reward);
     balance_5 = current.balances[accounts[5]];
     deposit_5[mod(now, 3)] = Math.trunc(balance_5 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 7, {from: accounts[5]}),
+    await check_vote(await _acb.encrypt(_default_level, 7, {from: accounts[5]}),
                      _default_level, 6, {from: accounts[5]},
                      true, true, deposit_5[mod(now, 3)],
                      deposit_5[mod(now - 2, 3)],
@@ -1627,7 +1627,7 @@ function parameterized_test(accounts,
                  reward_5 + constant_reward);
     balance_6 = current.balances[accounts[6]];
     deposit_6[mod(now, 3)] = Math.trunc(balance_6 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 7, {from: accounts[6]}),
+    await check_vote(await _acb.encrypt(_default_level, 7, {from: accounts[6]}),
                      _default_level, 5, {from: accounts[6]},
                      true, false, deposit_6[mod(now, 3)],
                      deposit_6[mod(now - 2, 3)],
@@ -1643,7 +1643,7 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     mint = await mint_at_default_level();
@@ -1667,7 +1667,7 @@ function parameterized_test(accounts,
                               constant_reward * 2);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 8, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 8, {from: accounts[4]}),
                      _default_level, 6, {from: accounts[4]},
                      true, false, deposit_4[mod(now, 3)],
                      deposit_4[mod(now - 2, 3)],
@@ -1680,7 +1680,7 @@ function parameterized_test(accounts,
                  reward_4 + constant_reward);
     balance_5 = current.balances[accounts[5]];
     deposit_5[mod(now, 3)] = Math.trunc(balance_5 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 8, {from: accounts[5]}),
+    await check_vote(await _acb.encrypt(_default_level, 8, {from: accounts[5]}),
                      _default_level, 6, {from: accounts[5]},
                      true, false, deposit_5[mod(now, 3)],
                      deposit_5[mod(now - 2, 3)],
@@ -1692,7 +1692,7 @@ function parameterized_test(accounts,
                  reward_5 + constant_reward);
     balance_6 = current.balances[accounts[6]];
     deposit_6[mod(now, 3)] = Math.trunc(balance_6 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 8, {from: accounts[6]}),
+    await check_vote(await _acb.encrypt(_default_level, 8, {from: accounts[6]}),
                      _default_level, 7, {from: accounts[6]},
                      true, true, deposit_6[mod(now, 3)], 0, 0, false);
     current = await get_current(sub_accounts, []);
@@ -1705,7 +1705,7 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     mint = await mint_at_default_level();
@@ -1727,7 +1727,7 @@ function parameterized_test(accounts,
                               constant_reward * 1);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 9, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 9, {from: accounts[4]}),
                      _default_level, 0, {from: accounts[4]},
                      true, false, deposit_4[mod(now, 3)], 0, 0, true);
     current = await get_current(sub_accounts, []);
@@ -1736,7 +1736,7 @@ function parameterized_test(accounts,
                  balance_4 - deposit_4[mod(now, 3)]);
     balance_5 = current.balances[accounts[5]];
     deposit_5[mod(now, 3)] = Math.trunc(balance_5 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 9, {from: accounts[5]}),
+    await check_vote(await _acb.encrypt(_default_level, 9, {from: accounts[5]}),
                      _default_level, 0, {from: accounts[5]},
                      true, false, deposit_5[mod(now, 3)], 0, 0, false);
     current = await get_current(sub_accounts, []);
@@ -1744,7 +1744,7 @@ function parameterized_test(accounts,
                  balance_5 - deposit_5[mod(now, 3)]);
     balance_6 = current.balances[accounts[6]];
     deposit_6[mod(now, 3)] = Math.trunc(balance_6 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 9, {from: accounts[6]}),
+    await check_vote(await _acb.encrypt(_default_level, 9, {from: accounts[6]}),
                      _default_level, 0, {from: accounts[6]},
                      true, false, deposit_6[mod(now, 3)],
                      deposit_6[mod(now - 2, 3)],
@@ -1760,7 +1760,7 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     mint = 0;
@@ -1776,7 +1776,7 @@ function parameterized_test(accounts,
     remainder[mod(now, 3)] = reward_total;
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 10, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 10, {from: accounts[4]}),
                      _default_level, 9, {from: accounts[4]},
                      true, true, deposit_4[mod(now, 3)], 0, 0, true);
     current = await get_current(sub_accounts, []);
@@ -1785,7 +1785,7 @@ function parameterized_test(accounts,
                  balance_4 - deposit_4[mod(now, 3)]);
     balance_5 = current.balances[accounts[5]];
     deposit_5[mod(now, 3)] = Math.trunc(balance_5 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 10, {from: accounts[5]}),
+    await check_vote(await _acb.encrypt(_default_level, 10, {from: accounts[5]}),
                      _default_level, 9, {from: accounts[5]},
                      true, true, deposit_5[mod(now, 3)], 0, 0, false);
     current = await get_current(sub_accounts, []);
@@ -1793,7 +1793,7 @@ function parameterized_test(accounts,
                  balance_5 - deposit_5[mod(now, 3)]);
     balance_6 = current.balances[accounts[6]];
     deposit_6[mod(now, 3)] = Math.trunc(balance_6 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 10, {from: accounts[6]}),
+    await check_vote(await _acb.encrypt(_default_level, 10, {from: accounts[6]}),
                      _default_level, 9, {from: accounts[6]},
                      true, true, deposit_6[mod(now, 3)], 0, 0, false);
     current = await get_current(sub_accounts, []);
@@ -1805,7 +1805,7 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     mint = await mint_at_default_level();
@@ -1830,7 +1830,7 @@ function parameterized_test(accounts,
                               constant_reward * 2 + deposit_4[mod(now - 2, 3)]);
     balance_5 = current.balances[accounts[5]];
     deposit_5[mod(now, 3)] = Math.trunc(balance_5 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 11, {from: accounts[5]}),
+    await check_vote(await _acb.encrypt(_default_level, 11, {from: accounts[5]}),
                      _default_level, 10, {from: accounts[5]},
                      true, true, deposit_5[mod(now, 3)],
                      deposit_5[mod(now - 2, 3)],
@@ -1843,7 +1843,7 @@ function parameterized_test(accounts,
                  reward_5 + constant_reward);
     balance_6 = current.balances[accounts[6]];
     deposit_6[mod(now, 3)] = Math.trunc(balance_6 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 11, {from: accounts[6]}),
+    await check_vote(await _acb.encrypt(_default_level, 11, {from: accounts[6]}),
                      _default_level, 10, {from: accounts[6]},
                      true, true, deposit_6[mod(now, 3)],
                      deposit_6[mod(now - 2, 3)],
@@ -1859,7 +1859,7 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     mint = await mint_at_default_level();
@@ -1880,7 +1880,7 @@ function parameterized_test(accounts,
                               constant_reward + deposit_5[mod(now - 2, 3)]);
     balance_6 = current.balances[accounts[6]];
     deposit_6[mod(now, 3)] = Math.trunc(balance_6 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 12, {from: accounts[6]}),
+    await check_vote(await _acb.encrypt(_default_level, 12, {from: accounts[6]}),
                      _default_level, 11, {from: accounts[6]},
                      true, true, deposit_6[mod(now, 3)],
                      deposit_6[mod(now - 2, 3)],
@@ -1897,7 +1897,7 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     mint = await mint_at_default_level();
@@ -1914,7 +1914,7 @@ function parameterized_test(accounts,
                               constant_reward * 0 + deposit_6[mod(now - 2, 3)]);
     deposit13 = Math.trunc(
         current.balances[accounts[1]] * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 1000, {from: accounts[1]}),
+    await check_vote(await _acb.encrypt(_default_level, 1000, {from: accounts[1]}),
                      _default_level, 1000, {from: accounts[1]},
                      true, false, deposit13, 0, 0, true);
     current = await get_current(sub_accounts, []);
@@ -1925,7 +1925,7 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     mint = 0;
@@ -1935,7 +1935,7 @@ function parameterized_test(accounts,
     remainder[mod(now, 3)] = deposit_6[mod(now - 2, 3)] + _tax;
     deposit14 = Math.trunc(
         current.balances[accounts[1]] * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 1000, {from: accounts[1]}),
+    await check_vote(await _acb.encrypt(_default_level, 1000, {from: accounts[1]}),
                      _default_level, 1000, {from: accounts[1]},
                      true, true, deposit14, 0, 0, true);
     current = await get_current(sub_accounts, []);
@@ -1949,7 +1949,7 @@ function parameterized_test(accounts,
     // 0, stable, stable
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     await reset_balances(accounts);
@@ -1969,7 +1969,7 @@ function parameterized_test(accounts,
     remainder[mod(now, 3)] = reward_total;
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(0, 1, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(0, 1, {from: accounts[4]}),
                      _default_level, 0, {from: accounts[4]},
                      true, false, deposit_4[mod(now, 3)], 0, 0, true);
     current = await get_current(sub_accounts, []);
@@ -1978,7 +1978,7 @@ function parameterized_test(accounts,
                  balance_4 - deposit_4[mod(now, 3)]);
     balance_5 = current.balances[accounts[5]];
     deposit_5[mod(now, 3)] = Math.trunc(balance_5 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 1, {from: accounts[5]}),
+    await check_vote(await _acb.encrypt(_default_level, 1, {from: accounts[5]}),
                      _default_level, 0, {from: accounts[5]},
                      true, false, deposit_5[mod(now, 3)], 0, 0, false);
     current = await get_current(sub_accounts, []);
@@ -1986,7 +1986,7 @@ function parameterized_test(accounts,
                  balance_5 - deposit_5[mod(now, 3)]);
     balance_6 = current.balances[accounts[6]];
     deposit_6[mod(now, 3)] = Math.trunc(balance_6 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 1, {from: accounts[6]}),
+    await check_vote(await _acb.encrypt(_default_level, 1, {from: accounts[6]}),
                      _default_level, 0, {from: accounts[6]},
                      true, false, deposit_6[mod(now, 3)], 0, 0, false);
     current = await get_current(sub_accounts, []);
@@ -1998,7 +1998,7 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     mint = 0;
@@ -2013,7 +2013,7 @@ function parameterized_test(accounts,
     remainder[mod(now, 3)] = reward_total;
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 2, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 2, {from: accounts[4]}),
                      0, 1, {from: accounts[4]},
                      true, true, deposit_4[mod(now, 3)], 0, 0, true);
     current = await get_current(sub_accounts, []);
@@ -2022,7 +2022,7 @@ function parameterized_test(accounts,
                  balance_4 - deposit_4[mod(now, 3)]);
     balance_5 = current.balances[accounts[5]];
     deposit_5[mod(now, 3)] = Math.trunc(balance_5 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 2, {from: accounts[5]}),
+    await check_vote(await _acb.encrypt(_default_level, 2, {from: accounts[5]}),
                      _default_level, 1, {from: accounts[5]},
                      true, true, deposit_5[mod(now, 3)], 0, 0, false);
     current = await get_current(sub_accounts, []);
@@ -2030,7 +2030,7 @@ function parameterized_test(accounts,
                  balance_5 - deposit_5[mod(now, 3)]);
     balance_6 = current.balances[accounts[6]];
     deposit_6[mod(now, 3)] = Math.trunc(balance_6 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 2, {from: accounts[6]}),
+    await check_vote(await _acb.encrypt(_default_level, 2, {from: accounts[6]}),
                      _default_level, 1, {from: accounts[6]},
                      true, true, deposit_6[mod(now, 3)], 0, 0, false);
     current = await get_current(sub_accounts, []);
@@ -2042,7 +2042,7 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     mint = await mint_at_default_level();
@@ -2073,7 +2073,7 @@ function parameterized_test(accounts,
                               constant_reward * 2);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 3, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 3, {from: accounts[4]}),
                      _default_level, 2, {from: accounts[4]},
                      true, true, deposit_4[mod(now, 3)], reclaim_4, 0, true);
     current = await get_current(sub_accounts, []);
@@ -2082,7 +2082,7 @@ function parameterized_test(accounts,
                  balance_4 - deposit_4[mod(now, 3)] + reclaim_4);
     balance_5 = current.balances[accounts[5]];
     deposit_5[mod(now, 3)] = Math.trunc(balance_5 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 3, {from: accounts[5]}),
+    await check_vote(await _acb.encrypt(_default_level, 3, {from: accounts[5]}),
                      _default_level, 2, {from: accounts[5]},
                      true, true, deposit_5[mod(now, 3)],
                      deposit_5[mod(now - 2, 3)],
@@ -2094,7 +2094,7 @@ function parameterized_test(accounts,
                  reward_5 + constant_reward);
     balance_6 = current.balances[accounts[6]];
     deposit_6[mod(now, 3)] = Math.trunc(balance_6 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 3, {from: accounts[6]}),
+    await check_vote(await _acb.encrypt(_default_level, 3, {from: accounts[6]}),
                      _default_level, 2, {from: accounts[6]},
                      true, true, deposit_6[mod(now, 3)],
                      deposit_6[mod(now - 2, 3)],
@@ -2117,7 +2117,7 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     await reset_balances(accounts);
@@ -2150,7 +2150,7 @@ function parameterized_test(accounts,
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(0, 4, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(0, 4, {from: accounts[4]}),
                      _default_level, 3, {from: accounts[4]},
                      true, true, deposit_4[mod(now, 3)],
                      deposit_4[mod(now - 2, 3)],
@@ -2163,7 +2163,7 @@ function parameterized_test(accounts,
                  reward_4 + constant_reward);
     balance_5 = current.balances[accounts[5]];
     deposit_5[mod(now, 3)] = Math.trunc(balance_5 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(0, 4, {from: accounts[5]}),
+    await check_vote(await _acb.encrypt(0, 4, {from: accounts[5]}),
                      _default_level, 3, {from: accounts[5]},
                      true, true, deposit_5[mod(now, 3)],
                      deposit_5[mod(now - 2, 3)],
@@ -2175,7 +2175,7 @@ function parameterized_test(accounts,
                  reward_5 + constant_reward);
     balance_6 = current.balances[accounts[6]];
     deposit_6[mod(now, 3)] = Math.trunc(balance_6 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 4, {from: accounts[6]}),
+    await check_vote(await _acb.encrypt(_default_level, 4, {from: accounts[6]}),
                      _default_level, 3, {from: accounts[6]},
                      true, true, deposit_6[mod(now, 3)],
                      deposit_6[mod(now - 2, 3)],
@@ -2194,7 +2194,7 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     mint = await mint_at_default_level();
@@ -2222,7 +2222,7 @@ function parameterized_test(accounts,
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 5, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 5, {from: accounts[4]}),
                      0, 4, {from: accounts[4]},
                      true, true, deposit_4[mod(now, 3)],
                      deposit_4[mod(now - 2, 3)],
@@ -2235,7 +2235,7 @@ function parameterized_test(accounts,
                  reward_4 + constant_reward);
     balance_5 = current.balances[accounts[5]];
     deposit_5[mod(now, 3)] = Math.trunc(balance_5 * _deposit_rate / 100);
-    await check_vote(await _acb.hash( _default_level, 5, {from: accounts[5]}),
+    await check_vote(await _acb.encrypt( _default_level, 5, {from: accounts[5]}),
                      0, 4, {from: accounts[5]},
                      true, true, deposit_5[mod(now, 3)],
                      deposit_5[mod(now - 2, 3)],
@@ -2247,7 +2247,7 @@ function parameterized_test(accounts,
                  reward_5 + constant_reward);
     balance_6 = current.balances[accounts[6]];
     deposit_6[mod(now, 3)] = Math.trunc(balance_6 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 5, {from: accounts[6]}),
+    await check_vote(await _acb.encrypt(_default_level, 5, {from: accounts[6]}),
                      _default_level, 4, {from: accounts[6]},
                      true, true, deposit_6[mod(now, 3)],
                      deposit_6[mod(now - 2, 3)],
@@ -2263,7 +2263,7 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     mint = await mint_at_default_level();
@@ -2293,7 +2293,7 @@ function parameterized_test(accounts,
                               constant_reward * 1);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 6, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 6, {from: accounts[4]}),
                      _default_level, 5, {from: accounts[4]},
                      true, true, deposit_4[mod(now, 3)], reclaim_4, 0, true);
     current = await get_current(sub_accounts, []);
@@ -2302,7 +2302,7 @@ function parameterized_test(accounts,
                  balance_4 - deposit_4[mod(now, 3)] + reclaim_4);
     balance_5 = current.balances[accounts[5]];
     deposit_5[mod(now, 3)] = Math.trunc(balance_5 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 6, {from: accounts[5]}),
+    await check_vote(await _acb.encrypt(_default_level, 6, {from: accounts[5]}),
                      _default_level, 5, {from: accounts[5]},
                      true, true, deposit_5[mod(now, 3)], reclaim_5, 0, false);
     current = await get_current(sub_accounts, []);
@@ -2310,7 +2310,7 @@ function parameterized_test(accounts,
                  balance_5 - deposit_5[mod(now, 3)] + reclaim_5);
     balance_6 = current.balances[accounts[6]];
     deposit_6[mod(now, 3)] = Math.trunc(balance_6 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 6, {from: accounts[6]}),
+    await check_vote(await _acb.encrypt(_default_level, 6, {from: accounts[6]}),
                      _default_level, 5, {from: accounts[6]},
                      true, true, deposit_6[mod(now, 3)],
                      deposit_6[mod(now - 2, 3)],
@@ -2327,7 +2327,7 @@ function parameterized_test(accounts,
     // stable, stable, level_max - 1
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     await reset_balances(accounts);
@@ -2360,7 +2360,7 @@ function parameterized_test(accounts,
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 7, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 7, {from: accounts[4]}),
                      _default_level, 6, {from: accounts[4]},
                      true, true, deposit_4[mod(now, 3)],
                      deposit_4[mod(now - 2, 3)],
@@ -2373,7 +2373,7 @@ function parameterized_test(accounts,
                  reward_4 + constant_reward);
     balance_5 = current.balances[accounts[5]];
     deposit_5[mod(now, 3)] = Math.trunc(balance_5 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 7, {from: accounts[5]}),
+    await check_vote(await _acb.encrypt(_default_level, 7, {from: accounts[5]}),
                      _default_level, 6, {from: accounts[5]},
                      true, true, deposit_5[mod(now, 3)],
                      deposit_5[mod(now - 2, 3)],
@@ -2385,7 +2385,7 @@ function parameterized_test(accounts,
                  reward_5 + constant_reward);
     balance_6 = current.balances[accounts[6]];
     deposit_6[mod(now, 3)] = Math.trunc(balance_6 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_level_max - 1, 7, {from: accounts[6]}),
+    await check_vote(await _acb.encrypt(_level_max - 1, 7, {from: accounts[6]}),
                      _default_level, 6, {from: accounts[6]},
                      true, true, deposit_6[mod(now, 3)],
                      deposit_6[mod(now - 2, 3)],
@@ -2401,7 +2401,7 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     mint = await mint_at_default_level();
@@ -2429,7 +2429,7 @@ function parameterized_test(accounts,
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 8, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 8, {from: accounts[4]}),
                      _default_level, 7, {from: accounts[4]},
                      true, true, deposit_4[mod(now, 3)],
                      deposit_4[mod(now - 2, 3)],
@@ -2442,7 +2442,7 @@ function parameterized_test(accounts,
                  reward_4 + constant_reward);
     balance_5 = current.balances[accounts[5]];
     deposit_5[mod(now, 3)] = Math.trunc(balance_5 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 8, {from: accounts[5]}),
+    await check_vote(await _acb.encrypt(_default_level, 8, {from: accounts[5]}),
                      _default_level, 7, {from: accounts[5]},
                      true, true, deposit_5[mod(now, 3)],
                      deposit_5[mod(now - 2, 3)],
@@ -2454,7 +2454,7 @@ function parameterized_test(accounts,
                  reward_5 + constant_reward);
     balance_6 = current.balances[accounts[6]];
     deposit_6[mod(now, 3)] = Math.trunc(balance_6 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 8, {from: accounts[6]}),
+    await check_vote(await _acb.encrypt(_default_level, 8, {from: accounts[6]}),
                      _level_max - 1, 7, {from: accounts[6]},
                      true, true, deposit_6[mod(now, 3)],
                      deposit_6[mod(now - 2, 3)],
@@ -2470,7 +2470,7 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     mint = await mint_at_default_level();
@@ -2501,7 +2501,7 @@ function parameterized_test(accounts,
                               constant_reward * 2);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 9, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 9, {from: accounts[4]}),
                      _default_level, 8, {from: accounts[4]},
                      true, true, deposit_4[mod(now, 3)],
                      deposit_4[mod(now - 2, 3)],
@@ -2514,7 +2514,7 @@ function parameterized_test(accounts,
                  reward_4 + constant_reward);
     balance_5 = current.balances[accounts[5]];
     deposit_5[mod(now, 3)] = Math.trunc(balance_5 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 9, {from: accounts[5]}),
+    await check_vote(await _acb.encrypt(_default_level, 9, {from: accounts[5]}),
                      _default_level, 8, {from: accounts[5]},
                      true, true, deposit_5[mod(now, 3)],
                      deposit_5[mod(now - 2, 3)],
@@ -2526,7 +2526,7 @@ function parameterized_test(accounts,
                  reward_5 + constant_reward);
     balance_6 = current.balances[accounts[6]];
     deposit_6[mod(now, 3)] = Math.trunc(balance_6 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 9, {from: accounts[6]}),
+    await check_vote(await _acb.encrypt(_default_level, 9, {from: accounts[6]}),
                      _default_level, 8, {from: accounts[6]},
                      true, true, deposit_6[mod(now, 3)], reclaim_6, 0, false);
     current = await get_current(sub_accounts, []);
@@ -2545,7 +2545,7 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     await reset_balances(accounts);
@@ -2578,7 +2578,7 @@ function parameterized_test(accounts,
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 10, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 10, {from: accounts[4]}),
                      _default_level, 9, {from: accounts[4]},
                      true, true, deposit_4[mod(now, 3)],
                      deposit_4[mod(now - 2, 3)],
@@ -2591,7 +2591,7 @@ function parameterized_test(accounts,
                  reward_4 + constant_reward);
     balance_5 = current.balances[accounts[5]];
     deposit_5[mod(now, 3)] = Math.trunc(balance_5 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_level_max - 1, 10, {from: accounts[5]}),
+    await check_vote(await _acb.encrypt(_level_max - 1, 10, {from: accounts[5]}),
                      _default_level, 9, {from: accounts[5]},
                      true, true, deposit_5[mod(now, 3)],
                      deposit_5[mod(now - 2, 3)],
@@ -2603,7 +2603,7 @@ function parameterized_test(accounts,
                  reward_5 + constant_reward);
     balance_6 = current.balances[accounts[6]];
     deposit_6[mod(now, 3)] = Math.trunc(balance_6 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_level_max - 1, 10, {from: accounts[6]}),
+    await check_vote(await _acb.encrypt(_level_max - 1, 10, {from: accounts[6]}),
                      _default_level, 9, {from: accounts[6]},
                      true, true, deposit_6[mod(now, 3)],
                      deposit_6[mod(now - 2, 3)],
@@ -2622,7 +2622,7 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     mint = await mint_at_default_level();
@@ -2650,7 +2650,7 @@ function parameterized_test(accounts,
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 11, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 11, {from: accounts[4]}),
                      _default_level, 10, {from: accounts[4]},
                      true, true, deposit_4[mod(now, 3)],
                      deposit_4[mod(now - 2, 3)],
@@ -2663,7 +2663,7 @@ function parameterized_test(accounts,
                  reward_4 + constant_reward);
     balance_5 = current.balances[accounts[5]];
     deposit_5[mod(now, 3)] = Math.trunc(balance_5 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 11, {from: accounts[5]}),
+    await check_vote(await _acb.encrypt(_default_level, 11, {from: accounts[5]}),
                      _level_max - 1, 10, {from: accounts[5]},
                      true, true, deposit_5[mod(now, 3)],
                      deposit_5[mod(now - 2, 3)],
@@ -2675,7 +2675,7 @@ function parameterized_test(accounts,
                  reward_5 + constant_reward);
     balance_6 = current.balances[accounts[6]];
     deposit_6[mod(now, 3)] = Math.trunc(balance_6 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 11, {from: accounts[6]}),
+    await check_vote(await _acb.encrypt(_default_level, 11, {from: accounts[6]}),
                      _level_max - 1, 10, {from: accounts[6]},
                      true, true, deposit_6[mod(now, 3)],
                      deposit_6[mod(now - 2, 3)],
@@ -2691,7 +2691,7 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     mint = await mint_at_default_level();
@@ -2721,7 +2721,7 @@ function parameterized_test(accounts,
                               constant_reward * 1);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 12, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 12, {from: accounts[4]}),
                      _default_level, 11, {from: accounts[4]},
                      true, true, deposit_4[mod(now, 3)],
                      deposit_4[mod(now - 2, 3)],
@@ -2734,7 +2734,7 @@ function parameterized_test(accounts,
                  reward_4 + constant_reward);
     balance_5 = current.balances[accounts[5]];
     deposit_5[mod(now, 3)] = Math.trunc(balance_5 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 12, {from: accounts[5]}),
+    await check_vote(await _acb.encrypt(_default_level, 12, {from: accounts[5]}),
                      _default_level, 11, {from: accounts[5]},
                      true, true, deposit_5[mod(now, 3)], reclaim_5, 0, false);
     current = await get_current(sub_accounts, []);
@@ -2742,7 +2742,7 @@ function parameterized_test(accounts,
                  balance_5 - deposit_5[mod(now, 3)] + reclaim_5);
     balance_6 = current.balances[accounts[6]];
     deposit_6[mod(now, 3)] = Math.trunc(balance_6 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 12, {from: accounts[6]}),
+    await check_vote(await _acb.encrypt(_default_level, 12, {from: accounts[6]}),
                      _default_level, 11, {from: accounts[6]},
                      true, true, deposit_6[mod(now, 3)], reclaim_6, 0, false);
     current = await get_current(sub_accounts, []);
@@ -2755,7 +2755,7 @@ function parameterized_test(accounts,
     // stable, stable, level_max - 1; deposit is the same
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     await reset_balances(accounts);
@@ -2788,7 +2788,7 @@ function parameterized_test(accounts,
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_level_max - 1, 13, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_level_max - 1, 13, {from: accounts[4]}),
                      _default_level, 12, {from: accounts[4]},
                      true, true, deposit_4[mod(now, 3)],
                      deposit_4[mod(now - 2, 3)],
@@ -2801,7 +2801,7 @@ function parameterized_test(accounts,
                  reward_4 + constant_reward);
     balance_5 = current.balances[accounts[5]];
     deposit_5[mod(now, 3)] = Math.trunc(balance_5 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 13, {from: accounts[5]}),
+    await check_vote(await _acb.encrypt(_default_level, 13, {from: accounts[5]}),
                      _default_level, 12, {from: accounts[5]},
                      true, true, deposit_5[mod(now, 3)],
                      deposit_5[mod(now - 2, 3)],
@@ -2813,7 +2813,7 @@ function parameterized_test(accounts,
                  reward_5 + constant_reward);
     balance_6 = current.balances[accounts[6]];
     deposit_6[mod(now, 3)] = Math.trunc(balance_6 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 13, {from: accounts[6]}),
+    await check_vote(await _acb.encrypt(_default_level, 13, {from: accounts[6]}),
                      _default_level, 12, {from: accounts[6]},
                      true, true, deposit_6[mod(now, 3)],
                      deposit_6[mod(now - 2, 3)],
@@ -2829,7 +2829,7 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     mint = await mint_at_default_level();
@@ -2857,7 +2857,7 @@ function parameterized_test(accounts,
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 14, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 14, {from: accounts[4]}),
                      _level_max - 1, 13, {from: accounts[4]},
                      true, true, deposit_4[mod(now, 3)],
                      deposit_4[mod(now - 2, 3)],
@@ -2870,7 +2870,7 @@ function parameterized_test(accounts,
                  reward_4 + constant_reward);
     balance_5 = current.balances[accounts[5]];
     deposit_5[mod(now, 3)] = Math.trunc(balance_5 * _deposit_rate / 100)
-    await check_vote(await _acb.hash(_default_level, 14, {from: accounts[5]}),
+    await check_vote(await _acb.encrypt(_default_level, 14, {from: accounts[5]}),
                      _default_level, 13, {from: accounts[5]},
                      true, true, deposit_5[mod(now, 3)],
                      deposit_5[mod(now - 2, 3)],
@@ -2882,7 +2882,7 @@ function parameterized_test(accounts,
                  reward_5 + constant_reward);
     balance_6 = current.balances[accounts[6]];
     deposit_6[mod(now, 3)] = Math.trunc(balance_6 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 14, {from: accounts[6]}),
+    await check_vote(await _acb.encrypt(_default_level, 14, {from: accounts[6]}),
                      _default_level, 13, {from: accounts[6]},
                      true, true, deposit_6[mod(now, 3)],
                      deposit_6[mod(now - 2, 3)],
@@ -2898,7 +2898,7 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     mint = await mint_at_default_level();
@@ -2929,7 +2929,7 @@ function parameterized_test(accounts,
                               constant_reward * 2);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 15, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(_default_level, 15, {from: accounts[4]}),
                      _default_level, 14, {from: accounts[4]},
                      true, true, deposit_4[mod(now, 3)], reclaim_4, 0, true);
     current = await get_current(sub_accounts, []);
@@ -2938,7 +2938,7 @@ function parameterized_test(accounts,
                  balance_4 - deposit_4[mod(now, 3)] + reclaim_4);
     balance_5 = current.balances[accounts[5]];
     deposit_5[mod(now, 3)] = Math.trunc(balance_5 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 15, {from: accounts[5]}),
+    await check_vote(await _acb.encrypt(_default_level, 15, {from: accounts[5]}),
                      _default_level, 14, {from: accounts[5]},
                      true, true, deposit_5[mod(now, 3)],
                      deposit_5[mod(now - 2, 3)],
@@ -2950,7 +2950,7 @@ function parameterized_test(accounts,
                  reward_5 + constant_reward);
     balance_6 = current.balances[accounts[6]];
     deposit_6[mod(now, 3)] = Math.trunc(balance_6 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(_default_level, 15, {from: accounts[6]}),
+    await check_vote(await _acb.encrypt(_default_level, 15, {from: accounts[6]}),
                      _default_level, 14, {from: accounts[6]},
                      true, true, deposit_6[mod(now, 3)],
                      deposit_6[mod(now - 2, 3)],
@@ -2967,7 +2967,7 @@ function parameterized_test(accounts,
     // all levels
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     await reset_balances(accounts);
@@ -2991,7 +2991,7 @@ function parameterized_test(accounts,
                               deposit_6[mod(now - 2, 3)]);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(0, 4444, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(0, 4444, {from: accounts[4]}),
                      _default_level, 15, {from: accounts[4]},
                      true, true, deposit_4[mod(now, 3)],
                      deposit_4[mod(now - 2, 3)],
@@ -3008,7 +3008,7 @@ function parameterized_test(accounts,
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _phase_duration,
+        await _acb.getTimestamp()).toNumber() + _epoch_duration,
                             {from: accounts[1]});
     await set_tax();
     mint = await mint_at_default_level();
@@ -3030,7 +3030,7 @@ function parameterized_test(accounts,
                               constant_reward * 1);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
-    await check_vote(await _acb.hash(1, 4444, {from: accounts[4]}),
+    await check_vote(await _acb.encrypt(1, 4444, {from: accounts[4]}),
                      0, 4444, {from: accounts[4]},
                      true, true, deposit_4[mod(now, 3)],
                      deposit_4[mod(now - 2, 3)],
@@ -3061,7 +3061,7 @@ function parameterized_test(accounts,
     for (let level = 2; level < _level_max + 2; level++) {
       now = mod(now + 1, 3);
       await _acb.setTimestamp((
-          await _acb.getTimestamp()).toNumber() + _phase_duration,
+          await _acb.getTimestamp()).toNumber() + _epoch_duration,
                               {from: accounts[1]});
 
       current = await get_current(sub_accounts, []);
@@ -3103,7 +3103,7 @@ function parameterized_test(accounts,
       remainder[mod(now, 3)] = (reward_total - reward_4 - constant_reward * 1);
       balance_4 = current.balances[accounts[4]];
       deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
-      await check_vote(await _acb.hash(level, 4444, {from: accounts[4]}),
+      await check_vote(await _acb.encrypt(level, 4444, {from: accounts[4]}),
                        level - 1, 4444, {from: accounts[4]},
                        true,
                        (level < _level_max + 1) ? true : false,
@@ -3294,7 +3294,7 @@ function parameterized_test(accounts,
     await _acb.pause({from: accounts[1]});
 
     await should_throw(async () => {
-      await _acb.vote(await _acb.hash(0, 0, {from: accounts[1]}),
+      await _acb.vote(await _acb.encrypt(0, 0, {from: accounts[1]}),
                       0, 0, {from: accounts[1]});
     }, "Pausable");
 
@@ -3321,7 +3321,7 @@ function parameterized_test(accounts,
     await _acb.deprecate({from: accounts[1]});
 
     await should_throw(async () => {
-      await _acb.vote(await _acb.hash(0, 0, {from: accounts[1]}),
+      await _acb.vote(await _acb.encrypt(0, 0, {from: accounts[1]}),
                       0, 0, {from: accounts[1]});
     }, "Ownable");
 
@@ -3370,22 +3370,22 @@ function parameterized_test(accounts,
     }
 
     async function check_vote(
-        committed_hash, revealed_level, revealed_salt, option,
+        hash, oracle_level, salt, option,
         commit_result, reveal_result, deposited, reclaimed, rewarded,
-        phase_updated) {
+        epoch_updated) {
       let receipt = await _acb.vote(
-          committed_hash, revealed_level, revealed_salt, option);
+          hash, oracle_level, salt, option);
       let args = receipt.logs.filter(e => e.event == 'VoteEvent')[0].args;
       assert.equal(args.sender, option.from);
-      assert.equal(args.committed_hash, committed_hash);
-      assert.equal(args.revealed_level, revealed_level);
-      assert.equal(args.revealed_salt, revealed_salt);
+      assert.equal(args.hash, hash);
+      assert.equal(args.oracle_level, oracle_level);
+      assert.equal(args.salt, salt);
       assert.equal(args.commit_result, commit_result);
       assert.equal(args.reveal_result, reveal_result);
       assert.equal(args.deposited, deposited);
       assert.equal(args.reclaimed, reclaimed);
       assert.equal(args.rewarded, rewarded);
-      assert.equal(args.phase_updated, phase_updated);
+      assert.equal(args.epoch_updated, epoch_updated);
     }
 
     async function check_purchase_bonds(count, option, redemption) {
@@ -3418,7 +3418,7 @@ function parameterized_test(accounts,
       let acb = {};
       acb.bond_budget = (await _acb.bond_budget_()).toNumber();
       acb.oracle_level = (await _acb.oracle_level_()).toNumber();
-      acb.current_phase_start = (await _acb.current_phase_start_()).toNumber();
+      acb.current_epoch_start = (await _acb.current_epoch_start_()).toNumber();
       let coin = await JohnLawCoin.at(await _acb.coin_());
       let bond = await JohnLawBond.at(await _acb.bond_());
       acb.coin_supply =(await coin.totalSupply()).toNumber();

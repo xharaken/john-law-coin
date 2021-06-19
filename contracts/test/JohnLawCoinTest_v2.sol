@@ -23,7 +23,7 @@ contract OracleForTesting_v2 is Oracle_v2 {
 contract ACBForTesting_v2 is ACB_v2 {
   function overrideConstants(uint bond_redemption_price,
                              uint bond_redemption_period,
-                             uint phase_duration,
+                             uint epoch_duration,
                              uint deposit_rate,
                              uint damping_factor,
                              uint[] memory level_to_exchange_rate,
@@ -31,7 +31,7 @@ contract ACBForTesting_v2 is ACB_v2 {
       public onlyOwner {
     BOND_REDEMPTION_PRICE = bond_redemption_price;
     BOND_REDEMPTION_PERIOD = bond_redemption_period;
-    PHASE_DURATION = phase_duration;
+    EPOCH_DURATION = epoch_duration;
     DEPOSIT_RATE = deposit_rate;
     DAMPING_FACTOR = damping_factor;
     LEVEL_TO_EXCHANGE_RATE = level_to_exchange_rate;

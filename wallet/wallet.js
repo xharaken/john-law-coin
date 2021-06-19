@@ -64,7 +64,7 @@ window.onload = async () => {
     } else if (_chain_id == 3) {
       $("network").innerHTML =
         "<span class='warning'>Note: You are connected to " +
-        "the Ropsten Testnet. The duration of one phase is " +
+        "the Ropsten Testnet. The duration of one epoch is " +
         "set to 1 min (instead of 1 week) for testing purposes. " +
         "Please test whatever you want to experiment with and give us " +
         "feedback!</span>";
@@ -309,22 +309,22 @@ async function vote() {
   try {
     const current_level = $("vote_oracle_level").value || LEVEL_MAX;
     
-    const phase_id = parseInt(
-      await _oracle_contract.methods.phase_id_().call());
-    const current_phase_id =
-          (await getNextPhaseStart()) < Date.now() ?
-          phase_id + 1 : phase_id;
-    console.log("phase_id: ", phase_id);
-    console.log("current_phase_id: ", current_phase_id);
+    const epoch_id = parseInt(
+      await _oracle_contract.methods.epoch_id_().call());
+    const current_epoch_id =
+          (await getNextEpochStart()) < Date.now() ?
+          epoch_id + 1 : epoch_id;
+    console.log("epoch_id: ", epoch_id);
+    console.log("current_epoch_id: ", current_epoch_id);
     
-    const current_salt = await getSalt(current_phase_id);
+    const current_salt = await getSalt(current_epoch_id);
     console.log("current_salt: ", current_salt);
-    const current_commit = await getCommit(current_phase_id);
-    const previous_commit = await getCommit(current_phase_id - 1);
+    const current_commit = await getCommit(current_epoch_id);
+    const previous_commit = await getCommit(current_epoch_id - 1);
     
     if (current_commit.voted) {
-      throw("You have already voted in this phase. " +
-            "You can vote only once per phase.");
+      throw("You have already voted in this epoch. " +
+            "You can vote only once per epoch.");
     }
     
     const null_hash = await _acb_contract.methods.NULL_HASH().call();
@@ -333,12 +333,12 @@ async function vote() {
     if (previous_commit.voted && previous_commit.hash != null_hash) {
       let found = false;
       let retry = 0;
-      for (let previous_phase_id = current_phase_id;
-           previous_phase_id >= 0 && retry < 6 && !found;
-           previous_phase_id--) {
-        previous_salt = await getSalt(previous_phase_id);
+      for (let previous_epoch_id = current_epoch_id;
+           previous_epoch_id >= 0 && retry < 6 && !found;
+           previous_epoch_id--) {
+        previous_salt = await getSalt(previous_epoch_id);
         for (let level = 0; level < LEVEL_MAX; level++) {
-          const hash = await _acb_contract.methods.hash(
+          const hash = await _acb_contract.methods.encrypt(
             level, previous_salt).call({from: _selected_address});
           if (hash == previous_commit.hash) {
             previous_level = level;
@@ -366,7 +366,7 @@ async function vote() {
     console.log("previous_level: ", previous_level);
 
     const hash = current_level == LEVEL_MAX ? null_hash :
-          await _acb_contract.methods.hash(current_level, current_salt).call(
+          await _acb_contract.methods.encrypt(current_level, current_salt).call(
             {from: _selected_address});
     const promise = _acb_contract.methods.vote(
       hash, previous_level, previous_salt).send(
@@ -378,24 +378,24 @@ async function vote() {
       throw(receipt);
     }
     const ret = receipt.events.VoteEvent.returnValues;
-    const updated_phase_id = parseInt(
-      await _oracle_contract.methods.phase_id_().call());
+    const updated_epoch_id = parseInt(
+      await _oracle_contract.methods.epoch_id_().call());
     const message =
-          (ret.commit_result ? "Commit for phase " + updated_phase_id +
+          (ret.commit_result ? "Commit for epoch " + updated_epoch_id +
            " succeeded. You voted for the oracle level " + current_level +
            ". You deposited " + ret.deposited + " coins. " +
-           "The coins will be reclaimed at phase " + (updated_phase_id + 2) +
-           " as long as you vote at phase " + (updated_phase_id + 1) +
-           " and phase " + (updated_phase_id + 2) + ".":
-           "Commit for phase " + updated_phase_id + " failed. "+
-           "You can vote only once per phase.") + "<br><br>" +
-          (ret.reveal_result ? "Reveal for phase " + (updated_phase_id - 1) +
+           "The coins will be reclaimed at epoch " + (updated_epoch_id + 2) +
+           " as long as you vote at epoch " + (updated_epoch_id + 1) +
+           " and epoch " + (updated_epoch_id + 2) + ".":
+           "Commit for epoch " + updated_epoch_id + " failed. "+
+           "You can vote only once per epoch.") + "<br><br>" +
+          (ret.reveal_result ? "Reveal for epoch " + (updated_epoch_id - 1) +
            " succeeded." :
-           "Reveal for phase " + (updated_phase_id - 1) +
-           " failed because your vote in phase " + (updated_phase_id - 1) +
+           "Reveal for epoch " + (updated_epoch_id - 1) +
+           " failed because your vote in epoch " + (updated_epoch_id - 1) +
            " was not found.") +
           "<br><br>" + "You reclaimed " + ret.reclaimed +
-          " coins you deposited at phase " + (updated_phase_id - 2) +
+          " coins you deposited at epoch " + (updated_epoch_id - 2) +
           ". You got " + ret.rewarded + " coins as a reward.";
     await showTransactionSuccessMessage(message, receipt);
   } catch (error) {
@@ -465,9 +465,9 @@ async function reloadInfo() {
             _selected_address).call());
     html += "<tr><td>Bond balance</td><td class='right'>" +
       bond_balance + "</td></tr>";
-    const phase_id =
-          parseInt(await _oracle_contract.methods.phase_id_().call());
-    const current_commit = await getCommit(phase_id);
+    const epoch_id =
+          parseInt(await _oracle_contract.methods.epoch_id_().call());
+    const current_commit = await getCommit(epoch_id);
     html += "<tr><td>Voted</td><td class='right'>" +
       (current_commit.voted ? "Done" : "Not yet") +
       "</td></tr></table>";
@@ -489,17 +489,17 @@ async function reloadInfo() {
       getOracleLevelString(
         parseInt(await _acb_contract.methods.oracle_level_().call()))
       + "</td></tr>";
-    html += "<tr><td>Current phase ID</td><td class='right'>" +
-      parseInt(await _oracle_contract.methods.phase_id_().call())
+    html += "<tr><td>Current epoch ID</td><td class='right'>" +
+      parseInt(await _oracle_contract.methods.epoch_id_().call())
       + "</td></tr>";
-    const current_phase_start_ms =
+    const current_epoch_start_ms =
           parseInt(
-            await _acb_contract.methods.current_phase_start_().call()) * 1000;
-    html += "<tr><td>Current phase started</td><td class='right'>" +
-      getDateString(current_phase_start_ms) + "</td></tr>";
-    const next_phase_start_ms = await getNextPhaseStart();
-    html += "<tr><td>Next phase will start</td><td class='right'>" +
-      getDateString(next_phase_start_ms) + " plus/minus 5 mins</td></tr>";
+            await _acb_contract.methods.current_epoch_start_().call()) * 1000;
+    html += "<tr><td>Current epoch started</td><td class='right'>" +
+      getDateString(current_epoch_start_ms) + "</td></tr>";
+    const next_epoch_start_ms = await getNextEpochStart();
+    html += "<tr><td>Next epoch will start</td><td class='right'>" +
+      getDateString(next_epoch_start_ms) + " plus/minus 5 mins</td></tr>";
     html += "<tr><td>Current time</td><td class='right'>" +
       getDateString(Date.now()) + "</td></tr>";
     showMessage($("acb_info"), html);
@@ -515,20 +515,20 @@ async function reloadInfo() {
         bond_budget + ".]";
     }
     
-    const next_phase_id =
-          next_phase_start_ms < Date.now() ?
-          phase_id + 1 : phase_id;
-    console.log("next_phase_id:", next_phase_id);
-    const next_commit = await getCommit(next_phase_id);
+    const next_epoch_id =
+          next_epoch_start_ms < Date.now() ?
+          epoch_id + 1 : epoch_id;
+    console.log("next_epoch_id:", next_epoch_id);
+    const next_commit = await getCommit(next_epoch_id);
     if (!next_commit.voted) {
       $("vote_button").disabled = false;
       $("vote_button_disabled").innerText = "";
     } else {
       $("vote_button").disabled = true;
       $("vote_button_disabled").innerText =
-        " [You can vote only once per phase. Please wait until the next " +
-        "phase starts. The next phase will start around " +
-        getDateString(next_phase_start_ms) + ".]";
+        " [You can vote only once per epoch. Please wait until the next " +
+        "epoch starts. The next epoch will start around " +
+        getDateString(next_epoch_start_ms) + ".]";
     }
     
     let has_redeemable = false;
@@ -593,10 +593,10 @@ async function showAdvancedInfo() {
 
 async function showOracleStatus() {
   let html = "";
-  const phase_id =
-        parseInt(await _oracle_contract.methods.phase_id_().call());
-  html += "<table><tr><td>phase_id_</td><td class='right'>" +
-    phase_id + "</td></tr></table>";
+  const epoch_id =
+        parseInt(await _oracle_contract.methods.epoch_id_().call());
+  html += "<table><tr><td>epoch_id_</td><td class='right'>" +
+    epoch_id + "</td></tr></table>";
   for (let index = 0; index < 3; index++) {
     html += "<br>Epoch " + index + "<br><table>";
     const ret = await _oracle_contract.methods.getEpoch(index).call();
@@ -666,7 +666,7 @@ async function showLoggingStatus() {
       acb_log[5] + "</td></tr>";
     html += "<tr><td>oracle_level</td><td class='right'>" +
       acb_log[6] + "</td></tr>";
-    html += "<tr><td>current_phase_start</td><td class='right'>" +
+    html += "<tr><td>current_epoch_start</td><td class='right'>" +
       acb_log[7] + "</td></tr>";
     html += "<tr><td>burned_tax</td><td class='right'>" +
       acb_log[8] + "</td></tr>";
@@ -905,20 +905,20 @@ async function showErrorMessage(message, object) {
 
 // Helper functions.
 
-async function getCommit(phase_id) {
+async function getCommit(epoch_id) {
   let target__oracle_contract = _oracle_contract;
-  if (phase_id < PHASE_ID_THAT_UPGRADED_ORACLE) {
+  if (epoch_id < EPOCH_ID_THAT_UPGRADED_ORACLE) {
     target__oracle_contract =
       await new _web3.eth.Contract(ORACLE_ABI, OLD_ORACLE_ADDRESS);
   }
   const ret = await target__oracle_contract.methods.getCommit(
-    phase_id % 3, _selected_address).call();
-  return {voted: ret[4] == phase_id,
-          hash: ret[4] == phase_id ? ret[0] : ""};
+    epoch_id % 3, _selected_address).call();
+  return {voted: ret[4] == epoch_id,
+          hash: ret[4] == epoch_id ? ret[0] : ""};
 }
 
-async function getSalt(phase_id) {
-  const message = "Vote (Phase ID = " + phase_id + ")";
+async function getSalt(epoch_id) {
+  const message = "Vote (Epoch ID = " + epoch_id + ")";
   const key = _selected_address + "-" + message;
   let salt = localStorage[key];
   if (salt) {
@@ -930,13 +930,13 @@ async function getSalt(phase_id) {
   return salt;
 }
 
-async function getNextPhaseStart() {
-  const current_phase_start_ms =
+async function getNextEpochStart() {
+  const current_epoch_start_ms =
         parseInt(
-          await _acb_contract.methods.current_phase_start_().call()) * 1000;
-  const phase_duration_ms =
-        parseInt(await _acb_contract.methods.PHASE_DURATION().call()) * 1000;
-  return current_phase_start_ms + phase_duration_ms;
+          await _acb_contract.methods.current_epoch_start_().call()) * 1000;
+  const epoch_duration_ms =
+        parseInt(await _acb_contract.methods.EPOCH_DURATION().call()) * 1000;
+  return current_epoch_start_ms + epoch_duration_ms;
 }
 
 function extractTransactionHash(error) {

@@ -24,7 +24,7 @@ contract("LoggingUnittest", function (accounts) {
     assert.equal(acb_log.coin_total_supply, 0);
     assert.equal(acb_log.bond_total_supply, 0);
     assert.equal(acb_log.oracle_level, 0);
-    assert.equal(acb_log.current_phase_start, 0);
+    assert.equal(acb_log.current_epoch_start, 0);
     assert.equal(acb_log.tax, 0);
     assert.equal(acb_log.purchased_bonds, 0);
     assert.equal(acb_log.redeemed_bonds, 0);
@@ -57,7 +57,7 @@ contract("LoggingUnittest", function (accounts) {
       assert.equal(acb_log.coin_total_supply, 5);
       assert.equal(acb_log.bond_total_supply, 6);
       assert.equal(acb_log.oracle_level, 7);
-      assert.equal(acb_log.current_phase_start, 8);
+      assert.equal(acb_log.current_epoch_start, 8);
       assert.equal(acb_log.tax, 9);
       assert.equal(acb_log.purchased_bonds, 6);
       assert.equal(acb_log.redeemed_bonds, 10);
@@ -180,7 +180,7 @@ contract("LoggingUnittest", function (accounts) {
     acb_log.coin_total_supply = ret[4];
     acb_log.bond_total_supply = ret[5];
     acb_log.oracle_level = ret[6];
-    acb_log.current_phase_start = ret[7];
+    acb_log.current_epoch_start = ret[7];
     acb_log.tax = ret[8];
     acb_log.purchased_bonds = ret[9];
     acb_log.redeemed_bonds = ret[10];

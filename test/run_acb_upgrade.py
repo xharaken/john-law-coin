@@ -10,7 +10,7 @@ import common
 # Need 12 parameters:
 # - bond_redemption_price
 # - bond_redemption_period
-# - phase_duration
+# - epoch_duration
 # - proportional_reward_rate
 # - deposit_rate
 # - damping_factor
@@ -31,7 +31,7 @@ common.run_test(command)
 iteration = 30
 for bond_redemption_price in [1000]:
     for bond_redemption_period in [1, 84 * 24 * 60 * 60]:
-        for phase_duration in [1, 7 * 24 * 60 * 60]:
+        for epoch_duration in [1, 7 * 24 * 60 * 60]:
             for proportional_reward_rate in [0, 90, 100]:
                 for deposit_rate in [0, 10, 100]:
                     for damping_factor in [10, 100]:
@@ -59,7 +59,7 @@ for bond_redemption_price in [1000]:
                                         "truffle test acb_simulator.js '" +
                                         str(bond_redemption_price) + " " +
                                         str(bond_redemption_period) + " " +
-                                        str(phase_duration) + " " +
+                                        str(epoch_duration) + " " +
                                         str(proportional_reward_rate) + " " +
                                         str(deposit_rate) + " " +
                                         str(damping_factor) + " " +

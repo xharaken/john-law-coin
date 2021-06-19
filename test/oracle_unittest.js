@@ -61,7 +61,7 @@ function parameterized_test(accounts,
     assert.equal(current.epochs[0].phase, Oracle.Phase.COMMIT);
     assert.equal(current.epochs[1].phase, Oracle.Phase.RECLAIM);
     assert.equal(current.epochs[2].phase, Oracle.Phase.REVEAL);
-    assert.equal(current.phase_id % 3, 0);
+    assert.equal(current.epoch_id % 3, 0);
 
     await should_throw(async () => {
       await _oracle.advance(-1);
@@ -75,7 +75,7 @@ function parameterized_test(accounts,
     await check_advance(0);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply + _tax);
-    assert.equal(current.phase_id % 3, 1);
+    assert.equal(current.epoch_id % 3, 1);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.REVEAL);
     assert.equal(current.epochs[0].votes.length, _level_max);
@@ -107,7 +107,7 @@ function parameterized_test(accounts,
     await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
-    assert.equal(current.phase_id % 3, 2);
+    assert.equal(current.epoch_id % 3, 2);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.RECLAIM);
     assert.equal(current.epochs[0].votes.length, _level_max);
@@ -133,7 +133,7 @@ function parameterized_test(accounts,
     await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
-    assert.equal(current.phase_id % 3, 0);
+    assert.equal(current.epoch_id % 3, 0);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.COMMIT);
     assert.equal(current.epochs[0].votes.length, _level_max);
@@ -159,21 +159,21 @@ function parameterized_test(accounts,
     assert.equal(
         await _oracle.commit.call(
             _coin.address, accounts[1],
-            await _oracle.hash(accounts[1], _mode_level, 1111),
+            await _oracle.encrypt(accounts[1], _mode_level, 1111),
             _deposit + 1), false);
     await check_commit(accounts[1],
-                       await _oracle.hash(accounts[1], _mode_level, 1111),
+                       await _oracle.encrypt(accounts[1], _mode_level, 1111),
                        _deposit);
     assert.equal(await balance_of(accounts[1]), balance - _deposit);
     assert.equal(
         await _oracle.commit.call(
             _coin.address, accounts[1],
-            await _oracle.hash(accounts[1], _mode_level, 1111),
+            await _oracle.encrypt(accounts[1], _mode_level, 1111),
             _deposit), false);
     assert.equal(
         await _oracle.commit.call(
             _coin.address, accounts[1],
-            await _oracle.hash(accounts[1], 0, 1111),
+            await _oracle.encrypt(accounts[1], 0, 1111),
             _deposit), false);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
@@ -181,14 +181,14 @@ function parameterized_test(accounts,
     await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
-    assert.equal(current.phase_id % 3, 1);
+    assert.equal(current.epoch_id % 3, 1);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.REVEAL);
-    assert.equal(current.epochs[0].commits[accounts[1]].committed_hash,
-                 await _oracle.hash(accounts[1], _mode_level, 1111));
+    assert.equal(current.epochs[0].commits[accounts[1]].hash,
+                 await _oracle.encrypt(accounts[1], _mode_level, 1111));
     assert.equal(current.epochs[0].commits[accounts[1]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[1]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[1]].oracle_level,
                  _level_max);
     assert.equal(current.epochs[0].votes.length, _level_max);
     assert.equal(current.epochs[0].reward_balance, 0);
@@ -221,14 +221,14 @@ function parameterized_test(accounts,
     await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
-    assert.equal(current.phase_id % 3, 2);
+    assert.equal(current.epoch_id % 3, 2);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.RECLAIM);
-    assert.equal(current.epochs[0].commits[accounts[1]].committed_hash,
-                 await _oracle.hash(accounts[1], _mode_level, 1111));
+    assert.equal(current.epochs[0].commits[accounts[1]].hash,
+                 await _oracle.encrypt(accounts[1], _mode_level, 1111));
     assert.equal(current.epochs[0].commits[accounts[1]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[1]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[1]].oracle_level,
                  _mode_level);
     assert.equal(current.epochs[0].votes.length, _level_max);
     assert.equal(current.epochs[0].votes[_mode_level].count, 1);
@@ -273,7 +273,7 @@ function parameterized_test(accounts,
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(),
                  coin_supply + _reward(_tax, 1) * 1);
-    assert.equal(current.phase_id % 3, 0);
+    assert.equal(current.epoch_id % 3, 0);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.COMMIT);
     assert.equal(current.epochs[0].votes.length, _level_max);
@@ -299,7 +299,7 @@ function parameterized_test(accounts,
     await _coin.mint(accounts[1], _deposit);
     balance = await balance_of(accounts[1]);
     await check_commit(accounts[1],
-                       await _oracle.hash(accounts[1], _mode_level, 1111),
+                       await _oracle.encrypt(accounts[1], _mode_level, 1111),
                        _deposit);
     assert.equal(await balance_of(accounts[1]), balance - _deposit);
 
@@ -308,14 +308,14 @@ function parameterized_test(accounts,
     await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
-    assert.equal(current.phase_id % 3, 1);
+    assert.equal(current.epoch_id % 3, 1);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.REVEAL);
-    assert.equal(current.epochs[0].commits[accounts[1]].committed_hash,
-                 await _oracle.hash(accounts[1], _mode_level, 1111));
+    assert.equal(current.epochs[0].commits[accounts[1]].hash,
+                 await _oracle.encrypt(accounts[1], _mode_level, 1111));
     assert.equal(current.epochs[0].commits[accounts[1]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[1]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[1]].oracle_level,
                  _level_max);
     assert.equal(current.epochs[0].votes.length, _level_max);
     assert.equal(current.epochs[0].reward_balance, 0);
@@ -338,7 +338,7 @@ function parameterized_test(accounts,
     await _coin.mint(accounts[1], _deposit);
     balance = await balance_of(accounts[1]);
     await check_commit(accounts[1],
-                       await _oracle.hash(accounts[1], _mode_level, 1111),
+                       await _oracle.encrypt(accounts[1], _mode_level, 1111),
                        _deposit);
     assert.equal(await balance_of(accounts[1]), balance - _deposit);
 
@@ -349,14 +349,14 @@ function parameterized_test(accounts,
     await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
-    assert.equal(current.phase_id % 3, 2);
+    assert.equal(current.epoch_id % 3, 2);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.RECLAIM);
-    assert.equal(current.epochs[0].commits[accounts[1]].committed_hash,
-                 await _oracle.hash(accounts[1], _mode_level, 1111));
+    assert.equal(current.epochs[0].commits[accounts[1]].hash,
+                 await _oracle.encrypt(accounts[1], _mode_level, 1111));
     assert.equal(current.epochs[0].commits[accounts[1]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[1]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[1]].oracle_level,
                  _mode_level);
     assert.equal(current.epochs[0].votes.length, _level_max);
     assert.equal(current.epochs[0].votes[_mode_level].count, 1);
@@ -377,11 +377,11 @@ function parameterized_test(accounts,
                  _deposit);
     assert.equal(current.epochs[0].reward_total, _tax);
     assert.equal(current.epochs[1].phase, Oracle.Phase.REVEAL);
-    assert.equal(current.epochs[1].commits[accounts[1]].committed_hash,
-                 await _oracle.hash(accounts[1], _mode_level, 1111));
+    assert.equal(current.epochs[1].commits[accounts[1]].hash,
+                 await _oracle.encrypt(accounts[1], _mode_level, 1111));
     assert.equal(current.epochs[1].commits[accounts[1]].deposit,
                  _deposit);
-    assert.equal(current.epochs[1].commits[accounts[1]].revealed_level,
+    assert.equal(current.epochs[1].commits[accounts[1]].oracle_level,
                  _level_max);
     assert.equal(current.epochs[1].votes.length, _level_max);
     assert.equal(current.epochs[1].reward_balance, 0);
@@ -404,7 +404,7 @@ function parameterized_test(accounts,
     await _coin.mint(accounts[1], _deposit);
     balance = await balance_of(accounts[1]);
     await check_commit(accounts[1],
-                       await _oracle.hash(accounts[1], _mode_level, 1111),
+                       await _oracle.encrypt(accounts[1], _mode_level, 1111),
                        _deposit);
     assert.equal(await balance_of(accounts[1]), balance - _deposit);
 
@@ -416,7 +416,7 @@ function parameterized_test(accounts,
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(),
                  coin_supply + _reward(_tax, 1) * 1);
-    assert.equal(current.phase_id % 3, 0);
+    assert.equal(current.epoch_id % 3, 0);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.COMMIT);
     assert.equal(current.epochs[0].votes.length, _level_max);
@@ -424,11 +424,11 @@ function parameterized_test(accounts,
     assert.equal(current.epochs[0].deposit_balance, 0);
     assert.equal(current.epochs[0].reward_total, 0);
     assert.equal(current.epochs[1].phase, Oracle.Phase.RECLAIM);
-    assert.equal(current.epochs[1].commits[accounts[1]].committed_hash,
-                 await _oracle.hash(accounts[1], _mode_level, 1111))
+    assert.equal(current.epochs[1].commits[accounts[1]].hash,
+                 await _oracle.encrypt(accounts[1], _mode_level, 1111))
     assert.equal(current.epochs[1].commits[accounts[1]].deposit,
                  _deposit);
-    assert.equal(current.epochs[1].commits[accounts[1]].revealed_level,
+    assert.equal(current.epochs[1].commits[accounts[1]].oracle_level,
                  _mode_level);
     assert.equal(current.epochs[1].votes.length, _level_max);
     assert.equal(current.epochs[1].votes[_mode_level].count, 1);
@@ -449,11 +449,11 @@ function parameterized_test(accounts,
                  _deposit);
     assert.equal(current.epochs[1].reward_total, _tax);
     assert.equal(current.epochs[2].phase, Oracle.Phase.REVEAL);
-    assert.equal(current.epochs[2].commits[accounts[1]].committed_hash,
-                 await _oracle.hash(accounts[1], _mode_level, 1111));
+    assert.equal(current.epochs[2].commits[accounts[1]].hash,
+                 await _oracle.encrypt(accounts[1], _mode_level, 1111));
     assert.equal(current.epochs[2].commits[accounts[1]].deposit,
                  _deposit);
-    assert.equal(current.epochs[2].commits[accounts[1]].revealed_level,
+    assert.equal(current.epochs[2].commits[accounts[1]].oracle_level,
                  _level_max);
     assert.equal(current.epochs[2].votes.length, _level_max);
     assert.equal(current.epochs[2].reward_balance, 0);
@@ -476,7 +476,7 @@ function parameterized_test(accounts,
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(),
                  coin_supply + _reward(_tax, 1) * 1);
-    assert.equal(current.phase_id % 3, 1);
+    assert.equal(current.epoch_id % 3, 1);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.REVEAL);
     assert.equal(current.epochs[0].votes.length, _level_max);
@@ -489,11 +489,11 @@ function parameterized_test(accounts,
     assert.equal(current.epochs[1].deposit_balance, 0);
     assert.equal(current.epochs[1].reward_total, 0);
     assert.equal(current.epochs[2].phase, Oracle.Phase.RECLAIM);
-    assert.equal(current.epochs[2].commits[accounts[1]].committed_hash,
-                 await _oracle.hash(accounts[1], _mode_level, 1111));
+    assert.equal(current.epochs[2].commits[accounts[1]].hash,
+                 await _oracle.encrypt(accounts[1], _mode_level, 1111));
     assert.equal(current.epochs[2].commits[accounts[1]].deposit,
                  _deposit);
-    assert.equal(current.epochs[2].commits[accounts[1]].revealed_level,
+    assert.equal(current.epochs[2].commits[accounts[1]].oracle_level,
                  _mode_level);
     assert.equal(current.epochs[2].votes.length, _level_max);
     assert.equal(current.epochs[2].votes[_mode_level].count, 1);
@@ -527,7 +527,7 @@ function parameterized_test(accounts,
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(),
                  coin_supply + _reward(_tax, 1) * 1);
-    assert.equal(current.phase_id % 3, 2);
+    assert.equal(current.epoch_id % 3, 2);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.RECLAIM);
     assert.equal(current.epochs[0].votes.length, _level_max);
@@ -559,37 +559,37 @@ function parameterized_test(accounts,
     await _coin.mint(accounts[1], _deposit);
     balance = await balance_of(accounts[1]);
     await check_commit(accounts[1],
-                       await _oracle.hash(accounts[1], _mode_level, 1111),
+                       await _oracle.encrypt(accounts[1], _mode_level, 1111),
                        _deposit);
     assert.equal(await balance_of(accounts[1]), balance - _deposit);
     await _coin.mint(accounts[2], _deposit);
     balance = await balance_of(accounts[2]);
     await check_commit(accounts[2],
-                       await _oracle.hash(accounts[2], _mode_level, 2222),
+                       await _oracle.encrypt(accounts[2], _mode_level, 2222),
                        _deposit);
     assert.equal(await balance_of(accounts[2]), balance - _deposit);
     await _coin.mint(accounts[3], _deposit);
     balance = await balance_of(accounts[3]);
     await check_commit(accounts[3],
-                       await _oracle.hash(accounts[3], _mode_level, 3333),
+                       await _oracle.encrypt(accounts[3], _mode_level, 3333),
                        _deposit);
     assert.equal(await balance_of(accounts[3]), balance - _deposit);
     await _coin.mint(accounts[4], _deposit);
     balance = await balance_of(accounts[4]);
     await check_commit(accounts[4],
-                       await _oracle.hash(accounts[4], _mode_level, 4444),
+                       await _oracle.encrypt(accounts[4], _mode_level, 4444),
                        _deposit);
     assert.equal(await balance_of(accounts[4]), balance - _deposit);
     await _coin.mint(accounts[5], _deposit);
     balance = await balance_of(accounts[5]);
     await check_commit(accounts[5],
-                       await _oracle.hash(accounts[5], _mode_level, 5555),
+                       await _oracle.encrypt(accounts[5], _mode_level, 5555),
                        _deposit);
     assert.equal(await balance_of(accounts[5]), balance - _deposit);
     await _coin.mint(accounts[6], _deposit);
     balance = await balance_of(accounts[6]);
     await check_commit(accounts[6],
-                       await _oracle.hash(accounts[6], _mode_level, 6666),
+                       await _oracle.encrypt(accounts[6], _mode_level, 6666),
                        _deposit);
     assert.equal(await balance_of(accounts[6]), balance - _deposit);
 
@@ -598,44 +598,44 @@ function parameterized_test(accounts,
     await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
-    assert.equal(current.phase_id % 3, 1);
+    assert.equal(current.epoch_id % 3, 1);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.REVEAL);
-    assert.equal(current.epochs[0].commits[accounts[1]].committed_hash,
-                 await _oracle.hash(accounts[1], _mode_level, 1111));
+    assert.equal(current.epochs[0].commits[accounts[1]].hash,
+                 await _oracle.encrypt(accounts[1], _mode_level, 1111));
     assert.equal(current.epochs[0].commits[accounts[1]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[1]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[1]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[2]].committed_hash,
-                 await _oracle.hash(accounts[2], _mode_level, 2222));
+    assert.equal(current.epochs[0].commits[accounts[2]].hash,
+                 await _oracle.encrypt(accounts[2], _mode_level, 2222));
     assert.equal(current.epochs[0].commits[accounts[2]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[2]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[2]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[3]].committed_hash,
-                 await _oracle.hash(accounts[3], _mode_level, 3333));
+    assert.equal(current.epochs[0].commits[accounts[3]].hash,
+                 await _oracle.encrypt(accounts[3], _mode_level, 3333));
     assert.equal(current.epochs[0].commits[accounts[3]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[3]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[3]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[4]].committed_hash,
-                 await _oracle.hash(accounts[4], _mode_level, 4444));
+    assert.equal(current.epochs[0].commits[accounts[4]].hash,
+                 await _oracle.encrypt(accounts[4], _mode_level, 4444));
     assert.equal(current.epochs[0].commits[accounts[4]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[4]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[4]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[5]].committed_hash,
-                 await _oracle.hash(accounts[5], _mode_level, 5555));
+    assert.equal(current.epochs[0].commits[accounts[5]].hash,
+                 await _oracle.encrypt(accounts[5], _mode_level, 5555));
     assert.equal(current.epochs[0].commits[accounts[5]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[5]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[5]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[6]].committed_hash,
-                 await _oracle.hash(accounts[6], _mode_level, 6666));
+    assert.equal(current.epochs[0].commits[accounts[6]].hash,
+                 await _oracle.encrypt(accounts[6], _mode_level, 6666));
     assert.equal(current.epochs[0].commits[accounts[6]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[6]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[6]].oracle_level,
                  _level_max);
     assert.equal(current.epochs[0].votes.length, _level_max);
     assert.equal(current.epochs[0].reward_balance, 0);
@@ -663,20 +663,20 @@ function parameterized_test(accounts,
     await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
-    assert.equal(current.phase_id % 3, 2);
+    assert.equal(current.epoch_id % 3, 2);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.RECLAIM);
-    assert.equal(current.epochs[0].commits[accounts[1]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[1]].oracle_level,
                  _mode_level);
-    assert.equal(current.epochs[0].commits[accounts[2]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[2]].oracle_level,
                  _mode_level);
-    assert.equal(current.epochs[0].commits[accounts[3]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[3]].oracle_level,
                  _mode_level);
-    assert.equal(current.epochs[0].commits[accounts[4]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[4]].oracle_level,
                  _mode_level);
-    assert.equal(current.epochs[0].commits[accounts[5]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[5]].oracle_level,
                  _mode_level);
-    assert.equal(current.epochs[0].commits[accounts[6]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[6]].oracle_level,
                  _mode_level);
     assert.equal(current.epochs[0].votes.length, _level_max);
     assert.equal(current.epochs[0].votes[_mode_level].count, 6);
@@ -727,7 +727,7 @@ function parameterized_test(accounts,
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(),
                  coin_supply + _reward(_tax, 6) * 6);
-    assert.equal(current.phase_id % 3, 0);
+    assert.equal(current.epoch_id % 3, 0);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.COMMIT);
     assert.equal(current.epochs[0].votes.length, _level_max);
@@ -743,37 +743,37 @@ function parameterized_test(accounts,
     await _coin.mint(accounts[1], _deposit);
     balance = await balance_of(accounts[1]);
     await check_commit(accounts[1],
-                       await _oracle.hash(accounts[1], _mode_level, 1111),
+                       await _oracle.encrypt(accounts[1], _mode_level, 1111),
                        _deposit);
     assert.equal(await balance_of(accounts[1]), balance - _deposit);
     await _coin.mint(accounts[2], _deposit);
     balance = await balance_of(accounts[2]);
     await check_commit(accounts[2],
-                       await _oracle.hash(accounts[2], _mode_level, 2222),
+                       await _oracle.encrypt(accounts[2], _mode_level, 2222),
                        _deposit);
     assert.equal(await balance_of(accounts[2]), balance - _deposit);
     await _coin.mint(accounts[3], _deposit);
     balance = await balance_of(accounts[3]);
     await check_commit(accounts[3],
-                       await _oracle.hash(accounts[3], _mode_level, 3333),
+                       await _oracle.encrypt(accounts[3], _mode_level, 3333),
                        _deposit);
     assert.equal(await balance_of(accounts[3]), balance - _deposit);
     await _coin.mint(accounts[4], _deposit);
     balance = await balance_of(accounts[4]);
     await check_commit(accounts[4],
-                       await _oracle.hash(accounts[4], _mode_level, 4444),
+                       await _oracle.encrypt(accounts[4], _mode_level, 4444),
                        _deposit);
     assert.equal(await balance_of(accounts[4]), balance - _deposit);
     await _coin.mint(accounts[5], _deposit);
     balance = await balance_of(accounts[5]);
     await check_commit(accounts[5],
-                       await _oracle.hash(accounts[5], _mode_level, 5555),
+                       await _oracle.encrypt(accounts[5], _mode_level, 5555),
                        _deposit);
     assert.equal(await balance_of(accounts[5]), balance - _deposit);
     await _coin.mint(accounts[6], _deposit);
     balance = await balance_of(accounts[6]);
     await check_commit(accounts[6],
-                       await _oracle.hash(accounts[6], _mode_level, 6666),
+                       await _oracle.encrypt(accounts[6], _mode_level, 6666),
                        _deposit);
     assert.equal(await balance_of(accounts[6]), balance - _deposit);
 
@@ -782,44 +782,44 @@ function parameterized_test(accounts,
     await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
-    assert.equal(current.phase_id % 3, 1);
+    assert.equal(current.epoch_id % 3, 1);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.REVEAL);
-    assert.equal(current.epochs[0].commits[accounts[1]].committed_hash,
-                 await _oracle.hash(accounts[1], _mode_level, 1111));
+    assert.equal(current.epochs[0].commits[accounts[1]].hash,
+                 await _oracle.encrypt(accounts[1], _mode_level, 1111));
     assert.equal(current.epochs[0].commits[accounts[1]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[1]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[1]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[2]].committed_hash,
-                 await _oracle.hash(accounts[2], _mode_level, 2222));
+    assert.equal(current.epochs[0].commits[accounts[2]].hash,
+                 await _oracle.encrypt(accounts[2], _mode_level, 2222));
     assert.equal(current.epochs[0].commits[accounts[2]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[2]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[2]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[3]].committed_hash,
-                 await _oracle.hash(accounts[3], _mode_level, 3333));
+    assert.equal(current.epochs[0].commits[accounts[3]].hash,
+                 await _oracle.encrypt(accounts[3], _mode_level, 3333));
     assert.equal(current.epochs[0].commits[accounts[3]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[3]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[3]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[4]].committed_hash,
-                 await _oracle.hash(accounts[4], _mode_level, 4444));
+    assert.equal(current.epochs[0].commits[accounts[4]].hash,
+                 await _oracle.encrypt(accounts[4], _mode_level, 4444));
     assert.equal(current.epochs[0].commits[accounts[4]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[4]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[4]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[5]].committed_hash,
-                 await _oracle.hash(accounts[5], _mode_level, 5555));
+    assert.equal(current.epochs[0].commits[accounts[5]].hash,
+                 await _oracle.encrypt(accounts[5], _mode_level, 5555));
     assert.equal(current.epochs[0].commits[accounts[5]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[5]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[5]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[6]].committed_hash,
-                 await _oracle.hash(accounts[6], _mode_level, 6666));
+    assert.equal(current.epochs[0].commits[accounts[6]].hash,
+                 await _oracle.encrypt(accounts[6], _mode_level, 6666));
     assert.equal(current.epochs[0].commits[accounts[6]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[6]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[6]].oracle_level,
                  _level_max);
     assert.equal(current.epochs[0].votes.length, _level_max);
     assert.equal(current.epochs[0].reward_balance, 0);
@@ -847,20 +847,20 @@ function parameterized_test(accounts,
     await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
-    assert.equal(current.phase_id % 3, 2);
+    assert.equal(current.epoch_id % 3, 2);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.RECLAIM);
-    assert.equal(current.epochs[0].commits[accounts[1]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[1]].oracle_level,
                  _mode_level);
-    assert.equal(current.epochs[0].commits[accounts[2]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[2]].oracle_level,
                  _mode_level);
-    assert.equal(current.epochs[0].commits[accounts[3]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[3]].oracle_level,
                  _mode_level);
-    assert.equal(current.epochs[0].commits[accounts[4]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[4]].oracle_level,
                  _mode_level);
-    assert.equal(current.epochs[0].commits[accounts[5]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[5]].oracle_level,
                  _mode_level);
-    assert.equal(current.epochs[0].commits[accounts[6]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[6]].oracle_level,
                  _mode_level);
     assert.equal(current.epochs[0].votes.length, _level_max);
     assert.equal(current.epochs[0].votes[_mode_level].count, 6);
@@ -890,7 +890,7 @@ function parameterized_test(accounts,
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(),
                  coin_supply - _deposit * 6);
-    assert.equal(current.phase_id % 3, 0);
+    assert.equal(current.epoch_id % 3, 0);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.COMMIT);
     assert.equal(current.epochs[0].votes.length, _level_max);
@@ -906,37 +906,37 @@ function parameterized_test(accounts,
     await _coin.mint(accounts[1], _deposit);
     balance = await balance_of(accounts[1]);
     await check_commit(accounts[1],
-                       await _oracle.hash(accounts[1], _mode_level, 1111),
+                       await _oracle.encrypt(accounts[1], _mode_level, 1111),
                        _deposit);
     assert.equal(await balance_of(accounts[1]), balance - _deposit);
     await _coin.mint(accounts[2], _deposit);
     balance = await balance_of(accounts[2]);
     await check_commit(accounts[2],
-                       await _oracle.hash(accounts[2], _other_level, 2222),
+                       await _oracle.encrypt(accounts[2], _other_level, 2222),
                        _deposit);
     assert.equal(await balance_of(accounts[2]), balance - _deposit);
     await _coin.mint(accounts[3], _deposit);
     balance = await balance_of(accounts[3]);
     await check_commit(accounts[3],
-                       await _oracle.hash(accounts[3], _mode_level, 3333),
+                       await _oracle.encrypt(accounts[3], _mode_level, 3333),
                        _deposit);
     assert.equal(await balance_of(accounts[3]), balance - _deposit);
     await _coin.mint(accounts[4], _deposit);
     balance = await balance_of(accounts[4]);
     await check_commit(accounts[4],
-                       await _oracle.hash(accounts[4], _mode_level, 4444),
+                       await _oracle.encrypt(accounts[4], _mode_level, 4444),
                        _deposit);
     assert.equal(await balance_of(accounts[4]), balance - _deposit);
     await _coin.mint(accounts[5], _deposit);
     balance = await balance_of(accounts[5]);
     await check_commit(accounts[5],
-                       await _oracle.hash(accounts[5], _mode_level, 5555),
+                       await _oracle.encrypt(accounts[5], _mode_level, 5555),
                        _deposit);
     assert.equal(await balance_of(accounts[5]), balance - _deposit);
     await _coin.mint(accounts[6], _deposit);
     balance = await balance_of(accounts[6]);
     await check_commit(accounts[6],
-                       await _oracle.hash(accounts[6], _other_level, 6666),
+                       await _oracle.encrypt(accounts[6], _other_level, 6666),
                        _deposit);
     assert.equal(await balance_of(accounts[6]), balance - _deposit);
 
@@ -945,44 +945,44 @@ function parameterized_test(accounts,
     await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
-    assert.equal(current.phase_id % 3, 1);
+    assert.equal(current.epoch_id % 3, 1);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.REVEAL);
-    assert.equal(current.epochs[0].commits[accounts[1]].committed_hash,
-                 await _oracle.hash(accounts[1], _mode_level, 1111));
+    assert.equal(current.epochs[0].commits[accounts[1]].hash,
+                 await _oracle.encrypt(accounts[1], _mode_level, 1111));
     assert.equal(current.epochs[0].commits[accounts[1]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[1]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[1]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[2]].committed_hash,
-                 await _oracle.hash(accounts[2], _other_level, 2222));
+    assert.equal(current.epochs[0].commits[accounts[2]].hash,
+                 await _oracle.encrypt(accounts[2], _other_level, 2222));
     assert.equal(current.epochs[0].commits[accounts[2]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[2]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[2]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[3]].committed_hash,
-                 await _oracle.hash(accounts[3], _mode_level, 3333));
+    assert.equal(current.epochs[0].commits[accounts[3]].hash,
+                 await _oracle.encrypt(accounts[3], _mode_level, 3333));
     assert.equal(current.epochs[0].commits[accounts[3]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[3]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[3]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[4]].committed_hash,
-                 await _oracle.hash(accounts[4], _mode_level, 4444));
+    assert.equal(current.epochs[0].commits[accounts[4]].hash,
+                 await _oracle.encrypt(accounts[4], _mode_level, 4444));
     assert.equal(current.epochs[0].commits[accounts[4]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[4]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[4]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[5]].committed_hash,
-                 await _oracle.hash(accounts[5], _mode_level, 5555));
+    assert.equal(current.epochs[0].commits[accounts[5]].hash,
+                 await _oracle.encrypt(accounts[5], _mode_level, 5555));
     assert.equal(current.epochs[0].commits[accounts[5]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[5]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[5]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[6]].committed_hash,
-                 await _oracle.hash(accounts[6], _other_level, 6666));
+    assert.equal(current.epochs[0].commits[accounts[6]].hash,
+                 await _oracle.encrypt(accounts[6], _other_level, 6666));
     assert.equal(current.epochs[0].commits[accounts[6]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[6]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[6]].oracle_level,
                  _level_max);
     assert.equal(current.epochs[0].votes.length, _level_max);
     assert.equal(current.epochs[0].reward_balance, 0);
@@ -1010,20 +1010,20 @@ function parameterized_test(accounts,
     await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
-    assert.equal(current.phase_id % 3, 2);
+    assert.equal(current.epoch_id % 3, 2);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.RECLAIM);
-    assert.equal(current.epochs[0].commits[accounts[1]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[1]].oracle_level,
                  _mode_level);
-    assert.equal(current.epochs[0].commits[accounts[2]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[2]].oracle_level,
                  _other_level);
-    assert.equal(current.epochs[0].commits[accounts[3]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[3]].oracle_level,
                  _mode_level);
-    assert.equal(current.epochs[0].commits[accounts[4]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[4]].oracle_level,
                  _mode_level);
-    assert.equal(current.epochs[0].commits[accounts[5]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[5]].oracle_level,
                  _mode_level);
-    assert.equal(current.epochs[0].commits[accounts[6]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[6]].oracle_level,
                  _other_level);
     assert.equal(current.epochs[0].votes.length, _level_max);
     assert.equal(current.epochs[0].votes[_mode_level].count, 4);
@@ -1090,7 +1090,7 @@ function parameterized_test(accounts,
     assert.equal(await _coin.totalSupply(),
                  coin_supply + _tax - reward_total +
                  _reward(reward_total, 4) * 4);
-    assert.equal(current.phase_id % 3, 0);
+    assert.equal(current.epoch_id % 3, 0);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.COMMIT);
     assert.equal(current.epochs[0].votes.length, _level_max);
@@ -1106,37 +1106,37 @@ function parameterized_test(accounts,
     await _coin.mint(accounts[1], _deposit);
     balance = await balance_of(accounts[1]);
     await check_commit(accounts[1],
-                       await _oracle.hash(accounts[1], _mode_level, 1111),
+                       await _oracle.encrypt(accounts[1], _mode_level, 1111),
                        _deposit);
     assert.equal(await balance_of(accounts[1]), balance - _deposit);
     await _coin.mint(accounts[2], _deposit);
     balance = await balance_of(accounts[2]);
     await check_commit(accounts[2],
-                       await _oracle.hash(accounts[2], _other_level, 2222),
+                       await _oracle.encrypt(accounts[2], _other_level, 2222),
                        _deposit);
     assert.equal(await balance_of(accounts[2]), balance - _deposit);
     await _coin.mint(accounts[3], _deposit);
     balance = await balance_of(accounts[3]);
     await check_commit(accounts[3],
-                       await _oracle.hash(accounts[3], _mode_level, 3333),
+                       await _oracle.encrypt(accounts[3], _mode_level, 3333),
                        _deposit);
     assert.equal(await balance_of(accounts[3]), balance - _deposit);
     await _coin.mint(accounts[4], _deposit);
     balance = await balance_of(accounts[4]);
     await check_commit(accounts[4],
-                       await _oracle.hash(accounts[4], _mode_level, 4444),
+                       await _oracle.encrypt(accounts[4], _mode_level, 4444),
                        _deposit);
     assert.equal(await balance_of(accounts[4]), balance - _deposit);
     await _coin.mint(accounts[5], _deposit);
     balance = await balance_of(accounts[5]);
     await check_commit(accounts[5],
-                       await _oracle.hash(accounts[5], _mode_level, 5555),
+                       await _oracle.encrypt(accounts[5], _mode_level, 5555),
                        _deposit);
     assert.equal(await balance_of(accounts[5]), balance - _deposit);
     await _coin.mint(accounts[6], _deposit);
     balance = await balance_of(accounts[6]);
     await check_commit(accounts[6],
-                       await _oracle.hash(accounts[6], _other_level, 6666),
+                       await _oracle.encrypt(accounts[6], _other_level, 6666),
                        _deposit);
     assert.equal(await balance_of(accounts[6]), balance - _deposit);
 
@@ -1145,44 +1145,44 @@ function parameterized_test(accounts,
     await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
-    assert.equal(current.phase_id % 3, 1);
+    assert.equal(current.epoch_id % 3, 1);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.REVEAL);
-    assert.equal(current.epochs[0].commits[accounts[1]].committed_hash,
-                 await _oracle.hash(accounts[1], _mode_level, 1111));
+    assert.equal(current.epochs[0].commits[accounts[1]].hash,
+                 await _oracle.encrypt(accounts[1], _mode_level, 1111));
     assert.equal(current.epochs[0].commits[accounts[1]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[1]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[1]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[2]].committed_hash,
-                 await _oracle.hash(accounts[2], _other_level, 2222));
+    assert.equal(current.epochs[0].commits[accounts[2]].hash,
+                 await _oracle.encrypt(accounts[2], _other_level, 2222));
     assert.equal(current.epochs[0].commits[accounts[2]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[2]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[2]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[3]].committed_hash,
-                 await _oracle.hash(accounts[3], _mode_level, 3333));
+    assert.equal(current.epochs[0].commits[accounts[3]].hash,
+                 await _oracle.encrypt(accounts[3], _mode_level, 3333));
     assert.equal(current.epochs[0].commits[accounts[3]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[3]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[3]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[4]].committed_hash,
-                 await _oracle.hash(accounts[4], _mode_level, 4444));
+    assert.equal(current.epochs[0].commits[accounts[4]].hash,
+                 await _oracle.encrypt(accounts[4], _mode_level, 4444));
     assert.equal(current.epochs[0].commits[accounts[4]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[4]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[4]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[5]].committed_hash,
-                 await _oracle.hash(accounts[5], _mode_level, 5555));
+    assert.equal(current.epochs[0].commits[accounts[5]].hash,
+                 await _oracle.encrypt(accounts[5], _mode_level, 5555));
     assert.equal(current.epochs[0].commits[accounts[5]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[5]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[5]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[6]].committed_hash,
-                 await _oracle.hash(accounts[6], _other_level, 6666));
+    assert.equal(current.epochs[0].commits[accounts[6]].hash,
+                 await _oracle.encrypt(accounts[6], _other_level, 6666));
     assert.equal(current.epochs[0].commits[accounts[6]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[6]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[6]].oracle_level,
                  _level_max);
     assert.equal(current.epochs[0].votes.length, _level_max);
     assert.equal(current.epochs[0].reward_balance, 0);
@@ -1210,20 +1210,20 @@ function parameterized_test(accounts,
     await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
-    assert.equal(current.phase_id % 3, 2);
+    assert.equal(current.epoch_id % 3, 2);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.RECLAIM);
-    assert.equal(current.epochs[0].commits[accounts[1]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[1]].oracle_level,
                  _mode_level);
-    assert.equal(current.epochs[0].commits[accounts[2]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[2]].oracle_level,
                  _other_level);
-    assert.equal(current.epochs[0].commits[accounts[3]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[3]].oracle_level,
                  _mode_level);
-    assert.equal(current.epochs[0].commits[accounts[4]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[4]].oracle_level,
                  _mode_level);
-    assert.equal(current.epochs[0].commits[accounts[5]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[5]].oracle_level,
                  _mode_level);
-    assert.equal(current.epochs[0].commits[accounts[6]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[6]].oracle_level,
                  _other_level);
     assert.equal(current.epochs[0].votes.length, _level_max);
     assert.equal(current.epochs[0].votes[_mode_level].count, 4);
@@ -1262,7 +1262,7 @@ function parameterized_test(accounts,
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(),
                  coin_supply - _deposit * 6);
-    assert.equal(current.phase_id % 3, 0);
+    assert.equal(current.epoch_id % 3, 0);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.COMMIT);
     assert.equal(current.epochs[0].votes.length, _level_max);
@@ -1280,42 +1280,42 @@ function parameterized_test(accounts,
     await _coin.mint(accounts[1], _deposit);
     balance = await balance_of(accounts[1]);
     await check_commit(accounts[1],
-                       await _oracle.hash(
+                       await _oracle.encrypt(
                            accounts[1], real_mode_level, 1111),
                        _deposit);
     assert.equal(await balance_of(accounts[1]), balance - _deposit);
     await _coin.mint(accounts[2], _deposit);
     balance = await balance_of(accounts[2]);
     await check_commit(accounts[2],
-                       await _oracle.hash(
+                       await _oracle.encrypt(
                            accounts[2], real_other_level, 2222),
                        _deposit);
     assert.equal(await balance_of(accounts[2]), balance - _deposit);
     await _coin.mint(accounts[3], _deposit);
     balance = await balance_of(accounts[3]);
     await check_commit(accounts[3],
-                       await _oracle.hash(
+                       await _oracle.encrypt(
                            accounts[3], real_mode_level, 3333),
                        _deposit);
     assert.equal(await balance_of(accounts[3]), balance - _deposit);
     await _coin.mint(accounts[4], _deposit);
     balance = await balance_of(accounts[4]);
     await check_commit(accounts[4],
-                       await _oracle.hash(
+                       await _oracle.encrypt(
                            accounts[4], real_other_level, 4444),
                        _deposit);
     assert.equal(await balance_of(accounts[4]), balance - _deposit);
     await _coin.mint(accounts[5], _deposit);
     balance = await balance_of(accounts[5]);
     await check_commit(accounts[5],
-                       await _oracle.hash(
+                       await _oracle.encrypt(
                            accounts[5], real_mode_level, 5555),
                        _deposit);
     assert.equal(await balance_of(accounts[5]), balance - _deposit);
     await _coin.mint(accounts[6], _deposit);
     balance = await balance_of(accounts[6]);
     await check_commit(accounts[6],
-                       await _oracle.hash(
+                       await _oracle.encrypt(
                            accounts[6], real_other_level, 6666),
                        _deposit);
     assert.equal(await balance_of(accounts[6]), balance - _deposit);
@@ -1325,50 +1325,50 @@ function parameterized_test(accounts,
     await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
-    assert.equal(current.phase_id % 3, 1);
+    assert.equal(current.epoch_id % 3, 1);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.REVEAL);
-    assert.equal(current.epochs[0].commits[accounts[1]].committed_hash,
-                 await _oracle.hash(
+    assert.equal(current.epochs[0].commits[accounts[1]].hash,
+                 await _oracle.encrypt(
                      accounts[1], real_mode_level, 1111));
     assert.equal(current.epochs[0].commits[accounts[1]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[1]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[1]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[2]].committed_hash,
-                 await _oracle.hash(
+    assert.equal(current.epochs[0].commits[accounts[2]].hash,
+                 await _oracle.encrypt(
                      accounts[2], real_other_level, 2222));
     assert.equal(current.epochs[0].commits[accounts[2]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[2]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[2]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[3]].committed_hash,
-                 await _oracle.hash(
+    assert.equal(current.epochs[0].commits[accounts[3]].hash,
+                 await _oracle.encrypt(
                      accounts[3], real_mode_level, 3333));
     assert.equal(current.epochs[0].commits[accounts[3]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[3]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[3]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[4]].committed_hash,
-                 await _oracle.hash(
+    assert.equal(current.epochs[0].commits[accounts[4]].hash,
+                 await _oracle.encrypt(
                      accounts[4], real_other_level, 4444));
     assert.equal(current.epochs[0].commits[accounts[4]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[4]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[4]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[5]].committed_hash,
-                 await _oracle.hash(
+    assert.equal(current.epochs[0].commits[accounts[5]].hash,
+                 await _oracle.encrypt(
                      accounts[5], real_mode_level, 5555));
     assert.equal(current.epochs[0].commits[accounts[5]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[5]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[5]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[6]].committed_hash,
-                 await _oracle.hash(
+    assert.equal(current.epochs[0].commits[accounts[6]].hash,
+                 await _oracle.encrypt(
                      accounts[6], real_other_level, 6666));
     assert.equal(current.epochs[0].commits[accounts[6]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[6]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[6]].oracle_level,
                  _level_max);
     assert.equal(current.epochs[0].votes.length, _level_max);
     assert.equal(current.epochs[0].reward_balance, 0);
@@ -1396,20 +1396,20 @@ function parameterized_test(accounts,
     await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
-    assert.equal(current.phase_id % 3, 2);
+    assert.equal(current.epoch_id % 3, 2);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.RECLAIM);
-    assert.equal(current.epochs[0].commits[accounts[1]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[1]].oracle_level,
                  real_mode_level);
-    assert.equal(current.epochs[0].commits[accounts[2]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[2]].oracle_level,
                  real_other_level);
-    assert.equal(current.epochs[0].commits[accounts[3]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[3]].oracle_level,
                  real_mode_level);
-    assert.equal(current.epochs[0].commits[accounts[4]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[4]].oracle_level,
                  real_other_level);
-    assert.equal(current.epochs[0].commits[accounts[5]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[5]].oracle_level,
                  real_mode_level);
-    assert.equal(current.epochs[0].commits[accounts[6]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[6]].oracle_level,
                  real_other_level);
     assert.equal(current.epochs[0].votes.length, _level_max);
     assert.equal(current.epochs[0].votes[_mode_level].count, 3);
@@ -1480,7 +1480,7 @@ function parameterized_test(accounts,
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply + _tax -
                  reward_total + _reward(reward_total, 3) * 3);
-    assert.equal(current.phase_id % 3, 0);
+    assert.equal(current.epoch_id % 3, 0);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.COMMIT);
     assert.equal(current.epochs[0].votes.length, _level_max);
@@ -1498,41 +1498,41 @@ function parameterized_test(accounts,
     await _coin.mint(accounts[1], _deposit);
     balance = await balance_of(accounts[1]);
     await check_commit(accounts[1],
-                       await _oracle.hash(
+                       await _oracle.encrypt(
                            accounts[1], real_mode_level, 1111),
                        _deposit);
     assert.equal(await balance_of(accounts[1]), balance - _deposit);
     await _coin.mint(accounts[2], _deposit);
     balance = await balance_of(accounts[2]);
     await check_commit(accounts[2],
-                       await _oracle.hash(
+                       await _oracle.encrypt(
                            accounts[2], real_other_level, 2222),
                        _deposit);
     assert.equal(await balance_of(accounts[2]), balance - _deposit);
     await _coin.mint(accounts[3], _deposit);
     balance = await balance_of(accounts[3]);
     await check_commit(accounts[3],
-                       await _oracle.hash(
+                       await _oracle.encrypt(
                            accounts[3], real_mode_level, 3333),
                        _deposit);
     assert.equal(await balance_of(accounts[3]), balance - _deposit);
     await _coin.mint(accounts[4], _deposit);
     balance = await balance_of(accounts[4]);
     await check_commit(accounts[4],
-                       await _oracle.hash(accounts[4], real_other_level, 4444),
+                       await _oracle.encrypt(accounts[4], real_other_level, 4444),
                        _deposit);
     assert.equal(await balance_of(accounts[4]), balance - _deposit);
     await _coin.mint(accounts[5], _deposit);
     balance = await balance_of(accounts[5]);
     await check_commit(accounts[5],
-                       await _oracle.hash(
+                       await _oracle.encrypt(
                            accounts[5], real_mode_level, 5555),
                        _deposit);
     assert.equal(await balance_of(accounts[5]), balance - _deposit);
     await _coin.mint(accounts[6], _deposit);
     balance = await balance_of(accounts[6]);
     await check_commit(accounts[6],
-                       await _oracle.hash(
+                       await _oracle.encrypt(
                            accounts[6], real_other_level, 6666),
                        _deposit);
     assert.equal(await balance_of(accounts[6]), balance - _deposit);
@@ -1542,50 +1542,50 @@ function parameterized_test(accounts,
     await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
-    assert.equal(current.phase_id % 3, 1);
+    assert.equal(current.epoch_id % 3, 1);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.REVEAL);
-    assert.equal(current.epochs[0].commits[accounts[1]].committed_hash,
-                 await _oracle.hash(
+    assert.equal(current.epochs[0].commits[accounts[1]].hash,
+                 await _oracle.encrypt(
                      accounts[1], real_mode_level, 1111));
     assert.equal(current.epochs[0].commits[accounts[1]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[1]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[1]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[2]].committed_hash,
-                 await _oracle.hash(
+    assert.equal(current.epochs[0].commits[accounts[2]].hash,
+                 await _oracle.encrypt(
                      accounts[2], real_other_level, 2222));
     assert.equal(current.epochs[0].commits[accounts[2]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[2]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[2]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[3]].committed_hash,
-                 await _oracle.hash(
+    assert.equal(current.epochs[0].commits[accounts[3]].hash,
+                 await _oracle.encrypt(
                      accounts[3], real_mode_level, 3333));
     assert.equal(current.epochs[0].commits[accounts[3]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[3]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[3]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[4]].committed_hash,
-                 await _oracle.hash(
+    assert.equal(current.epochs[0].commits[accounts[4]].hash,
+                 await _oracle.encrypt(
                      accounts[4], real_other_level, 4444));
     assert.equal(current.epochs[0].commits[accounts[4]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[4]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[4]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[5]].committed_hash,
-                 await _oracle.hash(
+    assert.equal(current.epochs[0].commits[accounts[5]].hash,
+                 await _oracle.encrypt(
                      accounts[5], real_mode_level, 5555));
     assert.equal(current.epochs[0].commits[accounts[5]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[5]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[5]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[6]].committed_hash,
-                 await _oracle.hash(
+    assert.equal(current.epochs[0].commits[accounts[6]].hash,
+                 await _oracle.encrypt(
                      accounts[6], real_other_level, 6666));
     assert.equal(current.epochs[0].commits[accounts[6]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[6]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[6]].oracle_level,
                  _level_max);
     assert.equal(current.epochs[0].votes.length, _level_max);
     assert.equal(current.epochs[0].reward_balance, 0);
@@ -1614,20 +1614,20 @@ function parameterized_test(accounts,
     await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
-    assert.equal(current.phase_id % 3, 2);
+    assert.equal(current.epoch_id % 3, 2);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.RECLAIM);
-    assert.equal(current.epochs[0].commits[accounts[1]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[1]].oracle_level,
                  real_mode_level);
-    assert.equal(current.epochs[0].commits[accounts[2]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[2]].oracle_level,
                  real_other_level);
-    assert.equal(current.epochs[0].commits[accounts[3]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[3]].oracle_level,
                  real_mode_level);
-    assert.equal(current.epochs[0].commits[accounts[4]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[4]].oracle_level,
                  real_other_level);
-    assert.equal(current.epochs[0].commits[accounts[5]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[5]].oracle_level,
                  real_mode_level);
-    assert.equal(current.epochs[0].commits[accounts[6]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[6]].oracle_level,
                  real_other_level);
     assert.equal(current.epochs[0].votes.length, _level_max);
     assert.equal(current.epochs[0].votes[_mode_level].count, 3);
@@ -1668,7 +1668,7 @@ function parameterized_test(accounts,
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(),
                  coin_supply - _deposit * 6);
-    assert.equal(current.phase_id % 3, 0);
+    assert.equal(current.epoch_id % 3, 0);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.COMMIT);
     assert.equal(current.epochs[0].votes.length, _level_max);
@@ -1684,37 +1684,37 @@ function parameterized_test(accounts,
     await _coin.mint(accounts[1], _deposit);
     balance = await balance_of(accounts[1]);
     await check_commit(accounts[1],
-                       await _oracle.hash(accounts[1], _mode_level, 1111),
+                       await _oracle.encrypt(accounts[1], _mode_level, 1111),
                        _deposit);
     assert.equal(await balance_of(accounts[1]), balance - _deposit);
     await _coin.mint(accounts[2], _deposit);
     balance = await balance_of(accounts[2]);
     await check_commit(accounts[2],
-                       await _oracle.hash(accounts[2], _other_level, 2222),
+                       await _oracle.encrypt(accounts[2], _other_level, 2222),
                        _deposit);
     assert.equal(await balance_of(accounts[2]), balance - _deposit);
     await _coin.mint(accounts[3], _deposit);
     balance = await balance_of(accounts[3]);
     await check_commit(accounts[3],
-                       await _oracle.hash(accounts[3], _mode_level, 3333),
+                       await _oracle.encrypt(accounts[3], _mode_level, 3333),
                        _deposit);
     assert.equal(await balance_of(accounts[3]), balance - _deposit);
     await _coin.mint(accounts[4], _deposit);
     balance = await balance_of(accounts[4]);
     await check_commit(accounts[4],
-                       await _oracle.hash(accounts[4], _mode_level, 4444),
+                       await _oracle.encrypt(accounts[4], _mode_level, 4444),
                        _deposit);
     assert.equal(await balance_of(accounts[4]), balance - _deposit);
     await _coin.mint(accounts[5], _deposit);
     balance = await balance_of(accounts[5]);
     await check_commit(accounts[5],
-                       await _oracle.hash(accounts[5], _mode_level, 5555),
+                       await _oracle.encrypt(accounts[5], _mode_level, 5555),
                        _deposit);
     assert.equal(await balance_of(accounts[5]), balance - _deposit);
     await _coin.mint(accounts[6], _deposit);
     balance = await balance_of(accounts[6]);
     await check_commit(accounts[6],
-                       await _oracle.hash(accounts[6], _other_level, 6666),
+                       await _oracle.encrypt(accounts[6], _other_level, 6666),
                        _deposit);
     assert.equal(await balance_of(accounts[6]), balance - _deposit);
 
@@ -1723,44 +1723,44 @@ function parameterized_test(accounts,
     await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
-    assert.equal(current.phase_id % 3, 1);
+    assert.equal(current.epoch_id % 3, 1);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.REVEAL);
-    assert.equal(current.epochs[0].commits[accounts[1]].committed_hash,
-                 await _oracle.hash(accounts[1], _mode_level, 1111));
+    assert.equal(current.epochs[0].commits[accounts[1]].hash,
+                 await _oracle.encrypt(accounts[1], _mode_level, 1111));
     assert.equal(current.epochs[0].commits[accounts[1]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[1]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[1]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[2]].committed_hash,
-                 await _oracle.hash(accounts[2], _other_level, 2222));
+    assert.equal(current.epochs[0].commits[accounts[2]].hash,
+                 await _oracle.encrypt(accounts[2], _other_level, 2222));
     assert.equal(current.epochs[0].commits[accounts[2]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[2]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[2]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[3]].committed_hash,
-                 await _oracle.hash(accounts[3], _mode_level, 3333));
+    assert.equal(current.epochs[0].commits[accounts[3]].hash,
+                 await _oracle.encrypt(accounts[3], _mode_level, 3333));
     assert.equal(current.epochs[0].commits[accounts[3]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[3]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[3]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[4]].committed_hash,
-                 await _oracle.hash(accounts[4], _mode_level, 4444));
+    assert.equal(current.epochs[0].commits[accounts[4]].hash,
+                 await _oracle.encrypt(accounts[4], _mode_level, 4444));
     assert.equal(current.epochs[0].commits[accounts[4]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[4]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[4]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[5]].committed_hash,
-                 await _oracle.hash(accounts[5], _mode_level, 5555));
+    assert.equal(current.epochs[0].commits[accounts[5]].hash,
+                 await _oracle.encrypt(accounts[5], _mode_level, 5555));
     assert.equal(current.epochs[0].commits[accounts[5]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[5]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[5]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[6]].committed_hash,
-                 await _oracle.hash(accounts[6], _other_level, 6666));
+    assert.equal(current.epochs[0].commits[accounts[6]].hash,
+                 await _oracle.encrypt(accounts[6], _other_level, 6666));
     assert.equal(current.epochs[0].commits[accounts[6]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[6]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[6]].oracle_level,
                  _level_max);
     assert.equal(current.epochs[0].votes.length, _level_max);
     assert.equal(current.epochs[0].reward_balance, 0);
@@ -1797,20 +1797,20 @@ function parameterized_test(accounts,
     await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
-    assert.equal(current.phase_id % 3, 2);
+    assert.equal(current.epoch_id % 3, 2);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.RECLAIM);
-    assert.equal(current.epochs[0].commits[accounts[1]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[1]].oracle_level,
                  _mode_level);
-    assert.equal(current.epochs[0].commits[accounts[2]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[2]].oracle_level,
                  _other_level);
-    assert.equal(current.epochs[0].commits[accounts[3]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[3]].oracle_level,
                  _mode_level);
-    assert.equal(current.epochs[0].commits[accounts[4]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[4]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[5]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[5]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[6]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[6]].oracle_level,
                  _level_max);
     assert.equal(current.epochs[0].votes.length, _level_max);
     assert.equal(current.epochs[0].votes[_mode_level].count, 2);
@@ -1872,7 +1872,7 @@ function parameterized_test(accounts,
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply + _tax -
                  reward_total + _reward(reward_total, 2) * 2);
-    assert.equal(current.phase_id % 3, 0);
+    assert.equal(current.epoch_id % 3, 0);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.COMMIT);
     assert.equal(current.epochs[0].votes.length, _level_max);
@@ -1889,37 +1889,37 @@ function parameterized_test(accounts,
     await _coin.mint(accounts[1], _deposit);
     balance = await balance_of(accounts[1]);
     await check_commit(accounts[1],
-                       await _oracle.hash(accounts[1], _mode_level, 1111),
+                       await _oracle.encrypt(accounts[1], _mode_level, 1111),
                        _deposit);
     assert.equal(await balance_of(accounts[1]), balance - _deposit);
     await _coin.mint(accounts[2], _deposit);
     balance = await balance_of(accounts[2]);
     await check_commit(accounts[2],
-                       await _oracle.hash(accounts[2], _other_level, 2222),
+                       await _oracle.encrypt(accounts[2], _other_level, 2222),
                        _deposit);
     assert.equal(await balance_of(accounts[2]), balance - _deposit);
     await _coin.mint(accounts[3], _deposit);
     balance = await balance_of(accounts[3]);
     await check_commit(accounts[3],
-                       await _oracle.hash(accounts[3], _mode_level, 3333),
+                       await _oracle.encrypt(accounts[3], _mode_level, 3333),
                        _deposit);
     assert.equal(await balance_of(accounts[3]), balance - _deposit);
     await _coin.mint(accounts[4], _deposit);
     balance = await balance_of(accounts[4]);
     await check_commit(accounts[4],
-                       await _oracle.hash(accounts[4], _mode_level, 4444),
+                       await _oracle.encrypt(accounts[4], _mode_level, 4444),
                        _deposit);
     assert.equal(await balance_of(accounts[4]), balance - _deposit);
     await _coin.mint(accounts[5], _deposit);
     balance = await balance_of(accounts[5]);
     await check_commit(accounts[5],
-                       await _oracle.hash(accounts[5], _mode_level, 5555),
+                       await _oracle.encrypt(accounts[5], _mode_level, 5555),
                        _deposit);
     assert.equal(await balance_of(accounts[5]), balance - _deposit);
     await _coin.mint(accounts[6], _deposit);
     balance = await balance_of(accounts[6]);
     await check_commit(accounts[6],
-                       await _oracle.hash(accounts[6], _other_level, 6666),
+                       await _oracle.encrypt(accounts[6], _other_level, 6666),
                        _deposit);
     assert.equal(await balance_of(accounts[6]), balance - _deposit);
 
@@ -1928,44 +1928,44 @@ function parameterized_test(accounts,
     await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
-    assert.equal(current.phase_id % 3, 1);
+    assert.equal(current.epoch_id % 3, 1);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.REVEAL);
-    assert.equal(current.epochs[0].commits[accounts[1]].committed_hash,
-                 await _oracle.hash(accounts[1], _mode_level, 1111));
+    assert.equal(current.epochs[0].commits[accounts[1]].hash,
+                 await _oracle.encrypt(accounts[1], _mode_level, 1111));
     assert.equal(current.epochs[0].commits[accounts[1]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[1]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[1]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[2]].committed_hash,
-                 await _oracle.hash(accounts[2], _other_level, 2222));
+    assert.equal(current.epochs[0].commits[accounts[2]].hash,
+                 await _oracle.encrypt(accounts[2], _other_level, 2222));
     assert.equal(current.epochs[0].commits[accounts[2]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[2]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[2]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[3]].committed_hash,
-                 await _oracle.hash(accounts[3], _mode_level, 3333));
+    assert.equal(current.epochs[0].commits[accounts[3]].hash,
+                 await _oracle.encrypt(accounts[3], _mode_level, 3333));
     assert.equal(current.epochs[0].commits[accounts[3]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[3]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[3]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[4]].committed_hash,
-                 await _oracle.hash(accounts[4], _mode_level, 4444));
+    assert.equal(current.epochs[0].commits[accounts[4]].hash,
+                 await _oracle.encrypt(accounts[4], _mode_level, 4444));
     assert.equal(current.epochs[0].commits[accounts[4]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[4]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[4]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[5]].committed_hash,
-                 await _oracle.hash(accounts[5], _mode_level, 5555));
+    assert.equal(current.epochs[0].commits[accounts[5]].hash,
+                 await _oracle.encrypt(accounts[5], _mode_level, 5555));
     assert.equal(current.epochs[0].commits[accounts[5]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[5]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[5]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[6]].committed_hash,
-                 await _oracle.hash(accounts[6], _other_level, 6666));
+    assert.equal(current.epochs[0].commits[accounts[6]].hash,
+                 await _oracle.encrypt(accounts[6], _other_level, 6666));
     assert.equal(current.epochs[0].commits[accounts[6]].deposit,
                  _deposit);
-    assert.equal(current.epochs[0].commits[accounts[6]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[6]].oracle_level,
                  _level_max);
     assert.equal(current.epochs[0].votes.length, _level_max);
     assert.equal(current.epochs[0].reward_balance, 0);
@@ -1994,20 +1994,20 @@ function parameterized_test(accounts,
     await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
-    assert.equal(current.phase_id % 3, 2);
+    assert.equal(current.epoch_id % 3, 2);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.RECLAIM);
-    assert.equal(current.epochs[0].commits[accounts[1]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[1]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[2]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[2]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[3]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[3]].oracle_level,
                  _level_max);
-    assert.equal(current.epochs[0].commits[accounts[4]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[4]].oracle_level,
                  _mode_level);
-    assert.equal(current.epochs[0].commits[accounts[5]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[5]].oracle_level,
                  _mode_level);
-    assert.equal(current.epochs[0].commits[accounts[6]].revealed_level,
+    assert.equal(current.epochs[0].commits[accounts[6]].oracle_level,
                  _other_level);
     assert.equal(current.epochs[0].votes.length, _level_max);
     assert.equal(current.epochs[0].votes[_mode_level].count, 2);
@@ -2049,7 +2049,7 @@ function parameterized_test(accounts,
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(),
                  coin_supply - _deposit * 6);
-    assert.equal(current.phase_id % 3, 0);
+    assert.equal(current.epoch_id % 3, 0);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.COMMIT);
     assert.equal(current.epochs[0].votes.length, _level_max);
@@ -2070,11 +2070,11 @@ function parameterized_test(accounts,
     assert.equal(await _coin.totalSupply(), balance_total);
 
     // hash function
-    assert.notEqual(await _oracle.hash(accounts[1], 10, 1111), 0);
-    assert.notEqual(await _oracle.hash(accounts[1], 11, 111),
-                    await _oracle.hash(accounts[1], 111, 11));
-    assert.notEqual(await _oracle.hash(accounts[1], 11, 111),
-                    await _oracle.hash(accounts[1], 1, 1111));
+    assert.notEqual(await _oracle.encrypt(accounts[1], 10, 1111), 0);
+    assert.notEqual(await _oracle.encrypt(accounts[1], 11, 111),
+                    await _oracle.encrypt(accounts[1], 111, 11));
+    assert.notEqual(await _oracle.encrypt(accounts[1], 11, 111),
+                    await _oracle.encrypt(accounts[1], 1, 1111));
 
     // Initializable
     await should_throw(async () => {
@@ -2084,7 +2084,7 @@ function parameterized_test(accounts,
     // Ownable
     await should_throw(async () => {
       await _oracle.commit(_coin.address, accounts[1],
-                           await _oracle.hash(accounts[1], _mode_level, 1111),
+                           await _oracle.encrypt(accounts[1], _mode_level, 1111),
                            _deposit,
                            {from: accounts[1]});
     }, "Ownable");
@@ -2121,7 +2121,7 @@ function parameterized_test(accounts,
 
     await should_throw(async () => {
       await _oracle.commit(_coin.address, accounts[2],
-                           await _oracle.hash(accounts[2], _mode_level, 1111),
+                           await _oracle.encrypt(accounts[2], _mode_level, 1111),
                            0,
                            {from: accounts[2]});
     }, "Ownable");
@@ -2137,12 +2137,12 @@ function parameterized_test(accounts,
     await _coin.transferOwnership(_oracle.address, {from: accounts[2]});
 
     await _oracle.commit(_coin.address, accounts[2],
-                         await _oracle.hash(accounts[2], _mode_level, 1111),
+                         await _oracle.encrypt(accounts[2], _mode_level, 1111),
                          0,
                          {from: accounts[2]});
     await should_throw(async () => {
       await _oracle.commit(_coin.address, accounts[3],
-                           await _oracle.hash(accounts[3], _mode_level, 1111),
+                           await _oracle.encrypt(accounts[3], _mode_level, 1111),
                            0,
                            {from: accounts[3]});
     }, "Ownable");
@@ -2209,14 +2209,14 @@ function parameterized_test(accounts,
       return proportional_reward + constant_reward;
     }
 
-    async function check_commit(account, committed_hash, deposit) {
+    async function check_commit(account, hash, deposit) {
       await _coin.transferOwnership(_oracle.address);
       let receipt =
-          await _oracle.commit(_coin.address, account, committed_hash, deposit);
+          await _oracle.commit(_coin.address, account, hash, deposit);
       await _oracle.revokeOwnership(_coin.address);
       let args = receipt.logs.filter(e => e.event == 'CommitEvent')[0].args;
       assert.equal(args.sender, account);
-      assert.equal(args.committed_hash, committed_hash);
+      assert.equal(args.hash, hash);
       assert.equal(args.deposited, deposit);
     }
 
@@ -2224,8 +2224,8 @@ function parameterized_test(accounts,
       let receipt = await _oracle.reveal(account, level, salt);
       let args = receipt.logs.filter(e => e.event == 'RevealEvent')[0].args;
       assert.equal(args.sender, account);
-      assert.equal(args.revealed_level, level);
-      assert.equal(args.revealed_salt, salt);
+      assert.equal(args.oracle_level, level);
+      assert.equal(args.salt, salt);
     }
 
     async function check_reclaim(account, reclaimed, reward) {
@@ -2244,7 +2244,7 @@ function parameterized_test(accounts,
       await _oracle.revokeOwnership(_coin.address);
       let args = receipt.logs.filter(
           e => e.event == 'AdvancePhaseEvent')[0].args;
-      assert.isTrue(args.phase_id >= 3);
+      assert.isTrue(args.epoch_id >= 3);
       assert.equal(args.burned, burned);
     }
 
@@ -2257,7 +2257,7 @@ function parameterized_test(accounts,
       oracle.level_max = _level_max;
       oracle.reclaim_threshold = _reclaim_threshold;
       oracle.proportional_reward_rate = _proportional_reward_rate;
-      oracle.phase_id = (await _oracle.phase_id_()).toNumber();
+      oracle.epoch_id = (await _oracle.epoch_id_()).toNumber();
       oracle.epochs = [];
       for (let epoch_index = 0; epoch_index < 3; epoch_index++) {
         let ret = await _oracle.getEpoch(epoch_index);
@@ -2276,9 +2276,9 @@ function parameterized_test(accounts,
         epoch.commits = {};
         for (let account of accounts) {
           let ret = await _oracle.getCommit(epoch_index, account);
-          let commit = {committed_hash: ret[0], deposit: ret[1],
-                        revealed_level: ret[2], phase: ret[3],
-                        phase_id: ret[4]};
+          let commit = {hash: ret[0], deposit: ret[1],
+                        oracle_level: ret[2], phase: ret[3],
+                        epoch_id: ret[4]};
           epoch.commits[account] = commit;
         }
         oracle.epochs.push(epoch);

@@ -45,7 +45,7 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
   uint[] public LEVEL_TO_EXCHANGE_RATE;
   uint public EXCHANGE_RATE_DIVISOR;
   uint[] public LEVEL_TO_BOND_PRICE;
-  uint public PHASE_DURATION;
+  uint public EPOCH_DURATION;
   uint public DEPOSIT_RATE;
   uint public DAMPING_FACTOR;
 
@@ -60,15 +60,15 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
   Logging_v2 public logging_;
   int public bond_budget_;
   uint public oracle_level_;
-  uint public current_phase_start_;
+  uint public current_epoch_start_;
 
   // Events.
   event PayableEvent(address indexed sender, uint value);
-  event VoteEvent(address indexed sender, bytes32 committed_hash,
-                  uint revealed_level, uint revealed_salt,
+  event VoteEvent(address indexed sender, bytes32 hash,
+                  uint oracle_level, uint salt,
                   bool commit_result, bool reveal_result,
                   uint deposited, uint reclaimed, uint rewarded,
-                  bool phase_updated);
+                  bool epoch_updated);
   event PurchaseBondsEvent(address indexed sender, uint count,
                            uint redemption_timestamp);
   event RedeemBondsEvent(address indexed sender, uint count);
@@ -86,7 +86,7 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
   function initialize(JohnLawCoin_v2 coin, JohnLawBond_v2 bond,
                       Oracle_v3 oracle, Logging_v2 logging,
                       int bond_budget, uint oracle_level,
-                      uint current_phase_start)
+                      uint current_epoch_start)
       public initializer {
     __Ownable_init();
     __Pausable_init();
@@ -115,7 +115,7 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
     // real-world currency exchangers and vote for the oracle level that
     // corresponds to the exchange rate. Strictly speaking, the current
     // exchange rate is defined as the exchange rate at the point when the
-    // current phase started (i.e., current_phase_start_).
+    // current phase started (i.e., current_epoch_start_).
     //
     // In the bootstrap phase in which no currency exchanger supports JLC <=>
     // USD conversions, voters are expected to vote for the oracle level 5
@@ -142,7 +142,7 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
 
     // The duration of the oracle phase. The ACB adjusts the total coin supply
     // once per phase. Voters can vote once per phase.
-    PHASE_DURATION = 60; // 1 week.
+    EPOCH_DURATION = 60; // 1 week.
 
     // The percentage of the coin balance voters need to deposit.
     DEPOSIT_RATE = 10; // 10%.
@@ -193,7 +193,7 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
     oracle_level_ = oracle_level;
 
     // The timestamp when the current phase started.
-    current_phase_start_ = current_phase_start;
+    current_epoch_start_ = current_epoch_start;
 
     /*
     require(LEVEL_TO_EXCHANGE_RATE.length == oracle.getLevelMax(), "AC1");
@@ -248,7 +248,7 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
   // A struct to pack local variables. This is needed to avoid a stack-too-deep
   // error of Solidity.
   struct VoteResult {
-    bool phase_updated;
+    bool epoch_updated;
     bool reveal_result;
     bool commit_result;
     uint deposited;
@@ -263,11 +263,11 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
   //
   // Parameters
   // ----------------
-  // |committed_hash|: The hash to be committed in the current phase. Specify
+  // |hash|: The hash to be committed in the current phase. Specify
   // ACB.NULL_HASH if you do not want to commit and only want to reveal and
   // reclaim previous votes.
-  // |revealed_level|: The oracle level you voted for in the previous phase.
-  // |revealed_salt|: The salt you used in the previous phase.
+  // |oracle_level|: The oracle level you voted for in the previous phase.
+  // |salt|: The salt you used in the previous phase.
   //
   // Returns
   // ----------------
@@ -278,15 +278,15 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
   //  - uint: The amount of the reclaimed coins.
   //  - uint: The amount of the reward.
   //  - boolean: Whether this vote resulted in a phase update.
-  function vote(bytes32 committed_hash, uint revealed_level, uint revealed_salt)
+  function vote(bytes32 hash, uint oracle_level, uint salt)
       public whenNotPaused returns (bool, bool, uint, uint, uint, bool) {
     VoteResult memory result;
     
-    result.phase_updated = false;
-    if (getTimestamp() >= current_phase_start_ + PHASE_DURATION) {
+    result.epoch_updated = false;
+    if (getTimestamp() >= current_epoch_start_ + EPOCH_DURATION) {
       // Start a new phase.
-      result.phase_updated = true;
-      current_phase_start_ = getTimestamp();
+      result.epoch_updated = true;
+      current_epoch_start_ = getTimestamp();
       
       int delta = 0;
       oracle_level_ = oracle_.getModeLevel();
@@ -326,7 +326,7 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
       
       logging_.phaseUpdated(mint, burned, delta, bond_budget_,
                             coin_.totalSupply(), bond_.totalSupply(),
-                            oracle_level_, current_phase_start_, tax);
+                            oracle_level_, current_epoch_start_, tax);
     }
 
     coin_.transferOwnership(address(oracle_));
@@ -336,18 +336,17 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
     // The voter needs to deposit the DEPOSIT_RATE percentage of their coin
     // balance.
     result.deposited = coin_.balanceOf(msg.sender) * DEPOSIT_RATE / 100;
-    if (committed_hash == NULL_HASH) {
+    if (hash == NULL_HASH) {
       result.deposited = 0;
     }
     result.commit_result = oracle_.commit(
-        coin_, msg.sender, committed_hash, result.deposited);
+        coin_, msg.sender, hash, result.deposited);
     if (!result.commit_result) {
       result.deposited = 0;
     }
 
     // Reveal.
-    result.reveal_result = oracle_.reveal(
-        msg.sender, revealed_level, revealed_salt);
+    result.reveal_result = oracle_.reveal(msg.sender, oracle_level, salt);
     
     // Reclaim.
     (result.reclaimed, result.rewarded) = oracle_.reclaim(coin_, msg.sender);
@@ -357,11 +356,11 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
     logging_.voted(result.commit_result, result.reveal_result,
                    result.deposited, result.reclaimed, result.rewarded);
     emit VoteEvent(
-        msg.sender, committed_hash, revealed_level, revealed_salt,
+        msg.sender, hash, oracle_level, salt,
         result.commit_result, result.reveal_result, result.deposited,
-        result.reclaimed, result.rewarded, result.phase_updated);
+        result.reclaimed, result.rewarded, result.epoch_updated);
     return (result.commit_result, result.reveal_result, result.deposited,
-            result.reclaimed, result.rewarded, result.phase_updated);
+            result.reclaimed, result.rewarded, result.epoch_updated);
   }
 
   // Purchase bonds.
@@ -506,17 +505,17 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
   // Returns
   // ----------------
   // The calculated hash value.
-  function hash(uint level, uint salt)
+  function encrypt(uint level, uint salt)
       public view returns (bytes32) {
     address sender = msg.sender;
-    return oracle_.hash(sender, level, salt);
+    return oracle_.encrypt(sender, level, salt);
   }
 
   // Public getter: Return the current timestamp in seconds.
   function getTimestamp()
       public virtual view returns (uint) {
     // block.timestamp is better than block.number because the granularity of
-    // the phase update is PHASE_DURATION (1 week).
+    // the phase update is EPOCH_DURATION (1 week).
     return block.timestamp;
   }
 

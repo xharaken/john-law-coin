@@ -42,7 +42,7 @@ class LoggingUnitTest(unittest.TestCase):
         self.assertEqual(vote_log.rewarded, 0)
 
         for i in range(50):
-            logging.phase_updated(1, 2, 3, 4, 5, 6, 7, 8, 9)
+            logging.epoch_updated(1, 2, 3, 4, 5, 6, 7, 8, 9)
             logging.purchased_bonds(1)
             logging.purchased_bonds(2)
             logging.purchased_bonds(3)

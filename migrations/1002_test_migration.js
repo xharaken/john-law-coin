@@ -27,7 +27,7 @@ module.exports = async function (deployer) {
       ACB_v4, [coin.address, bond.address, oracle.address, logging.address,
                await old_acb.bond_budget_(),
                await old_acb.oracle_level_(),
-               await old_acb.current_phase_start_()]);
+               await old_acb.current_epoch_start_()]);
   await old_acb.deprecate();
 
   await coin.transferOwnership(acb.address);

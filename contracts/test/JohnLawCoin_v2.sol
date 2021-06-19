@@ -341,20 +341,20 @@ contract Oracle_v2 is OwnableUpgradeable {
   // scheme.
   struct Commit {
     // The committed hash (filled in the commit phase).
-    bytes32 committed_hash;
+    bytes32 hash;
     // The amount of deposited coins (filled in the commit phase).
     uint deposit;
-    // The revealed level (filled in the reveal phase).
-    uint revealed_level;
+    // The oracle level (filled in the reveal phase).
+    uint oracle_level;
     // The phase of this commit entry.
     Phase phase;
-    // The phase ID when this commit entry is created.
-    uint phase_id;
+    // The epoch ID when this commit entry is created.
+    uint epoch_id;
 
-    bytes32 committed_hash_v2;
+    bytes32 hash_v2;
     uint deposit_v2;
-    uint revealed_level_v2;
-    uint phase_id_v2;
+    uint oracle_level_v2;
+    uint epoch_id_v2;
   }
 
   // Vote is a struct to count votes for each oracle level.
@@ -411,21 +411,21 @@ contract Oracle_v2 is OwnableUpgradeable {
   // This can be an array of Epochs but is intentionally using a mapping to
   // make the Epoch struct upgradeable.
   mapping (uint => Epoch) public epochs_;
-  uint public phase_id_;
+  uint public epoch_id_;
 
-  uint public phase_id_v2_;
+  uint public epoch_id_v2_;
   
   // Events.
   event CommitEvent(address indexed sender,
-                    bytes32 committed_hash, uint deposited);
+                    bytes32 hash, uint deposited);
   event RevealEvent(address indexed sender,
-                    uint revealed_level, uint revealed_salt);
+                    uint oracle_level, uint salt);
   event ReclaimEvent(address indexed sender, uint deposited, uint rewarded);
-  event AdvancePhaseEvent(uint indexed phase_id, uint tax, uint burned);
+  event AdvancePhaseEvent(uint indexed epoch_id, uint tax, uint burned);
 
   function upgrade()
       public onlyOwner {
-    phase_id_v2_ = phase_id_;
+    epoch_id_v2_ = epoch_id_;
     for (uint epoch_index = 0; epoch_index < 3; epoch_index++) {
       epochs_[epoch_index].deposit_account_v2 =
           epochs_[epoch_index].deposit_account;
@@ -451,40 +451,40 @@ contract Oracle_v2 is OwnableUpgradeable {
   // ----------------
   // |coin|: The JohnLawCoin contract.
   // |sender|: The voter's account.
-  // |committed_hash|: The committed hash.
+  // |hash|: The committed hash.
   // |deposit|: The amount of the deposited coins.
   //
   // Returns
   // ----------------
   // True if the commit succeeded. False otherwise.
   function commit(JohnLawCoin_v2 coin, address sender,
-                  bytes32 committed_hash, uint deposit)
+                  bytes32 hash, uint deposit)
       public onlyOwner returns (bool) {
-    return commit_v2(coin, sender, committed_hash, deposit);
+    return commit_v2(coin, sender, hash, deposit);
   }
   
   function commit_v2(JohnLawCoin_v2 coin, address sender,
-                     bytes32 committed_hash, uint deposit)
+                     bytes32 hash, uint deposit)
       public onlyOwner returns (bool) {
-    Epoch storage epoch = epochs_[phase_id_v2_ % 3];
+    Epoch storage epoch = epochs_[epoch_id_v2_ % 3];
     require(epoch.phase_v2 == Phase.COMMIT, "co1");
     if (coin.balanceOf(sender) < deposit) {
       return false;
     }
     // One voter can commit only once per phase.
-    if (epoch.commits[sender].phase_id == phase_id_v2_) {
+    if (epoch.commits[sender].epoch_id == epoch_id_v2_) {
       return false;
     }
 
     // Create a commit entry.
     epoch.commits[sender] = Commit(
-        committed_hash, deposit, LEVEL_MAX, Phase.COMMIT, phase_id_v2_,
-        committed_hash, deposit, LEVEL_MAX, phase_id_v2_);
+        hash, deposit, LEVEL_MAX, Phase.COMMIT, epoch_id_v2_,
+        hash, deposit, LEVEL_MAX, epoch_id_v2_);
     require(epoch.commits[sender].phase == Phase.COMMIT, "co2");
 
     // Move the deposited coins to the deposit account.
     coin.move(sender, epoch.deposit_account_v2, deposit);
-    emit CommitEvent(sender, committed_hash, deposit);
+    emit CommitEvent(sender, hash, deposit);
     return true;
   }
 
@@ -493,25 +493,25 @@ contract Oracle_v2 is OwnableUpgradeable {
   // Parameters
   // ----------------
   // |sender|: The voter's account.
-  // |revealed_level|: The oracle level revealed by the voter.
-  // |revealed_salt|: The salt revealed by the voter.
+  // |oracle_level|: The oracle level revealed by the voter.
+  // |salt|: The salt revealed by the voter.
   //
   // Returns
   // ----------------
   // True if the reveal succeeded. False otherwise.
-  function reveal(address sender, uint revealed_level, uint revealed_salt)
+  function reveal(address sender, uint oracle_level, uint salt)
       public onlyOwner returns (bool) {
-    return reveal_v2(sender, revealed_level, revealed_salt);
+    return reveal_v2(sender, oracle_level, salt);
   }
   
-  function reveal_v2(address sender, uint revealed_level, uint revealed_salt)
+  function reveal_v2(address sender, uint oracle_level, uint salt)
       public onlyOwner returns (bool) {
-    Epoch storage epoch = epochs_[(phase_id_v2_ - 1) % 3];
+    Epoch storage epoch = epochs_[(epoch_id_v2_ - 1) % 3];
     require(epoch.phase_v2 == Phase.REVEAL, "rv1");
-    if (LEVEL_MAX <= revealed_level) {
+    if (LEVEL_MAX <= oracle_level) {
       return false;
     }
-    if (epoch.commits[sender].phase_id != phase_id_v2_ - 1) {
+    if (epoch.commits[sender].epoch_id != epoch_id_v2_ - 1) {
       // The corresponding commit was not found.
       return false;
     }
@@ -522,20 +522,20 @@ contract Oracle_v2 is OwnableUpgradeable {
     epoch.commits[sender].phase = Phase.REVEAL;
 
     // Check if the committed hash matches the revealed level and the salt.
-    bytes32 reveal_hash = hash(
-        sender, revealed_level, revealed_salt);
-    bytes32 committed_hash = epoch.commits[sender].committed_hash;
-    if (committed_hash != reveal_hash) {
+    bytes32 reveal_hash = encrypt(
+        sender, oracle_level, salt);
+    bytes32 hash = epoch.commits[sender].hash;
+    if (hash != reveal_hash) {
       return false;
     }
 
     // Update the commit entry with the revealed level.
-    epoch.commits[sender].revealed_level = revealed_level;
+    epoch.commits[sender].oracle_level = oracle_level;
 
     // Count up the vote.
-    epoch.votes[revealed_level].deposit_v2 += epoch.commits[sender].deposit;
-    epoch.votes[revealed_level].count_v2 += 1;
-    emit RevealEvent(sender, revealed_level, revealed_salt);
+    epoch.votes[oracle_level].deposit_v2 += epoch.commits[sender].deposit;
+    epoch.votes[oracle_level].count_v2 += 1;
+    emit RevealEvent(sender, oracle_level, salt);
     return true;
   }
 
@@ -560,9 +560,9 @@ contract Oracle_v2 is OwnableUpgradeable {
   
   function reclaim_v2(JohnLawCoin_v2 coin, address sender)
       public onlyOwner returns (uint, uint) {
-    Epoch storage epoch = epochs_[(phase_id_v2_ - 2) % 3];
+    Epoch storage epoch = epochs_[(epoch_id_v2_ - 2) % 3];
     require(epoch.phase_v2 == Phase.RECLAIM, "rc1");
-    if (epoch.commits[sender].phase_id != phase_id_v2_ - 2){
+    if (epoch.commits[sender].epoch_id != epoch_id_v2_ - 2){
       // The corresponding commit was not found.
       return (0, 0);
     }
@@ -573,22 +573,22 @@ contract Oracle_v2 is OwnableUpgradeable {
 
     epoch.commits[sender].phase = Phase.RECLAIM;
     uint deposit = epoch.commits[sender].deposit;
-    uint revealed_level = epoch.commits[sender].revealed_level;
-    if (revealed_level == LEVEL_MAX) {
+    uint oracle_level = epoch.commits[sender].oracle_level;
+    if (oracle_level == LEVEL_MAX) {
       return (0, 0);
     }
-    require(0 <= revealed_level && revealed_level < LEVEL_MAX, "rc2");
+    require(0 <= oracle_level && oracle_level < LEVEL_MAX, "rc2");
 
-    if (!epoch.votes[revealed_level].should_reclaim_v2) {
+    if (!epoch.votes[oracle_level].should_reclaim_v2) {
       return (0, 0);
     }
 
-    require(epoch.votes[revealed_level].count_v2 > 0, "rc3");
+    require(epoch.votes[oracle_level].count_v2 > 0, "rc3");
     // Reclaim the deposited coins.
     coin.move(epoch.deposit_account_v2, sender, deposit);
 
     uint reward = 0;
-    if (epoch.votes[revealed_level].should_reward_v2) {
+    if (epoch.votes[oracle_level].should_reward_v2) {
       // The voter who voted for the "truth" level can receive the reward.
       //
       // The PROPORTIONAL_REWARD_RATE of the reward is distributed to the
@@ -598,14 +598,14 @@ contract Oracle_v2 is OwnableUpgradeable {
       //
       // The rest of the reward is distributed to the voters evenly. This
       // incentivizes more voters (including new voters) to join the oracle.
-      if (epoch.votes[revealed_level].deposit_v2 > 0) {
+      if (epoch.votes[oracle_level].deposit_v2 > 0) {
         reward += (uint(PROPORTIONAL_REWARD_RATE) * epoch.reward_total_v2 *
                    deposit) /
-                  (uint(100) * epoch.votes[revealed_level].deposit_v2);
+                  (uint(100) * epoch.votes[oracle_level].deposit_v2);
       }
       reward += ((uint(100) - PROPORTIONAL_REWARD_RATE) *
                  epoch.reward_total_v2) /
-                (uint(100) * epoch.votes[revealed_level].count_v2);
+                (uint(100) * epoch.votes[oracle_level].count_v2);
       coin.move(epoch.reward_account_v2, sender, reward);
     }
     emit ReclaimEvent(sender, deposit, reward);
@@ -630,23 +630,23 @@ contract Oracle_v2 is OwnableUpgradeable {
   function advance_v2(JohnLawCoin_v2 coin)
       public onlyOwner returns (uint) {
     // Step 1: Move the commit phase to the reveal phase.
-    Epoch storage epoch = epochs_[phase_id_v2_ % 3];
+    Epoch storage epoch = epochs_[epoch_id_v2_ % 3];
     require(epoch.phase_v2 == Phase.COMMIT, "ad1");
     epoch.phase_v2 = Phase.REVEAL;
 
     // Step 2: Move the reveal phase to the reclaim phase.
-    epoch = epochs_[(phase_id_v2_ - 1) % 3];
+    epoch = epochs_[(epoch_id_v2_ - 1) % 3];
     require(epoch.phase_v2 == Phase.REVEAL, "ad2");
 
     // The "truth" level is set to the mode of the weighted majority votes.
     uint mode_level = getModeLevel();
     if (0 <= mode_level && mode_level < LEVEL_MAX) {
-      uint deposit_voted = 0;
+      uint deposit_revealed = 0;
       uint deposit_to_reclaim = 0;
       for (uint level = 0; level < LEVEL_MAX; level++) {
         require(epoch.votes[level].should_reclaim_v2 == false, "ad3");
         require(epoch.votes[level].should_reward_v2 == false, "ad4");
-        deposit_voted += epoch.votes[level].deposit_v2;
+        deposit_revealed += epoch.votes[level].deposit_v2;
         if ((mode_level < RECLAIM_THRESHOLD ||
              mode_level - RECLAIM_THRESHOLD <= level) &&
             level <= mode_level + RECLAIM_THRESHOLD) {
@@ -663,10 +663,12 @@ contract Oracle_v2 is OwnableUpgradeable {
       // reward.
       epoch.votes[mode_level].should_reward_v2 = true;
 
-      // Note: |deposit_voted| is equal to |balanceOf(epoch.deposit_account_v2)|
+      // Note: |deposit_revealed| is equal to
+      // |balanceOf(epoch.deposit_account_v2)|
       // only when all the voters who voted in the commit phase revealed
       // their votes correctly in the reveal phase.
-      require(deposit_voted <= coin.balanceOf(epoch.deposit_account_v2), "ad5");
+      require(deposit_revealed <= coin.balanceOf(epoch.deposit_account_v2),
+              "ad5");
       require(deposit_to_reclaim <= coin.balanceOf(epoch.deposit_account_v2),
               "ad6");
 
@@ -687,7 +689,7 @@ contract Oracle_v2 is OwnableUpgradeable {
     epoch.phase_v2 = Phase.RECLAIM;
 
     // Step 3: Move the reclaim phase to the commit phase.
-    uint epoch_index = (phase_id_v2_ - 2) % 3;
+    uint epoch_index = (epoch_id_v2_ - 2) % 3;
     epoch = epochs_[epoch_index];
     require(epoch.phase_v2 == Phase.RECLAIM, "ad7");
 
@@ -702,7 +704,7 @@ contract Oracle_v2 is OwnableUpgradeable {
     // Initialize the Epoch object for the next commit phase.
     //
     // |epoch.commits_| cannot be cleared due to the restriction of Solidity.
-    // |phase_id_| ensures the stale commit entries are not misused.
+    // |epoch_id_| ensures the stale commit entries are not misused.
     for (uint level = 0; level < LEVEL_MAX; level++) {
       epoch.votes[level] = Vote(0, 0, false, false, false, false, 0, 0);
     }
@@ -719,10 +721,10 @@ contract Oracle_v2 is OwnableUpgradeable {
     epoch.phase_v2 = Phase.COMMIT;
 
     // Advance the phase.
-    phase_id_v2_ += 1;
-    phase_id_ += 1;
+    epoch_id_v2_ += 1;
+    epoch_id_ += 1;
 
-    emit AdvancePhaseEvent(phase_id_v2_, tax, burned);
+    emit AdvancePhaseEvent(epoch_id_v2_, tax, burned);
     return burned;
   }
 
@@ -746,7 +748,7 @@ contract Oracle_v2 is OwnableUpgradeable {
   
   function getModeLevel_v2()
       public onlyOwner view returns (uint) {
-    Epoch storage epoch = epochs_[(phase_id_v2_ - 1) % 3];
+    Epoch storage epoch = epochs_[(epoch_id_v2_ - 1) % 3];
     require(epoch.phase_v2 == Phase.REVEAL, "gm1");
     uint mode_level = LEVEL_MAX;
     uint max_deposit = 0;
@@ -805,8 +807,8 @@ contract Oracle_v2 is OwnableUpgradeable {
       public view returns (bytes32, uint, uint, Phase, uint) {
     require(0 <= epoch_index && epoch_index <= 2, "gc1");
     Commit memory entry = epochs_[epoch_index].commits[account];
-    return (entry.committed_hash, entry.deposit, entry.revealed_level,
-            entry.phase, entry.phase_id);
+    return (entry.hash, entry.deposit, entry.oracle_level,
+            entry.phase, entry.epoch_id);
   }
 
   // Public getter: Return the Epoch object at |epoch_index|.
@@ -831,7 +833,7 @@ contract Oracle_v2 is OwnableUpgradeable {
   // Returns
   // ----------------
   // The calculated hash value.
-  function hash(address sender, uint level, uint salt)
+  function encrypt(address sender, uint level, uint salt)
       public pure returns (bytes32) {
     return hash_v2(sender, level, salt);
   }
@@ -876,7 +878,7 @@ contract Logging_v2 is OwnableUpgradeable {
     uint total_coin_supply;
     uint total_bond_supply;
     uint oracle_level;
-    uint current_phase_start;
+    uint current_epoch_start;
     uint tax;
     uint purchased_bonds;
     uint redeemed_bonds;
@@ -941,7 +943,7 @@ contract Logging_v2 is OwnableUpgradeable {
     ACBLog memory log = acb_logs_[log_index];
     return (log.minted_coins, log.burned_coins, log.coin_supply_delta,
             log.bond_budget, log.total_coin_supply, log.total_bond_supply,
-            log.oracle_level, log.current_phase_start, log.tax,
+            log.oracle_level, log.current_epoch_start, log.tax,
             log.purchased_bonds, log.redeemed_bonds);
   }
   
@@ -956,7 +958,7 @@ contract Logging_v2 is OwnableUpgradeable {
   // |total_coin_supply|: The total coin supply.
   // |total_bond_supply|: The total bond supply.
   // |oracle_level|: ACB.oracle_level_.
-  // |current_phase_start|: ACB.current_phase_start_.
+  // |current_epoch_start|: ACB.current_epoch_start_.
   // |tax|: The amount of the tax collected in the phase.
   //
   // Returns
@@ -964,15 +966,15 @@ contract Logging_v2 is OwnableUpgradeable {
   // None.
   function phaseUpdated(uint minted, uint burned, int delta, int bond_budget,
                         uint total_coin_supply, uint total_bond_supply,
-                        uint oracle_level, uint current_phase_start, uint tax)
+                        uint oracle_level, uint current_epoch_start, uint tax)
       public onlyOwner {
     phaseUpdated_v2(minted, burned, delta, bond_budget, total_coin_supply,
-                    total_bond_supply, oracle_level, current_phase_start, tax);
+                    total_bond_supply, oracle_level, current_epoch_start, tax);
   }
 
   function phaseUpdated_v2(uint minted, uint burned, int delta, int bond_budget,
                            uint total_coin_supply, uint total_bond_supply,
-                           uint oracle_level, uint current_phase_start,
+                           uint oracle_level, uint current_epoch_start,
                            uint tax)
       public onlyOwner {
     log_index_ += 1;
@@ -992,7 +994,7 @@ contract Logging_v2 is OwnableUpgradeable {
     acb_logs_[log_index_v2_].total_coin_supply = total_coin_supply;
     acb_logs_[log_index_v2_].total_bond_supply = total_bond_supply;
     acb_logs_[log_index_v2_].oracle_level = oracle_level;
-    acb_logs_[log_index_v2_].current_phase_start = current_phase_start;
+    acb_logs_[log_index_v2_].current_epoch_start = current_epoch_start;
     acb_logs_[log_index_v2_].tax = tax;
     acb_logs_[log_index_v2_].new_value1 += minted;
     acb_logs_[log_index_v2_].new_value2 += burned;
@@ -1126,7 +1128,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
   uint[] public LEVEL_TO_EXCHANGE_RATE;
   uint public EXCHANGE_RATE_DIVISOR;
   uint[] public LEVEL_TO_BOND_PRICE;
-  uint public PHASE_DURATION;
+  uint public EPOCH_DURATION;
   uint public DEPOSIT_RATE;
   uint public DAMPING_FACTOR;
 
@@ -1141,7 +1143,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
   Logging public logging_;
   int public bond_budget_;
   uint public oracle_level_;
-  uint public current_phase_start_;
+  uint public current_epoch_start_;
 
   JohnLawCoin_v2 public coin_v2_;
   JohnLawBond_v2 public bond_v2_;
@@ -1149,15 +1151,15 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
   Logging_v2 public logging_v2_;
   int public bond_budget_v2_;
   uint public oracle_level_v2_;
-  uint public current_phase_start_v2_;
+  uint public current_epoch_start_v2_;
 
   // Events.
   event PayableEvent(address indexed sender, uint value);
-  event VoteEvent(address indexed sender, bytes32 committed_hash,
-                  uint revealed_level, uint revealed_salt,
+  event VoteEvent(address indexed sender, bytes32 hash,
+                  uint oracle_level, uint salt,
                   bool commit_result, bool reveal_result,
                   uint deposited, uint reclaimed, uint rewarded,
-                  bool phase_updated);
+                  bool epoch_updated);
   event PurchaseBondsEvent(address indexed sender, uint count,
                            uint redemption_timestamp);
   event RedeemBondsEvent(address indexed sender, uint count);
@@ -1171,7 +1173,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
     bond_budget_v2_ = bond_budget_;
     oracle_v2_ = oracle;
     oracle_level_v2_ = oracle_level_;
-    current_phase_start_v2_ = current_phase_start_;
+    current_epoch_start_v2_ = current_epoch_start_;
     logging_v2_ = logging;
 
     coin_v2_.upgrade();
@@ -1227,7 +1229,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
   // A struct to pack local variables. This is needed to avoid a stack-too-deep
   // error of Solidity.
   struct VoteResult {
-    bool phase_updated;
+    bool epoch_updated;
     bool reveal_result;
     bool commit_result;
     uint deposited;
@@ -1242,11 +1244,11 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
   //
   // Parameters
   // ----------------
-  // |committed_hash|: The hash to be committed in the current phase. Specify
+  // |hash|: The hash to be committed in the current phase. Specify
   // ACB.NULL_HASH if you do not want to commit and only want to reveal and
   // reclaim previous votes.
-  // |revealed_level|: The oracle level you voted for in the previous phase.
-  // |revealed_salt|: The salt you used in the previous phase.
+  // |oracle_level|: The oracle level you voted for in the previous phase.
+  // |salt|: The salt you used in the previous phase.
   //
   // Returns
   // ----------------
@@ -1257,23 +1259,23 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
   //  - uint: The amount of the reclaimed coins.
   //  - uint: The amount of the reward.
   //  - boolean: Whether this vote resulted in a phase update.
-  function vote(bytes32 committed_hash, uint revealed_level,
-                uint revealed_salt)
+  function vote(bytes32 hash, uint oracle_level,
+                uint salt)
       public whenNotPaused returns (bool, bool, uint, uint, uint, bool) {
-    return vote_v2(committed_hash, revealed_level, revealed_salt);
+    return vote_v2(hash, oracle_level, salt);
   }
   
-  function vote_v2(bytes32 committed_hash, uint revealed_level,
-                   uint revealed_salt)
+  function vote_v2(bytes32 hash, uint oracle_level,
+                   uint salt)
       public whenNotPaused returns (bool, bool, uint, uint, uint, bool) {
     VoteResult memory result;
     
-    result.phase_updated = false;
-    if (getTimestamp() >= current_phase_start_v2_ + PHASE_DURATION) {
+    result.epoch_updated = false;
+    if (getTimestamp() >= current_epoch_start_v2_ + EPOCH_DURATION) {
       // Start a new phase.
-      result.phase_updated = true;
-      current_phase_start_v2_ = getTimestamp();
-      current_phase_start_ = current_phase_start_v2_;
+      result.epoch_updated = true;
+      current_epoch_start_v2_ = getTimestamp();
+      current_epoch_start_ = current_epoch_start_v2_;
       
       int delta = 0;
       oracle_level_ = oracle_v2_.getModeLevel();
@@ -1313,7 +1315,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
       
       logging_v2_.phaseUpdated(mint, burned, delta, bond_budget_,
                                coin_v2_.totalSupply(), bond_v2_.totalSupply(),
-                               oracle_level_, current_phase_start_v2_, tax);
+                               oracle_level_, current_epoch_start_v2_, tax);
     }
     
     coin_v2_.transferOwnership(address(oracle_v2_));
@@ -1323,18 +1325,17 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
     // The voter needs to deposit the DEPOSIT_RATE percentage of their coin
     // balance.
     result.deposited = coin_v2_.balanceOf(msg.sender) * DEPOSIT_RATE / 100;
-    if (committed_hash == 0) {
+    if (hash == 0) {
       result.deposited = 0;
     }
     result.commit_result = oracle_v2_.commit(
-        coin_v2_, msg.sender, committed_hash, result.deposited);
+        coin_v2_, msg.sender, hash, result.deposited);
     if (!result.commit_result) {
       result.deposited = 0;
     }
     
     // Reveal.
-    result.reveal_result = oracle_v2_.reveal(
-        msg.sender, revealed_level, revealed_salt);
+    result.reveal_result = oracle_v2_.reveal(msg.sender, oracle_level, salt);
     
     // Reclaim.
     (result.reclaimed, result.rewarded) =
@@ -1345,11 +1346,11 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
     logging_v2_.voted(result.commit_result, result.reveal_result,
                       result.deposited, result.reclaimed, result.rewarded);
     emit VoteEvent(
-        msg.sender, committed_hash, revealed_level, revealed_salt,
+        msg.sender, hash, oracle_level, salt,
         result.commit_result, result.reveal_result, result.deposited,
-        result.reclaimed, result.rewarded, result.phase_updated);
+        result.reclaimed, result.rewarded, result.epoch_updated);
     return (result.commit_result, result.reveal_result, result.deposited,
-            result.reclaimed, result.rewarded, result.phase_updated);
+            result.reclaimed, result.rewarded, result.epoch_updated);
   }
 
   // Purchase bonds.
@@ -1509,7 +1510,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
   // Returns
   // ----------------
   // The calculated hash value.
-  function hash(uint level, uint salt)
+  function encrypt(uint level, uint salt)
       public view returns (bytes32) {
     return hash_v2(level, salt);
   }
@@ -1517,14 +1518,14 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
   function hash_v2(uint level, uint salt)
       public view returns (bytes32) {
     address sender = msg.sender;
-    return oracle_v2_.hash(sender, level, salt);
+    return oracle_v2_.encrypt(sender, level, salt);
   }
   
   // Return the current timestamp in seconds.
   function getTimestamp()
       public virtual view returns (uint) {
     // block.timestamp is better than block.number because the granularity of
-    // the phase update is PHASE_DURATION (1 week).
+    // the phase update is EPOCH_DURATION (1 week).
     return block.timestamp;
   }
 

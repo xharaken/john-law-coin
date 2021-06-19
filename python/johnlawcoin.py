@@ -753,7 +753,7 @@ class Logging:
     # Returns
     # ----------------
     # None.
-    def phase_updated(self, minted, burned, delta, bond_budget,
+    def epoch_updated(self, minted, burned, delta, bond_budget,
                       total_coin_supply, total_bond_supply,
                       oracle_level, current_epoch_start, tax):
         self.log_index += 1
@@ -911,7 +911,7 @@ class ACB:
 
         # The duration of the oracle phase. The ACB adjusts the total coin
         # supply once per phase. Voters can vote once per phase.
-        ACB.PHASE_DURATION = 7 * 24 * 60 * 60 # 1 week.
+        ACB.EPOCH_DURATION = 7 * 24 * 60 * 60 # 1 week.
 
         # The percentage of the coin balance voters need to deposit.
         ACB.DEPOSIT_RATE = 10 # 10%.
@@ -975,12 +975,12 @@ class ACB:
     # Test only.
     def override_constants_for_testing(
         self, bond_redemption_price, bond_redemption_period,
-        phase_duration, deposit_rate, damping_factor,
+        epoch_duration, deposit_rate, damping_factor,
         level_to_exchange_rate, level_to_bond_price):
 
         ACB.BOND_REDEMPTION_PRICE = bond_redemption_price
         ACB.BOND_REDEMPTION_PERIOD = bond_redemption_period
-        ACB.PHASE_DURATION = phase_duration
+        ACB.EPOCH_DURATION = epoch_duration
         ACB.DEPOSIT_RATE = deposit_rate
         ACB.DAMPING_FACTOR = damping_factor
         ACB.LEVEL_TO_EXCHANGE_RATE = level_to_exchange_rate
@@ -990,8 +990,8 @@ class ACB:
                ACB.BOND_REDEMPTION_PRICE <= 100000)
         assert(1 <= ACB.BOND_REDEMPTION_PERIOD and
                ACB.BOND_REDEMPTION_PERIOD <= 365 * 24 * 60 * 60)
-        assert(1 <= ACB.PHASE_DURATION and
-               ACB.PHASE_DURATION <= 30 * 24 * 60 * 60)
+        assert(1 <= ACB.EPOCH_DURATION and
+               ACB.EPOCH_DURATION <= 30 * 24 * 60 * 60)
         assert(0 <= ACB.DEPOSIT_RATE and ACB.DEPOSIT_RATE <= 100)
         assert(1 <= ACB.DAMPING_FACTOR and ACB.DAMPING_FACTOR <= 100)
         for bond_price in ACB.LEVEL_TO_BOND_PRICE:
@@ -1025,11 +1025,11 @@ class ACB:
     #  - uint: The amount of the reward.
     #  - boolean: Whether this vote resulted in a phase update.
     def vote(self, sender, hash, oracle_level, salt):
-        phase_updated = False
+        epoch_updated = False
         timestamp = self.get_timestamp()
-        if timestamp >= self.current_epoch_start + ACB.PHASE_DURATION:
+        if timestamp >= self.current_epoch_start + ACB.EPOCH_DURATION:
             # Start a new phase.
-            phase_updated = True
+            epoch_updated = True
             self.current_epoch_start = timestamp
 
             delta = 0
@@ -1065,7 +1065,7 @@ class ACB:
             self.coin.reset_tax_account()
             assert(self.coin.balance_of(self.coin.tax_account) == 0)
 
-            self.logging.phase_updated(
+            self.logging.epoch_updated(
                 mint, burned, delta, self.bond_budget,
                 self.coin.total_supply, self.bond.total_supply,
                 self.oracle_level, self.current_epoch_start, tax)
@@ -1074,13 +1074,13 @@ class ACB:
         #
         # The voter needs to deposit the DEPOSIT_RATE percentage of their coin
         # balance.
-        deposit = int(self.coin.balance_of(sender) * ACB.DEPOSIT_RATE / 100)
+        deposited = int(self.coin.balance_of(sender) * ACB.DEPOSIT_RATE / 100)
         if hash == ACB.NULL_HASH:
-            deposit = 0
-        assert(deposit >= 0)
-        commit_result = self.oracle.commit(self.coin, sender, hash, deposit)
+            deposited = 0
+        assert(deposited >= 0)
+        commit_result = self.oracle.commit(self.coin, sender, hash, deposited)
         if not commit_result:
-            deposit = 0
+            deposited = 0
 
         # Reveal.
         reveal_result = self.oracle.reveal(sender, oracle_level, salt)
@@ -1089,9 +1089,9 @@ class ACB:
         (reclaimed, rewarded) = self.oracle.reclaim(self.coin, sender)
 
         self.logging.voted(
-            commit_result, reveal_result, deposit, reclaimed, rewarded)
-        return (commit_result, reveal_result, deposit, reclaimed, rewarded,
-                phase_updated)
+            commit_result, reveal_result, deposited, reclaimed, rewarded)
+        return (commit_result, reveal_result, deposited, reclaimed, rewarded,
+                epoch_updated)
 
     # Purchase bonds.
     #

@@ -13,7 +13,7 @@ class ACBUnitTest(unittest.TestCase):
     def __init__(self,
                  bond_redemption_price,
                  bond_redemption_period,
-                 phase_duration,
+                 epoch_duration,
                  proportional_reward_rate,
                  deposit_rate,
                  damping_factor,
@@ -27,7 +27,7 @@ class ACBUnitTest(unittest.TestCase):
               'reward_rate=%d deposit_rate=%d damping=%d reclaim=%d tax=%d' %
               (bond_redemption_price,
                bond_redemption_period,
-               phase_duration,
+               epoch_duration,
                proportional_reward_rate,
                deposit_rate,
                damping_factor,
@@ -51,7 +51,7 @@ class ACBUnitTest(unittest.TestCase):
             level_max, reclaim_threshold, proportional_reward_rate)
         self.acb.override_constants_for_testing(
             bond_redemption_price, bond_redemption_period,
-            phase_duration, deposit_rate, damping_factor,
+            epoch_duration, deposit_rate, damping_factor,
             level_to_exchange_rate, level_to_bond_price)
 
         self.initial_coin_supply = JohnLawCoin.INITIAL_COIN_SUPPLY
@@ -72,10 +72,10 @@ class ACBUnitTest(unittest.TestCase):
         if (ACB.LEVEL_TO_BOND_PRICE[Oracle.LEVEL_MAX - 1] >= 2 and
             ACB.BOND_REDEMPTION_PRICE >= 2 and
             ACB.BOND_REDEMPTION_PERIOD >= 3 and
-            ACB.PHASE_DURATION >= 2):
+            ACB.EPOCH_DURATION >= 2):
             self.run_non_vote_tests()
 
-        self.acb.set_timestamp(self.acb.get_timestamp() + ACB.PHASE_DURATION)
+        self.acb.set_timestamp(self.acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.run_vote_tests()
 
     def run_non_vote_tests(self):
@@ -246,12 +246,12 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.get_timestamp(), 0)
         acb.set_timestamp(1)
         self.assertEqual(acb.get_timestamp(), 1)
-        acb.set_timestamp(ACB.PHASE_DURATION)
-        self.assertEqual(acb.get_timestamp(), ACB.PHASE_DURATION)
+        acb.set_timestamp(ACB.EPOCH_DURATION)
+        self.assertEqual(acb.get_timestamp(), ACB.EPOCH_DURATION)
         with self.assertRaises(Exception):
-            acb.set_timestamp(ACB.PHASE_DURATION - 1)
+            acb.set_timestamp(ACB.EPOCH_DURATION - 1)
         with self.assertRaises(Exception):
-            acb.set_timestamp(ACB.PHASE_DURATION)
+            acb.set_timestamp(ACB.EPOCH_DURATION)
         with self.assertRaises(Exception):
             acb.set_timestamp(0)
 
@@ -262,7 +262,7 @@ class ACBUnitTest(unittest.TestCase):
 
         coin_supply = acb.coin.total_supply
 
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         t1 = acb.get_timestamp() + ACB.BOND_REDEMPTION_PERIOD
 
         acb.coin.move(accounts[1], accounts[2], bond_price * 30)
@@ -309,7 +309,7 @@ class ACBUnitTest(unittest.TestCase):
         with self.assertRaises(Exception):
             acb.purchase_bonds(accounts[3], 70)
 
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         t2 = acb.get_timestamp() + ACB.BOND_REDEMPTION_PERIOD
 
         self.assertEqual(acb.purchase_bonds(accounts[2], 1), t2)
@@ -341,7 +341,7 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply - bond_price * 32)
 
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         t3 = acb.get_timestamp() + ACB.BOND_REDEMPTION_PERIOD
 
         with self.assertRaises(Exception):
@@ -727,13 +727,13 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.balance_of(accounts[4]), balance)
 
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
 
         balance = acb.coin.balance_of(accounts[4])
         deposit_4[now] = int(balance * ACB.DEPOSIT_RATE / 100)
         self.assertEqual(acb.current_epoch_start,
-                         acb.get_timestamp() - ACB.PHASE_DURATION)
+                         acb.get_timestamp() - ACB.EPOCH_DURATION)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
                 accounts[4], self.default_level, 2),
@@ -751,7 +751,7 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.balance_of(accounts[4]), balance)
 
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         mint = self.mint_at_default_level()
 
@@ -764,7 +764,7 @@ class ACBUnitTest(unittest.TestCase):
         remainder[now] = self.tax - reward
         deposit_4[now] = int(balance * ACB.DEPOSIT_RATE / 100)
         self.assertEqual(acb.current_epoch_start,
-                         acb.get_timestamp() - ACB.PHASE_DURATION)
+                         acb.get_timestamp() - ACB.EPOCH_DURATION)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
                 accounts[4], self.default_level, 3),
@@ -785,7 +785,7 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.balance_of(accounts[4]), balance)
 
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         mint = 0
 
@@ -811,7 +811,7 @@ class ACBUnitTest(unittest.TestCase):
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         mint = self.mint_at_default_level()
 
@@ -845,7 +845,7 @@ class ACBUnitTest(unittest.TestCase):
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         mint = self.mint_at_default_level()
 
@@ -878,8 +878,8 @@ class ACBUnitTest(unittest.TestCase):
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         mint = self.mint_at_default_level()
 
@@ -913,7 +913,7 @@ class ACBUnitTest(unittest.TestCase):
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         mint = self.mint_at_default_level()
 
@@ -947,7 +947,7 @@ class ACBUnitTest(unittest.TestCase):
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         mint = 0
 
@@ -982,7 +982,7 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.balance_of(accounts[6]), 0)
 
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         mint = 0
 
@@ -1018,7 +1018,7 @@ class ACBUnitTest(unittest.TestCase):
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         mint = 0
 
@@ -1054,7 +1054,7 @@ class ACBUnitTest(unittest.TestCase):
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         mint = 0
 
@@ -1091,7 +1091,7 @@ class ACBUnitTest(unittest.TestCase):
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         mint = self.mint_at_default_level()
 
@@ -1153,7 +1153,7 @@ class ACBUnitTest(unittest.TestCase):
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         mint = self.mint_at_default_level()
 
@@ -1217,7 +1217,7 @@ class ACBUnitTest(unittest.TestCase):
 
         self.reset_balances()
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         mint = self.mint_at_default_level()
 
@@ -1282,7 +1282,7 @@ class ACBUnitTest(unittest.TestCase):
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         mint = self.mint_at_default_level()
 
@@ -1344,7 +1344,7 @@ class ACBUnitTest(unittest.TestCase):
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         mint = self.mint_at_default_level()
 
@@ -1396,7 +1396,7 @@ class ACBUnitTest(unittest.TestCase):
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         mint = self.mint_at_default_level()
 
@@ -1452,7 +1452,7 @@ class ACBUnitTest(unittest.TestCase):
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         mint = self.mint_at_default_level()
 
@@ -1502,7 +1502,7 @@ class ACBUnitTest(unittest.TestCase):
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         mint = 0
 
@@ -1544,7 +1544,7 @@ class ACBUnitTest(unittest.TestCase):
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         mint = self.mint_at_default_level()
 
@@ -1592,7 +1592,7 @@ class ACBUnitTest(unittest.TestCase):
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         mint = self.mint_at_default_level()
 
@@ -1625,7 +1625,7 @@ class ACBUnitTest(unittest.TestCase):
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         mint = self.mint_at_default_level()
 
@@ -1650,7 +1650,7 @@ class ACBUnitTest(unittest.TestCase):
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         mint = 0
 
@@ -1671,7 +1671,7 @@ class ACBUnitTest(unittest.TestCase):
 
         # 0, stable, stable
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         self.reset_balances()
         mint = self.mint_at_default_level()
@@ -1717,7 +1717,7 @@ class ACBUnitTest(unittest.TestCase):
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         mint = 0
 
@@ -1758,7 +1758,7 @@ class ACBUnitTest(unittest.TestCase):
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         mint = self.mint_at_default_level()
 
@@ -1825,7 +1825,7 @@ class ACBUnitTest(unittest.TestCase):
             ACB.DEPOSIT_RATE = 1
 
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         self.reset_balances()
         mint = self.mint_at_default_level()
@@ -1891,7 +1891,7 @@ class ACBUnitTest(unittest.TestCase):
         ACB.DEPOSIT_RATE = tmp_deposit_rate
 
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         mint = self.mint_at_default_level()
 
@@ -1950,7 +1950,7 @@ class ACBUnitTest(unittest.TestCase):
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         mint = self.mint_at_default_level()
 
@@ -2007,7 +2007,7 @@ class ACBUnitTest(unittest.TestCase):
 
         # stable, stable, level_max - 1
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         self.reset_balances()
         mint = self.mint_at_default_level()
@@ -2074,7 +2074,7 @@ class ACBUnitTest(unittest.TestCase):
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         mint = self.mint_at_default_level()
 
@@ -2136,7 +2136,7 @@ class ACBUnitTest(unittest.TestCase):
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         mint = self.mint_at_default_level()
 
@@ -2204,7 +2204,7 @@ class ACBUnitTest(unittest.TestCase):
             ACB.DEPOSIT_RATE = 1
 
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         self.reset_balances()
         mint = self.mint_at_default_level()
@@ -2273,7 +2273,7 @@ class ACBUnitTest(unittest.TestCase):
         ACB.DEPOSIT_RATE = tmp_deposit_rate
 
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         mint = self.mint_at_default_level()
 
@@ -2335,7 +2335,7 @@ class ACBUnitTest(unittest.TestCase):
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         mint = self.mint_at_default_level()
 
@@ -2395,7 +2395,7 @@ class ACBUnitTest(unittest.TestCase):
 
         # stable, stable, level_max - 1; deposit is the same
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         self.reset_balances()
         mint = self.mint_at_default_level()
@@ -2462,7 +2462,7 @@ class ACBUnitTest(unittest.TestCase):
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         mint = self.mint_at_default_level()
 
@@ -2524,7 +2524,7 @@ class ACBUnitTest(unittest.TestCase):
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         mint = self.mint_at_default_level()
 
@@ -2587,7 +2587,7 @@ class ACBUnitTest(unittest.TestCase):
 
         # all levels
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         self.reset_balances()
         mint = self.mint_at_default_level()
@@ -2623,7 +2623,7 @@ class ACBUnitTest(unittest.TestCase):
                          remainder[(now - 1) % 3])
 
         now = (now + 1) % 3
-        acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+        acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         mint = self.mint_at_default_level()
 
@@ -2668,7 +2668,7 @@ class ACBUnitTest(unittest.TestCase):
         tax_total = 0
         for level in range(2, Oracle.LEVEL_MAX + 2):
             now = (now + 1) % 3
-            acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+            acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
 
             self.assertEqual(acb.bond.total_supply, 2)
             mint = 0
@@ -2789,7 +2789,7 @@ class ACBUnitTest(unittest.TestCase):
 def main():
     bond_redemption_price = 1000
     bond_redemption_period = 10
-    phase_duration = 2
+    epoch_duration = 2
     proportional_reward_rate = 90
     deposit_rate = 10
     damping_factor = 10
@@ -2801,7 +2801,7 @@ def main():
     test = ACBUnitTest(
         bond_redemption_price,
         bond_redemption_period,
-        phase_duration,
+        epoch_duration,
         proportional_reward_rate,
         deposit_rate,
         damping_factor,
@@ -2814,7 +2814,7 @@ def main():
 
     for bond_redemption_price in [3, 1000]:
         for bond_redemption_period in [1, 5, 84 * 24 * 60 * 60]:
-            for phase_duration in [1, 5, 7 * 24 * 60 * 60]:
+            for epoch_duration in [1, 5, 7 * 24 * 60 * 60]:
                 for proportional_reward_rate in [0, 1, 90, 100]:
                     for deposit_rate in [0, 10, 100]:
                         for damping_factor in [1, 10, 100]:
@@ -2837,7 +2837,7 @@ def main():
                                         test = ACBUnitTest(
                                             bond_redemption_price,
                                             bond_redemption_period,
-                                            phase_duration,
+                                            epoch_duration,
                                             proportional_reward_rate,
                                             deposit_rate,
                                             damping_factor,

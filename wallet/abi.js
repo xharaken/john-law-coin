@@ -11,7 +11,7 @@ const ETHERSCAN_ADDRESS_ON_ROPSTEN = "https://ropsten.etherscan.io/";
 const ETHERSCAN_ADDRESS_ON_MAINNET = "https://etherscan.io/";
 
 // The ABI of Oracle::getCommit() must not change.
-const PHASE_ID_THAT_UPGRADED_ORACLE = 0;
+const EPOCH_ID_THAT_UPGRADED_ORACLE = 0;
 const OLD_ORACLE_ADDRESS = "";
 
 const EXCHANGE_RATES = [0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4];
@@ -855,7 +855,7 @@ const ORACLE_ABI = [
         {
           "indexed": true,
           "internalType": "uint256",
-          "name": "phase_id",
+          "name": "epoch_id",
           "type": "uint256"
         },
         {
@@ -871,7 +871,7 @@ const ORACLE_ABI = [
           "type": "uint256"
         }
       ],
-      "name": "AdvancePhaseEvent",
+      "name": "AdvanceEpochEvent",
       "type": "event"
     },
     {
@@ -1036,8 +1036,8 @@ const ORACLE_ABI = [
           "type": "uint256"
         },
         {
-          "internalType": "enum Oracle.Phase",
-          "name": "phase",
+          "internalType": "enum Oracle.Epoch",
+          "name": "epoch",
           "type": "uint8"
         }
       ],
@@ -1061,7 +1061,7 @@ const ORACLE_ABI = [
     },
     {
       "inputs": [],
-      "name": "phase_id_",
+      "name": "epoch_id_",
       "outputs": [
         {
           "internalType": "uint256",
@@ -1328,7 +1328,7 @@ const ORACLE_ABI = [
           "type": "uint256"
         },
         {
-          "internalType": "enum Oracle.Phase",
+          "internalType": "enum Oracle.Epoch",
           "name": "",
           "type": "uint8"
         },
@@ -1368,7 +1368,7 @@ const ORACLE_ABI = [
           "type": "uint256"
         },
         {
-          "internalType": "enum Oracle.Phase",
+          "internalType": "enum Oracle.Epoch",
           "name": "",
           "type": "uint8"
         }
@@ -1476,7 +1476,7 @@ const LOGGING_ABI = [
         },
         {
           "internalType": "uint256",
-          "name": "current_phase_start",
+          "name": "current_epoch_start",
           "type": "uint256"
         },
         {
@@ -1783,7 +1783,7 @@ const LOGGING_ABI = [
         },
         {
           "internalType": "uint256",
-          "name": "current_phase_start",
+          "name": "current_epoch_start",
           "type": "uint256"
         },
         {
@@ -1792,7 +1792,7 @@ const LOGGING_ABI = [
           "type": "uint256"
         }
       ],
-      "name": "phaseUpdated",
+      "name": "epochUpdated",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -2052,7 +2052,7 @@ const ACB_ABI = [
         {
           "indexed": false,
           "internalType": "bool",
-          "name": "phase_updated",
+          "name": "epoch_updated",
           "type": "bool"
         }
       ],
@@ -2210,7 +2210,7 @@ const ACB_ABI = [
     },
     {
       "inputs": [],
-      "name": "PHASE_DURATION",
+      "name": "EPOCH_DURATION",
       "outputs": [
         {
           "internalType": "uint256",
@@ -2280,7 +2280,7 @@ const ACB_ABI = [
     },
     {
       "inputs": [],
-      "name": "current_phase_start_",
+      "name": "current_epoch_start_",
       "outputs": [
         {
           "internalType": "uint256",

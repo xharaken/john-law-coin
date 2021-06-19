@@ -33,7 +33,7 @@ class ACBSimulator(unittest.TestCase):
     def __init__(self,
                  bond_redemption_price,
                  bond_redemption_period,
-                 phase_duration,
+                 epoch_duration,
                  proportional_reward_rate,
                  deposit_rate,
                  damping_factor,
@@ -48,7 +48,7 @@ class ACBSimulator(unittest.TestCase):
               'deposit_rate=%d damping=%d reclaim=%d voter=%d iter=%d' %
               (bond_redemption_price,
                bond_redemption_period,
-               phase_duration,
+               epoch_duration,
                proportional_reward_rate,
                deposit_rate,
                damping_factor,
@@ -70,7 +70,7 @@ class ACBSimulator(unittest.TestCase):
             level_max, reclaim_threshold, proportional_reward_rate)
         self.acb.override_constants_for_testing(
             bond_redemption_price, bond_redemption_period,
-            phase_duration, deposit_rate, damping_factor,
+            epoch_duration, deposit_rate, damping_factor,
             level_to_exchange_rate, level_to_bond_price)
 
         self.tax_rate = JohnLawCoin.TAX_RATE
@@ -181,7 +181,7 @@ class ACBSimulator(unittest.TestCase):
 
             coin_supply1 = acb.coin.total_supply
 
-            acb.set_timestamp(acb.get_timestamp() + ACB.PHASE_DURATION)
+            acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
             commit_observed = self.vote(epoch, tax)
             if not commit_observed:
                 continue
@@ -724,7 +724,7 @@ def main():
 
     for bond_redemption_price in [3, 1000]:
         for bond_redemption_period in [1, 84 * 24 * 60 * 60]:
-            for phase_duration in [1, 7 * 24 * 60 * 60]:
+            for epoch_duration in [1, 7 * 24 * 60 * 60]:
                 for proportional_reward_rate in [0, 90, 100]:
                     for deposit_rate in [0, 10, 100]:
                         for damping_factor in [10, 100]:
@@ -747,7 +747,7 @@ def main():
                                         test = ACBSimulator(
                                             bond_redemption_price,
                                             bond_redemption_period,
-                                            phase_duration,
+                                            epoch_duration,
                                             proportional_reward_rate,
                                             deposit_rate,
                                             damping_factor,
