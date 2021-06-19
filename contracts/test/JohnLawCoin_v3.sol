@@ -529,11 +529,11 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
   // Constants. The values are defined in initialize(). The values never
   // change during the contract execution but use 'public' (instead of
   // 'constant') because tests want to override the values.
+  uint public BOND_PRICE;
   uint public BOND_REDEMPTION_PRICE;
   uint public BOND_REDEMPTION_PERIOD;
   uint[] public LEVEL_TO_EXCHANGE_RATE;
   uint public EXCHANGE_RATE_DIVISOR;
-  uint[] public LEVEL_TO_BOND_PRICE;
   uint public EPOCH_DURATION;
   uint public DEPOSIT_RATE;
   uint public DAMPING_FACTOR;
@@ -766,11 +766,7 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
     require(bond_budget_ >= count.toInt256(),
             "PurchaseBonds: The ACB's bond budget is not enough.");
 
-    uint bond_price = LEVEL_TO_BOND_PRICE[oracle_v3_.getLevelMax() - 1];
-    if (0 <= oracle_level_ && oracle_level_ < oracle_v3_.getLevelMax()) {
-      bond_price = LEVEL_TO_BOND_PRICE[oracle_level_];
-    }
-    uint amount = bond_price * count;
+    uint amount = BOND_PRICE * count;
     require(coin_v2_.balanceOf(sender) >= amount,
             "PurchaseBonds: Your coin balance is not enough.");
 
@@ -870,7 +866,7 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
       require(0 <= oracle_level_ && oracle_level_ < oracle_v3_.getLevelMax(),
               "cs2");
       // Issue new bonds to decrease the total coin supply.
-      bond_budget_ = -delta / LEVEL_TO_BOND_PRICE[oracle_level_].toInt256();
+      bond_budget_ = -delta / BOND_PRICE.toInt256();
       require(bond_budget_ >= 0, "cs3");
     }
 

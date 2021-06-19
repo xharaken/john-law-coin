@@ -40,11 +40,11 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
   // Constants. The values are defined in initialize(). The values never
   // change during the contract execution but use 'public' (instead of
   // 'constant') because tests want to override the values.
+  uint public BOND_PRICE;
   uint public BOND_REDEMPTION_PRICE;
   uint public BOND_REDEMPTION_PERIOD;
   uint[] public LEVEL_TO_EXCHANGE_RATE;
   uint public EXCHANGE_RATE_DIVISOR;
-  uint[] public LEVEL_TO_BOND_PRICE;
   uint public EPOCH_DURATION;
   uint public DEPOSIT_RATE;
   uint public DAMPING_FACTOR;
@@ -132,11 +132,8 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
     LEVEL_TO_EXCHANGE_RATE = [6, 7, 8, 9, 10, 11, 12, 13, 14];
     EXCHANGE_RATE_DIVISOR = 10;
 
-    // LEVEL_TO_BOND_PRICE is the mapping from the oracle levels to the
-    // bond prices.
-    LEVEL_TO_BOND_PRICE = [970, 978, 986, 992, 997, 997, 997, 997, 997];
-
     // The bond redemption price and the redemption period.
+    BOND_PRICE = 996; // One bond is sold for 996 coins.
     BOND_REDEMPTION_PRICE = 1000; // One bond is redeemed for 1000 coins.
     BOND_REDEMPTION_PERIOD = 84 * 24 * 60 * 60; // 12 weeks.
 
@@ -197,7 +194,6 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
 
     /*
     require(LEVEL_TO_EXCHANGE_RATE.length == oracle.getLevelMax(), "AC1");
-    require(LEVEL_TO_BOND_PRICE.length == oracle.getLevelMax(), "AC2");
     */
   }
 
@@ -381,11 +377,7 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
     require(bond_budget_ >= count.toInt256(),
             "PurchaseBonds: The ACB's bond budget is not enough.");
 
-    uint bond_price = LEVEL_TO_BOND_PRICE[oracle_.getLevelMax() - 1];
-    if (0 <= oracle_level_ && oracle_level_ < oracle_.getLevelMax()) {
-      bond_price = LEVEL_TO_BOND_PRICE[oracle_level_];
-    }
-    uint amount = bond_price * count;
+    uint amount = BOND_PRICE * count;
     require(coin_.balanceOf(sender) >= amount,
             "PurchaseBonds: Your coin balance is not enough.");
 
@@ -485,7 +477,7 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
       require(0 <= oracle_level_ && oracle_level_ < oracle_.getLevelMax(),
               "cs2");
       // Issue new bonds to decrease the total coin supply.
-      bond_budget_ = -delta / LEVEL_TO_BOND_PRICE[oracle_level_].toInt256();
+      bond_budget_ = -delta / BOND_PRICE.toInt256();
       require(bond_budget_ >= 0, "cs3");
     }
 

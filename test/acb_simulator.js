@@ -56,6 +56,7 @@ contract("ACBSimulator", function (accounts) {
 });
 
 function parameterized_test(accounts,
+                            _bond_price,
                             _bond_redemption_price,
                             _bond_redemption_period,
                             _epoch_duration,
@@ -63,12 +64,12 @@ function parameterized_test(accounts,
                             _deposit_rate,
                             _damping_factor,
                             _level_to_exchange_rate,
-                            _level_to_bond_price,
                             _reclaim_threshold,
                             _voter_count,
                             _iteration,
                             _should_upgrade) {
   let test_name = "ACB parameters:" +
+      " bond_price=" + _bond_price +
       " bond_redemp_price=" + _bond_redemption_price +
       " bond_redemp_period=" + _bond_redemption_period +
       " epoch_duration=" + _epoch_duration +
@@ -76,7 +77,6 @@ function parameterized_test(accounts,
       " deposit_rate=" + _deposit_rate +
       " damping_factor=" + _damping_factor +
       " level_to_exchange_rate=" + _level_to_exchange_rate +
-      " level_to_bond_price=" + _level_to_bond_price +
       " reclaim=" + _reclaim_threshold +
       " voter=" + _voter_count +
       " iter=" + _iteration +
@@ -107,13 +107,13 @@ function parameterized_test(accounts,
     await _bond.transferOwnership(_acb.address);
     await _oracle.transferOwnership(_acb.address);
     await _logging.transferOwnership(_acb.address);
-    await _acb.overrideConstants(_bond_redemption_price,
+    await _acb.overrideConstants(_bond_price,
+                                 _bond_redemption_price,
                                  _bond_redemption_period,
                                  _epoch_duration,
                                  _deposit_rate,
                                  _damping_factor,
-                                 _level_to_exchange_rate,
-                                 _level_to_bond_price);
+                                 _level_to_exchange_rate);
 
     let _tax_rate = await _coin.TAX_RATE();
     let _lost_deposit = [0, 0, 0];
@@ -214,7 +214,7 @@ function parameterized_test(accounts,
     _metrics = new Metrics();
 
     for (let i = 0; i < _voter_count; i++) {
-      let amount = randint(0, _level_to_bond_price[_level_max - 1] * 100);
+      let amount = randint(0, _bond_price * 100);
       if (randint(0, 9) >= 9) {
         amount = 0;
       }
@@ -424,14 +424,10 @@ function parameterized_test(accounts,
           continue;
         }
 
+        let bond_price = _bond_price;
         let voter = _voters[(start_index + index) % _voter_count];
-        let bond_price = _level_to_bond_price[_level_max - 1];
-        let oracle_level = (await _acb.oracle_level_()).toNumber();
-        if (0 <= oracle_level && oracle_level < _level_max) {
-          bond_price = _level_to_bond_price[oracle_level];
-        }
         let count = Math.min(
-            bond_budget, Math.trunc(0.3 * voter.balance / bond_price));
+            bond_budget, Math.trunc(0.3 * voter.balance / _bond_price));
         if (count <= 0) {
           continue;
         }
@@ -614,7 +610,7 @@ function parameterized_test(accounts,
         }
       } else {
         assert.isTrue(mode_level != _level_max);
-        issued_bonds = Math.trunc(-delta / _level_to_bond_price[mode_level]);
+        issued_bonds = Math.trunc(-delta / _bond_price);
       }
 
       let target_level = randint(0, _level_max - 1);
@@ -788,6 +784,7 @@ function parameterized_test(accounts,
       }
 
       if (epoch == 5) {
+        _tmp_bond_price = _bond_price;
         _tmp_bond_redemption_price = _bond_redemption_price;
         _tmp_bond_redemption_period = _bond_redemption_period;
         _tmp_epoch_duration = _epoch_duration;
@@ -795,9 +792,9 @@ function parameterized_test(accounts,
         _tmp_deposit_rate = _deposit_rate;
         _tmp_damping_factor = _damping_factor;
         _tmp_level_to_exchange_rate = _level_to_exchange_rate.slice();
-        _tmp_level_to_bond_price = _level_to_bond_price.slice();
         _tmp_reclaim_threshold = _reclaim_threshold;
 
+        _bond_price += 100;
         _bond_redemption_price += 100;
         _bond_redemption_period = 2;
         _epoch_duration = 10;
@@ -806,7 +803,6 @@ function parameterized_test(accounts,
         _damping_factor = 50;
         for (let level = 0; level < _level_max; level++) {
           _level_to_exchange_rate[level] += 1;
-          _level_to_bond_price[level] += 100;
         }
         _reclaim_threshold = 0;
 
@@ -821,17 +817,18 @@ function parameterized_test(accounts,
         _logging = await upgradeProxy(_logging.address, Logging_v2);
         common.print_contract_size(_logging, "Logging_v2");
         _acb = await upgradeProxy(_acb.address, ACBForTesting_v2);
-        await _acb.overrideConstants(_bond_redemption_price,
+        await _acb.overrideConstants(_bond_price,
+                                     _bond_redemption_price,
                                      _bond_redemption_period,
                                      _epoch_duration,
                                      _deposit_rate,
                                      _damping_factor,
-                                     _level_to_exchange_rate,
-                                     _level_to_bond_price);
+                                     _level_to_exchange_rate);
         common.print_contract_size(_acb, "ACBForTesting_v2");
         await _acb.upgrade(_coin.address, _bond.address,
                            _oracle.address, _logging.address);
       } else if (epoch == 10) {
+        _bond_price = _tmp_bond_price;
         _bond_redemption_price = _tmp_bond_redemption_price;
         _bond_redemption_period = _tmp_bond_redemption_period;
         _epoch_duration = _tmp_epoch_duration;
@@ -839,7 +836,6 @@ function parameterized_test(accounts,
         _deposit_rate = _tmp_deposit_rate;
         _damping_factor = _tmp_damping_factor;
         _level_to_exchange_rate = _tmp_level_to_exchange_rate.slice();
-        _level_to_bond_price = _tmp_level_to_bond_price.slice();
         _reclaim_threshold = _tmp_reclaim_threshold;
 
         _oracle = await upgradeProxy(_oracle.address, OracleForTesting_v3);
@@ -848,15 +844,16 @@ function parameterized_test(accounts,
                                         _proportional_reward_rate);
         _acb = await upgradeProxy(_acb.address, ACBForTesting_v3);
         common.print_contract_size(_acb, "ACBForTesting_v3");
-        await _acb.overrideConstants(_bond_redemption_price,
+        await _acb.overrideConstants(_bond_price,
+                                     _bond_redemption_price,
                                      _bond_redemption_period,
                                      _epoch_duration,
                                      _deposit_rate,
                                      _damping_factor,
-                                     _level_to_exchange_rate,
-                                     _level_to_bond_price);
+                                     _level_to_exchange_rate);
         await _acb.upgrade(_oracle.address);
       } else if (epoch == 15) {
+        _tmp_bond_price = _bond_price;
         _tmp_bond_redemption_price = _bond_redemption_price;
         _tmp_bond_redemption_period = _bond_redemption_period;
         _tmp_epoch_duration = _epoch_duration;
@@ -864,9 +861,9 @@ function parameterized_test(accounts,
         _tmp_deposit_rate = _deposit_rate;
         _tmp_damping_factor = _damping_factor;
         _tmp_level_to_exchange_rate = _level_to_exchange_rate.slice();
-        _tmp_level_to_bond_price = _level_to_bond_price.slice();
         _tmp_reclaim_threshold = _reclaim_threshold;
 
+        _bond_price += 100;
         _bond_redemption_price += 100;
         _bond_redemption_period = 2;
         _epoch_duration = 10;
@@ -875,7 +872,6 @@ function parameterized_test(accounts,
         _damping_factor = 50;
         for (let level = 0; level < _level_max; level++) {
           _level_to_exchange_rate[level] += 1;
-          _level_to_bond_price[level] += 100;
         }
         _reclaim_threshold = 0;
 
@@ -896,15 +892,16 @@ function parameterized_test(accounts,
         await _bond.transferOwnership(_acb.address);
         await _oracle.transferOwnership(_acb.address);
         await _logging.transferOwnership(_acb.address);
-        await _acb.overrideConstants(_bond_redemption_price,
+        await _acb.overrideConstants(_bond_price,
+                                     _bond_redemption_price,
                                      _bond_redemption_period,
                                      _epoch_duration,
                                      _deposit_rate,
                                      _damping_factor,
-                                     _level_to_exchange_rate,
-                                     _level_to_bond_price);
+                                     _level_to_exchange_rate);
         await _acb.setTimestamp((await old_acb.getTimestamp()).toNumber());
       } else if (epoch == 20) {
+        _bond_price = _tmp_bond_price;
         _bond_redemption_price = _tmp_bond_redemption_price;
         _bond_redemption_period = _tmp_bond_redemption_period;
         _epoch_duration = _tmp_epoch_duration;
@@ -912,7 +909,6 @@ function parameterized_test(accounts,
         _deposit_rate = _tmp_deposit_rate;
         _damping_factor = _tmp_damping_factor;
         _level_to_exchange_rate = _tmp_level_to_exchange_rate.slice();
-        _level_to_bond_price = _tmp_level_to_bond_price.slice();
         _reclaim_threshold = _tmp_reclaim_threshold;
 
         await _oracle.overrideConstants(_reclaim_threshold,
@@ -942,13 +938,13 @@ function parameterized_test(accounts,
         await old_oracle.transferOwnership(_acb.address);
         await _oracle.transferOwnership(_acb.address);
         await _logging.transferOwnership(_acb.address);
-        await _acb.overrideConstants(_bond_redemption_price,
+        await _acb.overrideConstants(_bond_price,
+                                     _bond_redemption_price,
                                      _bond_redemption_period,
                                      _epoch_duration,
                                      _deposit_rate,
                                      _damping_factor,
-                                     _level_to_exchange_rate,
-                                     _level_to_bond_price);
+                                     _level_to_exchange_rate);
         await _acb.setTimestamp((await old_acb.getTimestamp()).toNumber());
       }
     }

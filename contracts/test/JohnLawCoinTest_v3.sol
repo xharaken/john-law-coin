@@ -21,21 +21,21 @@ contract OracleForTesting_v3 is Oracle_v3 {
 
 // A contract to test ACB.
 contract ACBForTesting_v3 is ACB_v3 {
-  function overrideConstants(uint bond_redemption_price,
+  function overrideConstants(uint bond_price,
+                             uint bond_redemption_price,
                              uint bond_redemption_period,
                              uint epoch_duration,
                              uint deposit_rate,
                              uint damping_factor,
-                             uint[] memory level_to_exchange_rate,
-                             uint[] memory level_to_bond_price)
+                             uint[] memory level_to_exchange_rate)
       public onlyOwner {
+    BOND_PRICE = bond_price;
     BOND_REDEMPTION_PRICE = bond_redemption_price;
     BOND_REDEMPTION_PERIOD = bond_redemption_period;
     EPOCH_DURATION = epoch_duration;
     DEPOSIT_RATE = deposit_rate;
     DAMPING_FACTOR = damping_factor;
     LEVEL_TO_EXCHANGE_RATE = level_to_exchange_rate;
-    LEVEL_TO_BOND_PRICE = level_to_bond_price;
   }
   
   function controlSupply(int delta)
