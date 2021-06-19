@@ -29,16 +29,15 @@ contract JohnLawCoin_v2 is ERC20PausableUpgradeable, OwnableUpgradeable {
 
   // The initial coin supply.
   uint public constant INITIAL_COIN_SUPPLY = 10000000;
+
+  // The tax rate.
+  uint public constant TAX_RATE = 1;
   
   // Attributes.
   
-  // The tax rate set by the ACB.
-  uint public tax_rate_;
-
   // The account to which the tax is sent.
   address public tax_account_;
 
-  uint public tax_rate_v2_;
   address public tax_account_v2_;
   mapping (address => uint) public dummy_;
 
@@ -48,7 +47,6 @@ contract JohnLawCoin_v2 is ERC20PausableUpgradeable, OwnableUpgradeable {
 
   function upgrade()
       public onlyOwner {
-    tax_rate_v2_ = tax_rate_;
     tax_account_v2_ = tax_account_;
   }
 
@@ -143,17 +141,13 @@ contract JohnLawCoin_v2 is ERC20PausableUpgradeable, OwnableUpgradeable {
   }
 
   // Set the tax rate. Only the ACB can call this method.
-  function setTaxRate(uint tax_rate)
+  function resetTaxAccount()
       public onlyOwner {
-    setTaxRate_v2(tax_rate);
+    resetTaxAccount_v2();
   }
 
-  function setTaxRate_v2(uint tax_rate)
+  function resetTaxAccount_v2()
       public onlyOwner {
-    require(0 <= tax_rate && tax_rate <= 100, "st1");
-    tax_rate_v2_ = tax_rate;
-    
-    // Regenerate the account address just in case.
     address old_tax_account = tax_account_v2_;
     tax_account_ = address(uint160(uint(keccak256(abi.encode(
         "tax", block.number)))));
@@ -169,10 +163,8 @@ contract JohnLawCoin_v2 is ERC20PausableUpgradeable, OwnableUpgradeable {
 
   function transfer_v2(address account, uint amount)
       public returns (bool) {
-    uint tax = amount * tax_rate_v2_ / 100;
-    if (tax > 0) {
-      _transfer(_msgSender(), tax_account_v2_, tax);
-    }
+    uint tax = amount * TAX_RATE / 100;
+    _transfer(_msgSender(), tax_account_v2_, tax);
     _transfer(_msgSender(), account, amount - tax);
     emit TransferEvent(_msgSender(), account, amount - tax, tax);
     return true;
@@ -429,8 +421,7 @@ contract Oracle_v2 is OwnableUpgradeable {
   event RevealEvent(address indexed sender,
                     uint revealed_level, uint revealed_salt);
   event ReclaimEvent(address indexed sender, uint deposited, uint rewarded);
-  event AdvancePhaseEvent(uint indexed phase_id,
-                          uint minted, uint burned);
+  event AdvancePhaseEvent(uint indexed phase_id, uint tax, uint burned);
 
   function upgrade()
       public onlyOwner {
@@ -627,17 +618,16 @@ contract Oracle_v2 is OwnableUpgradeable {
   // Parameters
   // ----------------
   // |coin|: The JohnLawCoin contract.
-  // |mint|: The amount of the coins minted for the reward.
   //
   // Returns
   // ----------------
   // None.
-  function advance(JohnLawCoin_v2 coin, uint mint)
+  function advance(JohnLawCoin_v2 coin)
       public onlyOwner returns (uint) {
-    return advance_v2(coin, mint);
+    return advance_v2(coin);
   }
   
-  function advance_v2(JohnLawCoin_v2 coin, uint mint)
+  function advance_v2(JohnLawCoin_v2 coin)
       public onlyOwner returns (uint) {
     // Step 1: Move the commit phase to the reveal phase.
     Epoch storage epoch = epochs_[phase_id_v2_ % 3];
@@ -687,8 +677,10 @@ contract Oracle_v2 is OwnableUpgradeable {
           coin.balanceOf(epoch.deposit_account_v2) - deposit_to_reclaim);
     }
 
-    // Mint |mint| coins to the reward account.
-    coin.mint(epoch.reward_account_v2, mint);
+    // Move the collected tax to the reward account.
+    address tax_account = coin.tax_account_v2_();
+    uint tax = coin.balanceOf(tax_account);
+    coin.move(tax_account, epoch.reward_account_v2, tax);
 
     // Set the total amount of the reward.
     epoch.reward_total_v2 = coin.balanceOf(epoch.reward_account_v2);
@@ -730,7 +722,7 @@ contract Oracle_v2 is OwnableUpgradeable {
     phase_id_v2_ += 1;
     phase_id_ += 1;
 
-    emit AdvancePhaseEvent(phase_id_v2_, mint, burned);
+    emit AdvancePhaseEvent(phase_id_v2_, tax, burned);
     return burned;
   }
 
@@ -885,7 +877,7 @@ contract Logging_v2 is OwnableUpgradeable {
     uint total_bond_supply;
     uint oracle_level;
     uint current_phase_start;
-    uint burned_tax;
+    uint tax;
     uint purchased_bonds;
     uint redeemed_bonds;
 
@@ -949,7 +941,7 @@ contract Logging_v2 is OwnableUpgradeable {
     ACBLog memory log = acb_logs_[log_index];
     return (log.minted_coins, log.burned_coins, log.coin_supply_delta,
             log.bond_budget, log.total_coin_supply, log.total_bond_supply,
-            log.oracle_level, log.current_phase_start, log.burned_tax,
+            log.oracle_level, log.current_phase_start, log.tax,
             log.purchased_bonds, log.redeemed_bonds);
   }
   
@@ -965,25 +957,23 @@ contract Logging_v2 is OwnableUpgradeable {
   // |total_bond_supply|: The total bond supply.
   // |oracle_level|: ACB.oracle_level_.
   // |current_phase_start|: ACB.current_phase_start_.
-  // |burned_tax|: The amount of the burned tax.
+  // |tax|: The amount of the tax collected in the phase.
   //
   // Returns
   // ----------------
   // None.
   function phaseUpdated(uint minted, uint burned, int delta, int bond_budget,
                         uint total_coin_supply, uint total_bond_supply,
-                        uint oracle_level, uint current_phase_start,
-                        uint burned_tax)
+                        uint oracle_level, uint current_phase_start, uint tax)
       public onlyOwner {
     phaseUpdated_v2(minted, burned, delta, bond_budget, total_coin_supply,
-                    total_bond_supply, oracle_level, current_phase_start,
-                    burned_tax);
+                    total_bond_supply, oracle_level, current_phase_start, tax);
   }
 
   function phaseUpdated_v2(uint minted, uint burned, int delta, int bond_budget,
                            uint total_coin_supply, uint total_bond_supply,
                            uint oracle_level, uint current_phase_start,
-                           uint burned_tax)
+                           uint tax)
       public onlyOwner {
     log_index_ += 1;
     log_index_v2_ += 1;
@@ -1003,7 +993,7 @@ contract Logging_v2 is OwnableUpgradeable {
     acb_logs_[log_index_v2_].total_bond_supply = total_bond_supply;
     acb_logs_[log_index_v2_].oracle_level = oracle_level;
     acb_logs_[log_index_v2_].current_phase_start = current_phase_start;
-    acb_logs_[log_index_v2_].burned_tax = burned_tax;
+    acb_logs_[log_index_v2_].tax = tax;
     acb_logs_[log_index_v2_].new_value1 += minted;
     acb_logs_[log_index_v2_].new_value2 += burned;
 
@@ -1114,7 +1104,7 @@ contract Logging_v2 is OwnableUpgradeable {
 //    If that is not enough to supply sufficient coins, the ACB mints new coins
 //    and provides the coins to the oracle as a reward.
 // 4. If the exchange rate is smaller than 1.0, the ACB decreases the total coin
-//    supply by issuing new bonds and imposing tax on coin transfers.
+//    supply by issuing new bonds.
 //
 // Permission: All methods are public. No one (including the genesis account)
 // is privileged to influence the monetary policies of the ACB. The ACB
@@ -1136,7 +1126,6 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
   uint[] public LEVEL_TO_EXCHANGE_RATE;
   uint public EXCHANGE_RATE_DIVISOR;
   uint[] public LEVEL_TO_BOND_PRICE;
-  uint[] public LEVEL_TO_TAX_RATE;
   uint public PHASE_DURATION;
   uint public DEPOSIT_RATE;
   uint public DAMPING_FACTOR;
@@ -1287,7 +1276,6 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
       current_phase_start_ = current_phase_start_v2_;
       
       int delta = 0;
-      uint tax_rate = 0;
       oracle_level_ = oracle_v2_.getModeLevel();
       if (oracle_level_ != oracle_v2_.getLevelMax()) {
         require(0 <= oracle_level_ && oracle_level_ < oracle_v2_.getLevelMax(),
@@ -1307,31 +1295,25 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
         // To avoid increasing or decreasing too many coins in one phase,
         // multiply the damping factor.
         delta = delta * int(DAMPING_FACTOR) / 100;
-
-        // Translate the oracle level to the tax rate.
-        tax_rate = LEVEL_TO_TAX_RATE[oracle_level_];
       }
 
       // Increase or decrease the total coin supply.
       uint mint = _controlSupply(delta);
 
-      // Burn the tax. This is fine because the purpose of the tax is to
-      // decrease the total coin supply.
-      address tax_account = coin_v2_.tax_account_v2_();
-      uint burned_tax = coin_v2_.balanceOf(tax_account);
-      coin_v2_.burn(tax_account, burned_tax);
-      coin_v2_.setTaxRate(tax_rate);
-
-      // Advance to the next phase. Provide the |mint| coins to the oracle
+      // Advance to the next phase. Provide the |tax| coins to the oracle
       // as a reward.
+      uint tax = coin_v2_.balanceOf(coin_v2_.tax_account_v2_());
       coin_v2_.transferOwnership(address(oracle_v2_));
-      uint burned = oracle_v2_.advance(coin_v2_, mint);
+      uint burned = oracle_v2_.advance(coin_v2_);
       oracle_v2_.revokeOwnership(coin_v2_);
+      
+      // Reset the tax account address just in case.
+      coin_v2_.resetTaxAccount();
+      require(coin_v2_.balanceOf(coin_v2_.tax_account_v2_()) == 0, "vo2");
       
       logging_v2_.phaseUpdated(mint, burned, delta, bond_budget_,
                                coin_v2_.totalSupply(), bond_v2_.totalSupply(),
-                               oracle_level_, current_phase_start_v2_,
-                               burned_tax);
+                               oracle_level_, current_phase_start_v2_, tax);
     }
     
     coin_v2_.transferOwnership(address(oracle_v2_));

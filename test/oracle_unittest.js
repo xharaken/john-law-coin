@@ -30,19 +30,19 @@ function parameterized_test(accounts,
                             _level_max,
                             _reclaim_threshold,
                             _proportional_reward_rate,
-                            _mint,
+                            _tax,
                             _deposit,
                             _mode_level,
                             _other_level) {
   let test_name = "Oracle parameters: " + "level_max=" + _level_max +
       " reclaim=" + _reclaim_threshold +
       " prop=" + _proportional_reward_rate +
-      " mint=" + _mint + " deposit=" + _deposit +
+      " tax=" + _tax + " deposit=" + _deposit +
       " mode_level=" + _mode_level + " other_level=" + _other_level;
   console.log(test_name);
 
   it(test_name, async function () {
-    assert.isTrue(_mint >= 0);
+    assert.isTrue(_tax >= 0);
     assert.isTrue(_deposit >= 0);
     assert.isTrue(0 <= _mode_level && _mode_level < _level_max);
     assert.isTrue(0 <= _other_level && _other_level < _level_max);
@@ -64,16 +64,17 @@ function parameterized_test(accounts,
     assert.equal(current.phase_id % 3, 0);
 
     await should_throw(async () => {
-      await _oracle.advance(_coin.address, -1);
-    }, "out-of-bounds");
+      await _oracle.advance(-1);
+    }, "invalid");
 
     // no commit -> no reveal -> no reclaim
     assert.equal(await _oracle.getModeLevel(), _level_max);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
-    await check_advance(_mint, 0);
+    await _coin.mint(await _coin.tax_account_(), _tax);
+    await check_advance(0);
     current = await get_current(accounts);
-    assert.equal(await _coin.totalSupply(), coin_supply + _mint);
+    assert.equal(await _coin.totalSupply(), coin_supply + _tax);
     assert.equal(current.phase_id % 3, 1);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.REVEAL);
@@ -88,9 +89,9 @@ function parameterized_test(accounts,
     assert.equal(current.epochs[1].reward_total, 0);
     assert.equal(current.epochs[2].phase, Oracle.Phase.RECLAIM);
     assert.equal(current.epochs[2].votes.length, _level_max);
-    assert.equal(current.epochs[2].reward_balance, _mint);
+    assert.equal(current.epochs[2].reward_balance, _tax);
     assert.equal(current.epochs[2].deposit_balance, 0);
-    assert.equal(current.epochs[2].reward_total, _mint);
+    assert.equal(current.epochs[2].reward_total, _tax);
 
     await should_throw(async () => {
       await _oracle.reveal.call(accounts[1], -1, 1111);
@@ -102,16 +103,17 @@ function parameterized_test(accounts,
         accounts[1], _level_max, 1111)), false);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
-    await check_advance(_mint, _mint);
+    await _coin.mint(await _coin.tax_account_(), _tax);
+    await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
     assert.equal(current.phase_id % 3, 2);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.RECLAIM);
     assert.equal(current.epochs[0].votes.length, _level_max);
-    assert.equal(current.epochs[0].reward_balance, _mint);
+    assert.equal(current.epochs[0].reward_balance, _tax);
     assert.equal(current.epochs[0].deposit_balance, 0);
-    assert.equal(current.epochs[0].reward_total, _mint);
+    assert.equal(current.epochs[0].reward_total, _tax);
     assert.equal(current.epochs[1].phase, Oracle.Phase.REVEAL);
     assert.equal(current.epochs[1].votes.length, _level_max);
     assert.equal(current.epochs[1].reward_balance, 0);
@@ -127,7 +129,8 @@ function parameterized_test(accounts,
     array_equal(await _oracle.reclaim.call(_coin.address, accounts[1]), [0, 0]);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
-    await check_advance(_mint, _mint);
+    await _coin.mint(await _coin.tax_account_(), _tax);
+    await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
     assert.equal(current.phase_id % 3, 0);
@@ -139,9 +142,9 @@ function parameterized_test(accounts,
     assert.equal(current.epochs[0].reward_total, 0);
     assert.equal(current.epochs[1].phase, Oracle.Phase.RECLAIM);
     assert.equal(current.epochs[1].votes.length, _level_max);
-    assert.equal(current.epochs[1].reward_balance, _mint);
+    assert.equal(current.epochs[1].reward_balance, _tax);
     assert.equal(current.epochs[1].deposit_balance, 0);
-    assert.equal(current.epochs[1].reward_total, _mint);
+    assert.equal(current.epochs[1].reward_total, _tax);
     assert.equal(current.epochs[2].phase, Oracle.Phase.REVEAL);
     assert.equal(current.epochs[2].votes.length, _level_max);
     assert.equal(current.epochs[2].reward_balance, 0);
@@ -174,7 +177,8 @@ function parameterized_test(accounts,
             _deposit), false);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
-    await check_advance(_mint, _mint);
+    await _coin.mint(await _coin.tax_account_(), _tax);
+    await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
     assert.equal(current.phase_id % 3, 1);
@@ -198,9 +202,9 @@ function parameterized_test(accounts,
     assert.equal(current.epochs[1].reward_total, 0);
     assert.equal(current.epochs[2].phase, Oracle.Phase.RECLAIM);
     assert.equal(current.epochs[2].votes.length, _level_max);
-    assert.equal(current.epochs[2].reward_balance, _mint);
+    assert.equal(current.epochs[2].reward_balance, _tax);
     assert.equal(current.epochs[2].deposit_balance, 0);
-    assert.equal(current.epochs[2].reward_total, _mint);
+    assert.equal(current.epochs[2].reward_total, _tax);
 
     assert.equal(await _oracle.reveal.call(
         accounts[1], _level_max, 1111), false);
@@ -213,7 +217,8 @@ function parameterized_test(accounts,
     assert.equal(await _oracle.getModeLevel(), _mode_level);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
-    await check_advance(_mint, _mint);
+    await _coin.mint(await _coin.tax_account_(), _tax);
+    await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
     assert.equal(current.phase_id % 3, 2);
@@ -240,10 +245,10 @@ function parameterized_test(accounts,
         assert.equal(vote.should_reclaim, false);
       }
     }
-    assert.equal(current.epochs[0].reward_balance, _mint);
+    assert.equal(current.epochs[0].reward_balance, _tax);
     assert.equal(current.epochs[0].deposit_balance,
                  _deposit);
-    assert.equal(current.epochs[0].reward_total, _mint);
+    assert.equal(current.epochs[0].reward_total, _tax);
     assert.equal(current.epochs[1].phase, Oracle.Phase.REVEAL);
     assert.equal(current.epochs[1].votes.length, _level_max);
     assert.equal(current.epochs[1].reward_balance, 0);
@@ -255,19 +260,19 @@ function parameterized_test(accounts,
     assert.equal(current.epochs[2].deposit_balance, 0);
     assert.equal(current.epochs[2].reward_total, 0);
 
-    reclaim_amount = _deposit + _reward(_mint, 1);
+    reclaim_amount = _deposit + _reward(_tax, 1);
     balance = await balance_of(accounts[1]);
-    await check_reclaim(accounts[1], _deposit, _reward(_mint, 1));
+    await check_reclaim(accounts[1], _deposit, _reward(_tax, 1));
     assert.equal(await balance_of(accounts[1]), balance + reclaim_amount);
     array_equal(await _oracle.reclaim.call(_coin.address, accounts[1]), [0, 0]);
     array_equal(await _oracle.reclaim.call(_coin.address, accounts[2]), [0, 0]);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
-    await check_advance(_mint,
-                              _mint - _reward(_mint, 1) * 1);
+    await _coin.mint(await _coin.tax_account_(), _tax);
+    await check_advance(_tax - _reward(_tax, 1) * 1);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(),
-                 coin_supply + _reward(_mint, 1) * 1);
+                 coin_supply + _reward(_tax, 1) * 1);
     assert.equal(current.phase_id % 3, 0);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.COMMIT);
@@ -277,9 +282,9 @@ function parameterized_test(accounts,
     assert.equal(current.epochs[0].reward_total, 0);
     assert.equal(current.epochs[1].phase, Oracle.Phase.RECLAIM);
     assert.equal(current.epochs[1].votes.length, _level_max);
-    assert.equal(current.epochs[1].reward_balance, _mint);
+    assert.equal(current.epochs[1].reward_balance, _tax);
     assert.equal(current.epochs[1].deposit_balance, 0);
-    assert.equal(current.epochs[1].reward_total, _mint);
+    assert.equal(current.epochs[1].reward_total, _tax);
     assert.equal(current.epochs[2].phase, Oracle.Phase.REVEAL);
     assert.equal(current.epochs[2].votes.length, _level_max);
     assert.equal(current.epochs[2].reward_balance, 0);
@@ -299,7 +304,8 @@ function parameterized_test(accounts,
     assert.equal(await balance_of(accounts[1]), balance - _deposit);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
-    await check_advance(_mint, _mint);
+    await _coin.mint(await _coin.tax_account_(), _tax);
+    await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
     assert.equal(current.phase_id % 3, 1);
@@ -323,9 +329,9 @@ function parameterized_test(accounts,
     assert.equal(current.epochs[1].reward_total, 0);
     assert.equal(current.epochs[2].phase, Oracle.Phase.RECLAIM);
     assert.equal(current.epochs[2].votes.length, _level_max);
-    assert.equal(current.epochs[2].reward_balance, _mint);
+    assert.equal(current.epochs[2].reward_balance, _tax);
     assert.equal(current.epochs[2].deposit_balance, 0);
-    assert.equal(current.epochs[2].reward_total, _mint);
+    assert.equal(current.epochs[2].reward_total, _tax);
 
     await check_reveal(accounts[1], _mode_level, 1111);
 
@@ -339,7 +345,8 @@ function parameterized_test(accounts,
     assert.equal(await _oracle.getModeLevel(), _mode_level);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
-    await check_advance(_mint, _mint);
+    await _coin.mint(await _coin.tax_account_(), _tax);
+    await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
     assert.equal(current.phase_id % 3, 2);
@@ -365,10 +372,10 @@ function parameterized_test(accounts,
         assert.equal(vote.should_reclaim, false);
       }
     }
-    assert.equal(current.epochs[0].reward_balance, _mint);
+    assert.equal(current.epochs[0].reward_balance, _tax);
     assert.equal(current.epochs[0].deposit_balance,
                  _deposit);
-    assert.equal(current.epochs[0].reward_total, _mint);
+    assert.equal(current.epochs[0].reward_total, _tax);
     assert.equal(current.epochs[1].phase, Oracle.Phase.REVEAL);
     assert.equal(current.epochs[1].commits[accounts[1]].committed_hash,
                  await _oracle.hash(accounts[1], _mode_level, 1111));
@@ -387,9 +394,9 @@ function parameterized_test(accounts,
     assert.equal(current.epochs[2].deposit_balance, 0);
     assert.equal(current.epochs[2].reward_total, 0);
 
-    reclaim_amount = _deposit + _reward(_mint, 1);
+    reclaim_amount = _deposit + _reward(_tax, 1);
     balance = await balance_of(accounts[1]);
-    await check_reclaim(accounts[1], _deposit, _reward(_mint, 1));
+    await check_reclaim(accounts[1], _deposit, _reward(_tax, 1));
     assert.equal(await balance_of(accounts[1]), balance + reclaim_amount);
 
     await check_reveal(accounts[1], _mode_level, 1111);
@@ -404,11 +411,11 @@ function parameterized_test(accounts,
     assert.equal(await _oracle.getModeLevel(), _mode_level);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
-    await check_advance(_mint,
-                              _mint - _reward(_mint, 1) * 1);
+    await _coin.mint(await _coin.tax_account_(), _tax);
+    await check_advance(_tax - _reward(_tax, 1) * 1);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(),
-                 coin_supply + _reward(_mint, 1) * 1);
+                 coin_supply + _reward(_tax, 1) * 1);
     assert.equal(current.phase_id % 3, 0);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.COMMIT);
@@ -437,10 +444,10 @@ function parameterized_test(accounts,
         assert.equal(vote.should_reclaim, false);
       }
     }
-    assert.equal(current.epochs[1].reward_balance, _mint);
+    assert.equal(current.epochs[1].reward_balance, _tax);
     assert.equal(current.epochs[1].deposit_balance,
                  _deposit);
-    assert.equal(current.epochs[1].reward_total, _mint);
+    assert.equal(current.epochs[1].reward_total, _tax);
     assert.equal(current.epochs[2].phase, Oracle.Phase.REVEAL);
     assert.equal(current.epochs[2].commits[accounts[1]].committed_hash,
                  await _oracle.hash(accounts[1], _mode_level, 1111));
@@ -454,9 +461,9 @@ function parameterized_test(accounts,
                  _deposit);
     assert.equal(current.epochs[2].reward_total, 0);
 
-    reclaim_amount = _deposit + _reward(_mint, 1);
+    reclaim_amount = _deposit + _reward(_tax, 1);
     balance = await balance_of(accounts[1]);
-    await check_reclaim(accounts[1], _deposit, _reward(_mint, 1));
+    await check_reclaim(accounts[1], _deposit, _reward(_tax, 1));
     assert.equal(await balance_of(accounts[1]), balance + reclaim_amount);
 
     await check_reveal(accounts[1], _mode_level, 1111);
@@ -464,11 +471,11 @@ function parameterized_test(accounts,
     assert.equal(await _oracle.getModeLevel(), _mode_level);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
-    await check_advance(_mint,
-                              _mint - _reward(_mint, 1) * 1);
+    await _coin.mint(await _coin.tax_account_(), _tax);
+    await check_advance(_tax - _reward(_tax, 1) * 1);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(),
-                 coin_supply + _reward(_mint, 1) * 1);
+                 coin_supply + _reward(_tax, 1) * 1);
     assert.equal(current.phase_id % 3, 1);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.REVEAL);
@@ -502,31 +509,31 @@ function parameterized_test(accounts,
         assert.equal(vote.should_reclaim, false);
       }
     }
-    assert.equal(current.epochs[2].reward_balance, _mint);
+    assert.equal(current.epochs[2].reward_balance, _tax);
     assert.equal(current.epochs[2].deposit_balance,
                  _deposit);
-    assert.equal(current.epochs[2].reward_total, _mint);
+    assert.equal(current.epochs[2].reward_total, _tax);
 
-    reclaim_amount = _deposit + _reward(_mint, 1);
+    reclaim_amount = _deposit + _reward(_tax, 1);
     balance = await balance_of(accounts[1]);
-    await check_reclaim(accounts[1], _deposit, _reward(_mint, 1));
+    await check_reclaim(accounts[1], _deposit, _reward(_tax, 1));
     assert.equal(await balance_of(accounts[1]), balance + reclaim_amount);
 
     assert.equal(await _oracle.getModeLevel(), _level_max);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
-    await check_advance(_mint,
-                              _mint - _reward(_mint, 1) * 1);
+    await _coin.mint(await _coin.tax_account_(), _tax);
+    await check_advance(_tax - _reward(_tax, 1) * 1);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(),
-                 coin_supply + _reward(_mint, 1) * 1);
+                 coin_supply + _reward(_tax, 1) * 1);
     assert.equal(current.phase_id % 3, 2);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.RECLAIM);
     assert.equal(current.epochs[0].votes.length, _level_max);
-    assert.equal(current.epochs[0].reward_balance, _mint);
+    assert.equal(current.epochs[0].reward_balance, _tax);
     assert.equal(current.epochs[0].deposit_balance, 0);
-    assert.equal(current.epochs[0].reward_total, _mint);
+    assert.equal(current.epochs[0].reward_total, _tax);
     assert.equal(current.epochs[1].phase, Oracle.Phase.REVEAL);
     assert.equal(current.epochs[1].votes.length, _level_max);
     assert.equal(current.epochs[1].reward_balance, 0);
@@ -539,7 +546,8 @@ function parameterized_test(accounts,
     assert.equal(current.epochs[2].reward_total, 0);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
-    await check_advance(_mint, _mint);
+    await _coin.mint(await _coin.tax_account_(), _tax);
+    await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
 
@@ -586,7 +594,8 @@ function parameterized_test(accounts,
     assert.equal(await balance_of(accounts[6]), balance - _deposit);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
-    await check_advance(_mint, _mint);
+    await _coin.mint(await _coin.tax_account_(), _tax);
+    await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
     assert.equal(current.phase_id % 3, 1);
@@ -650,7 +659,8 @@ function parameterized_test(accounts,
     assert.equal(await _oracle.getModeLevel(), _mode_level);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
-    await check_advance(_mint, _mint);
+    await _coin.mint(await _coin.tax_account_(), _tax);
+    await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
     assert.equal(current.phase_id % 3, 2);
@@ -683,40 +693,40 @@ function parameterized_test(accounts,
       }
     }
     assert.equal(current.epochs[0].reward_balance,
-                 _mint);
+                 _tax);
     assert.equal(current.epochs[0].deposit_balance,
                  _deposit * 6);
-    assert.equal(current.epochs[0].reward_total, _mint);
+    assert.equal(current.epochs[0].reward_total, _tax);
 
 
-    reclaim_amount = _deposit + _reward(_mint, 6);
+    reclaim_amount = _deposit + _reward(_tax, 6);
     balance = await balance_of(accounts[6]);
-    await check_reclaim(accounts[6], _deposit, _reward(_mint, 6));
+    await check_reclaim(accounts[6], _deposit, _reward(_tax, 6));
     assert.equal(await balance_of(accounts[6]), balance + reclaim_amount);
     balance = await balance_of(accounts[5]);
-    await check_reclaim(accounts[5], _deposit, _reward(_mint, 6));
+    await check_reclaim(accounts[5], _deposit, _reward(_tax, 6));
     assert.equal(await balance_of(accounts[5]), balance + reclaim_amount);
     balance = await balance_of(accounts[4]);
-    await check_reclaim(accounts[4], _deposit, _reward(_mint, 6));
+    await check_reclaim(accounts[4], _deposit, _reward(_tax, 6));
     assert.equal(await balance_of(accounts[4]), balance + reclaim_amount);
     balance = await balance_of(accounts[3]);
-    await check_reclaim(accounts[3], _deposit, _reward(_mint, 6));
+    await check_reclaim(accounts[3], _deposit, _reward(_tax, 6));
     assert.equal(await balance_of(accounts[3]), balance + reclaim_amount);
     balance = await balance_of(accounts[2]);
-    await check_reclaim(accounts[2], _deposit, _reward(_mint, 6));
+    await check_reclaim(accounts[2], _deposit, _reward(_tax, 6));
     assert.equal(await balance_of(accounts[2]), balance + reclaim_amount);
     balance = await balance_of(accounts[1]);
-    await check_reclaim(accounts[1], _deposit, _reward(_mint, 6));
+    await check_reclaim(accounts[1], _deposit, _reward(_tax, 6));
     assert.equal(await balance_of(accounts[1]), balance + reclaim_amount);
     array_equal(await _oracle.reclaim.call(_coin.address, accounts[6]), [0, 0]);
     array_equal(await _oracle.reclaim.call(_coin.address, accounts[7]), [0, 0]);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
-    await check_advance(_mint,
-                              _mint - _reward(_mint, 6) * 6);
+    await _coin.mint(await _coin.tax_account_(), _tax);
+    await check_advance(_tax - _reward(_tax, 6) * 6);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(),
-                 coin_supply + _reward(_mint, 6) * 6);
+                 coin_supply + _reward(_tax, 6) * 6);
     assert.equal(current.phase_id % 3, 0);
     assert.equal(current.mode_level, _level_max);
     assert.equal(current.epochs[0].phase, Oracle.Phase.COMMIT);
@@ -768,7 +778,8 @@ function parameterized_test(accounts,
     assert.equal(await balance_of(accounts[6]), balance - _deposit);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
-    await check_advance(_mint, _mint);
+    await _coin.mint(await _coin.tax_account_(), _tax);
+    await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
     assert.equal(current.phase_id % 3, 1);
@@ -832,7 +843,8 @@ function parameterized_test(accounts,
     assert.equal(await _oracle.getModeLevel(), _mode_level);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
-    await check_advance(_mint, _mint);
+    await _coin.mint(await _coin.tax_account_(), _tax);
+    await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
     assert.equal(current.phase_id % 3, 2);
@@ -865,16 +877,16 @@ function parameterized_test(accounts,
       }
     }
     assert.equal(current.epochs[0].reward_balance,
-                 _mint);
+                 _tax);
     assert.equal(current.epochs[0].deposit_balance,
                  _deposit * 6);
-    assert.equal(current.epochs[0].reward_total, _mint);
+    assert.equal(current.epochs[0].reward_total, _tax);
 
     array_equal(await _oracle.reclaim.call(_coin.address, accounts[7]), [0, 0]);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
-    await check_advance(_mint,
-                              _mint + _deposit * 6);
+    await _coin.mint(await _coin.tax_account_(), _tax);
+    await check_advance(_tax + _deposit * 6);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(),
                  coin_supply - _deposit * 6);
@@ -929,7 +941,8 @@ function parameterized_test(accounts,
     assert.equal(await balance_of(accounts[6]), balance - _deposit);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
-    await check_advance(_mint, _mint);
+    await _coin.mint(await _coin.tax_account_(), _tax);
+    await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
     assert.equal(current.phase_id % 3, 1);
@@ -993,7 +1006,8 @@ function parameterized_test(accounts,
     assert.equal(await _oracle.getModeLevel(), _mode_level);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
-    await check_advance(_mint, _mint);
+    await _coin.mint(await _coin.tax_account_(), _tax);
+    await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
     assert.equal(current.phase_id % 3, 2);
@@ -1029,10 +1043,10 @@ function parameterized_test(accounts,
     reward_total = 0;
     deposit_total = 0;
     if (_is_in_reclaim_threshold(_other_level)) {
-      reward_total = _mint;
+      reward_total = _tax;
       deposit_total = _deposit * 6;
     } else {
-      reward_total = _mint + _deposit * 2;
+      reward_total = _tax + _deposit * 2;
       deposit_total = _deposit * 4;
       assert.equal(current.epochs[0].reward_balance,
                    reward_total);
@@ -1070,11 +1084,11 @@ function parameterized_test(accounts,
     array_equal(await _oracle.reclaim.call(_coin.address, accounts[7]), [0, 0]);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
-    await check_advance(_mint,
-                              reward_total - _reward(reward_total, 4) * 4);
+    await _coin.mint(await _coin.tax_account_(), _tax);
+    await check_advance(reward_total - _reward(reward_total, 4) * 4);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(),
-                 coin_supply + _mint - reward_total +
+                 coin_supply + _tax - reward_total +
                  _reward(reward_total, 4) * 4);
     assert.equal(current.phase_id % 3, 0);
     assert.equal(current.mode_level, _level_max);
@@ -1127,7 +1141,8 @@ function parameterized_test(accounts,
     assert.equal(await balance_of(accounts[6]), balance - _deposit);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
-    await check_advance(_mint, _mint);
+    await _coin.mint(await _coin.tax_account_(), _tax);
+    await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
     assert.equal(current.phase_id % 3, 1);
@@ -1191,7 +1206,8 @@ function parameterized_test(accounts,
     assert.equal(await _oracle.getModeLevel(), _mode_level);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
-    await check_advance(_mint, _mint);
+    await _coin.mint(await _coin.tax_account_(), _tax);
+    await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
     assert.equal(current.phase_id % 3, 2);
@@ -1227,10 +1243,10 @@ function parameterized_test(accounts,
     reward_total = 0;
     deposit_total = 0;
     if (_is_in_reclaim_threshold(_other_level)) {
-      reward_total = _mint;
+      reward_total = _tax;
       deposit_total = _deposit * 6;
     } else {
-      reward_total = _mint + _deposit * 2;
+      reward_total = _tax + _deposit * 2;
       deposit_total = _deposit * 4;
       assert.equal(current.epochs[0].reward_balance,
                    reward_total);
@@ -1241,8 +1257,8 @@ function parameterized_test(accounts,
     array_equal(await _oracle.reclaim.call(_coin.address, accounts[7]), [0, 0]);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
-    await check_advance(_mint,
-                              _mint + _deposit * 6);
+    await _coin.mint(await _coin.tax_account_(), _tax);
+    await check_advance(_tax + _deposit * 6);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(),
                  coin_supply - _deposit * 6);
@@ -1305,7 +1321,8 @@ function parameterized_test(accounts,
     assert.equal(await balance_of(accounts[6]), balance - _deposit);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
-    await check_advance(_mint, _mint);
+    await _coin.mint(await _coin.tax_account_(), _tax);
+    await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
     assert.equal(current.phase_id % 3, 1);
@@ -1375,7 +1392,8 @@ function parameterized_test(accounts,
     assert.equal(await _oracle.getModeLevel(), real_mode_level);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
-    await check_advance(_mint, _mint);
+    await _coin.mint(await _coin.tax_account_(), _tax);
+    await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
     assert.equal(current.phase_id % 3, 2);
@@ -1413,10 +1431,10 @@ function parameterized_test(accounts,
     deposit_total = 0;
     if (real_mode_level - _reclaim_threshold <= real_other_level &&
         real_other_level <= real_mode_level + _reclaim_threshold) {
-      reward_total = _mint;
+      reward_total = _tax;
       deposit_total = _deposit * 6;
     } else {
-      reward_total = _mint + _deposit * 3;
+      reward_total = _tax + _deposit * 3;
       deposit_total = _deposit * 3;
       assert.equal(current.epochs[0].reward_balance,
                    reward_total);
@@ -1457,10 +1475,10 @@ function parameterized_test(accounts,
     array_equal(await _oracle.reclaim.call(_coin.address, accounts[7]), [0, 0]);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
-    await check_advance(_mint,
-                              reward_total - _reward(reward_total, 3) * 3);
+    await _coin.mint(await _coin.tax_account_(), _tax);
+    await check_advance(reward_total - _reward(reward_total, 3) * 3);
     current = await get_current(accounts);
-    assert.equal(await _coin.totalSupply(), coin_supply + _mint -
+    assert.equal(await _coin.totalSupply(), coin_supply + _tax -
                  reward_total + _reward(reward_total, 3) * 3);
     assert.equal(current.phase_id % 3, 0);
     assert.equal(current.mode_level, _level_max);
@@ -1520,7 +1538,8 @@ function parameterized_test(accounts,
     assert.equal(await balance_of(accounts[6]), balance - _deposit);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
-    await check_advance(_mint, _mint);
+    await _coin.mint(await _coin.tax_account_(), _tax);
+    await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
     assert.equal(current.phase_id % 3, 1);
@@ -1591,7 +1610,8 @@ function parameterized_test(accounts,
                  Math.min(real_mode_level, real_other_level));
 
     coin_supply = (await _coin.totalSupply()).toNumber();
-    await check_advance(_mint, _mint);
+    await _coin.mint(await _coin.tax_account_(), _tax);
+    await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
     assert.equal(current.phase_id % 3, 2);
@@ -1629,10 +1649,10 @@ function parameterized_test(accounts,
     deposit_total = 0;
     if (real_mode_level - _reclaim_threshold <= real_other_level &&
         real_other_level <= real_mode_level + _reclaim_threshold) {
-      reward_total = _mint;
+      reward_total = _tax;
       deposit_total = _deposit * 6;
     } else {
-      reward_total = _mint + _deposit * 3;
+      reward_total = _tax + _deposit * 3;
       deposit_total = _deposit * 3;
       assert.equal(current.epochs[0].reward_balance,
                    reward_total);
@@ -1643,8 +1663,8 @@ function parameterized_test(accounts,
     array_equal(await _oracle.reclaim.call(_coin.address, accounts[7]), [0, 0]);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
-    await check_advance(_mint,
-                              _mint + _deposit * 6);
+    await _coin.mint(await _coin.tax_account_(), _tax);
+    await check_advance(_tax + _deposit * 6);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(),
                  coin_supply - _deposit * 6);
@@ -1699,7 +1719,8 @@ function parameterized_test(accounts,
     assert.equal(await balance_of(accounts[6]), balance - _deposit);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
-    await check_advance(_mint, _mint);
+    await _coin.mint(await _coin.tax_account_(), _tax);
+    await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
     assert.equal(current.phase_id % 3, 1);
@@ -1772,7 +1793,8 @@ function parameterized_test(accounts,
     assert.equal(await _oracle.getModeLevel(), _mode_level);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
-    await check_advance(_mint, _mint);
+    await _coin.mint(await _coin.tax_account_(), _tax);
+    await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
     assert.equal(current.phase_id % 3, 2);
@@ -1808,10 +1830,10 @@ function parameterized_test(accounts,
     reward_total = 0;
     deposit_total = 0;
     if (_is_in_reclaim_threshold(_other_level)) {
-      reward_total = _mint + _deposit * 3;
+      reward_total = _tax + _deposit * 3;
       deposit_total = _deposit * 3;
     } else {
-      reward_total = _mint + _deposit * 4;
+      reward_total = _tax + _deposit * 4;
       deposit_total = _deposit * 2;
       assert.equal(current.epochs[0].reward_balance,
                    reward_total);
@@ -1845,10 +1867,10 @@ function parameterized_test(accounts,
     array_equal(await _oracle.reclaim.call(_coin.address, accounts[7]), [0, 0]);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
-    await check_advance(_mint,
-                              reward_total - _reward(reward_total, 2) * 2);
+    await _coin.mint(await _coin.tax_account_(), _tax);
+    await check_advance(reward_total - _reward(reward_total, 2) * 2);
     current = await get_current(accounts);
-    assert.equal(await _coin.totalSupply(), coin_supply + _mint -
+    assert.equal(await _coin.totalSupply(), coin_supply + _tax -
                  reward_total + _reward(reward_total, 2) * 2);
     assert.equal(current.phase_id % 3, 0);
     assert.equal(current.mode_level, _level_max);
@@ -1902,7 +1924,8 @@ function parameterized_test(accounts,
     assert.equal(await balance_of(accounts[6]), balance - _deposit);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
-    await check_advance(_mint, _mint);
+    await _coin.mint(await _coin.tax_account_(), _tax);
+    await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
     assert.equal(current.phase_id % 3, 1);
@@ -1967,7 +1990,8 @@ function parameterized_test(accounts,
     assert.equal(await _oracle.getModeLevel(), _mode_level);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
-    await check_advance(_mint, _mint);
+    await _coin.mint(await _coin.tax_account_(), _tax);
+    await check_advance(_tax);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(), coin_supply);
     assert.equal(current.phase_id % 3, 2);
@@ -2003,10 +2027,10 @@ function parameterized_test(accounts,
     reward_total = 0;
     deposit_total = 0;
     if (_is_in_reclaim_threshold(_other_level)) {
-      reward_total = _mint + _deposit * 3;
+      reward_total = _tax + _deposit * 3;
       deposit_total = _deposit * 3;
     } else {
-      reward_total = _mint + _deposit * 4;
+      reward_total = _tax + _deposit * 4;
       deposit_total = _deposit * 2;
       assert.equal(current.epochs[0].reward_balance,
                    reward_total);
@@ -2020,8 +2044,8 @@ function parameterized_test(accounts,
     array_equal(await _oracle.reclaim.call(_coin.address, accounts[7]), [0, 0]);
 
     coin_supply = (await _coin.totalSupply()).toNumber();
-    await check_advance(_mint,
-                              _mint + _deposit * 6);
+    await _coin.mint(await _coin.tax_account_(), _tax);
+    await check_advance(_tax + _deposit * 6);
     current = await get_current(accounts);
     assert.equal(await _coin.totalSupply(),
                  coin_supply - _deposit * 6);
@@ -2033,8 +2057,8 @@ function parameterized_test(accounts,
     assert.equal(current.epochs[0].deposit_balance, 0);
     assert.equal(current.epochs[0].reward_total, 0);
 
-    await check_advance(0, _mint);
-    await check_advance(0, 0);
+    await check_advance(_tax);
+    await check_advance(0);
 
     let balance_total = (await balance_of(accounts[0]) +
                          await balance_of(accounts[1]) +
@@ -2079,7 +2103,7 @@ function parameterized_test(accounts,
     }, "Ownable");
 
     await should_throw(async () => {
-      await _oracle.advance(_coin.address, 1, {from: accounts[1]});
+      await _oracle.advance(_coin.address, {from: accounts[1]});
     }, "Ownable");
 
     await should_throw(async () => {
@@ -2103,7 +2127,7 @@ function parameterized_test(accounts,
     }, "Ownable");
 
     await should_throw(async () => {
-      await _oracle.advance(_coin.address, 1, {from: accounts[2]});
+      await _oracle.advance(_coin.address, {from: accounts[2]});
     }, "Ownable");
 
     await should_throw(async () => {
@@ -2139,9 +2163,9 @@ function parameterized_test(accounts,
       await _oracle.getModeLevel({from: accounts[3]});
     }, "Ownable");
 
-    await _oracle.advance(_coin.address, 1, {from: accounts[2]});
+    await _oracle.advance(_coin.address, {from: accounts[2]});
     await should_throw(async () => {
-      await _oracle.advance(_coin.address, 1, {from: accounts[3]});
+      await _oracle.advance(_coin.address, {from: accounts[3]});
     }, "Ownable");
 
     await _oracle.revokeOwnership(_coin.address, {from: accounts[2]});
@@ -2214,14 +2238,13 @@ function parameterized_test(accounts,
       assert.equal(args.rewarded, reward);
     }
 
-    async function check_advance(mint, burned) {
+    async function check_advance(burned) {
       await _coin.transferOwnership(_oracle.address);
-      let receipt = await _oracle.advance(_coin.address, mint);
+      let receipt = await _oracle.advance(_coin.address);
       await _oracle.revokeOwnership(_coin.address);
       let args = receipt.logs.filter(
           e => e.event == 'AdvancePhaseEvent')[0].args;
       assert.isTrue(args.phase_id >= 3);
-      assert.equal(args.minted, mint);
       assert.equal(args.burned, burned);
     }
 

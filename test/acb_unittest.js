@@ -39,8 +39,8 @@ function parameterized_test(accounts,
                             _damping_factor,
                             _level_to_exchange_rate,
                             _level_to_bond_price,
-                            _level_to_tax_rate,
-                            _reclaim_threshold) {
+                            _reclaim_threshold,
+                            _tax) {
   let test_name = "ACB parameters:" +
       " bond_redemp_price=" + _bond_redemption_price +
       " bond_redemp_period=" + _bond_redemption_period +
@@ -50,8 +50,8 @@ function parameterized_test(accounts,
       " damping_factor=" + _damping_factor +
       " level_to_exchange_rate=" + _level_to_exchange_rate +
       " level_to_bond_price=" + _level_to_bond_price +
-      " level_to_tax_rate=" + _level_to_tax_rate +
-      " reclaim=" + _reclaim_threshold;
+      " reclaim=" + _reclaim_threshold +
+      " tax=" + _tax;
   console.log(test_name);
 
   it(test_name, async function () {
@@ -92,10 +92,10 @@ function parameterized_test(accounts,
                                  _damping_factor,
                                  _level_to_exchange_rate,
                                  _level_to_bond_price,
-                                 _level_to_tax_rate,
                                  {from: accounts[1]});
 
     let _initial_coin_supply = (await _coin.totalSupply()).toNumber();
+    let _tax_rate = await _coin.TAX_RATE();
     assert.equal(await _acb.paused(), false);
 
     let _default_level;
@@ -160,6 +160,23 @@ function parameterized_test(accounts,
       assert.equal(current.balances[accounts[2]], 0);
       assert.equal(current.balances[accounts[3]], 11);
       await _coin.transfer(accounts[1], 11, {from: accounts[3]});
+      current = await get_current(sub_accounts, []);
+      assert.equal(current.balances[accounts[1]], _initial_coin_supply);
+      assert.equal(current.balances[accounts[2]], 0);
+      assert.equal(current.balances[accounts[3]], 0);
+      assert.equal(current.coin_supply, _initial_coin_supply);
+      await _coin.transfer(accounts[2], 1000, {from: accounts[1]});
+      current = await get_current(sub_accounts, []);
+      assert.equal(current.balances[accounts[1]], _initial_coin_supply - 1000);
+      assert.equal(current.balances[accounts[2]], 990);
+      assert.equal(await _coin.balanceOf(await _coin.tax_account_()), 10);
+      await _coin.transfer(accounts[1], 990, {from: accounts[2]});
+      current = await get_current(sub_accounts, []);
+      assert.equal(current.balances[accounts[1]], _initial_coin_supply - 19);
+      assert.equal(current.balances[accounts[2]], 0);
+      assert.equal(await _coin.balanceOf(await _coin.tax_account_()), 19);
+      await _acb.moveCoin(await _coin.tax_account_(), accounts[1], 19,
+                          {from: accounts[1]});
       current = await get_current(sub_accounts, []);
       assert.equal(current.balances[accounts[1]], _initial_coin_supply);
       assert.equal(current.balances[accounts[2]], 0);
@@ -321,10 +338,10 @@ function parameterized_test(accounts,
           (await _acb.getTimestamp()).toNumber() + _bond_redemption_period;
       redemptions = [t1];
 
-      await _coin.transfer(
-          accounts[2], bond_price * 30, {from: accounts[1]});
-      await _coin.transfer(
-          accounts[3], bond_price * 50, {from: accounts[1]});
+      await _acb.moveCoin(
+        accounts[1], accounts[2], bond_price * 30, {from: accounts[1]});
+      await _acb.moveCoin(
+        accounts[1], accounts[3], bond_price * 50, {from: accounts[1]});
       await should_throw(async () => {
         await _acb.purchaseBonds.call(1, {from: accounts[4]});
       }, "PurchaseBonds");
@@ -441,8 +458,10 @@ function parameterized_test(accounts,
       assert.equal(current.coin_supply,
                    coin_supply - bond_price * 80);
 
-      await _coin.transfer(accounts[2], bond_price * 10, {from: accounts[1]});
-      await _coin.transfer(accounts[3], bond_price * 10, {from: accounts[1]});
+      await _acb.moveCoin(accounts[1], accounts[2],
+                          bond_price * 10, {from: accounts[1]});
+      await _acb.moveCoin(accounts[1], accounts[3],
+                          bond_price * 10, {from: accounts[1]});
       await should_throw(async () => {
         await _acb.purchaseBonds.call(1, {from: accounts[2]});
       }, "PurchaseBonds");
@@ -589,10 +608,12 @@ function parameterized_test(accounts,
       assert.equal(current.bond_budget, 100);
 
       balance = current.balances[accounts[2]];
-      await _coin.transfer(accounts[1], balance, {from: accounts[2]});
+      await _acb.moveCoin(accounts[2], accounts[1],
+                          balance, {from: accounts[1]});
       current = await get_current(sub_accounts, redemptions);
       assert.equal(current.balances[accounts[2]], 0);
-      await _coin.transfer(accounts[2], 100 * bond_price, {from: accounts[1]});
+      await _acb.moveCoin(accounts[1], accounts[2],
+                          100 * bond_price, {from: accounts[1]});
       await check_purchase_bonds(20, {from: accounts[2]}, t4);
       await _acb.setTimestamp((await _acb.getTimestamp()).toNumber() + 1,
                               {from: accounts[1]});
@@ -831,14 +852,15 @@ function parameterized_test(accounts,
     }
 
     await _acb.setTimestamp(
-        (await _acb.getTimestamp()).toNumber() + _phase_duration,
-        {from: accounts[1]});
+      (await _acb.getTimestamp()).toNumber() + _phase_duration,
+      {from: accounts[1]});
 
     let remainder = [0, 0, 0];
     let deposit_4 = [0, 0, 0];
     let deposit_5 = [0, 0, 0];
     let deposit_6 = [0, 0, 0];
     let now = 0;
+    await set_tax();
     sub_accounts = accounts.slice(4, 7);
 
     await move_coins(accounts[1], accounts[4], 100);
@@ -880,10 +902,11 @@ function parameterized_test(accounts,
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
+    await set_tax();
 
+    current = await get_current(sub_accounts, []);
     balance = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance * _deposit_rate / 100);
-    current = await get_current(sub_accounts, []);
     assert.equal(current.current_phase_start,
                  await _acb.getTimestamp() - _phase_duration);
     await check_vote(await _acb.hash(_default_level, 2, {from: accounts[4]}),
@@ -906,18 +929,19 @@ function parameterized_test(accounts,
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
-    let mint = await _mint_at_default_level();
+    await set_tax();
+    let mint = await mint_at_default_level();
 
+    current = await get_current(sub_accounts, []);
     balance = current.balances[accounts[4]];
     reward = Math.trunc((100 - _proportional_reward_rate) *
-                        mint / 100);
+                        _tax / 100);
     if (deposit_4[mod(now - 2, 3)] > 0) {
       reward += Math.trunc(_proportional_reward_rate *
-                           mint / 100);
+                           _tax / 100);
     }
-    remainder[mod(now, 3)] = mint - reward;
+    remainder[mod(now, 3)] = _tax - reward;
     deposit_4[mod(now, 3)] = Math.trunc(balance * _deposit_rate / 100);
-    current = await get_current(sub_accounts, []);
     assert.equal(current.current_phase_start,
                  await _acb.getTimestamp() - _phase_duration);
     await check_vote(await _acb.hash(_default_level, 3, {from: accounts[4]}),
@@ -942,11 +966,13 @@ function parameterized_test(accounts,
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
+    await set_tax();
     mint = 0;
 
+    current = await get_current(sub_accounts, []);
     balance = current.balances[accounts[4]];
     coin_supply = current.coin_supply;
-    remainder[mod(now, 3)] = deposit_4[mod(now - 2, 3)] + mint;
+    remainder[mod(now, 3)] = deposit_4[mod(now - 2, 3)] + _tax;
     deposit_4[mod(now, 3)] = Math.trunc(balance * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 4, {from: accounts[4]}),
                      _default_level, 3, {from: accounts[4]},
@@ -962,24 +988,26 @@ function parameterized_test(accounts,
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[4]], balance);
     assert.equal(current.coin_supply,
-                 coin_supply + mint -
+                 coin_supply -
                  remainder[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
-    mint = await _mint_at_default_level();
+    await set_tax();
+    mint = await mint_at_default_level();
 
+    current = await get_current(sub_accounts, []);
     balance = current.balances[accounts[4]];
     coin_supply = current.coin_supply;
     reward = Math.trunc((100 - _proportional_reward_rate) *
-                        mint / 100);
+                        _tax / 100);
     if( deposit_4[mod(now - 2, 3)] > 0) {
       reward += Math.trunc(_proportional_reward_rate *
-                           mint / 100);
+                           _tax / 100);
     }
-    remainder[mod(now, 3)] = mint - reward;
+    remainder[mod(now, 3)] = _tax - reward;
     deposit_4[mod(now, 3)] = Math.trunc(balance * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 5, {from: accounts[4]}),
                      _default_level, 4, {from: accounts[4]},
@@ -997,24 +1025,26 @@ function parameterized_test(accounts,
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[4]], balance);
     assert.equal(current.coin_supply,
-                 coin_supply + mint -
+                 coin_supply -
                  remainder[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
-    mint = await _mint_at_default_level();
+    await set_tax();
+    mint = await mint_at_default_level();
 
+    current = await get_current(sub_accounts, []);
     balance = current.balances[accounts[4]];
     coin_supply = current.coin_supply;
     reward = Math.trunc((100 - _proportional_reward_rate) *
-                        mint / 100);
+                        _tax / 100);
     if (deposit_4[mod(now - 2, 3)] > 0) {
       reward += Math.trunc(_proportional_reward_rate *
-                           await _mint_at_default_level() / 100);
+                           _tax / 100);
     }
-    remainder[mod(now, 3)] = mint - reward;
+    remainder[mod(now, 3)] = _tax - reward;
     deposit_4[mod(now, 3)] = Math.trunc(balance * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 6, {from: accounts[4]}),
                      _default_level, 5, {from: accounts[4]},
@@ -1032,7 +1062,7 @@ function parameterized_test(accounts,
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[4]], balance);
     assert.equal(current.coin_supply,
-                 coin_supply + mint -
+                 coin_supply -
                  remainder[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
@@ -1042,17 +1072,19 @@ function parameterized_test(accounts,
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
-    mint = await _mint_at_default_level();
+    await set_tax();
+    mint = await mint_at_default_level();
 
+    current = await get_current(sub_accounts, []);
     balance = current.balances[accounts[4]];
     coin_supply = current.coin_supply;
     reward = Math.trunc((100 - _proportional_reward_rate) *
-                        mint / 100);
+                        _tax / 100);
     if (deposit_4[mod(now - 2, 3)] > 0) {
       reward += Math.trunc(_proportional_reward_rate *
-                           mint / 100);
+                           _tax / 100);
     }
-    remainder[mod(now, 3)] = mint - reward;
+    remainder[mod(now, 3)] = _tax - reward;
     deposit_4[mod(now, 3)] = Math.trunc(balance * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 7, {from: accounts[4]}),
                      _default_level, 6, {from: accounts[4]},
@@ -1070,24 +1102,26 @@ function parameterized_test(accounts,
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[4]], balance);
     assert.equal(current.coin_supply,
-                 coin_supply + mint -
+                 coin_supply -
                  remainder[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
-    mint = await _mint_at_default_level();
+    await set_tax();
+    mint = await mint_at_default_level();
 
+    current = await get_current(sub_accounts, []);
     balance = current.balances[accounts[4]];
     coin_supply = current.coin_supply;
     reward = Math.trunc((100 - _proportional_reward_rate) *
-                        mint / 100);
+                        _tax / 100);
     if (deposit_4[mod(now - 2, 3)] > 0) {
       reward += Math.trunc(_proportional_reward_rate *
-                           mint / 100);
+                           _tax / 100);
     }
-    remainder[mod(now, 3)] = mint - reward;
+    remainder[mod(now, 3)] = _tax - reward;
     deposit_4[mod(now, 3)] = Math.trunc(balance * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 8, {from: accounts[4]}),
                      _default_level, 6, {from: accounts[4]},
@@ -1105,19 +1139,21 @@ function parameterized_test(accounts,
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[4]], balance);
     assert.equal(current.coin_supply,
-                 coin_supply + mint -
+                 coin_supply -
                  remainder[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
+    await set_tax();
     mint = 0;
 
+    current = await get_current(sub_accounts, []);
     balance = current.balances[accounts[4]];
     coin_supply = current.coin_supply;
     reward = 0;
-    remainder[mod(now, 3)] = deposit_4[mod(now - 2, 3)] + mint - reward;
+    remainder[mod(now, 3)] = deposit_4[mod(now - 2, 3)] + _tax - reward;
     deposit_4[mod(now, 3)] = 0;
     await check_vote(await _acb.NULL_HASH(), _default_level,
                      7, {from: accounts[4]},
@@ -1134,7 +1170,7 @@ function parameterized_test(accounts,
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[4]], balance);
     assert.equal(current.coin_supply,
-                 coin_supply + mint -
+                 coin_supply -
                  remainder[mod(now - 1, 3)]);
 
     // 3 commits on the stable level.
@@ -1150,10 +1186,12 @@ function parameterized_test(accounts,
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
+    await set_tax();
     mint = 0;
 
+    current = await get_current(sub_accounts, []);
     coin_supply = current.coin_supply;
-    remainder[mod(now, 3)] = deposit_4[mod(now - 2, 3)] + mint;
+    remainder[mod(now, 3)] = deposit_4[mod(now - 2, 3)] + _tax;
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 1000, {from: accounts[4]}),
@@ -1180,17 +1218,19 @@ function parameterized_test(accounts,
     assert.equal(current.balances[accounts[6]],
                  balance_6 - deposit_6[mod(now, 3)]);
     assert.equal(current.coin_supply,
-                 coin_supply + mint -
+                 coin_supply -
                  remainder[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
+    await set_tax();
     mint = 0;
 
+    current = await get_current(sub_accounts, []);
     coin_supply = current.coin_supply;
-    remainder[mod(now, 3)] = deposit_4[mod(now - 2, 3)] + mint;
+    remainder[mod(now, 3)] = deposit_4[mod(now - 2, 3)] + _tax;
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 1, {from: accounts[4]}),
@@ -1217,19 +1257,21 @@ function parameterized_test(accounts,
     assert.equal(current.balances[accounts[6]],
                  balance_6 - deposit_6[mod(now, 3)]);
     assert.equal(current.coin_supply,
-                 coin_supply + mint -
+                 coin_supply -
                  remainder[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
+    await set_tax();
     mint = 0;
 
+    current = await get_current(sub_accounts, []);
     coin_supply = current.coin_supply;
     remainder[mod(now, 3)] = (deposit_4[mod(now - 2, 3)] +
                               deposit_5[mod(now - 2, 3)] +
-                              deposit_6[mod(now - 2, 3)] + mint);
+                              deposit_6[mod(now - 2, 3)] + _tax);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 2, {from: accounts[4]}),
@@ -1256,17 +1298,19 @@ function parameterized_test(accounts,
     assert.equal(current.balances[accounts[6]],
                  balance_6 - deposit_6[mod(now, 3)]);
     assert.equal(current.coin_supply,
-                 coin_supply + mint -
+                 coin_supply -
                  remainder[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
-    mint = await _mint_at_default_level();
+    await set_tax();
+    mint = await mint_at_default_level();
 
+    current = await get_current(sub_accounts, []);
     coin_supply = current.coin_supply;
-    reward_total = 0 + mint;
+    reward_total = 0 + _tax;
     constant_reward = Math.trunc((100 - _proportional_reward_rate) *
                                  reward_total / (3 * 100));
     reward_4 = reward_5 = reward_6 = 0;
@@ -1323,17 +1367,19 @@ function parameterized_test(accounts,
                  deposit_6[mod(now - 2, 3)] +
                  reward_6 + constant_reward);
     assert.equal(current.coin_supply,
-                 coin_supply + mint -
+                 coin_supply -
                  remainder[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
-    mint = await _mint_at_default_level();
+    await set_tax();
+    mint = await mint_at_default_level();
 
+    current = await get_current(sub_accounts, []);
     coin_supply = current.coin_supply;
-    reward_total = 0 + mint;
+    reward_total = 0 + _tax;
     constant_reward = Math.trunc((100 - _proportional_reward_rate) *
                                  reward_total / (3 * 100));
     reward_4 = reward_5 = reward_6 = 0;
@@ -1391,7 +1437,7 @@ function parameterized_test(accounts,
                  reward_6 + constant_reward);
 
     assert.equal(current.coin_supply,
-                 coin_supply + mint -
+                 coin_supply -
                  remainder[mod(now - 1, 3)]);
 
     await reset_balances(accounts);
@@ -1400,11 +1446,12 @@ function parameterized_test(accounts,
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
-    mint = await _mint_at_default_level();
+    await set_tax();
+    mint = await mint_at_default_level();
+    
     current = await get_current(sub_accounts, []);
-
     coin_supply = current.coin_supply;
-    reward_total = 0 + mint;
+    reward_total = 0 + _tax;
     constant_reward = Math.trunc((100 - _proportional_reward_rate) *
                                  reward_total / (3 * 100));
     reward_4 = reward_5 = reward_6 = 0;
@@ -1464,17 +1511,19 @@ function parameterized_test(accounts,
     assert.equal(deposit_5[mod(now, 3)], 0);
     assert.equal(deposit_6[mod(now, 3)], 0);
     assert.equal(current.coin_supply,
-                 coin_supply + mint -
+                 coin_supply -
                  remainder[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
-    mint = await _mint_at_default_level();
+    await set_tax();
+    mint = await mint_at_default_level();
 
+    current = await get_current(sub_accounts, []);
     coin_supply = current.coin_supply;
-    reward_total = 0 + mint;
+    reward_total = 0 + _tax;
     constant_reward = Math.trunc((100 - _proportional_reward_rate) *
                                  reward_total / (3 * 100));
     reward_4 = reward_5 = reward_6 = 0;
@@ -1531,17 +1580,19 @@ function parameterized_test(accounts,
                  deposit_6[mod(now - 2, 3)] +
                  reward_6 + constant_reward);
     assert.equal(current.coin_supply,
-                 coin_supply + mint -
+                 coin_supply -
                  remainder[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
-    mint = await _mint_at_default_level();
+    await set_tax();
+    mint = await mint_at_default_level();
 
+    current = await get_current(sub_accounts, []);
     coin_supply = current.coin_supply;
-    reward_total = 0 + mint;
+    reward_total = 0 + _tax;
     constant_reward = Math.trunc((100 - _proportional_reward_rate) *
                                  reward_total / (3 * 100));
     reward_4 = 0;
@@ -1587,17 +1638,19 @@ function parameterized_test(accounts,
                  deposit_6[mod(now - 2, 3)] +
                  reward_6 + constant_reward);
     assert.equal(current.coin_supply,
-                 coin_supply + mint -
+                 coin_supply -
                  remainder[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
-    mint = await _mint_at_default_level();
+    await set_tax();
+    mint = await mint_at_default_level();
 
+    current = await get_current(sub_accounts, []);
     coin_supply = current.coin_supply;
-    reward_total = deposit_6[mod(now - 2, 3)] + mint;
+    reward_total = deposit_6[mod(now - 2, 3)] + _tax;
     constant_reward = Math.trunc((100 - _proportional_reward_rate) *
                                  reward_total / (2 * 100));
     reward_4 = reward_5 = reward_6 = 0;
@@ -1647,18 +1700,20 @@ function parameterized_test(accounts,
                  balance_6 - deposit_6[mod(now, 3)] +
                  reward_6);
     assert.equal(current.coin_supply,
-                 coin_supply + mint -
+                 coin_supply -
                  remainder[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
-    mint = await _mint_at_default_level();
+    await set_tax();
+    mint = await mint_at_default_level();
 
+    current = await get_current(sub_accounts, []);
     coin_supply = current.coin_supply;
     reward_total = (deposit_4[mod(now - 2, 3)] + deposit_5[mod(now - 2, 3)] +
-                    mint);
+                    _tax);
     constant_reward = Math.trunc((100 - _proportional_reward_rate) *
                                  reward_total / (1 * 100));
     reward_4 = 0;
@@ -1700,18 +1755,20 @@ function parameterized_test(accounts,
                  deposit_6[mod(now - 2, 3)] +
                  reward_6 + constant_reward);
     assert.equal(current.coin_supply,
-                 coin_supply + mint -
+                 coin_supply -
                  remainder[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
+    await set_tax();
     mint = 0;
 
+    current = await get_current(sub_accounts, []);
     coin_supply = current.coin_supply;
     reward_total = (deposit_4[mod(now - 2, 3)] + deposit_5[mod(now - 2, 3)] +
-                    deposit_6[mod(now - 2, 3)] + mint);
+                    deposit_6[mod(now - 2, 3)] + _tax);
     constant_reward = 0;
     reward_4 = 0;
     reward_5 = 0;
@@ -1743,17 +1800,19 @@ function parameterized_test(accounts,
     assert.equal(current.balances[accounts[6]],
                  balance_6 - deposit_6[mod(now, 3)]);
     assert.equal(current.coin_supply,
-                 coin_supply + mint -
+                 coin_supply -
                  remainder[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
-    mint = await _mint_at_default_level();
+    await set_tax();
+    mint = await mint_at_default_level();
 
+    current = await get_current(sub_accounts, []);
     coin_supply = current.coin_supply;
-    reward_total = 0 + mint;
+    reward_total = 0 + _tax;
     constant_reward = Math.trunc((100 - _proportional_reward_rate) *
                                  reward_total / (3 * 100));
     reward_4 = reward_5 = reward_6 = 0;
@@ -1795,17 +1854,19 @@ function parameterized_test(accounts,
                  deposit_6[mod(now - 2, 3)] +
                  reward_6 + constant_reward);
     assert.equal(current.coin_supply,
-                 coin_supply + mint -
+                 coin_supply -
                  remainder[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
-    mint = await _mint_at_default_level();
+    await set_tax();
+    mint = await mint_at_default_level();
 
+    current = await get_current(sub_accounts, []);
     coin_supply = current.coin_supply;
-    reward_total = deposit_4[mod(now - 2, 3)] + mint;
+    reward_total = deposit_4[mod(now - 2, 3)] + _tax;
     constant_reward = Math.trunc((100 - _proportional_reward_rate) *
                                  reward_total / (2 * 100));
     reward_4 = reward_5 = reward_6 = 0;
@@ -1831,18 +1892,19 @@ function parameterized_test(accounts,
                  deposit_6[mod(now - 2, 3)] +
                  reward_6 + constant_reward);
     assert.equal(current.coin_supply,
-                 coin_supply + mint -
+                 coin_supply -
                  remainder[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
-    mint = await _mint_at_default_level();
+    await set_tax();
+    mint = await mint_at_default_level();
 
     current = await get_current([accounts[1]], []);
     coin_supply = current.coin_supply;
-    reward_total = deposit_5[mod(now - 2, 3)] + mint;
+    reward_total = deposit_5[mod(now - 2, 3)] + _tax;
     constant_reward = Math.trunc((100 - _proportional_reward_rate) *
                                  reward_total / (1 * 100));
     reward_4 = 0;
@@ -1858,18 +1920,19 @@ function parameterized_test(accounts,
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _default_level);
     assert.equal(current.coin_supply,
-                 coin_supply + mint -
+                 coin_supply -
                  remainder[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
+    await set_tax();
     mint = 0;
 
     current = await get_current([accounts[1]], []);
     coin_supply = current.coin_supply;
-    remainder[mod(now, 3)] = deposit_6[mod(now - 2, 3)] + mint;
+    remainder[mod(now, 3)] = deposit_6[mod(now - 2, 3)] + _tax;
     deposit14 = Math.trunc(
         current.balances[accounts[1]] * _deposit_rate / 100);
     await check_vote(await _acb.hash(_default_level, 1000, {from: accounts[1]}),
@@ -1878,7 +1941,7 @@ function parameterized_test(accounts,
     current = await get_current(sub_accounts, []);
     assert.equal(current.oracle_level, _level_max);
     assert.equal(current.coin_supply,
-                 coin_supply + mint -
+                 coin_supply -
                  remainder[mod(now - 1, 3)]);
 
     // 3 commits on the stable level and another level.
@@ -1888,8 +1951,9 @@ function parameterized_test(accounts,
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
+    await set_tax();
     await reset_balances(accounts);
-    mint = await _mint_at_default_level();
+    mint = await mint_at_default_level();
 
     await move_coins(accounts[1], accounts[4], 10000);
     await move_coins(accounts[1], accounts[5], 2000);
@@ -1897,7 +1961,7 @@ function parameterized_test(accounts,
     current = await get_current(sub_accounts, []);
 
     coin_supply = current.coin_supply;
-    reward_total = deposit13 + mint;
+    reward_total = deposit13 + _tax;
     constant_reward = 0;
     reward_4 = 0;
     reward_5 = 0;
@@ -1929,17 +1993,19 @@ function parameterized_test(accounts,
     assert.equal(current.balances[accounts[6]],
                  balance_6 - deposit_6[mod(now, 3)]);
     assert.equal(current.coin_supply,
-                 coin_supply + mint -
+                 coin_supply -
                  remainder[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
+    await set_tax();
     mint = 0;
 
+    current = await get_current(sub_accounts, []);
     coin_supply = current.coin_supply;
-    reward_total = deposit14 + mint;
+    reward_total = deposit14 + _tax;
     constant_reward = 0;
     reward_4 = 0;
     reward_5 = 0;
@@ -1971,15 +2037,17 @@ function parameterized_test(accounts,
     assert.equal(current.balances[accounts[6]],
                  balance_6 - deposit_6[mod(now, 3)]);
     assert.equal(current.coin_supply,
-                 coin_supply + mint -
+                 coin_supply -
                  remainder[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
-    mint = await _mint_at_default_level();
+    await set_tax();
+    mint = await mint_at_default_level();
 
+    current = await get_current(sub_accounts, []);
     coin_supply = current.coin_supply;
     reclaim_4 = 0;
     in_threshold = false;
@@ -1988,7 +2056,7 @@ function parameterized_test(accounts,
       reclaim_4 = deposit_4[mod(now - 2, 3)];
     }
     reward_total = (deposit_4[mod(now - 2, 3)] - reclaim_4 +
-                    mint);
+                    _tax);
     constant_reward = Math.trunc((100 - _proportional_reward_rate) *
                                  reward_total / (2 * 100));
     reward_4 = reward_5 = reward_6 = 0;
@@ -2037,7 +2105,7 @@ function parameterized_test(accounts,
                  deposit_6[mod(now - 2, 3)] +
                  reward_6 + constant_reward);
     assert.equal(current.coin_supply,
-                 coin_supply + mint -
+                 coin_supply -
                  remainder[mod(now - 1, 3)]);
 
     // 0, 0, stable
@@ -2051,8 +2119,9 @@ function parameterized_test(accounts,
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
+    await set_tax();
     await reset_balances(accounts);
-    mint = await _mint_at_default_level();
+    mint = await mint_at_default_level();
 
     await move_coins(accounts[1], accounts[4], 2900);
     await move_coins(accounts[1], accounts[5], 7000);
@@ -2060,7 +2129,7 @@ function parameterized_test(accounts,
     current = await get_current(sub_accounts, []);
 
     coin_supply = current.coin_supply;
-    reward_total = 0 + mint;
+    reward_total = 0 + _tax;
     constant_reward = Math.trunc((100 - _proportional_reward_rate) *
                                  reward_total / (3 * 100));
     reward_4 = reward_5 = reward_6 = 0;
@@ -2117,7 +2186,7 @@ function parameterized_test(accounts,
                  deposit_6[mod(now - 2, 3)] +
                  reward_6 + constant_reward);
     assert.equal(current.coin_supply,
-                 coin_supply + mint -
+                 coin_supply -
                  remainder[mod(now - 1, 3)]);
 
     _deposit_rate = tmp_deposit_rate;
@@ -2127,10 +2196,12 @@ function parameterized_test(accounts,
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
-    mint = await _mint_at_default_level();
+    await set_tax();
+    mint = await mint_at_default_level();
 
+    current = await get_current(sub_accounts, []);
     coin_supply = current.coin_supply;
-    reward_total = 0 + mint;
+    reward_total = 0 + _tax;
     constant_reward = Math.trunc((100 - _proportional_reward_rate) *
                                  reward_total / (3 * 100));
     reward_4 = reward_5 = reward_6 = 0;
@@ -2187,15 +2258,17 @@ function parameterized_test(accounts,
                  deposit_6[mod(now - 2, 3)] +
                  reward_6 + constant_reward);
     assert.equal(current.coin_supply,
-                 coin_supply + mint -
+                 coin_supply -
                  remainder[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
-    mint = await _mint_at_default_level();
+    await set_tax();
+    mint = await mint_at_default_level();
 
+    current = await get_current(sub_accounts, []);
     coin_supply = current.coin_supply;
     reclaim_4 = reclaim_5 = 0;
     in_threshold = false;
@@ -2206,7 +2279,7 @@ function parameterized_test(accounts,
     }
     reward_total = (deposit_4[mod(now - 2, 3)] - reclaim_4 +
                     deposit_5[mod(now - 2, 3)] - reclaim_5 +
-                    mint);
+                    _tax);
     constant_reward = Math.trunc((100 - _proportional_reward_rate) *
                                  reward_total / (1 * 100));
     reward_4 = reward_5 = reward_6 = 0;
@@ -2248,7 +2321,7 @@ function parameterized_test(accounts,
                  deposit_6[mod(now - 2, 3)] +
                  reward_6 + constant_reward);
     assert.equal(current.coin_supply,
-                 coin_supply + mint -
+                 coin_supply -
                  remainder[mod(now - 1, 3)]);
 
     // stable, stable, level_max - 1
@@ -2256,8 +2329,9 @@ function parameterized_test(accounts,
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
+    await set_tax();
     await reset_balances(accounts);
-    mint = await _mint_at_default_level();
+    mint = await mint_at_default_level();
 
     await move_coins(accounts[1], accounts[4], 3100);
     await move_coins(accounts[1], accounts[5], 7000);
@@ -2265,7 +2339,7 @@ function parameterized_test(accounts,
     current = await get_current(sub_accounts, []);
 
     coin_supply = current.coin_supply;
-    reward_total = 0 + mint;
+    reward_total = 0 + _tax;
     constant_reward = Math.trunc((100 - _proportional_reward_rate) *
                                  reward_total / (3 * 100));
     reward_4 = reward_5 = reward_6 = 0;
@@ -2322,17 +2396,19 @@ function parameterized_test(accounts,
                  deposit_6[mod(now - 2, 3)] +
                  reward_6 + constant_reward);
     assert.equal(current.coin_supply,
-                 coin_supply + mint -
+                 coin_supply -
                  remainder[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
-    mint = await _mint_at_default_level();
+    await set_tax();
+    mint = await mint_at_default_level();
 
+    current = await get_current(sub_accounts, []);
     coin_supply = current.coin_supply;
-    reward_total = 0 + mint;
+    reward_total = 0 + _tax;
     constant_reward = Math.trunc((100 - _proportional_reward_rate) *
                                  reward_total / (3 * 100));
     reward_4 = reward_5 = reward_6 = 0;
@@ -2389,15 +2465,17 @@ function parameterized_test(accounts,
                  deposit_6[mod(now - 2, 3)] +
                  reward_6 + constant_reward);
     assert.equal(current.coin_supply,
-                 coin_supply + mint -
+                 coin_supply -
                  remainder[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
-    mint = await _mint_at_default_level();
+    await set_tax();
+    mint = await mint_at_default_level();
 
+    current = await get_current(sub_accounts, []);
     coin_supply = current.coin_supply;
     reclaim_6 = 0;
     in_threshold = false;
@@ -2406,7 +2484,7 @@ function parameterized_test(accounts,
       reclaim_6 = deposit_6[mod(now - 2, 3)];
     }
     reward_total = (deposit_6[mod(now - 2, 3)] - reclaim_6 +
-                    mint);
+                    _tax);
     constant_reward = Math.trunc((100 - _proportional_reward_rate) *
                                  reward_total / (2 * 100));
     reward_4 = reward_5 = reward_6 = 0;
@@ -2455,7 +2533,7 @@ function parameterized_test(accounts,
     assert.equal(current.balances[accounts[6]],
                  balance_6 - deposit_6[mod(now, 3)] + reclaim_6);
     assert.equal(current.coin_supply,
-                 coin_supply + mint -
+                 coin_supply -
                  remainder[mod(now - 1, 3)]);
 
     // stable, level_max - 1, level_max - 1
@@ -2469,8 +2547,9 @@ function parameterized_test(accounts,
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
+    await set_tax();
     await reset_balances(accounts);
-    mint = await _mint_at_default_level();
+    mint = await mint_at_default_level();
 
     await move_coins(accounts[1], accounts[4], 10000);
     await move_coins(accounts[1], accounts[5], 7000);
@@ -2478,7 +2557,7 @@ function parameterized_test(accounts,
     current = await get_current(sub_accounts, []);
 
     coin_supply = current.coin_supply;
-    reward_total = 0 + mint;
+    reward_total = 0 + _tax;
     constant_reward = Math.trunc((100 - _proportional_reward_rate) *
                                  reward_total / (3 * 100));
     reward_4 = reward_5 = reward_6 = 0;
@@ -2535,7 +2614,7 @@ function parameterized_test(accounts,
                  deposit_6[mod(now - 2, 3)] +
                  reward_6 + constant_reward);
     assert.equal(current.coin_supply,
-                 coin_supply + mint -
+                 coin_supply -
                  remainder[mod(now - 1, 3)]);
 
     _deposit_rate = tmp_deposit_rate;
@@ -2545,10 +2624,12 @@ function parameterized_test(accounts,
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
-    mint = await _mint_at_default_level();
+    await set_tax();
+    mint = await mint_at_default_level();
 
+    current = await get_current(sub_accounts, []);
     coin_supply = current.coin_supply;
-    reward_total = 0 + mint;
+    reward_total = 0 + _tax;
     constant_reward = Math.trunc((100 - _proportional_reward_rate) *
                                  reward_total / (3 * 100));
     reward_4 = reward_5 = reward_6 = 0;
@@ -2605,15 +2686,17 @@ function parameterized_test(accounts,
                  deposit_6[mod(now - 2, 3)] +
                  reward_6 + constant_reward);
     assert.equal(current.coin_supply,
-                 coin_supply + mint -
+                 coin_supply -
                  remainder[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
-    mint = await _mint_at_default_level();
+    await set_tax();
+    mint = await mint_at_default_level();
 
+    current = await get_current(sub_accounts, []);
     coin_supply = current.coin_supply;
     reclaim_5 = reclaim_6 = 0;
     in_threshold = false;
@@ -2624,7 +2707,7 @@ function parameterized_test(accounts,
     }
     reward_total = (deposit_5[mod(now - 2, 3)] - reclaim_5 +
                     deposit_6[mod(now - 2, 3)] - reclaim_6 +
-                    mint);
+                    _tax);
     constant_reward = Math.trunc((100 - _proportional_reward_rate) *
                                  reward_total / (1 * 100));
     reward_4 = reward_5 = reward_6 = 0;
@@ -2666,7 +2749,7 @@ function parameterized_test(accounts,
     assert.equal(current.balances[accounts[6]],
                  balance_6 - deposit_6[mod(now, 3)] + reclaim_6);
     assert.equal(current.coin_supply,
-                 coin_supply + mint -
+                 coin_supply -
                  remainder[mod(now - 1, 3)]);
 
     // stable, stable, level_max - 1; deposit is the same
@@ -2674,8 +2757,9 @@ function parameterized_test(accounts,
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
+    await set_tax();
     await reset_balances(accounts);
-    mint = await _mint_at_default_level();
+    mint = await mint_at_default_level();
 
     await move_coins(accounts[1], accounts[4], 10000);
     await move_coins(accounts[1], accounts[5], 7000);
@@ -2683,7 +2767,7 @@ function parameterized_test(accounts,
     current = await get_current(sub_accounts, []);
 
     coin_supply = current.coin_supply;
-    reward_total = 0 + mint;
+    reward_total = 0 + _tax;
     constant_reward = Math.trunc((100 - _proportional_reward_rate) *
                                  reward_total / (3 * 100));
     reward_4 = reward_5 = reward_6 = 0;
@@ -2740,17 +2824,19 @@ function parameterized_test(accounts,
                  deposit_6[mod(now - 2, 3)] +
                  reward_6 + constant_reward);
     assert.equal(current.coin_supply,
-                 coin_supply + mint -
+                 coin_supply -
                  remainder[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
-    mint = await _mint_at_default_level();
+    await set_tax();
+    mint = await mint_at_default_level();
 
+    current = await get_current(sub_accounts, []);
     coin_supply = current.coin_supply;
-    reward_total = 0 + mint;
+    reward_total = 0 + _tax;
     constant_reward = Math.trunc((100 - _proportional_reward_rate) *
                                  reward_total / (3 * 100));
     reward_4 = reward_5 = reward_6 = 0;
@@ -2807,15 +2893,17 @@ function parameterized_test(accounts,
                  deposit_6[mod(now - 2, 3)] +
                  reward_6 + constant_reward);
     assert.equal(current.coin_supply,
-                 coin_supply + mint -
+                 coin_supply -
                  remainder[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
-    mint = await _mint_at_default_level();
+    await set_tax();
+    mint = await mint_at_default_level();
 
+    current = await get_current(sub_accounts, []);
     coin_supply = current.coin_supply;
     reclaim_4 = 0;
     in_threshold = false;
@@ -2824,7 +2912,7 @@ function parameterized_test(accounts,
       reclaim_4 = deposit_4[mod(now - 2, 3)];
     }
     reward_total = (deposit_4[mod(now - 2, 3)] - reclaim_4 +
-                    mint);
+                    _tax);
     constant_reward = Math.trunc((100 - _proportional_reward_rate) *
                                  reward_total / (2 * 100));
     reward_4 = reward_5 = reward_6 = 0;
@@ -2873,7 +2961,7 @@ function parameterized_test(accounts,
                  deposit_6[mod(now - 2, 3)] +
                  reward_6 + constant_reward);
     assert.equal(current.coin_supply,
-                 coin_supply + mint -
+                 coin_supply -
                  remainder[mod(now - 1, 3)]);
 
     // all levels
@@ -2881,12 +2969,13 @@ function parameterized_test(accounts,
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
+    await set_tax();
     await reset_balances(accounts);
-    mint = await _mint_at_default_level();
+    mint = await mint_at_default_level();
+    
     current = await get_current(sub_accounts, []);
-
     coin_supply = current.coin_supply;
-    reward_total = 0 + mint;
+    reward_total = 0 + _tax;
     constant_reward = Math.trunc((100 - _proportional_reward_rate) *
                                  reward_total / (3 * 100));
     reward_4 = reward_5 = reward_6 = 0;
@@ -2914,18 +3003,20 @@ function parameterized_test(accounts,
                  deposit_4[mod(now - 2, 3)] +
                  reward_4 + constant_reward);
     assert.equal(current.coin_supply,
-                 coin_supply + mint -
+                 coin_supply -
                  remainder[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
         await _acb.getTimestamp()).toNumber() + _phase_duration,
                             {from: accounts[1]});
-    mint = await _mint_at_default_level();
+    await set_tax();
+    mint = await mint_at_default_level();
 
+    current = await get_current(sub_accounts, []);
     coin_supply = current.coin_supply;
     reward_total = (deposit_5[mod(now - 2, 3)] + deposit_6[mod(now - 2, 3)] +
-                    mint);
+                    _tax);
     constant_reward = Math.trunc((100 - _proportional_reward_rate) *
                                  reward_total / (1 * 100));
     reward_4 = reward_5 = reward_6 = 0;
@@ -2951,7 +3042,7 @@ function parameterized_test(accounts,
                  deposit_4[mod(now - 2, 3)] +
                  reward_4 + constant_reward);
     assert.equal(current.coin_supply,
-                 coin_supply + mint -
+                 coin_supply -
                  remainder[mod(now - 1, 3)]);
 
     assert.equal(current.bond_supply, 0);
@@ -2966,7 +3057,7 @@ function parameterized_test(accounts,
     current = await get_current(sub_accounts, []);
     assert.equal(current.bond_supply, 2);
 
-    let burned_tax = 0
+    let tax_total = 0
     for (let level = 2; level < _level_max + 2; level++) {
       now = mod(now + 1, 3);
       await _acb.setTimestamp((
@@ -2999,7 +3090,7 @@ function parameterized_test(accounts,
       }
 
       coin_supply = current.coin_supply;
-      reward_total = mint;
+      reward_total = tax_total;
       constant_reward = Math.trunc((100 - _proportional_reward_rate) *
                                    reward_total / (1 * 100));
       reward_4 = 0;
@@ -3027,16 +3118,15 @@ function parameterized_test(accounts,
                    deposit_4[mod(now - 2, 3)] +
                    reward_4 + constant_reward);
       assert.equal(current.coin_supply,
-                   coin_supply + mint -
-                   remainder[mod(now - 1, 3)] - burned_tax);
+                   coin_supply -
+                   remainder[mod(now - 1, 3)]);
       assert.equal(current.bond_supply, 2);
       assert.equal(current.bond_budget, bond_budget);
 
-      burned_tax = 0
+      tax_total = 0
       assert.equal(await _coin.balanceOf(await _coin.tax_account_()), 0);
       for (let transfer of [0, 1234, 1111]) {
-        let tax = Math.trunc(transfer *
-                           _level_to_tax_rate[current.oracle_level] / 100);
+        let tax = Math.trunc(transfer * _tax_rate / 100);
         let balance_1 = (await _coin.balanceOf(accounts[1])).toNumber();
         let balance_2 = (await _coin.balanceOf(accounts[2])).toNumber();
         let balance_tax =
@@ -3047,7 +3137,7 @@ function parameterized_test(accounts,
                      balance_2 + transfer - tax);
         assert.equal(await _coin.balanceOf(await _coin.tax_account_()),
                      balance_tax + tax);
-        burned_tax += tax;
+        tax_total += tax;
       }
     }
 
@@ -3063,7 +3153,8 @@ function parameterized_test(accounts,
     assert.equal(current.bond_supply, 0);
     assert.equal(current.coin_supply,
                  _initial_coin_supply + deposit_4[mod(now - 2, 3)] +
-                 deposit_4[mod(now - 1, 3)] + remainder[mod(now - 1, 3)]);
+                 deposit_4[mod(now - 1, 3)] + remainder[mod(now - 1, 3)] +
+                 tax_total);
 
     // Payable functions
     assert.equal(await web3.eth.getBalance(_acb.address), 0);
@@ -3183,11 +3274,11 @@ function parameterized_test(accounts,
     }, "Ownable");
 
     await should_throw(async () => {
-      await oracle.advance(_coin.address, 0);
+      await oracle.advance(_coin.address);
     }, "Ownable");
 
     await should_throw(async () => {
-      await oracle.advance(_coin.address, 0, {from: accounts[1]});
+      await oracle.advance(_coin.address, {from: accounts[1]});
     }, "Ownable");
 
     await should_throw(async () => {
@@ -3253,7 +3344,12 @@ function parameterized_test(accounts,
       }
     }
 
-    async function _mint_at_default_level() {
+    async function set_tax() {
+      assert.equal(await _coin.balanceOf(await _coin.tax_account_()), 0);
+      await _acb.setCoin(await _coin.tax_account_(), _tax, {from: accounts[1]});
+    }
+
+    async function mint_at_default_level() {
       let current = await get_current([], []);
       let delta = Math.trunc(current.coin_supply * (11 - 10) / 10);
       delta = Math.trunc(delta * _damping_factor / 100);

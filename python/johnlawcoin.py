@@ -138,6 +138,8 @@ class JohnLawCoin:
 
     # Override ERC20's transfer method to impose a tax set by the ACB.
     def transfer(self, sender, receiver, amount):
+        assert(sender in self.balances)
+        assert(self.balances[sender] >= amount)
         tax = int(amount * JohnLawCoin.TAX_RATE / 100)
         self.move(sender, self.tax_account, tax)
         self.move(sender, receiver, amount - tax)
@@ -1054,13 +1056,14 @@ class ACB:
             # Increase or decrease the total coin supply.
             mint = self._control_supply(delta)
 
-            # Reset the tax account address just in case.
-            tax = self.coin.balance_of(self.coin.tax_account)
-            self.coin.reset_tax_account()
-            
-            # Advance to the next phase. Provide the |mint| coins to the oracle
+            # Advance to the next phase. Provide the |tax| coins to the oracle
             # as a reward.
+            tax = self.coin.balance_of(self.coin.tax_account)
             burned = self.oracle.advance(self.coin)
+            
+            # Reset the tax account address just in case.
+            self.coin.reset_tax_account()
+            assert(self.coin.balance_of(self.coin.tax_account) == 0)
 
             self.logging.phase_updated(
                 mint, burned, delta, self.bond_budget,

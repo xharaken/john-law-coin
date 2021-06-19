@@ -27,8 +27,7 @@ contract ACBForTesting_v2 is ACB_v2 {
                              uint deposit_rate,
                              uint damping_factor,
                              uint[] memory level_to_exchange_rate,
-                             uint[] memory level_to_bond_price,
-                             uint[] memory level_to_tax_rate)
+                             uint[] memory level_to_bond_price)
       public onlyOwner {
     BOND_REDEMPTION_PRICE = bond_redemption_price;
     BOND_REDEMPTION_PERIOD = bond_redemption_period;
@@ -37,7 +36,6 @@ contract ACBForTesting_v2 is ACB_v2 {
     DAMPING_FACTOR = damping_factor;
     LEVEL_TO_EXCHANGE_RATE = level_to_exchange_rate;
     LEVEL_TO_BOND_PRICE = level_to_bond_price;
-    LEVEL_TO_TAX_RATE = level_to_tax_rate;
   }
   
   function controlSupply(int delta)

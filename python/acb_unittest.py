@@ -90,34 +90,50 @@ class ACBUnitTest(unittest.TestCase):
 
         # transfer
         with self.assertRaises(Exception):
-            acb.coin.move(accounts[4], accounts[1], 1)
-        acb.coin.move(accounts[1], accounts[2], 0)
+            acb.coin.transfer(accounts[4], accounts[1], 1)
+        acb.coin.transfer(accounts[1], accounts[2], 0)
         with self.assertRaises(Exception):
-            acb.coin.move(accounts[2], accounts[1], 1)
+            acb.coin.transfer(accounts[2], accounts[1], 1)
         with self.assertRaises(Exception):
-            acb.coin.move(accounts[1], accounts[2],
-                          self.initial_coin_supply + 1)
-        acb.coin.move(accounts[1], accounts[2], 1)
-        acb.coin.move(accounts[1], accounts[3], 10)
-        acb.coin.move(accounts[3], accounts[2], 5)
+            acb.coin.transfer(accounts[1], accounts[2],
+                              self.initial_coin_supply + 1)
+        acb.coin.transfer(accounts[1], accounts[2], 1)
+        acb.coin.transfer(accounts[1], accounts[3], 10)
+        acb.coin.transfer(accounts[3], accounts[2], 5)
         self.assertEqual(acb.coin.balance_of(accounts[1]),
                          self.initial_coin_supply - 11)
         self.assertEqual(acb.coin.balance_of(accounts[2]), 6)
         self.assertEqual(acb.coin.balance_of(accounts[3]), 5)
-        acb.coin.move(accounts[2], accounts[2], 5)
+        acb.coin.transfer(accounts[2], accounts[2], 5)
         self.assertEqual(acb.coin.balance_of(accounts[1]),
                          self.initial_coin_supply - 11)
         self.assertEqual(acb.coin.balance_of(accounts[2]), 6)
         self.assertEqual(acb.coin.balance_of(accounts[3]), 5)
-        acb.coin.move(accounts[2], accounts[3], 0)
+        acb.coin.transfer(accounts[2], accounts[3], 0)
         with self.assertRaises(Exception):
-            acb.coin.move(accounts[2], accounts[3], 7)
-        acb.coin.move(accounts[2], accounts[3], 6)
+            acb.coin.transfer(accounts[2], accounts[3], 7)
+        acb.coin.transfer(accounts[2], accounts[3], 6)
         self.assertEqual(acb.coin.balance_of(accounts[1]),
                          self.initial_coin_supply - 11)
         self.assertEqual(acb.coin.balance_of(accounts[2]), 0)
         self.assertEqual(acb.coin.balance_of(accounts[3]), 11)
-        acb.coin.move(accounts[3], accounts[1], 11)
+        acb.coin.transfer(accounts[3], accounts[1], 11)
+        self.assertEqual(acb.coin.balance_of(accounts[1]),
+                         self.initial_coin_supply)
+        self.assertEqual(acb.coin.balance_of(accounts[2]), 0)
+        self.assertEqual(acb.coin.balance_of(accounts[3]), 0)
+        self.assertEqual(acb.coin.total_supply, self.initial_coin_supply)
+        acb.coin.transfer(accounts[1], accounts[2], 1000)
+        self.assertEqual(acb.coin.balance_of(accounts[1]),
+                         self.initial_coin_supply - 1000)
+        self.assertEqual(acb.coin.balance_of(accounts[2]), 990)
+        self.assertEqual(acb.coin.balance_of(acb.coin.tax_account), 10)
+        acb.coin.transfer(accounts[2], accounts[1], 990)
+        self.assertEqual(acb.coin.balance_of(accounts[1]),
+                         self.initial_coin_supply - 19)
+        self.assertEqual(acb.coin.balance_of(accounts[2]), 0)
+        self.assertEqual(acb.coin.balance_of(acb.coin.tax_account), 19)
+        acb.coin.transfer(acb.coin.tax_account, accounts[1], 19)
         self.assertEqual(acb.coin.balance_of(accounts[1]),
                          self.initial_coin_supply)
         self.assertEqual(acb.coin.balance_of(accounts[2]), 0)

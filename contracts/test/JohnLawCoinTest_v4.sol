@@ -17,8 +17,7 @@ contract ACBForTesting_v4 is ACB_v4 {
                              uint deposit_rate,
                              uint damping_factor,
                              uint[] memory level_to_exchange_rate,
-                             uint[] memory level_to_bond_price,
-                             uint[] memory level_to_tax_rate)
+                             uint[] memory level_to_bond_price)
       public onlyOwner {
     BOND_REDEMPTION_PRICE = bond_redemption_price;
     BOND_REDEMPTION_PERIOD = bond_redemption_period;
@@ -27,7 +26,6 @@ contract ACBForTesting_v4 is ACB_v4 {
     DAMPING_FACTOR = damping_factor;
     LEVEL_TO_EXCHANGE_RATE = level_to_exchange_rate;
     LEVEL_TO_BOND_PRICE = level_to_bond_price;
-    LEVEL_TO_TAX_RATE = level_to_tax_rate;
 
     require(1 <= BOND_REDEMPTION_PRICE && BOND_REDEMPTION_PRICE <= 100000,
             "oc1");
@@ -37,7 +35,6 @@ contract ACBForTesting_v4 is ACB_v4 {
     require(0 <= DEPOSIT_RATE && DEPOSIT_RATE <= 100, "oc4");
     require(1 <= DAMPING_FACTOR && DAMPING_FACTOR <= 100, "oc5");
     require(LEVEL_TO_EXCHANGE_RATE.length == LEVEL_TO_BOND_PRICE.length, "oc6");
-    require(LEVEL_TO_EXCHANGE_RATE.length == LEVEL_TO_TAX_RATE.length, "oc7");
     for (uint i = 0; i < LEVEL_TO_BOND_PRICE.length; i++) {
       require(LEVEL_TO_BOND_PRICE[i] <= BOND_REDEMPTION_PRICE, "oc8");
     }

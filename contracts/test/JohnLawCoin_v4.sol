@@ -23,7 +23,7 @@ import "./JohnLawCoin_v3.sol";
 //    If that is not enough to supply sufficient coins, the ACB mints new coins
 //    and provides the coins to the oracle as a reward.
 // 4. If the exchange rate is smaller than 1.0, the ACB decreases the total coin
-//    supply by issuing new bonds and imposing tax on coin transfers.
+//    supply by issuing new bonds.
 //
 // Permission: All methods are public. No one (including the genesis account)
 // is privileged to influence the monetary policies of the ACB. The ACB
@@ -45,7 +45,6 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
   uint[] public LEVEL_TO_EXCHANGE_RATE;
   uint public EXCHANGE_RATE_DIVISOR;
   uint[] public LEVEL_TO_BOND_PRICE;
-  uint[] public LEVEL_TO_TAX_RATE;
   uint public PHASE_DURATION;
   uint public DEPOSIT_RATE;
   uint public DAMPING_FACTOR;
@@ -95,23 +94,22 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
     // Constants.
 
     // The following table shows the mapping from the oracle level to the
-    // exchange rate, the bond issue price and the tax rate. Voters can vote for
-    // one of the oracle levels.
+    // exchange rate. Voters can vote for one of the oracle levels.
     //
-    // -----------------------------------------------------------------------
-    // | oracle level | exchange rate    | bond issue price       | tax rate |
-    // |              |                  | (annual interest rate) |          |
-    // -----------------------------------------------------------------------
-    // |             0| 1 coin = 0.6 USD |       970 coins (14.1%)|       30%|
-    // |             1| 1 coin = 0.7 USD |       978 coins (10.1%)|       20%|
-    // |             2| 1 coin = 0.8 USD |       986 coins (6.32%)|       12%|
-    // |             3| 1 coin = 0.9 USD |       992 coins (3.55%)|        5%|
-    // |             4| 1 coin = 1.0 USD |       997 coins (1.31%)|        0%|
-    // |             5| 1 coin = 1.1 USD |       997 coins (1.31%)|        0%|
-    // |             6| 1 coin = 1.2 USD |       997 coins (1.31%)|        0%|
-    // |             7| 1 coin = 1.3 USD |       997 coins (1.31%)|        0%|
-    // |             8| 1 coin = 1.4 USD |       997 coins (1.31%)|        0%|
-    // -----------------------------------------------------------------------
+    // -----------------------------------
+    // | oracle level | exchange rate    |
+    // |              |                  |
+    // -----------------------------------
+    // |             0| 1 coin = 0.6 USD |
+    // |             1| 1 coin = 0.7 USD |
+    // |             2| 1 coin = 0.8 USD |
+    // |             3| 1 coin = 0.9 USD |
+    // |             4| 1 coin = 1.0 USD |
+    // |             5| 1 coin = 1.1 USD |
+    // |             6| 1 coin = 1.2 USD |
+    // |             7| 1 coin = 1.3 USD |
+    // |             8| 1 coin = 1.4 USD |
+    // -----------------------------------
     //
     // Voters are expected to look up the current exchange rate using
     // real-world currency exchangers and vote for the oracle level that
@@ -141,9 +139,6 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
     // The bond redemption price and the redemption period.
     BOND_REDEMPTION_PRICE = 1000; // One bond is redeemed for 1000 coins.
     BOND_REDEMPTION_PERIOD = 84 * 24 * 60 * 60; // 12 weeks.
-
-    // LEVEL_TO_TAX_RATE is the mapping from the oracle levels to the tax rate.
-    LEVEL_TO_TAX_RATE = [30, 20, 12, 5, 0, 0, 0, 0, 0];
 
     // The duration of the oracle phase. The ACB adjusts the total coin supply
     // once per phase. Voters can vote once per phase.
@@ -203,7 +198,6 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
     /*
     require(LEVEL_TO_EXCHANGE_RATE.length == oracle.getLevelMax(), "AC1");
     require(LEVEL_TO_BOND_PRICE.length == oracle.getLevelMax(), "AC2");
-    require(LEVEL_TO_TAX_RATE.length == oracle.getLevelMax(), "AC3");
     */
   }
 
@@ -295,7 +289,6 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
       current_phase_start_ = getTimestamp();
       
       int delta = 0;
-      uint tax_rate = 0;
       oracle_level_ = oracle_.getModeLevel();
       if (oracle_level_ != oracle_.getLevelMax()) {
         require(0 <= oracle_level_ && oracle_level_ < oracle_.getLevelMax(),
@@ -315,30 +308,25 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
         // To avoid increasing or decreasing too many coins in one phase,
         // multiply the damping factor.
         delta = delta * int(DAMPING_FACTOR) / 100;
-
-        // Translate the oracle level to the tax rate.
-        tax_rate = LEVEL_TO_TAX_RATE[oracle_level_];
       }
 
       // Increase or decrease the total coin supply.
       uint mint = _controlSupply(delta);
 
-      // Burn the tax. This is fine because the purpose of the tax is to
-      // decrease the total coin supply.
-      address tax_account = coin_.tax_account_();
-      uint burned_tax = coin_.balanceOf(tax_account);
-      coin_.burn(tax_account, burned_tax);
-      coin_.setTaxRate(tax_rate);
-
-      // Advance to the next phase. Provide the |mint| coins to the oracle
+      // Advance to the next phase. Provide the |tax| coins to the oracle
       // as a reward.
+      uint tax = coin_.balanceOf(coin_.tax_account_());
       coin_.transferOwnership(address(oracle_));
-      uint burned = oracle_.advance(coin_, mint);
+      uint burned = oracle_.advance(coin_);
       oracle_.revokeOwnership(coin_);
-
+      
+      // Reset the tax account address just in case.
+      coin_.resetTaxAccount();
+      require(coin_.balanceOf(coin_.tax_account_()) == 0, "vo2");
+      
       logging_.phaseUpdated(mint, burned, delta, bond_budget_,
                             coin_.totalSupply(), bond_.totalSupply(),
-                            oracle_level_, current_phase_start_, burned_tax);
+                            oracle_level_, current_phase_start_, tax);
     }
 
     coin_.transferOwnership(address(oracle_));

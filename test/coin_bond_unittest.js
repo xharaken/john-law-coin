@@ -135,36 +135,43 @@ contract("CoinBondUnittest", function (accounts) {
     assert.equal(await coin.balanceOf(accounts[5]), 1);
 
     // tax
-    await coin.setTaxRate(0);
-    await coin.transfer(accounts[2], 10, {from: accounts[1]});
-    assert.equal(await coin.balanceOf(accounts[1]), 280);
-    assert.equal(await coin.balanceOf(accounts[2]), 18);
-    assert.equal(await coin.balanceOf(await coin.tax_account_()), 0);
-    await coin.setTaxRate(10);
-    await coin.transfer(accounts[2], 10, {from: accounts[1]});
-    assert.equal(await coin.balanceOf(accounts[1]), 270);
-    assert.equal(await coin.balanceOf(accounts[2]), 27);
-    assert.equal(await coin.balanceOf(await coin.tax_account_()), 1);
-    await coin.transfer(accounts[2], 1, {from: accounts[1]});
-    assert.equal(await coin.balanceOf(accounts[1]), 269);
-    assert.equal(await coin.balanceOf(accounts[2]), 28);
-    assert.equal(await coin.balanceOf(await coin.tax_account_()), 1);
-    await coin.transfer(accounts[2], 19, {from: accounts[1]});
-    assert.equal(await coin.balanceOf(accounts[1]), 250);
-    assert.equal(await coin.balanceOf(accounts[2]), 46);
-    assert.equal(await coin.balanceOf(await coin.tax_account_()), 2);
-    await coin.transfer(accounts[1], 20, {from: accounts[1]});
-    assert.equal(await coin.balanceOf(accounts[1]), 248);
-    assert.equal(await coin.balanceOf(accounts[2]), 46);
-    assert.equal(await coin.balanceOf(await coin.tax_account_()), 4);
+    await coin.mint(accounts[1], 10000);
+    let account1_balance = (await coin.balanceOf(accounts[1])).toNumber();
+    let account2_balance = (await coin.balanceOf(accounts[2])).toNumber();
+    let tax_balance =
+        (await coin.balanceOf(await coin.tax_account_())).toNumber();
+    for (let amount of [0, 1, 99, 100, 101, 999, 1000, 1001]) {
+      let tax = Math.trunc(amount * (await coin.TAX_RATE()) / 100);
+      await coin.resetTaxAccount();
+      await coin.transfer(accounts[2], amount, {from: accounts[1]});
+      assert.equal(await coin.balanceOf(accounts[1]),
+                   account1_balance - amount);
+      assert.equal(await coin.balanceOf(accounts[2]),
+                   account2_balance + amount - tax);
+      assert.equal(await coin.balanceOf(await coin.tax_account_()),
+                   tax_balance + tax);
+      account1_balance = (await coin.balanceOf(accounts[1])).toNumber();
+      account2_balance = (await coin.balanceOf(accounts[2])).toNumber();
+      tax_balance =
+        (await coin.balanceOf(await coin.tax_account_())).toNumber();
+    }
+    await coin.transfer(accounts[1], 1000, {from: accounts[1]});
+    assert.equal(await coin.balanceOf(accounts[1]),
+                 account1_balance - 10);
+    assert.equal(await coin.balanceOf(accounts[2]),
+                 account2_balance);
+    assert.equal(await coin.balanceOf(await coin.tax_account_()),
+                 tax_balance + 10);
     let old_tax_account = await coin.tax_account_();
-    await coin.setTaxRate(20);
+    await coin.resetTaxAccount();
     assert.equal(await coin.balanceOf(old_tax_account), 0);
-    assert.equal(await coin.balanceOf(await coin.tax_account_()), 4);
+    assert.equal(await coin.balanceOf(await coin.tax_account_()),
+                 tax_balance + 10);
     old_tax_account = await coin.tax_account_();
-    await coin.setTaxRate(0);
+    await coin.resetTaxAccount();
     assert.equal(await coin.balanceOf(old_tax_account), 0);
-    assert.equal(await coin.balanceOf(await coin.tax_account_()), 4);
+    assert.equal(await coin.balanceOf(await coin.tax_account_()),
+                 tax_balance + 10);
   });
 
   it("JohnLawBond", async function () {
@@ -316,7 +323,7 @@ contract("CoinBondUnittest", function (accounts) {
     }, "Ownable");
 
     await should_throw(async () => {
-      await coin.setTaxRate(10);
+      await coin.resetTaxAccount();
     }, "Ownable");
 
     await should_throw(async () => {
@@ -340,7 +347,7 @@ contract("CoinBondUnittest", function (accounts) {
     }, "Ownable");
 
     await should_throw(async () => {
-      await coin.setTaxRate(10, {from: accounts[2]});
+      await coin.resetTaxAccount({from: accounts[2]});
     }, "Ownable");
 
     await should_throw(async () => {
@@ -397,10 +404,6 @@ contract("CoinBondUnittest", function (accounts) {
 
     await should_throw(async () => {
       await coin.transfer(accounts[2], 1, {from: accounts[1]});
-    }, "Pausable");
-
-    await should_throw(async () => {
-      await coin.pause();
     }, "Pausable");
 
     assert.equal(await coin.totalSupply(), 10 + initial_coin_supply);
