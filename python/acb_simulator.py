@@ -31,6 +31,7 @@ class Voter:
 class ACBSimulator(unittest.TestCase):
 
     def __init__(self,
+                 bond_price,
                  bond_redemption_price,
                  bond_redemption_period,
                  epoch_duration,
@@ -38,15 +39,16 @@ class ACBSimulator(unittest.TestCase):
                  deposit_rate,
                  damping_factor,
                  level_to_exchange_rate,
-                 level_to_bond_price,
                  reclaim_threshold,
                  voter_count,
                  iteration):
         super().__init__()
 
-        print('redemp_price=%d redemp_period=%d phase_dur=%d reward_rate=%d '
-              'deposit_rate=%d damping=%d reclaim=%d voter=%d iter=%d' %
-              (bond_redemption_price,
+        print('bond_price=%d redemp_price=%d redemp_period=%d epoch_dur=%d '
+              'reward_rate=%d deposit_rate=%d damping=%d reclaim=%d '
+              'voter=%d iter=%d' %
+              (bond_price,
+               bond_redemption_price,
                bond_redemption_period,
                epoch_duration,
                proportional_reward_rate,
@@ -57,8 +59,6 @@ class ACBSimulator(unittest.TestCase):
                iteration))
         print('exchange_rate=', end='')
         print(level_to_exchange_rate)
-        print('bond_price=', end='')
-        print(level_to_bond_price)
 
         coin = JohnLawCoin(0)
         bond = JohnLawBond()
@@ -69,9 +69,9 @@ class ACBSimulator(unittest.TestCase):
         self.oracle.override_constants_for_testing(
             level_max, reclaim_threshold, proportional_reward_rate)
         self.acb.override_constants_for_testing(
-            bond_redemption_price, bond_redemption_period,
+            bond_price, bond_redemption_price, bond_redemption_period,
             epoch_duration, deposit_rate, damping_factor,
-            level_to_exchange_rate, level_to_bond_price)
+            level_to_exchange_rate)
 
         self.tax_rate = JohnLawCoin.TAX_RATE
         self.lost_deposit = [0] * 3
@@ -163,8 +163,7 @@ class ACBSimulator(unittest.TestCase):
         logging = self.logging
 
         for i in range(self.voter_count):
-            amount = random.randint(
-                0, ACB.LEVEL_TO_BOND_PRICE[Oracle.LEVEL_MAX - 1] * 100)
+            amount = random.randint(0, ACB.BOND_PRICE * 100)
             if random.randint(0, 9) >= 9:
                 amount = 0
             self.voters[i].balance = amount
@@ -369,10 +368,8 @@ class ACBSimulator(unittest.TestCase):
             if bond_budget <= 0:
                 continue
 
+            bond_price = ACB.BOND_PRICE
             voter = self.voters[(start_index + index) % self.voter_count]
-            bond_price = ACB.LEVEL_TO_BOND_PRICE[Oracle.LEVEL_MAX - 1]
-            if 0 <= acb.oracle_level and acb.oracle_level < Oracle.LEVEL_MAX:
-                bond_price = ACB.LEVEL_TO_BOND_PRICE[acb.oracle_level]
             count = min(acb.bond_budget, int(0.3 * voter.balance / bond_price))
             if count <= 0:
                 continue
@@ -543,8 +540,7 @@ class ACBSimulator(unittest.TestCase):
                 mint = ((necessary_bonds - acb.bond.total_supply) *
                         ACB.BOND_REDEMPTION_PRICE)
         else:
-            issued_bonds = int(
-                -delta / ACB.LEVEL_TO_BOND_PRICE[mode_level])
+            issued_bonds = int(-delta / ACB.BOND_PRICE)
 
         target_level = random.randint(0, Oracle.LEVEL_MAX - 1)
         #target_level = int(epoch / 6) % 3
@@ -708,6 +704,7 @@ def main():
     iteration = 1000
 
     test = ACBSimulator(
+        996,
         1000,
         84,
         7,
@@ -715,36 +712,29 @@ def main():
         10,
         10,
         [6, 7, 8, 9, 10, 11, 12, 13, 14],
-        [970, 978, 986, 992, 997, 997, 997, 997, 997],
         1,
         200,
         iteration)
     test.run()
     test.teardown()
 
-    for bond_redemption_price in [3, 1000]:
+    for (bond_price, bond_redemption_price) in [
+            (1, 3), (996, 1000), (1000, 1000)]:
         for bond_redemption_period in [1, 84 * 24 * 60 * 60]:
             for epoch_duration in [1, 7 * 24 * 60 * 60]:
                 for proportional_reward_rate in [0, 90, 100]:
                     for deposit_rate in [0, 10, 100]:
                         for damping_factor in [10, 100]:
                             p = bond_redemption_price
-                            for (level_to_exchange_rate,
-                                 level_to_bond_price) in [
-                                     ([9, 11, 12],
-                                      [max(1, p - 20), max(1, p - 10), p]),
-                                     ([0, 1, 10, 11, 12],
-                                      [max(1, p - 20), max(1, p - 10),
-                                       p, p, p]),
-                                     ([6, 7, 8, 9, 10, 11, 12, 13, 14],
-                                      [max(1, p - 30),
-                                       max(1, p - 20), max(1, p - 20),
-                                       max(1, p - 10), max(1, p - 10),
-                                       p, p, p, p])]:
+                            for level_to_exchange_rate in [
+                                    [9, 11, 12],
+                                    [0, 1, 10, 11, 12],
+                                    [6, 7, 8, 9, 10, 11, 12, 13, 14]]:
                                 for reclaim_threshold in [0, 1, len(
                                     level_to_exchange_rate) - 1]:
                                     for voter_count in [1, 200]:
                                         test = ACBSimulator(
+                                            bond_price,
                                             bond_redemption_price,
                                             bond_redemption_period,
                                             epoch_duration,
@@ -752,7 +742,6 @@ def main():
                                             deposit_rate,
                                             damping_factor,
                                             level_to_exchange_rate,
-                                            level_to_bond_price,
                                             reclaim_threshold,
                                             voter_count,
                                             iteration)

@@ -11,6 +11,7 @@ import unittest, random
 class ACBUnitTest(unittest.TestCase):
 
     def __init__(self,
+                 bond_price,
                  bond_redemption_price,
                  bond_redemption_period,
                  epoch_duration,
@@ -18,14 +19,14 @@ class ACBUnitTest(unittest.TestCase):
                  deposit_rate,
                  damping_factor,
                  level_to_exchange_rate,
-                 level_to_bond_price,
                  reclaim_threshold,
                  tax):
         super().__init__()
 
-        print('redemp_price=%d redemp_period=%d phase_dur=%d '
+        print('bond_price=%d redemp_price=%d redemp_period=%d epoch_dur=%d '
               'reward_rate=%d deposit_rate=%d damping=%d reclaim=%d tax=%d' %
-              (bond_redemption_price,
+              (bond_price,
+               bond_redemption_price,
                bond_redemption_period,
                epoch_duration,
                proportional_reward_rate,
@@ -35,8 +36,6 @@ class ACBUnitTest(unittest.TestCase):
                tax))
         print('exchange_rate=', end='')
         print(level_to_exchange_rate)
-        print('bond_price=', end='')
-        print(level_to_bond_price)
 
         self.accounts = ['0x0000', '0x1000', '0x2000', '0x3000', '0x4000',
                          '0x5000', '0x6000', '0x7000']
@@ -50,9 +49,9 @@ class ACBUnitTest(unittest.TestCase):
         self.oracle.override_constants_for_testing(
             level_max, reclaim_threshold, proportional_reward_rate)
         self.acb.override_constants_for_testing(
-            bond_redemption_price, bond_redemption_period,
+            bond_price, bond_redemption_price, bond_redemption_period,
             epoch_duration, deposit_rate, damping_factor,
-            level_to_exchange_rate, level_to_bond_price)
+            level_to_exchange_rate)
 
         self.initial_coin_supply = JohnLawCoin.INITIAL_COIN_SUPPLY
         self.tax_rate = JohnLawCoin.TAX_RATE
@@ -69,7 +68,7 @@ class ACBUnitTest(unittest.TestCase):
         pass
 
     def run(self):
-        if (ACB.LEVEL_TO_BOND_PRICE[Oracle.LEVEL_MAX - 1] >= 2 and
+        if (ACB.BOND_PRICE >= 2 and
             ACB.BOND_REDEMPTION_PRICE >= 2 and
             ACB.BOND_REDEMPTION_PERIOD >= 3 and
             ACB.EPOCH_DURATION >= 2):
@@ -142,7 +141,7 @@ class ACBUnitTest(unittest.TestCase):
 
         # _control_supply
         acb.oracle_level = Oracle.LEVEL_MAX - 1
-        bond_price = ACB.LEVEL_TO_BOND_PRICE[acb.oracle_level]
+        bond_price = ACB.BOND_PRICE
         self.assertEqual(acb.bond.total_supply, 0)
         self.assertEqual(acb.bond_budget, 0)
         self.assertEqual(acb._control_supply(
@@ -2657,8 +2656,7 @@ class ACBUnitTest(unittest.TestCase):
 
         self.assertEqual(acb.bond.total_supply, 0)
         self.assertEqual(acb.bond_budget, 0)
-        self.assertEqual(acb._control_supply(
-            -ACB.LEVEL_TO_BOND_PRICE[acb.oracle_level] * 2), 0)
+        self.assertEqual(acb._control_supply(-ACB.BOND_PRICE * 2), 0)
         self.assertEqual(acb.bond.total_supply, 0)
         self.assertEqual(acb.bond_budget, 2)
         t12 = acb.get_timestamp() + ACB.BOND_REDEMPTION_PERIOD
@@ -2690,8 +2688,7 @@ class ACBUnitTest(unittest.TestCase):
                     bond_budget = -necessary_bonds
             else:
                 mint = 0
-                bond_budget = int(-delta /
-                                  ACB.LEVEL_TO_BOND_PRICE[level - 2])
+                bond_budget = int(-delta / ACB.BOND_PRICE)
 
             coin_supply = acb.coin.total_supply
             reward_total = tax_total
@@ -2787,6 +2784,7 @@ class ACBUnitTest(unittest.TestCase):
 
 
 def main():
+    bond_price = 996
     bond_redemption_price = 1000
     bond_redemption_period = 10
     epoch_duration = 2
@@ -2796,9 +2794,9 @@ def main():
     reclaim_threshold = 1
     tax = 12345
     level_to_exchange_rate = [1, 11, 20]
-    level_to_bond_price = [990, 997, 997]
 
     test = ACBUnitTest(
+        bond_price,
         bond_redemption_price,
         bond_redemption_period,
         epoch_duration,
@@ -2806,35 +2804,28 @@ def main():
         deposit_rate,
         damping_factor,
         level_to_exchange_rate,
-        level_to_bond_price,
         reclaim_threshold,
         tax)
     test.run()
     test.teardown()
 
-    for bond_redemption_price in [3, 1000]:
+    for (bond_price, bond_redemption_price) in [
+            (1, 3), (996, 1000), (1000, 1000)]:
         for bond_redemption_period in [1, 5, 84 * 24 * 60 * 60]:
             for epoch_duration in [1, 5, 7 * 24 * 60 * 60]:
                 for proportional_reward_rate in [0, 1, 90, 100]:
                     for deposit_rate in [0, 10, 100]:
                         for damping_factor in [1, 10, 100]:
                             p = bond_redemption_price
-                            for (level_to_exchange_rate,
-                                 level_to_bond_price) in [
-                                     ([9, 11, 12],
-                                      [max(1, p - 20), max(1, p - 10), p]),
-                                     ([0, 1, 10, 11, 12],
-                                      [max(1, p - 20), max(1, p - 10),
-                                       p, p, p]),
-                                     ([6, 7, 8, 9, 10, 11, 12, 13, 14],
-                                      [max(1, p - 30),
-                                       max(1, p - 20), max(1, p - 20),
-                                       max(1, p - 10), max(1, p - 10),
-                                       p, p, p, p])]:
+                            for level_to_exchange_rate in [
+                                    [9, 11, 12],
+                                    [0, 1, 10, 11, 12],
+                                    [6, 7, 8, 9, 10, 11, 12, 13, 14]]:
                                 for reclaim_threshold in [0, 1, len(
                                     level_to_exchange_rate) - 1]:
                                     for tax in [0, 12345]:
                                         test = ACBUnitTest(
+                                            bond_price,
                                             bond_redemption_price,
                                             bond_redemption_period,
                                             epoch_duration,
@@ -2842,7 +2833,6 @@ def main():
                                             deposit_rate,
                                             damping_factor,
                                             level_to_exchange_rate,
-                                            level_to_bond_price,
                                             reclaim_threshold,
                                             tax)
                                         test.run()

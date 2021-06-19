@@ -901,11 +901,8 @@ class ACB:
         ACB.LEVEL_TO_EXCHANGE_RATE = [6, 7, 8, 9, 10, 11, 12, 13, 14]
         ACB.EXCHANGE_RATE_DIVISOR = 10
 
-        # LEVEL_TO_BOND_PRICE is the mapping from the oracle levels to the
-        # bond prices.
-        ACB.LEVEL_TO_BOND_PRICE = [970, 978, 986, 992, 997, 997, 997, 997, 997]
-
-        # The bond redemption price and the redemption period.
+        # The bond price and the redemption period.
+        ACB.BOND_PRICE = 996 # One bond is sold for 996 coins.
         ACB.BOND_REDEMPTION_PRICE = 1000 # One bond is redeemed for 1000 coins.
         ACB.BOND_REDEMPTION_PERIOD = 84 * 24 * 60 * 60 # 12 weeks.
 
@@ -970,22 +967,23 @@ class ACB:
         self.logging = logging
 
         assert(len(ACB.LEVEL_TO_EXCHANGE_RATE) == Oracle.LEVEL_MAX)
-        assert(len(ACB.LEVEL_TO_BOND_PRICE) == Oracle.LEVEL_MAX)
 
     # Test only.
     def override_constants_for_testing(
-        self, bond_redemption_price, bond_redemption_period,
+        self, bond_price, bond_redemption_price, bond_redemption_period,
         epoch_duration, deposit_rate, damping_factor,
-        level_to_exchange_rate, level_to_bond_price):
+        level_to_exchange_rate):
 
+        ACB.BOND_PRICE = bond_price
         ACB.BOND_REDEMPTION_PRICE = bond_redemption_price
         ACB.BOND_REDEMPTION_PERIOD = bond_redemption_period
         ACB.EPOCH_DURATION = epoch_duration
         ACB.DEPOSIT_RATE = deposit_rate
         ACB.DAMPING_FACTOR = damping_factor
         ACB.LEVEL_TO_EXCHANGE_RATE = level_to_exchange_rate
-        ACB.LEVEL_TO_BOND_PRICE = level_to_bond_price
 
+        assert(1 <= ACB.BOND_PRICE and
+               ACB.BOND_PRICE <= ACB.BOND_REDEMPTION_PRICE)
         assert(1 <= ACB.BOND_REDEMPTION_PRICE and
                ACB.BOND_REDEMPTION_PRICE <= 100000)
         assert(1 <= ACB.BOND_REDEMPTION_PERIOD and
@@ -994,11 +992,7 @@ class ACB:
                ACB.EPOCH_DURATION <= 30 * 24 * 60 * 60)
         assert(0 <= ACB.DEPOSIT_RATE and ACB.DEPOSIT_RATE <= 100)
         assert(1 <= ACB.DAMPING_FACTOR and ACB.DAMPING_FACTOR <= 100)
-        for bond_price in ACB.LEVEL_TO_BOND_PRICE:
-            assert(bond_price <= ACB.BOND_REDEMPTION_PRICE)
-
         assert(len(ACB.LEVEL_TO_EXCHANGE_RATE) == Oracle.LEVEL_MAX)
-        assert(len(ACB.LEVEL_TO_BOND_PRICE) == Oracle.LEVEL_MAX)
 
         self.oracle_level = Oracle.LEVEL_MAX
 
@@ -1110,10 +1104,7 @@ class ACB:
         # The ACB does not have enough bonds to issue.
         assert(self.bond_budget >= count)
 
-        bond_price = ACB.LEVEL_TO_BOND_PRICE[Oracle.LEVEL_MAX - 1]
-        if 0 <= self.oracle_level and self.oracle_level < Oracle.LEVEL_MAX:
-            bond_price = ACB.LEVEL_TO_BOND_PRICE[self.oracle_level]
-        amount = bond_price * count
+        amount = ACB.BOND_PRICE * count
         # The user does not have enough coins to purchase the bonds.
         assert(self.coin.balance_of(sender) >= amount)
 
@@ -1204,8 +1195,7 @@ class ACB:
             assert(0 <= self.oracle_level and
                    self.oracle_level < Oracle.LEVEL_MAX)
             # Issue new bonds to decrease the total coin supply.
-            self.bond_budget = int(
-                -delta / ACB.LEVEL_TO_BOND_PRICE[self.oracle_level])
+            self.bond_budget = int(-delta / ACB.BOND_PRICE)
             assert(self.bond_budget >= 0)
 
         assert(self.bond.total_supply + self.bond_budget >= 0)
