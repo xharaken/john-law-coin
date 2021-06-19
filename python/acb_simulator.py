@@ -21,8 +21,8 @@ class Voter:
         self.committed_salt = [0] * 3
         self.deposit = [0] * 3
         self.revealed = [False] * 3
-        self.revealed_level = [0] * 3
-        self.revealed_salt = [0] * 3
+        self.oracle_level = [0] * 3
+        self.salt = [0] * 3
         self.reclaimed = [False] * 3
         self.bonds = {}
         self.balance = 0
@@ -190,7 +190,7 @@ class ACBSimulator(unittest.TestCase):
             coin_supply2 = acb.coin.total_supply
             bond_supply = acb.bond.total_supply
             bond_budget = acb.bond_budget
-            current_phase_start = acb.current_phase_start
+            current_epoch_start = acb.current_epoch_start
 
             self.redeem_bonds()
             self.purchase_bonds()
@@ -203,7 +203,7 @@ class ACBSimulator(unittest.TestCase):
             self.assertEqual(acb_log.total_coin_supply, coin_supply2)
             self.assertEqual(acb_log.total_bond_supply, bond_supply)
             self.assertEqual(acb_log.oracle_level, self.metrics.oracle_level)
-            self.assertEqual(acb_log.current_phase_start, acb.get_timestamp())
+            self.assertEqual(acb_log.current_epoch_start, acb.get_timestamp())
             self.assertEqual(acb_log.tax, tax)
             self.assertEqual(acb_log.purchased_bonds,
                              self.metrics.purchase_count)
@@ -480,13 +480,13 @@ class ACBSimulator(unittest.TestCase):
         for i in range(len(voters)):
             if (voters[i].committed[prev_prev] and
                 voters[i].revealed[prev_prev] and
-                voters[i].revealed_level[prev_prev] ==
+                voters[i].oracle_level[prev_prev] ==
                 voters[i].committed_level[prev_prev] and
-                0 <= voters[i].revealed_level[prev_prev] and
-                voters[i].revealed_level[prev_prev] < Oracle.LEVEL_MAX and
-                voters[i].revealed_salt[prev_prev] ==
+                0 <= voters[i].oracle_level[prev_prev] and
+                voters[i].oracle_level[prev_prev] < Oracle.LEVEL_MAX and
+                voters[i].salt[prev_prev] ==
                 voters[i].committed_salt[prev_prev]):
-                level = voters[i].revealed_level[prev_prev]
+                level = voters[i].oracle_level[prev_prev]
                 revealed_deposits[level] += voters[i].deposit[prev_prev]
                 revealed_counts[level] += 1
 
@@ -510,13 +510,13 @@ class ACBSimulator(unittest.TestCase):
                 deposit_total += voters[i].deposit[prev_prev]
             if (voters[i].committed[prev_prev] and
                 voters[i].revealed[prev_prev] and
-                voters[i].revealed_level[prev_prev] ==
+                voters[i].oracle_level[prev_prev] ==
                 voters[i].committed_level[prev_prev] and
-                0 <= voters[i].revealed_level[prev_prev] and
-                voters[i].revealed_level[prev_prev] < Oracle.LEVEL_MAX and
-                voters[i].revealed_salt[prev_prev] ==
+                0 <= voters[i].oracle_level[prev_prev] and
+                voters[i].oracle_level[prev_prev] < Oracle.LEVEL_MAX and
+                voters[i].salt[prev_prev] ==
                 voters[i].committed_salt[prev_prev] and
-                (abs(voters[i].revealed_level[prev_prev] - mode_level) <=
+                (abs(voters[i].oracle_level[prev_prev] - mode_level) <=
                  Oracle.RECLAIM_THRESHOLD)):
                 deposit_to_be_reclaimed += voters[i].deposit[prev_prev]
         assert(deposit_to_be_reclaimed <= deposit_total)
@@ -559,8 +559,8 @@ class ACBSimulator(unittest.TestCase):
             voters[i].committed_salt[current] = 0
             voters[i].deposit[current] = 0
             voters[i].revealed[current] = False
-            voters[i].revealed_level[current] = 0
-            voters[i].revealed_salt[current] = 0
+            voters[i].oracle_level[current] = 0
+            voters[i].salt[current] = 0
             voters[i].reclaimed[current] = False
 
             voters[i].committed[current] = (random.randint(0, 99) < 99)
@@ -581,7 +581,7 @@ class ACBSimulator(unittest.TestCase):
                     0, Oracle.LEVEL_MAX)
 
             voters[i].committed_salt[current] = random.randint(0, 10)
-            committed_hash = Oracle.hash(
+            hash = Oracle.encrypt(
                 voters[i].address,
                 voters[i].committed_level[current],
                 voters[i].committed_salt[current])
@@ -590,36 +590,36 @@ class ACBSimulator(unittest.TestCase):
 
             voters[i].revealed[prev] = True
             if random.randint(0, 99) < 97:
-                voters[i].revealed_level[prev] = voters[i].committed_level[prev]
+                voters[i].oracle_level[prev] = voters[i].committed_level[prev]
             else:
-                voters[i].revealed_level[prev] = random.randint(
+                voters[i].oracle_level[prev] = random.randint(
                     0, Oracle.LEVEL_MAX)
             if random.randint(0, 99) < 97:
-                voters[i].revealed_salt[prev] = voters[i].committed_salt[prev]
+                voters[i].salt[prev] = voters[i].committed_salt[prev]
             else:
-                voters[i].revealed_salt[prev] = random.randint(0, 10)
+                voters[i].salt[prev] = random.randint(0, 10)
 
             voters[i].reclaimed[prev_prev] = True
 
             reveal_result = (
                 voters[i].committed[prev] and
-                voters[i].revealed_level[prev] ==
+                voters[i].oracle_level[prev] ==
                 voters[i].committed_level[prev] and
-                0 <= voters[i].revealed_level[prev] and
-                voters[i].revealed_level[prev] < Oracle.LEVEL_MAX and
-                voters[i].revealed_salt[prev] ==
+                0 <= voters[i].oracle_level[prev] and
+                voters[i].oracle_level[prev] < Oracle.LEVEL_MAX and
+                voters[i].salt[prev] ==
                 voters[i].committed_salt[prev])
 
             reclaim_result = (
                 voters[i].committed[prev_prev] and
                 voters[i].revealed[prev_prev] and
-                voters[i].revealed_level[prev_prev] ==
+                voters[i].oracle_level[prev_prev] ==
                 voters[i].committed_level[prev_prev] and
-                0 <= voters[i].revealed_level[prev_prev] and
-                voters[i].revealed_level[prev_prev] < Oracle.LEVEL_MAX and
-                voters[i].revealed_salt[prev_prev] ==
+                0 <= voters[i].oracle_level[prev_prev] and
+                voters[i].oracle_level[prev_prev] < Oracle.LEVEL_MAX and
+                voters[i].salt[prev_prev] ==
                 voters[i].committed_salt[prev_prev] and
-                (abs(voters[i].revealed_level[prev_prev] - mode_level) <=
+                (abs(voters[i].oracle_level[prev_prev] - mode_level) <=
                  Oracle.RECLAIM_THRESHOLD))
 
             coin_supply = acb.coin.total_supply
@@ -632,7 +632,7 @@ class ACBSimulator(unittest.TestCase):
 
             reward = 0
             if (reclaim_result and
-                mode_level == voters[i].revealed_level[prev_prev]):
+                mode_level == voters[i].oracle_level[prev_prev]):
                 proportional_reward = 0
                 if revealed_deposits[mode_level] > 0:
                     proportional_reward = int(
@@ -650,15 +650,15 @@ class ACBSimulator(unittest.TestCase):
             reclaimed_total += reclaimed + reward
 
             self.assertEqual(acb.vote(voters[i].address,
-                                      committed_hash,
-                                      voters[i].revealed_level[prev],
-                                      voters[i].revealed_salt[prev]),
+                                      hash,
+                                      voters[i].oracle_level[prev],
+                                      voters[i].salt[prev]),
                              (True, reveal_result, voters[i].deposit[current],
                               reclaimed, reward, not commit_observed))
 
             self.assertEqual(acb.coin.balance_of(voters[i].address),
                              voters[i].balance)
-            self.assertEqual(acb.current_phase_start, acb.get_timestamp())
+            self.assertEqual(acb.current_epoch_start, acb.get_timestamp())
 
             self.metrics.deposited += voters[i].deposit[current]
             self.metrics.reclaimed += reclaimed

@@ -47,8 +47,8 @@ class OracleSimulator(unittest.TestCase):
                 self.committed_correctly = False
                 self.revealed = False
                 self.revealed_correctly = False
-                self.revealed_level = 0
-                self.revealed_salt = 0
+                self.oracle_level = 0
+                self.salt = 0
                 self.reclaimed = False
 
         voters = []
@@ -65,9 +65,9 @@ class OracleSimulator(unittest.TestCase):
                 self.coin.mint(voters[i].address, voters[i].deposit)
                 result = self.oracle.commit(
                     self.coin, voters[i].address,
-                    Oracle.hash(voters[i].address,
-                                voters[i].committed_level,
-                                voters[i].committed_salt),
+                    Oracle.encrypt(voters[i].address,
+                                   voters[i].committed_level,
+                                   voters[i].committed_salt),
                     voters[i].deposit)
 
                 self.assertEqual(result, True)
@@ -76,9 +76,9 @@ class OracleSimulator(unittest.TestCase):
 
                 self.assertEqual(self.oracle.commit(
                     self.coin, voters[i].address,
-                    Oracle.hash(voters[i].address,
-                                voters[i].committed_level,
-                                voters[i].committed_salt), 0), False)
+                    Oracle.encrypt(voters[i].address,
+                                   voters[i].committed_level,
+                                   voters[i].committed_salt), 0), False)
 
         tax = random.randint(0, 200)
         self.coin.mint(self.coin.tax_account, tax)
@@ -91,33 +91,33 @@ class OracleSimulator(unittest.TestCase):
             voters[i].revealed = (random.randint(0, 99) < 95)
             if voters[i].revealed:
                 if random.randint(0, 99) < 95:
-                    voters[i].revealed_level = voters[i].committed_level
+                    voters[i].oracle_level = voters[i].committed_level
                 else:
-                    voters[i].revealed_level = random.randint(
+                    voters[i].oracle_level = random.randint(
                         0, Oracle.LEVEL_MAX)
                 if random.randint(0, 99) < 95:
-                    voters[i].revealed_salt = voters[i].committed_salt
+                    voters[i].salt = voters[i].committed_salt
                 else:
-                    voters[i].revealed_salt = random.randint(0, 10)
+                    voters[i].salt = random.randint(0, 10)
                 voters[i].revealed_correctly = (
                     voters[i].committed_correctly and
-                    voters[i].revealed_level == voters[i].committed_level and
-                    0 <= voters[i].revealed_level and
-                    voters[i].revealed_level < Oracle.LEVEL_MAX and
-                    voters[i].revealed_salt == voters[i].committed_salt)
+                    voters[i].oracle_level == voters[i].committed_level and
+                    0 <= voters[i].oracle_level and
+                    voters[i].oracle_level < Oracle.LEVEL_MAX and
+                    voters[i].salt == voters[i].committed_salt)
                 result = self.oracle.reveal(
                     voters[i].address,
-                    voters[i].revealed_level,
-                    voters[i].revealed_salt)
+                    voters[i].oracle_level,
+                    voters[i].salt)
                 self.assertEqual(result, voters[i].revealed_correctly)
                 self.assertEqual(
                     self.oracle.reveal(voters[i].address,
-                                       voters[i].revealed_level,
-                                       voters[i].revealed_salt), False)
+                                       voters[i].oracle_level,
+                                       voters[i].salt), False)
                 self.assertEqual(
                     self.oracle.reveal(-voters[i].address,
-                                       voters[i].revealed_level,
-                                       voters[i].revealed_salt), False)
+                                       voters[i].oracle_level,
+                                       voters[i].salt), False)
 
         deposits = [0] * Oracle.LEVEL_MAX
         counts = [0] * Oracle.LEVEL_MAX
@@ -127,8 +127,8 @@ class OracleSimulator(unittest.TestCase):
                 deposit_total += voters[i].deposit
                 assert(voters[i].deposit >= 0)
             if voters[i].revealed_correctly:
-                deposits[voters[i].revealed_level] += voters[i].deposit
-                counts[voters[i].revealed_level] += 1
+                deposits[voters[i].oracle_level] += voters[i].deposit
+                counts[voters[i].oracle_level] += 1
 
         max_deposit = 0
         max_count = 0
@@ -172,7 +172,7 @@ class OracleSimulator(unittest.TestCase):
                 reward = 0
                 reclaimed = 0
                 if (voters[i].revealed_correctly and
-                    voters[i].revealed_level == mode_level):
+                    voters[i].oracle_level == mode_level):
                     self.assertNotEqual(mode_level, Oracle.LEVEL_MAX)
                     if deposits[mode_level] > 0:
                         reward += int(
@@ -186,8 +186,8 @@ class OracleSimulator(unittest.TestCase):
                     reclaimed = voters[i].deposit
                 elif (voters[i].revealed_correctly and
                       mode_level - Oracle.RECLAIM_THRESHOLD <=
-                      voters[i].revealed_level and
-                      voters[i].revealed_level <=
+                      voters[i].oracle_level and
+                      voters[i].oracle_level <=
                       mode_level + Oracle.RECLAIM_THRESHOLD):
                     self.assertNotEqual(mode_level, Oracle.LEVEL_MAX)
                     reclaimed = voters[i].deposit
