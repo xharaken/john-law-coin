@@ -474,14 +474,12 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
       }
       require(bond_budget_ <= 0, "cs1");
     } else {
-      require(0 <= oracle_level_ && oracle_level_ < oracle_.getLevelMax(),
-              "cs2");
       // Issue new bonds to decrease the total coin supply.
       bond_budget_ = -delta / BOND_PRICE.toInt256();
-      require(bond_budget_ >= 0, "cs3");
+      require(bond_budget_ >= 0, "cs2");
     }
 
-    require(bond_.totalSupply().toInt256() + bond_budget_ >= 0, "cs4");
+    require(bond_.totalSupply().toInt256() + bond_budget_ >= 0, "cs3");
     emit ControlSupplyEvent(delta, bond_budget_, mint);
     return mint;
   }
