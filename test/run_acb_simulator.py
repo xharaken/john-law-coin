@@ -23,18 +23,17 @@ import common
 
 common.reset_network(41)
 command = ("truffle test acb_simulator.js " +
-           "'996 1000 84 7 90 10 10 [6, 7, 8, 9, 10, 11, 12, 13, 14] " +
+           "'996 1000 12 7 90 10 10 [6, 7, 8, 9, 10, 11, 12, 13, 14] " +
            "1 40 100 0'")
 common.run_test(command)
 
 iteration = 100
 for (bond_price, bond_redemption_price) in [(996, 1000)]:
-    for bond_redemption_period in [1, 84 * 24 * 60 * 60]:
-        for epoch_duration in [1, 7 * 24 * 60 * 60]:
+    for bond_redemption_period in [1, 12]:
+        for epoch_duration in [7 * 24 * 60 * 60]:
             for proportional_reward_rate in [0, 90, 100]:
                 for deposit_rate in [0, 10, 100]:
                     for damping_factor in [10, 100]:
-                        p = bond_redemption_price
                         for level_to_exchange_rate in [
                                 [9, 11, 12],
                                 [0, 1, 10, 11, 12],

@@ -21,7 +21,7 @@ import common
 
 common.reset_network(8)
 command = ("truffle test acb_unittest.js " +
-           "'996 1000 10 2 90 10 10 [1, 11, 20] 1 12345'")
+           "'996 1000 10 604800 90 10 10 [1, 11, 20] 1 12345'")
 common.run_test(command)
 
 for (bond_price, bond_redemption_price) in [(996, 1000)]:

@@ -55,7 +55,7 @@ contract ACBForTesting is ACB {
     require(1 <= BOND_REDEMPTION_PRICE && BOND_REDEMPTION_PRICE <= 100000,
             "oc2");
     require(1 <= BOND_REDEMPTION_PERIOD &&
-            BOND_REDEMPTION_PERIOD <= 365 * 24 * 60 * 60, "oc3");
+            BOND_REDEMPTION_PERIOD <= 100, "oc3");
     require(1 <= EPOCH_DURATION && EPOCH_DURATION <= 30 * 24 * 60 * 60, "oc4");
     require(0 <= DEPOSIT_RATE && DEPOSIT_RATE <= 100, "oc5");
     require(1 <= DAMPING_FACTOR && DAMPING_FACTOR <= 100, "oc6");

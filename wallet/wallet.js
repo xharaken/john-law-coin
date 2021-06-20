@@ -214,8 +214,8 @@ async function purchaseBonds() {
     }
     const ret = receipt.events.PurchaseBondsEvent.returnValues;
     const message = "Purchased " + ret.count +
-          " bonds. The redemption timestamp is " +
-          getDateString(parseInt(ret.redemption_timestamp) * 1000) + ".";
+          " bonds. The bonds can be redeemed at epoch " +
+          parseInt(ret.redemption_epoch) + ".";
     await showTransactionSuccessMessage(message, receipt);
   } catch (error) {
     const transactionHash = extractTransactionHash(error);
@@ -240,41 +240,43 @@ async function purchaseBonds() {
 
 async function redeemBonds() {
   try {
+    const epoch_id = parseInt(
+      await _oracle_contract.methods.epoch_id_().call());
     const bond_budget =
       -(parseInt(await _acb_contract.methods.bond_budget_().call()));
     const redemption_count =
           parseInt(await _bond_contract.methods.
-                   numberOfRedemptionTimestampsOwnedBy(
+                   numberOfRedemptionEpochsOwnedBy(
                      _selected_address).call());
-    let redemption_timestamps = [];
+    let redemption_epochs = [];
     for (let index = 0; index < redemption_count; index++) {
-      const redemption_timestamp =
+      const redemption_epoch =
             parseInt(await _bond_contract.methods.
-                     getRedemptionTimestampOwnedBy(
+                     getRedemptionEpochOwnedBy(
                        _selected_address, index).call());
-      redemption_timestamps.push(redemption_timestamp);
+      redemption_epochs.push(redemption_epoch);
     }
-    redemption_timestamps =
-      redemption_timestamps.sort((a, b) => { return a - b; });
-    console.log("redemption_timestamps: ", redemption_timestamps);
+    redemption_epochs =
+      redemption_epochs.sort((a, b) => { return a - b; });
+    console.log("redemption_epochs: ", redemption_epochs);
     
-    let redeemable_timestamps = [];
+    let redeemable_epochs = [];
     let bond_count = 0;
-    for (let redemption_timestamp of redemption_timestamps) {
-      if (parseInt(redemption_timestamp) * 1000 < Date.now()) {
-        redeemable_timestamps.push(redemption_timestamp);
+    for (let redemption_epoch of redemption_epochs) {
+      if (parseInt(redemption_epoch) < epoch_id) {
+        redeemable_epochs.push(redemption_epoch);
       } else if (bond_count < bond_budget) {
-        redeemable_timestamps.push(redemption_timestamp);
+        redeemable_epochs.push(redemption_epoch);
         const balance =
               parseInt(await _bond_contract.methods.balanceOf(
-                _selected_address, redemption_timestamp).call());
+                _selected_address, redemption_epoch).call());
         bond_count += balance;
       }
     }
-    console.log("redeemable_timestamps: ", redeemable_timestamps);
+    console.log("redeemable_epochs: ", redeemable_epochs);
     
     const promise = _acb_contract.methods.redeemBonds(
-      redeemable_timestamps).send({from: _selected_address});
+      redeemable_epochs).send({from: _selected_address});
     showProcessingMessage();
     const receipt = await promise;
     console.log("receipt: ", receipt);
@@ -534,33 +536,32 @@ async function reloadInfo() {
     let has_redeemable = false;
     let bond_list_html = "You have " + bond_balance + " bonds in total.";
     if (bond_balance > 0) {
-      bond_list_html += "<br><br><table><tr><td>Redemption timestamp</td>" +
+      bond_list_html += "<br><br><table><tr><td>Redemption epoch</td>" +
         "<td># of bonds</td><td>Redeemable?</td></tr>";
       const redemption_count =
             parseInt(await _bond_contract.methods.
-                     numberOfRedemptionTimestampsOwnedBy(
+                     numberOfRedemptionEpochsOwnedBy(
                        _selected_address).call());
-      let redemption_timestamps = [];
+      let redemption_epochs = [];
       for (let index = 0; index < redemption_count; index++) {
-        const redemption_timestamp =
+        const redemption_epoch =
               parseInt(await _bond_contract.methods.
-                       getRedemptionTimestampOwnedBy(
+                       getRedemptionEpochOwnedBy(
                          _selected_address, index).call());
-        redemption_timestamps.push(redemption_timestamp);
+        redemption_epochs.push(redemption_epoch);
       }
-      redemption_timestamps =
-        redemption_timestamps.sort((a, b) => { return a - b; });
+      redemption_epochs =
+        redemption_epochs.sort((a, b) => { return a - b; });
       
-      for (let redemption_timestamp of redemption_timestamps) {
+      for (let redemption_epoch of redemption_epochs) {
         const balance =
               parseInt(await _bond_contract.methods.balanceOf(
-                _selected_address, redemption_timestamp).call());
-        const redemption_timestamp_ms = parseInt(redemption_timestamp) * 1000;
-        bond_list_html += "<tr><td>" + getDateString(redemption_timestamp_ms) +
+                _selected_address, redemption_epoch).call());
+        bond_list_html += "<tr><td>" + redemption_epoch +
           "</td><td class='right'>" + balance + "</td><td>" +
-          (redemption_timestamp_ms < Date.now() ? "Yes" :
+          (redemption_epoch < epoch_id ? "Yes" :
            "As long as the ACB's bond budget is negative") + "</td></tr>";
-        if (redemption_timestamp_ms < Date.now()) {
+        if (redemption_epoch < epoch_id) {
           has_redeemable = true;
         }
       }

@@ -434,7 +434,7 @@ function parameterized_test(accounts,
 
         let coin_supply = await get_coin_supply();
         let bond_supply = await get_bond_supply();
-        let redemption = (await _acb.getTimestamp()).toNumber() +
+        let redemption = (await _oracle.epoch_id_()).toNumber() +
             _bond_redemption_period;
         if (redemption in voter.bonds) {
           voter.bonds[redemption] += count;
@@ -476,11 +476,11 @@ function parameterized_test(accounts,
         let fast_redeem_count = 0;
         let redeem_count = 0;
         let bond_budget = (await _acb.bond_budget_()).toNumber();
-        let timestamp = (await _acb.getTimestamp()).toNumber();
+        let epoch_id = (await _oracle.epoch_id_()).toNumber();
         for (let redemption of redemptions) {
           assert.isTrue(redemption in voter.bonds);
           let count = voter.bonds[redemption];
-          if (redemption > timestamp) {
+          if (redemption > epoch_id) {
             if (bond_budget >= 0) {
               continue;
             }
@@ -506,10 +506,10 @@ function parameterized_test(accounts,
                      voter.balance);
 
         let bond_count =
-            await _bond.numberOfRedemptionTimestampsOwnedBy(voter.address);
+            await _bond.numberOfRedemptionEpochsOwnedBy(voter.address);
         assert.equal(Object.keys(voter.bonds).length, bond_count);
         for (let index = 0; index < bond_count; index++) {
-          let redemption = (await _bond.getRedemptionTimestampOwnedBy(
+          let redemption = (await _bond.getRedemptionEpochOwnedBy(
               voter.address, index)).toNumber();
           assert.isTrue(redemption in voter.bonds);
           assert.equal(await get_bond(voter.address, redemption),
@@ -982,7 +982,7 @@ function parameterized_test(accounts,
           receipt.logs.filter(e => e.event == 'PurchaseBondsEvent')[0].args;
       assert.equal(args.sender, option.from);
       assert.equal(args.count, count);
-      assert.equal(args.redemption_timestamp, redemption);
+      assert.equal(args.redemption_epoch, redemption);
     }
 
     async function check_redeem_bonds(redemptions, option, count_total) {

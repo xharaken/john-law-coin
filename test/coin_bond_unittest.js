@@ -182,20 +182,20 @@ contract("CoinBondUnittest", function (accounts) {
     // balanceOf
     assert.equal(await bond.balanceOf(accounts[1], 1111), 0);
     assert.equal(await bond.numberOfBondsOwnedBy(accounts[1]), 0);
-    await check_redemption_timestamps(bond, accounts[1], []);
+    await check_redemption_epochs(bond, accounts[1], []);
 
     // mint
     await bond.mint(accounts[1], 1111, 1);
     assert.equal(await bond.totalSupply(), 1);
     assert.equal(await bond.balanceOf(accounts[1], 1111), 1);
     assert.equal(await bond.numberOfBondsOwnedBy(accounts[1]), 1);
-    await check_redemption_timestamps(bond, accounts[1], [1111]);
+    await check_redemption_epochs(bond, accounts[1], [1111]);
 
     await bond.mint(accounts[1], 1111, 2);
     assert.equal(await bond.totalSupply(), 3);
     assert.equal(await bond.balanceOf(accounts[1], 1111), 3);
     assert.equal(await bond.numberOfBondsOwnedBy(accounts[1]), 3);
-    await check_redemption_timestamps(bond, accounts[1], [1111]);
+    await check_redemption_epochs(bond, accounts[1], [1111]);
 
     await bond.mint(accounts[1], 2222, 2);
     assert.equal(await bond.totalSupply(), 5)
@@ -203,7 +203,7 @@ contract("CoinBondUnittest", function (accounts) {
     assert.equal(await bond.balanceOf(accounts[1], 2222), 2);
     assert.equal(await bond.numberOfBondsOwnedBy(accounts[1]), 5);
     assert.equal(await bond.numberOfBondsOwnedBy(accounts[2]), 0);
-    await check_redemption_timestamps(bond, accounts[1], [1111, 2222]);
+    await check_redemption_epochs(bond, accounts[1], [1111, 2222]);
 
     await bond.mint(accounts[2], 2222, 5);
     assert.equal(await bond.totalSupply(), 10);
@@ -212,8 +212,8 @@ contract("CoinBondUnittest", function (accounts) {
     assert.equal(await bond.balanceOf(accounts[2], 2222), 5);
     assert.equal(await bond.numberOfBondsOwnedBy(accounts[1]), 5);
     assert.equal(await bond.numberOfBondsOwnedBy(accounts[2]), 5);
-    await check_redemption_timestamps(bond, accounts[1], [1111, 2222]);
-    await check_redemption_timestamps(bond, accounts[2], [2222]);
+    await check_redemption_epochs(bond, accounts[1], [1111, 2222]);
+    await check_redemption_epochs(bond, accounts[2], [2222]);
 
     await bond.burn(accounts[3], 1111, 0);
     assert.equal(await bond.totalSupply(), 10);
@@ -222,8 +222,8 @@ contract("CoinBondUnittest", function (accounts) {
     assert.equal(await bond.balanceOf(accounts[2], 2222), 5);
     assert.equal(await bond.numberOfBondsOwnedBy(accounts[1]), 5);
     assert.equal(await bond.numberOfBondsOwnedBy(accounts[2]), 5);
-    await check_redemption_timestamps(bond, accounts[1], [1111, 2222]);
-    await check_redemption_timestamps(bond, accounts[2], [2222]);
+    await check_redemption_epochs(bond, accounts[1], [1111, 2222]);
+    await check_redemption_epochs(bond, accounts[2], [2222]);
 
     await bond.burn(accounts[2], 1111, 0);
     assert.equal(await bond.totalSupply(), 10);
@@ -232,8 +232,8 @@ contract("CoinBondUnittest", function (accounts) {
     assert.equal(await bond.balanceOf(accounts[2], 2222), 5);
     assert.equal(await bond.numberOfBondsOwnedBy(accounts[1]), 5);
     assert.equal(await bond.numberOfBondsOwnedBy(accounts[2]), 5);
-    await check_redemption_timestamps(bond, accounts[1], [1111, 2222]);
-    await check_redemption_timestamps(bond, accounts[2], [2222]);
+    await check_redemption_epochs(bond, accounts[1], [1111, 2222]);
+    await check_redemption_epochs(bond, accounts[2], [2222]);
 
     // burn
     await should_throw(async () => {
@@ -259,8 +259,8 @@ contract("CoinBondUnittest", function (accounts) {
     assert.equal(await bond.balanceOf(accounts[2], 2222), 0);
     assert.equal(await bond.numberOfBondsOwnedBy(accounts[1]), 5);
     assert.equal(await bond.numberOfBondsOwnedBy(accounts[2]), 0);
-    await check_redemption_timestamps(bond, accounts[1], [1111, 2222]);
-    await check_redemption_timestamps(bond, accounts[2], []);
+    await check_redemption_epochs(bond, accounts[1], [1111, 2222]);
+    await check_redemption_epochs(bond, accounts[2], []);
 
     await bond.burn(accounts[1], 2222, 1);
     assert.equal(await bond.totalSupply(), 4);
@@ -269,8 +269,8 @@ contract("CoinBondUnittest", function (accounts) {
     assert.equal(await bond.balanceOf(accounts[2], 2222), 0);
     assert.equal(await bond.numberOfBondsOwnedBy(accounts[1]), 4);
     assert.equal(await bond.numberOfBondsOwnedBy(accounts[2]), 0);
-    await check_redemption_timestamps(bond, accounts[1], [1111, 2222]);
-    await check_redemption_timestamps(bond, accounts[2], []);
+    await check_redemption_epochs(bond, accounts[1], [1111, 2222]);
+    await check_redemption_epochs(bond, accounts[2], []);
 
     await bond.burn(accounts[1], 2222, 1);
     assert.equal(await bond.totalSupply(), 3);
@@ -279,8 +279,8 @@ contract("CoinBondUnittest", function (accounts) {
     assert.equal(await bond.balanceOf(accounts[2], 2222), 0);
     assert.equal(await bond.numberOfBondsOwnedBy(accounts[1]), 3);
     assert.equal(await bond.numberOfBondsOwnedBy(accounts[2]), 0);
-    await check_redemption_timestamps(bond, accounts[1], [1111]);
-    await check_redemption_timestamps(bond, accounts[2], []);
+    await check_redemption_epochs(bond, accounts[1], [1111]);
+    await check_redemption_epochs(bond, accounts[2], []);
 
     await bond.burn(accounts[1], 1111, 3);
     assert.equal(await bond.totalSupply(), 0);
@@ -289,8 +289,8 @@ contract("CoinBondUnittest", function (accounts) {
     assert.equal(await bond.balanceOf(accounts[2], 2222), 0);
     assert.equal(await bond.numberOfBondsOwnedBy(accounts[1]), 0);
     assert.equal(await bond.numberOfBondsOwnedBy(accounts[2]), 0);
-    await check_redemption_timestamps(bond, accounts[1], []);
-    await check_redemption_timestamps(bond, accounts[2], []);
+    await check_redemption_epochs(bond, accounts[1], []);
+    await check_redemption_epochs(bond, accounts[2], []);
 
     await bond.burn(accounts[1], 1111, 0);
     assert.equal(await bond.totalSupply(), 0);
@@ -299,8 +299,8 @@ contract("CoinBondUnittest", function (accounts) {
     assert.equal(await bond.balanceOf(accounts[2], 2222), 0);
     assert.equal(await bond.numberOfBondsOwnedBy(accounts[1]), 0);
     assert.equal(await bond.numberOfBondsOwnedBy(accounts[2]), 0);
-    await check_redemption_timestamps(bond, accounts[1], []);
-    await check_redemption_timestamps(bond, accounts[2], []);
+    await check_redemption_epochs(bond, accounts[1], []);
+    await check_redemption_epochs(bond, accounts[2], []);
   });
 
   it("Ownable", async function () {
@@ -493,16 +493,16 @@ contract("CoinBondUnittest", function (accounts) {
     assert.equal(await coin.allowance(accounts[1], accounts[7]), 913 - 78);
   });
 
-  async function check_redemption_timestamps(bond, account, expected) {
-    let count = await bond.numberOfRedemptionTimestampsOwnedBy(account);
+  async function check_redemption_epochs(bond, account, expected) {
+    let count = await bond.numberOfRedemptionEpochsOwnedBy(account);
     assert.equal(count, expected.length);
 
     await should_throw(async () => {
-      await bond.getRedemptionTimestampOwnedBy(account, count);
+      await bond.getRedemptionEpochOwnedBy(account, count);
     }, "EnumerableSet");
 
     for (let index = 0; index < count; index++) {
-      let value = await bond.getRedemptionTimestampOwnedBy(account, index);
+      let value = await bond.getRedemptionEpochOwnedBy(account, index);
       assert.isTrue(expected.includes(value.toNumber()));
     }
   }

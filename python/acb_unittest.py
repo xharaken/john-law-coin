@@ -594,7 +594,7 @@ class ACBUnitTest(unittest.TestCase):
         coin_supply = acb.coin.total_supply
         bond_supply = acb.bond.total_supply
         self.assertEqual(t9 - t6, ACB.BOND_REDEMPTION_PERIOD)
-        self.assertEqual(t6 <= acb.get_timestamp(), True)
+        self.assertEqual(t6 <= acb.oracle.epoch_id, True)
         self.assertEqual(acb.redeem_bonds(accounts[2], [t6, t8, t7]), 20)
         self.assertEqual(acb.bond.balance_of(accounts[2], t6), 0)
         self.assertEqual(acb.bond.balance_of(accounts[2], t7), 15)
@@ -685,25 +685,6 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb._control_supply(
             5 * ACB.BOND_REDEMPTION_PRICE), 5 * ACB.BOND_REDEMPTION_PRICE)
         self.assertEqual(acb.bond_budget, 0)
-
-    def advance_epoch(self, amount):
-        bond_budget = self.acb.bond_budget
-        remaining = amount
-        while remaining > 0:
-            time_to_next_epoch = (ACB.EPOCH_DURATION -
-                                  self.acb.get_timestamp() +
-                                  self.acb.current_epoch_start)
-            advance = min(time_to_next_epoch, remaining)
-            if advance > 0:
-                self.acb.set_timestamp(self.acb.get_timestamp() + advance)
-            self.acb.vote(
-                self.accounts[7],
-                Oracle.encrypt(self.accounts[7], Oracle.LEVEL_MAX, 1),
-                Oracle.LEVEL_MAX, 1)
-            remaining -= advance
-        self.assertEqual(self.acb._control_supply(
-            -self.bond_price * bond_budget), 0)
-        self.assertEqual(self.acb.bond_budget, bond_budget)
 
     def run_vote_tests(self):
         acb = self.acb
@@ -2775,6 +2756,25 @@ class ACBUnitTest(unittest.TestCase):
                          deposit_4[(now - 1) % 3] + remainder[(now - 1) % 3] +
                          tax_total)
 
+
+    def advance_epoch(self, amount):
+        bond_budget = self.acb.bond_budget
+        remaining = amount
+        while remaining > 0:
+            time_to_next_epoch = (ACB.EPOCH_DURATION -
+                                  self.acb.get_timestamp() +
+                                  self.acb.current_epoch_start)
+            advance = min(time_to_next_epoch, remaining)
+            if advance > 0:
+                self.acb.set_timestamp(self.acb.get_timestamp() + advance)
+            self.acb.vote(
+                self.accounts[7],
+                Oracle.encrypt(self.accounts[7], Oracle.LEVEL_MAX, 1),
+                Oracle.LEVEL_MAX, 1)
+            remaining -= advance
+        self.assertEqual(self.acb._control_supply(
+            -self.bond_price * bond_budget), 0)
+        self.assertEqual(self.acb.bond_budget, bond_budget)
 
     def check_redemption_epochs(self, bond, account, expected):
         count = bond.number_of_redemption_epochs_owned_by(account)

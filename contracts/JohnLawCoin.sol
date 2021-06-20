@@ -205,15 +205,15 @@ contract JohnLawBond is OwnableUpgradeable {
 
   // Attributes.
   
-  // A mapping from a user account to the redemption timestamps of the bonds
+  // A mapping from a user account to the redemption epochs of the bonds
   // owned by the user.
-  mapping (address => EnumerableSet.UintSet) private _redemption_timestamps;
+  mapping (address => EnumerableSet.UintSet) private _redemption_epochs;
 
   // A mapping from a user account to the number of bonds owned by the account.
   mapping (address => uint) private _number_of_bonds;
   
-  // _bonds[account][redemption_timestamp] stores the number of the bonds
-  // owned by the |account| and have the |redemption_timestamp|.
+  // _bonds[account][redemption_epoch] stores the number of the bonds
+  // owned by the |account| and have the |redemption_epoch|.
   mapping (address => mapping (uint => uint)) private _bonds;
 
   // The total bond supply.
@@ -221,9 +221,9 @@ contract JohnLawBond is OwnableUpgradeable {
 
   // Events.
   event MintEvent(address indexed account,
-                  uint redemption_timestamp, uint amount);
+                  uint redemption_epoch, uint amount);
   event BurnEvent(address indexed account,
-                  uint redemption_timestamp, uint amount);
+                  uint redemption_epoch, uint amount);
 
   // Initializer.
   function initialize()
@@ -238,21 +238,21 @@ contract JohnLawBond is OwnableUpgradeable {
   // Parameters
   // ----------------
   // |account|: The account to which the bonds are minted.
-  // |redemption_timestamp|: The redemption timestamp of the bonds.
+  // |redemption_epoch|: The redemption epoch of the bonds.
   // |amount|: The amount to be minted.
   //
   // Returns
   // ----------------
   // None.
-  function mint(address account, uint redemption_timestamp, uint amount)
+  function mint(address account, uint redemption_epoch, uint amount)
       public onlyOwner {
-    _bonds[account][redemption_timestamp] += amount;
+    _bonds[account][redemption_epoch] += amount;
     _total_supply += amount;
     _number_of_bonds[account] += amount;
-    if (_bonds[account][redemption_timestamp] > 0) {
-      _redemption_timestamps[account].add(redemption_timestamp);
+    if (_bonds[account][redemption_epoch] > 0) {
+      _redemption_epochs[account].add(redemption_epoch);
     }
-    emit MintEvent(account, redemption_timestamp, amount);
+    emit MintEvent(account, redemption_epoch, amount);
   }
 
   // Burn bonds from one account. Only the ACB can call this method.
@@ -260,21 +260,21 @@ contract JohnLawBond is OwnableUpgradeable {
   // Parameters
   // ----------------
   // |account|: The account from which the bonds are burned.
-  // |redemption_timestamp|: The redemption timestamp of the bonds.
+  // |redemption_epoch|: The redemption epoch of the bonds.
   // |amount|: The amount to be burned.
   //
   // Returns
   // ----------------
   // None.
-  function burn(address account, uint redemption_timestamp, uint amount)
+  function burn(address account, uint redemption_epoch, uint amount)
       public onlyOwner {
-    _bonds[account][redemption_timestamp] -= amount;
+    _bonds[account][redemption_epoch] -= amount;
     _total_supply -= amount;
     _number_of_bonds[account] -= amount;
-    if (_bonds[account][redemption_timestamp] == 0) {
-      _redemption_timestamps[account].remove(redemption_timestamp);
+    if (_bonds[account][redemption_epoch] == 0) {
+      _redemption_epochs[account].remove(redemption_epoch);
     }
-    emit BurnEvent(account, redemption_timestamp, amount);
+    emit BurnEvent(account, redemption_epoch, amount);
   }
 
   // Public getter: Return the number of bonds owned by the |account|.
@@ -283,26 +283,26 @@ contract JohnLawBond is OwnableUpgradeable {
     return _number_of_bonds[account];
   }
 
-  // Public getter: Return the number of redemption timestamps of the bonds
+  // Public getter: Return the number of redemption epochs of the bonds
   // owned by the |account|.
-  function numberOfRedemptionTimestampsOwnedBy(address account)
+  function numberOfRedemptionEpochsOwnedBy(address account)
       public view returns (uint) {
-    return _redemption_timestamps[account].length();
+    return _redemption_epochs[account].length();
   }
 
-  // Public getter: Return the |index|-th redemption timestamp of the bonds
+  // Public getter: Return the |index|-th redemption epoch of the bonds
   // owned by the |account|. |index| must be smaller than the value returned by
-  // numberOfRedemptionTimestampsOwnedBy(account).
-  function getRedemptionTimestampOwnedBy(address account, uint index)
+  // numberOfRedemptionEpochsOwnedBy(account).
+  function getRedemptionEpochOwnedBy(address account, uint index)
       public view returns (uint) {
-    return _redemption_timestamps[account].at(index);
+    return _redemption_epochs[account].at(index);
   }
 
   // Public getter: Return the number of the bonds owned by the |account| and
-  // have the |redemption_timestamp|.
-  function balanceOf(address account, uint redemption_timestamp)
+  // have the |redemption_epoch|.
+  function balanceOf(address account, uint redemption_epoch)
       public view returns (uint) {
-    return _bonds[account][redemption_timestamp];
+    return _bonds[account][redemption_epoch];
   }
 
   // Public getter: Return the total bond supply.
@@ -1048,7 +1048,7 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
                   uint deposited, uint reclaimed, uint rewarded,
                   bool epoch_updated);
   event PurchaseBondsEvent(address indexed sender, uint count,
-                           uint redemption_timestamp);
+                           uint redemption_epoch);
   event RedeemBondsEvent(address indexed sender, uint count);
   event ControlSupplyEvent(int delta, int bond_budget, uint mint);
 
@@ -1111,7 +1111,7 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
     // The bond price and the redemption period.
     BOND_PRICE = 996; // One bond is sold for 996 coins.
     BOND_REDEMPTION_PRICE = 1000; // One bond is redeemed for 1000 coins.
-    BOND_REDEMPTION_PERIOD = 84 * 24 * 60 * 60; // 12 weeks.
+    BOND_REDEMPTION_PERIOD = 12; // 12 epochs.
 
     // The duration of the oracle phase. The ACB adjusts the total coin supply
     // once per phase. Voters can vote once per phase.
@@ -1168,7 +1168,7 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
     // The current oracle level.
     oracle_level_ = oracle.getLevelMax();
 
-    // The timestamp when the current phase started.
+    // The timestamp when the current epoch started.
     current_epoch_start_ = getTimestamp();
 
     require(LEVEL_TO_EXCHANGE_RATE.length == oracle.getLevelMax(), "AC1");
@@ -1344,7 +1344,7 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
   //
   // Returns
   // ----------------
-  // The redemption timestamp of the purchased bonds if it succeeds. 0
+  // The redemption epoch of the purchased bonds if it succeeds. 0
   // otherwise.
   function purchaseBonds(uint count)
       public whenNotPaused returns (uint) {
@@ -1358,44 +1358,44 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
     require(coin_.balanceOf(sender) >= amount,
             "PurchaseBonds: Your coin balance is not enough.");
 
-    // Set the redemption timestamp of the bonds.
-    uint redemption_timestamp = getTimestamp() + BOND_REDEMPTION_PERIOD;
+    // Set the redemption epoch of the bonds.
+    uint redemption_epoch = oracle_.epoch_id_() + BOND_REDEMPTION_PERIOD;
 
     // Issue new bonds.
-    bond_.mint(sender, redemption_timestamp, count);
+    bond_.mint(sender, redemption_epoch, count);
     bond_budget_ -= count.toInt256();
     require(bond_budget_ >= 0, "pb1");
     require((bond_.totalSupply().toInt256()) + bond_budget_ >= 0, "pb2");
-    require(bond_.balanceOf(sender, redemption_timestamp) > 0, "pb3");
+    require(bond_.balanceOf(sender, redemption_epoch) > 0, "pb3");
 
     // Burn the corresponding coins.
     coin_.burn(sender, amount);
 
     logging_.purchasedBonds(count);
-    emit PurchaseBondsEvent(sender, count, redemption_timestamp);
-    return redemption_timestamp;
+    emit PurchaseBondsEvent(sender, count, redemption_epoch);
+    return redemption_epoch;
   }
   
   // Redeem bonds.
   //
   // Parameters
   // ----------------
-  // |redemption_timestamps|: An array of bonds to be redeemed. Bonds are
-  // identified by their redemption timestamps.
+  // |redemption_epochs|: An array of bonds to be redeemed. Bonds are
+  // identified by their redemption epochs.
   //
   // Returns
   // ----------------
   // The number of successfully redeemed bonds.
-  function redeemBonds(uint[] memory redemption_timestamps)
+  function redeemBonds(uint[] memory redemption_epochs)
       public whenNotPaused returns (uint) {
     address sender = msg.sender;
 
     uint count_total = 0;
-    for (uint i = 0; i < redemption_timestamps.length; i++) {
-      uint redemption_timestamp = redemption_timestamps[i];
-      uint count = bond_.balanceOf(sender, redemption_timestamp);
-      if (redemption_timestamp > getTimestamp()) {
-        // If the bonds have not yet hit their redemption timestamp, the ACB
+    for (uint i = 0; i < redemption_epochs.length; i++) {
+      uint redemption_epoch = redemption_epochs[i];
+      uint count = bond_.balanceOf(sender, redemption_epoch);
+      if (redemption_epoch > oracle_.epoch_id_()) {
+        // If the bonds have not yet hit their redemption epoch, the ACB
         // accepts the redemption as long as |bond_budget_| is negative.
         if (bond_budget_ >= 0) {
           continue;
@@ -1411,7 +1411,7 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
 
       // Burn the redeemed bonds.
       bond_budget_ += count.toInt256();
-      bond_.burn(sender, redemption_timestamp, count);
+      bond_.burn(sender, redemption_epoch, count);
       count_total += count;
     }
     require(bond_.totalSupply().toInt256() + bond_budget_ >= 0, "rb1");
@@ -1451,14 +1451,12 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
       }
       require(bond_budget_ <= 0, "cs1");
     } else {
-      require(0 <= oracle_level_ && oracle_level_ < oracle_.getLevelMax(),
-              "cs2");
       // Issue new bonds to decrease the total coin supply.
       bond_budget_ = -delta / BOND_PRICE.toInt256();
-      require(bond_budget_ >= 0, "cs3");
+      require(bond_budget_ >= 0, "cs2");
     }
 
-    require(bond_.totalSupply().toInt256() + bond_budget_ >= 0, "cs4");
+    require(bond_.totalSupply().toInt256() + bond_budget_ >= 0, "cs3");
     emit ControlSupplyEvent(delta, bond_budget_, mint);
     return mint;
   }

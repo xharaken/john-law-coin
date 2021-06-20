@@ -569,7 +569,7 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
                   uint deposited, uint reclaimed, uint rewarded,
                   bool epoch_updated);
   event PurchaseBondsEvent(address indexed sender, uint count,
-                           uint redemption_timestamp);
+                           uint redemption_epoch);
   event RedeemBondsEvent(address indexed sender, uint count);
   event ControlSupplyEvent(int delta, int bond_budget, uint mint);
 
@@ -756,7 +756,7 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
   //
   // Returns
   // ----------------
-  // The redemption timestamp of the purchased bonds if it succeeds. 0
+  // The redemption epoch of the purchased bonds if it succeeds. 0
   // otherwise.
   function purchaseBonds(uint count)
       public whenNotPaused returns (uint) {
@@ -770,44 +770,44 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
     require(coin_v2_.balanceOf(sender) >= amount,
             "PurchaseBonds: Your coin balance is not enough.");
 
-    // Set the redemption timestamp of the bonds.
-    uint redemption = getTimestamp() + BOND_REDEMPTION_PERIOD;
+    // Set the redemption epoch of the bonds.
+    uint redemption_epoch = oracle_v3_.epoch_id_() + BOND_REDEMPTION_PERIOD;
 
     // Issue new bonds.
-    bond_v2_.mint(sender, redemption, count);
+    bond_v2_.mint(sender, redemption_epoch, count);
     bond_budget_ -= count.toInt256();
     require(bond_budget_ >= 0, "pb1");
     require(bond_v2_.totalSupply().toInt256() + bond_budget_ >= 0, "pb2");
-    require(bond_v2_.balanceOf(sender, redemption) > 0, "pb3");
+    require(bond_v2_.balanceOf(sender, redemption_epoch) > 0, "pb3");
 
     // Burn the corresponding coins.
     coin_v2_.burn(sender, amount);
 
     logging_v2_.purchasedBonds(count);
-    emit PurchaseBondsEvent(sender, count, redemption);
-    return redemption;
+    emit PurchaseBondsEvent(sender, count, redemption_epoch);
+    return redemption_epoch;
   }
   
   // Redeem bonds.
   //
   // Parameters
   // ----------------
-  // |redemption_timestamps|: An array of bonds to be redeemed. Bonds are
-  // identified by their redemption timestamps.
+  // |redemption_epochs|: An array of bonds to be redeemed. Bonds are
+  // identified by their redemption epochs.
   //
   // Returns
   // ----------------
   // The number of successfully redeemed bonds.
-  function redeemBonds(uint[] memory redemption_timestamps)
+  function redeemBonds(uint[] memory redemption_epochs)
       public whenNotPaused returns (uint) {
     address sender = msg.sender;
     
     uint count_total = 0;
-    for (uint i = 0; i < redemption_timestamps.length; i++) {
-      uint redemption = redemption_timestamps[i];
-      uint count = bond_v2_.balanceOf(sender, redemption);
-      if (redemption > getTimestamp()) {
-        // If the bonds have not yet hit their redemption timestamp, the ACB
+    for (uint i = 0; i < redemption_epochs.length; i++) {
+      uint redemption_epoch = redemption_epochs[i];
+      uint count = bond_v2_.balanceOf(sender, redemption_epoch);
+      if (redemption_epoch > oracle_v3_.epoch_id_()) {
+        // If the bonds have not yet hit their redemption epoch, the ACB
         // accepts the redemption as long as |bond_budget_| is negative.
         if (bond_budget_ >= 0) {
           continue;
@@ -823,7 +823,7 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
 
       // Burn the redeemed bonds.
       bond_budget_ += count.toInt256();
-      bond_v2_.burn(sender, redemption, count);
+      bond_v2_.burn(sender, redemption_epoch, count);
       count_total += count;
     }
     require(bond_v2_.totalSupply().toInt256() + bond_budget_ >= 0, "rb1");

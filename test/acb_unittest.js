@@ -184,7 +184,6 @@ function parameterized_test(accounts,
       assert.equal(current.coin_supply, _initial_coin_supply);
 
       // controlSupply
-      let bond_price = _bond_price;
       await _acb.setOracleLevel(_level_max - 1, {from: accounts[1]});
       current = await get_current([], []);
       assert.equal(current.bond_supply, 0);
@@ -205,11 +204,11 @@ function parameterized_test(accounts,
       current = await get_current([], []);
       assert.equal(current.bond_budget, 0);
 
-      await check_controlSupply(-(bond_price - 1), 0, 0);
+      await check_controlSupply(-(_bond_price - 1), 0, 0);
       current = await get_current([], []);
       assert.equal(current.bond_supply, 0);
       assert.equal(current.bond_budget, 0);
-      await check_controlSupply(-bond_price, 1, 0);
+      await check_controlSupply(-_bond_price, 1, 0);
       current = await get_current([], []);
       assert.equal(current.bond_supply, 0, 0);
       assert.equal(current.bond_budget, 1);
@@ -217,7 +216,7 @@ function parameterized_test(accounts,
       current = await get_current([], []);
       assert.equal(current.bond_supply, 0);
       assert.equal(current.bond_budget, 0);
-      await check_controlSupply(-bond_price * 99, 99, 0);
+      await check_controlSupply(-_bond_price * 99, 99, 0);
       current = await get_current([], []);
       assert.equal(current.bond_supply, 0);
       assert.equal(current.bond_budget, 99);
@@ -225,14 +224,16 @@ function parameterized_test(accounts,
       current = await get_current([], []);
       assert.equal(current.bond_supply, 0);
       assert.equal(current.bond_budget, 0);
-      await check_controlSupply(-bond_price * 100, 100, 0);
+      await check_controlSupply(-_bond_price * 100, 100, 0);
       current = await get_current([], []);
       assert.equal(current.bond_supply, 0);
       assert.equal(current.bond_budget, 100);
 
       await check_purchase_bonds(50, {from: accounts[1]},
+                                 (await _oracle.epoch_id_()).toNumber() +
                                  _bond_redemption_period);
       await check_purchase_bonds(50, {from: accounts[1]},
+                                 (await _oracle.epoch_id_()).toNumber() +
                                  _bond_redemption_period);
       current = await get_current([], []);
       assert.equal(current.bond_supply, 100);
@@ -270,14 +271,16 @@ function parameterized_test(accounts,
       current = await get_current([], []);
       assert.equal(current.bond_budget, -100);
 
-      await check_controlSupply(-bond_price * 100, 100, 0);
+      await check_controlSupply(-_bond_price * 100, 100, 0);
       current = await get_current([], []);
       assert.equal(current.bond_supply, 100);
       assert.equal(current.bond_budget, 100);
 
       await check_purchase_bonds(50, {from: accounts[1]},
+                                 (await _oracle.epoch_id_()).toNumber() +
                                  _bond_redemption_period);
       await check_purchase_bonds(50, {from: accounts[1]},
+                                 (await _oracle.epoch_id_()).toNumber() +
                                  _bond_redemption_period);
       current = await get_current([], []);
       assert.equal(current.bond_supply, 200);
@@ -298,8 +301,9 @@ function parameterized_test(accounts,
       current = await get_current([], []);
       assert.equal(current.bond_budget, -200);
 
-      await check_redeem_bonds([_bond_redemption_period],
-                               {from: accounts[1]}, 200);
+      await check_redeem_bonds(
+        [(await _oracle.epoch_id_()).toNumber() + _bond_redemption_period],
+        {from: accounts[1]}, 200);
       current = await get_current([], []);
       assert.equal(current.bond_supply, 0);
       assert.equal(current.bond_budget, 0);
@@ -324,24 +328,22 @@ function parameterized_test(accounts,
       }, "st1");
 
       // purchase_bonds
-      await check_controlSupply(-bond_price * 80, 80, 0);
+      await check_controlSupply(-_bond_price * 80, 80, 0);
       current = await get_current([], []);
       assert.equal(current.bond_supply, 0);
       assert.equal(current.bond_budget, 80);
 
       coin_supply = current.coin_supply;
 
-      await _acb.setTimestamp(
-          (await _acb.getTimestamp()).toNumber() + _epoch_duration,
-          {from: accounts[1]});
+      await advance_epoch(_epoch_duration);
       let t1 =
-          (await _acb.getTimestamp()).toNumber() + _bond_redemption_period;
+          (await _oracle.epoch_id_()).toNumber() + _bond_redemption_period;
       redemptions = [t1];
 
       await _acb.moveCoin(
-        accounts[1], accounts[2], bond_price * 30, {from: accounts[1]});
+        accounts[1], accounts[2], _bond_price * 30, {from: accounts[1]});
       await _acb.moveCoin(
-        accounts[1], accounts[3], bond_price * 50, {from: accounts[1]});
+        accounts[1], accounts[3], _bond_price * 50, {from: accounts[1]});
       await should_throw(async () => {
         await _acb.purchaseBonds.call(1, {from: accounts[4]});
       }, "PurchaseBonds");
@@ -378,18 +380,18 @@ function parameterized_test(accounts,
       assert.equal(current.bond_supply, 1);
       assert.equal(current.bond_budget, 79);
       assert.equal(current.bonds[accounts[2]][t1], 1);
-      check_redemption_timestamps(current, accounts[2], [t1]);
+      check_redemption_epochs(current, accounts[2], [t1]);
       assert.equal(current.coin_supply,
-                   coin_supply - bond_price * 1);
+                   coin_supply - _bond_price * 1);
 
       await check_purchase_bonds(10, {from: accounts[2]}, t1);
       current = await get_current(sub_accounts, redemptions);
       assert.equal(current.bond_supply, 11);
       assert.equal(current.bond_budget, 69);
       assert.equal(current.bonds[accounts[2]][t1], 11);
-      check_redemption_timestamps(current, accounts[2], [t1]);
+      check_redemption_epochs(current, accounts[2], [t1]);
       assert.equal(current.coin_supply,
-                   coin_supply - bond_price * 11);
+                   coin_supply - _bond_price * 11);
 
       await should_throw(async () => {
         await _acb.purchaseBonds.call(70, {from: accounts[1]});
@@ -398,11 +400,9 @@ function parameterized_test(accounts,
         await _acb.purchaseBonds.call(70, {from: accounts[3]});
       }, "PurchaseBonds");
 
-      await _acb.setTimestamp(
-          (await _acb.getTimestamp()).toNumber() + _epoch_duration,
-          {from: accounts[1]});
+      await advance_epoch(_epoch_duration);
       let t2 =
-          (await _acb.getTimestamp()).toNumber() + _bond_redemption_period;
+          (await _oracle.epoch_id_()).toNumber() + _bond_redemption_period;
       redemptions = [t2];
 
       await check_purchase_bonds(1, {from: accounts[2]}, t2);
@@ -410,18 +410,18 @@ function parameterized_test(accounts,
       assert.equal(current.bond_supply, 12);
       assert.equal(current.bond_budget, 68);
       assert.equal(current.bonds[accounts[2]][t2], 1);
-      check_redemption_timestamps(current, accounts[2], [t1, t2]);
+      check_redemption_epochs(current, accounts[2], [t1, t2]);
       assert.equal(current.coin_supply,
-                   coin_supply - bond_price * 12);
+                   coin_supply - _bond_price * 12);
 
       await check_purchase_bonds(10, {from: accounts[2]}, t2);
       current = await get_current(sub_accounts, redemptions);
       assert.equal(current.bond_supply, 22);
       assert.equal(current.bond_budget, 58);
       assert.equal(current.bonds[accounts[2]][t2], 11);
-      check_redemption_timestamps(current, accounts[2], [t1, t2]);
+      check_redemption_epochs(current, accounts[2], [t1, t2]);
       assert.equal(current.coin_supply,
-                   coin_supply - bond_price * 22);
+                   coin_supply - _bond_price * 22);
 
       await should_throw(async () => {
         await _acb.purchaseBonds.call(59, {from: accounts[1]});
@@ -435,15 +435,13 @@ function parameterized_test(accounts,
       assert.equal(current.bond_supply, 32);
       assert.equal(current.bond_budget, 48);
       assert.equal(current.bonds[accounts[1]][t2], 10);
-      check_redemption_timestamps(current, accounts[1], [t2]);
+      check_redemption_epochs(current, accounts[1], [t2]);
       assert.equal(current.coin_supply,
-                   coin_supply - bond_price * 32);
+                   coin_supply - _bond_price * 32);
 
-      await _acb.setTimestamp(
-          (await _acb.getTimestamp()).toNumber() + _epoch_duration,
-          {from: accounts[1]});
+      await advance_epoch(_epoch_duration);
       let t3 =
-          (await _acb.getTimestamp()).toNumber() + _bond_redemption_period;
+          (await _oracle.epoch_id_()).toNumber() + _bond_redemption_period;
       redemptions = [t3];
 
       await should_throw(async () => {
@@ -454,14 +452,14 @@ function parameterized_test(accounts,
       assert.equal(current.bond_supply, 80);
       assert.equal(current.bond_budget, 0);
       assert.equal(current.bonds[accounts[3]][t3], 48);
-      check_redemption_timestamps(current, accounts[3], [t3]);
+      check_redemption_epochs(current, accounts[3], [t3]);
       assert.equal(current.coin_supply,
-                   coin_supply - bond_price * 80);
+                   coin_supply - _bond_price * 80);
 
       await _acb.moveCoin(accounts[1], accounts[2],
-                          bond_price * 10, {from: accounts[1]});
+                          _bond_price * 10, {from: accounts[1]});
       await _acb.moveCoin(accounts[1], accounts[3],
-                          bond_price * 10, {from: accounts[1]});
+                          _bond_price * 10, {from: accounts[1]});
       await should_throw(async () => {
         await _acb.purchaseBonds.call(1, {from: accounts[2]});
       }, "PurchaseBonds");
@@ -469,9 +467,9 @@ function parameterized_test(accounts,
       assert.equal(current.bond_supply, 80);
       assert.equal(current.bond_budget, 0);
       assert.equal(current.bonds[accounts[3]][t3], 48);
-      check_redemption_timestamps(current, accounts[3], [t3]);
+      check_redemption_epochs(current, accounts[3], [t3]);
       assert.equal(current.coin_supply,
-                   coin_supply - bond_price * 80);
+                   coin_supply - _bond_price * 80);
       await should_throw(async () => {
         await _acb.purchaseBonds.call(1, {from: accounts[3]});
       }, "PurchaseBonds");
@@ -479,15 +477,15 @@ function parameterized_test(accounts,
       assert.equal(current.bond_supply, 80);
       assert.equal(current.bond_budget, 0);
       assert.equal(current.bonds[accounts[3]][t3], 48);
-      check_redemption_timestamps(current, accounts[3], [t3]);
+      check_redemption_epochs(current, accounts[3], [t3]);
       assert.equal(current.coin_supply,
-                   coin_supply - bond_price * 80);
+                   coin_supply - _bond_price * 80);
 
       current = await get_current(sub_accounts, redemptions);
       assert.equal(current.balances[accounts[2]],
-                   (30 + 10 - 22) * bond_price);
+                   (30 + 10 - 22) * _bond_price);
       assert.equal(current.balances[accounts[3]],
-                   (50 + 10 - 48) * bond_price);
+                   (50 + 10 - 48) * _bond_price);
 
       // redeem_bonds
       redemptions = [t1, t2, t3];
@@ -499,15 +497,13 @@ function parameterized_test(accounts,
       assert.equal(await _bond.numberOfBondsOwnedBy(accounts[1]), 10);
       assert.equal(await _bond.numberOfBondsOwnedBy(accounts[2]), 22);
       assert.equal(await _bond.numberOfBondsOwnedBy(accounts[3]), 48);
-      check_redemption_timestamps(current, accounts[1], [t2]);
-      check_redemption_timestamps(current, accounts[2], [t1, t2]);
-      check_redemption_timestamps(current, accounts[3], [t3]);
+      check_redemption_epochs(current, accounts[1], [t2]);
+      check_redemption_epochs(current, accounts[2], [t1, t2]);
+      check_redemption_epochs(current, accounts[3], [t3]);
 
-      await _acb.setTimestamp(
-          (await _acb.getTimestamp()).toNumber() + _bond_redemption_period,
-          {from: accounts[1]});
+      await advance_epoch(_epoch_duration * _bond_redemption_period);
       let t4 =
-          (await _acb.getTimestamp()).toNumber() + _bond_redemption_period;
+          (await _oracle.epoch_id_()).toNumber() + _bond_redemption_period;
       redemptions = [t1, t2, t3, t4];
 
       assert.equal(await _acb.redeemBonds.call(
@@ -525,7 +521,7 @@ function parameterized_test(accounts,
       assert.equal(current.bonds[accounts[2]][t1], 0);
       assert.equal(current.bonds[accounts[2]][t2], 11);
       assert.equal(current.bonds[accounts[2]][t3], 0);
-      check_redemption_timestamps(current, accounts[2], [t2]);
+      check_redemption_epochs(current, accounts[2], [t2]);
       assert.equal(current.balances[accounts[2]],
                    balance + 11 * _bond_redemption_price);
       assert.equal(current.bond_budget, 11);
@@ -537,7 +533,7 @@ function parameterized_test(accounts,
       current = await get_current(sub_accounts, redemptions);
       assert.equal(current.bonds[accounts[2]][t1], 0);
       assert.equal(current.bonds[accounts[2]][t2], 0);
-      check_redemption_timestamps(current, accounts[2], []);
+      check_redemption_epochs(current, accounts[2], []);
       assert.equal(current.balances[accounts[2]],
                    balance + 22 * _bond_redemption_price);
       assert.equal(current.bond_budget, 22);
@@ -551,7 +547,7 @@ function parameterized_test(accounts,
       assert.equal(current.bonds[accounts[2]][t1], 0);
       assert.equal(current.bonds[accounts[2]][t2], 0);
       assert.equal(current.bonds[accounts[2]][t3], 0);
-      check_redemption_timestamps(current, accounts[2], []);
+      check_redemption_epochs(current, accounts[2], []);
       assert.equal(current.balances[accounts[2]],
                    balance + 22 * _bond_redemption_price);
       assert.equal(current.bond_budget, 22);
@@ -566,7 +562,7 @@ function parameterized_test(accounts,
       assert.equal(current.bonds[accounts[3]][t1], 0);
       assert.equal(current.bonds[accounts[3]][t2], 0);
       assert.equal(current.bonds[accounts[3]][t3], 48);
-      check_redemption_timestamps(current, accounts[3], [t3]);
+      check_redemption_epochs(current, accounts[3], [t3]);
       assert.equal(current.balances[accounts[3]], balance);
       assert.equal(current.bond_budget, 22);
       assert.equal(current.bond_supply, bond_supply - 22);
@@ -578,7 +574,7 @@ function parameterized_test(accounts,
       assert.equal(current.bonds[accounts[3]][t1], 0);
       assert.equal(current.bonds[accounts[3]][t2], 0);
       assert.equal(current.bonds[accounts[3]][t3], 0);
-      check_redemption_timestamps(current, accounts[3], []);
+      check_redemption_epochs(current, accounts[3], []);
       assert.equal(current.balances[accounts[3]],
                    balance + 48 * _bond_redemption_price);
       assert.equal(current.bond_budget, 70);
@@ -593,7 +589,7 @@ function parameterized_test(accounts,
       assert.equal(await _bond.numberOfBondsOwnedBy(accounts[1]), 0);
       assert.equal(await _bond.numberOfBondsOwnedBy(accounts[2]), 0);
       assert.equal(await _bond.numberOfBondsOwnedBy(accounts[3]), 0);
-      check_redemption_timestamps(current, accounts[1], []);
+      check_redemption_epochs(current, accounts[1], []);
       assert.equal(current.balances[accounts[1]],
                    balance + 10 * _bond_redemption_price);
       assert.equal(current.bond_budget, 80);
@@ -603,7 +599,7 @@ function parameterized_test(accounts,
       assert.equal(current.bond_supply, 0);
 
       assert.equal(current.bond_budget, 80);
-      await check_controlSupply(-100 * bond_price, 100, 0);
+      await check_controlSupply(-100 * _bond_price, 100, 0);
       current = await get_current(sub_accounts, redemptions);
       assert.equal(current.bond_budget, 100);
 
@@ -613,36 +609,34 @@ function parameterized_test(accounts,
       current = await get_current(sub_accounts, redemptions);
       assert.equal(current.balances[accounts[2]], 0);
       await _acb.moveCoin(accounts[1], accounts[2],
-                          100 * bond_price, {from: accounts[1]});
+                          100 * _bond_price, {from: accounts[1]});
       await check_purchase_bonds(20, {from: accounts[2]}, t4);
-      await _acb.setTimestamp((await _acb.getTimestamp()).toNumber() + 1,
-                              {from: accounts[1]});
+      await advance_epoch(1);
       let t5 =
-          (await _acb.getTimestamp()).toNumber() + _bond_redemption_period;
+          (await _oracle.epoch_id_()).toNumber() + _bond_redemption_period;
       redemptions.push(t5);
       await check_purchase_bonds(20, {from: accounts[2]}, t5);
-      await _acb.setTimestamp(
-          (await _acb.getTimestamp()).toNumber() +
-            _bond_redemption_period - 2, {from: accounts[1]});
+      await advance_epoch(_epoch_duration * _bond_redemption_period - 2);
       let t6 =
-          (await _acb.getTimestamp()).toNumber() + _bond_redemption_period;
+          (await _oracle.epoch_id_()).toNumber() + _bond_redemption_period;
       redemptions.push(t6);
       await check_purchase_bonds(20, {from: accounts[2]}, t6);
-      await _acb.setTimestamp((await _acb.getTimestamp()).toNumber() + 1,
-                              {from: accounts[1]});
+      await advance_epoch(1);
       let t7 =
-          (await _acb.getTimestamp()).toNumber() + _bond_redemption_period;
+          (await _oracle.epoch_id_()).toNumber() + _bond_redemption_period;
       redemptions.push(t7);
       await check_purchase_bonds(20, {from: accounts[2]}, t7);
-      await _acb.setTimestamp((await _acb.getTimestamp()).toNumber() + 1,
-                              {from: accounts[1]});
+      await advance_epoch(_epoch_duration);
       let t8 =
-          (await _acb.getTimestamp()).toNumber() + _bond_redemption_period;
+          (await _oracle.epoch_id_()).toNumber() + _bond_redemption_period;
       redemptions.push(t8);
       await check_purchase_bonds(20, {from: accounts[2]}, t8);
       current = await get_current(sub_accounts, redemptions);
       assert.equal(current.balances[accounts[2]], 0);
+      assert.equal(t4, t5);
+      assert.notEqual(t4, t6);
       assert.equal(t7 - t4, _bond_redemption_period);
+      assert.equal(t8 - t7, 1);
 
       assert.equal(current.bond_budget, 0);
 
@@ -660,7 +654,7 @@ function parameterized_test(accounts,
       assert.equal(await _bond.numberOfBondsOwnedBy(accounts[1]), 0);
       assert.equal(await _bond.numberOfBondsOwnedBy(accounts[2]), 60);
       assert.equal(await _bond.numberOfBondsOwnedBy(accounts[3]), 0);
-      check_redemption_timestamps(current, accounts[2], [t6, t7, t8]);
+      check_redemption_epochs(current, accounts[2], [t6, t7, t8]);
       assert.equal(current.coin_supply,
                    coin_supply + 40 * _bond_redemption_price);
       assert.equal(current.bond_supply, bond_supply - 40);
@@ -673,7 +667,7 @@ function parameterized_test(accounts,
       assert.equal(current.bonds[accounts[2]][t6], 20);
       assert.equal(current.bonds[accounts[2]][t7], 20);
       assert.equal(current.bonds[accounts[2]][t8], 20);
-      check_redemption_timestamps(current, accounts[2], [t6, t7, t8]);
+      check_redemption_epochs(current, accounts[2], [t6, t7, t8]);
       assert.equal(current.coin_supply, coin_supply);
       assert.equal(current.bond_supply, bond_supply);
       assert.equal(current.bond_budget, 40);
@@ -689,7 +683,7 @@ function parameterized_test(accounts,
       assert.equal(current.bonds[accounts[2]][t6], 15);
       assert.equal(current.bonds[accounts[2]][t7], 20);
       assert.equal(current.bonds[accounts[2]][t8], 20);
-      check_redemption_timestamps(current, accounts[2], [t6, t7, t8]);
+      check_redemption_epochs(current, accounts[2], [t6, t7, t8]);
       assert.equal(current.coin_supply,
                    coin_supply + 5 * _bond_redemption_price);
       assert.equal(current.bond_supply, bond_supply - 5);
@@ -707,7 +701,7 @@ function parameterized_test(accounts,
       assert.equal(current.bonds[accounts[2]][t6], 15);
       assert.equal(current.bonds[accounts[2]][t7], 20);
       assert.equal(current.bonds[accounts[2]][t8], 15);
-      check_redemption_timestamps(current, accounts[2], [t6, t7, t8]);
+      check_redemption_epochs(current, accounts[2], [t6, t7, t8]);
       assert.equal(current.coin_supply,
                    coin_supply + 5 * _bond_redemption_price);
       assert.equal(current.bond_supply, bond_supply - 5);
@@ -725,17 +719,16 @@ function parameterized_test(accounts,
       assert.equal(current.bonds[accounts[2]][t6], 15);
       assert.equal(current.bonds[accounts[2]][t7], 15);
       assert.equal(current.bonds[accounts[2]][t8], 15);
-      check_redemption_timestamps(current, accounts[2], [t6, t7, t8]);
+      check_redemption_epochs(current, accounts[2], [t6, t7, t8]);
       assert.equal(current.coin_supply,
                    coin_supply + 5 * _bond_redemption_price);
       assert.equal(current.bond_supply, bond_supply - 5);
       assert.equal(current.bond_budget, 0);
 
-      await _acb.setTimestamp(
-          (await _acb.getTimestamp()).toNumber() +
-            _bond_redemption_period - 2, {from: accounts[1]});
+      await advance_epoch(_epoch_duration * _bond_redemption_period -
+                          _epoch_duration - 1);
       let t9 =
-          (await _acb.getTimestamp()).toNumber() + _bond_redemption_period;
+          (await _oracle.epoch_id_()).toNumber() + _bond_redemption_period;
 
       assert.equal(current.bond_budget, 0);
       await check_controlSupply(20 * _bond_redemption_price, -20, 0);
@@ -745,13 +738,13 @@ function parameterized_test(accounts,
       coin_supply = current.coin_supply;
       bond_supply = current.bond_supply;
       assert.equal(t9 - t6, _bond_redemption_period);
-      assert.equal(t6 <= (await _acb.getTimestamp()), true);
+      assert.equal(t6 <= (await _oracle.epoch_id_()), true);
       await check_redeem_bonds([t6, t8, t7], {from: accounts[2]}, 20);
       current = await get_current(sub_accounts, redemptions);
       assert.equal(current.bonds[accounts[2]][t6], 0);
       assert.equal(current.bonds[accounts[2]][t7], 15);
       assert.equal(current.bonds[accounts[2]][t8], 10);
-      check_redemption_timestamps(current, accounts[2], [t7, t8]);
+      check_redemption_epochs(current, accounts[2], [t7, t8]);
       assert.equal(current.coin_supply,
                    coin_supply + 20 * _bond_redemption_price);
       assert.equal(current.bond_supply, bond_supply - 20);
@@ -776,16 +769,15 @@ function parameterized_test(accounts,
       assert.equal(current.bonds[accounts[2]][t6], 0);
       assert.equal(current.bonds[accounts[2]][t7], 14);
       assert.equal(current.bonds[accounts[2]][t8], 10);
-      check_redemption_timestamps(current, accounts[2], [t7, t8]);
+      check_redemption_epochs(current, accounts[2], [t7, t8]);
       assert.equal(current.coin_supply,
                    coin_supply + 1 * _bond_redemption_price);
       assert.equal(current.bond_supply, bond_supply - 1);
       assert.equal(current.bond_budget, 0);
 
-      await _acb.setTimestamp((await _acb.getTimestamp()).toNumber() + 1,
-                              {from: accounts[1]});
+      await advance_epoch(1);
       let t10 =
-          (await _acb.getTimestamp()).toNumber() + _bond_redemption_period;
+          (await _oracle.epoch_id_()).toNumber() + _bond_redemption_period;
 
       await check_controlSupply(2 * _bond_redemption_price, -2, 0);
       current = await get_current(sub_accounts, redemptions);
@@ -798,7 +790,7 @@ function parameterized_test(accounts,
       assert.equal(current.bonds[accounts[2]][t6], 0);
       assert.equal(current.bonds[accounts[2]][t7], 0);
       assert.equal(current.bonds[accounts[2]][t8], 8);
-      check_redemption_timestamps(current, accounts[2], [t8]);
+      check_redemption_epochs(current, accounts[2], [t8]);
       assert.equal(current.coin_supply,
                    coin_supply + 16 * _bond_redemption_price);
       assert.equal(current.bond_supply, bond_supply - 16);
@@ -815,16 +807,15 @@ function parameterized_test(accounts,
       assert.equal(current.bonds[accounts[2]][t6], 0);
       assert.equal(current.bonds[accounts[2]][t7], 0);
       assert.equal(current.bonds[accounts[2]][t8], 7);
-      check_redemption_timestamps(current, accounts[2], [t8]);
+      check_redemption_epochs(current, accounts[2], [t8]);
       assert.equal(current.coin_supply,
                    coin_supply + 1 * _bond_redemption_price);
       assert.equal(current.bond_supply, bond_supply - 1);
       assert.equal(current.bond_budget, 0);
 
-      await _acb.setTimestamp((await _acb.getTimestamp()).toNumber() + 1,
-                              {from: accounts[1]});
+      await advance_epoch(_epoch_duration);
       let t11 =
-          (await _acb.getTimestamp()).toNumber() + _bond_redemption_period;
+          (await _oracle.epoch_id_()).toNumber() + _bond_redemption_period;
 
       coin_supply = current.coin_supply;
       bond_supply = current.bond_supply;
@@ -836,7 +827,7 @@ function parameterized_test(accounts,
       assert.equal(await _bond.numberOfBondsOwnedBy(accounts[1]), 0);
       assert.equal(await _bond.numberOfBondsOwnedBy(accounts[2]), 0);
       assert.equal(await _bond.numberOfBondsOwnedBy(accounts[3]), 0);
-      check_redemption_timestamps(current, accounts[2], []);
+      check_redemption_epochs(current, accounts[2], []);
       assert.equal(current.coin_supply,
                    coin_supply + 7 * _bond_redemption_price);
       assert.equal(current.bond_supply, bond_supply - 7);
@@ -867,7 +858,8 @@ function parameterized_test(accounts,
     current = await get_current(sub_accounts, []);
     assert.equal(current.balances[accounts[4]], 100);
 
-    await check_vote(await _acb.encrypt(_default_level, 7777, {from: accounts[7]}),
+    await check_vote(await _acb.encrypt(_default_level, 7777,
+                                        {from: accounts[7]}),
                      _default_level, 7777, {from: accounts[7]},
                      true, false, 0, 0, 0, true);
     current = await get_current(sub_accounts, []);
@@ -3051,7 +3043,7 @@ function parameterized_test(accounts,
     current = await get_current(sub_accounts, []);
     assert.equal(current.bond_supply, 0);
     assert.equal(current.bond_budget, 2);
-    let t12 = (await _acb.getTimestamp()).toNumber() + _bond_redemption_period;
+    let t12 = (await _oracle.epoch_id_()).toNumber() + _bond_redemption_period;
     await check_purchase_bonds(2, {from: accounts[1]}, t12);
     current = await get_current(sub_accounts, []);
     assert.equal(current.bond_supply, 2);
@@ -3141,8 +3133,8 @@ function parameterized_test(accounts,
     }
 
     now = mod(now + 1, 3);
-    await _acb.setTimestamp((
-        await _acb.getTimestamp()).toNumber() + _bond_redemption_period,
+    await _acb.setTimestamp((await _acb.getTimestamp()).toNumber() +
+                            _bond_redemption_period * _epoch_duration,
                             {from: accounts[1]});
 
     await check_redeem_bonds([t12], {from: accounts[1]}, 2);
@@ -3335,8 +3327,32 @@ function parameterized_test(accounts,
 
     await _acb.deprecate({from: accounts[1]});
 
-    function check_redemption_timestamps(current, account, expected) {
-      let actual = current.redemption_timestamps[account];
+    async function advance_epoch(amount) {
+      let bond_budget = (await _acb.bond_budget_()).toNumber();
+      let remaining = amount;
+      while (remaining > 0) {
+        let time_to_next_epoch = (
+          _epoch_duration -
+            (await _acb.getTimestamp()).toNumber() +
+            (await _acb.current_epoch_start_()).toNumber());
+        let advance = Math.min(time_to_next_epoch, remaining);
+        if (advance > 0) {
+          await _acb.setTimestamp(
+            (await _acb.getTimestamp()).toNumber() + advance,
+            {from: accounts[1]});
+        }
+        await _acb.vote(
+          await _acb.encrypt(_level_max, 1, {from: accounts[7]}),
+          _level_max, 1, {from: accounts[7]});
+        remaining -= advance;
+      }
+      assert.equal(await check_controlSupply(
+        -_bond_price * bond_budget, bond_budget, 0));
+      assert.equal(await _acb.bond_budget_(), bond_budget);
+    }
+
+    function check_redemption_epochs(current, account, expected) {
+      let actual = current.redemption_epochs[account];
       assert.equal(actual.length, expected.length);
       for (let index = 0; index < actual.length; index++) {
         assert.isTrue(expected.includes(actual[index]));
@@ -3393,7 +3409,7 @@ function parameterized_test(accounts,
           receipt.logs.filter(e => e.event == 'PurchaseBondsEvent')[0].args;
       assert.equal(args.sender, option.from);
       assert.equal(args.count, count);
-      assert.equal(args.redemption_timestamp, redemption);
+      assert.equal(args.redemption_epoch, redemption);
     }
 
     async function check_redeem_bonds(redemptions, option, count_total) {
@@ -3424,7 +3440,7 @@ function parameterized_test(accounts,
       acb.bond_supply = (await bond.totalSupply()).toNumber();
       acb.balances = {};
       acb.bonds = {};
-      acb.redemption_timestamps = {};
+      acb.redemption_epochs = {};
       for (let i = 0; i < accounts.length; i++) {
         acb.balances[accounts[i]] =
             (await coin.balanceOf(accounts[i])).toNumber();
@@ -3433,15 +3449,15 @@ function parameterized_test(accounts,
           acb.bonds[accounts[i]][redemptions[j]] =
               (await bond.balanceOf(accounts[i], redemptions[j])).toNumber();
         }
-        acb.redemption_timestamps[accounts[i]] = [];
+        acb.redemption_epochs[accounts[i]] = [];
         let bond_count =
-            (await bond.numberOfRedemptionTimestampsOwnedBy(
+            (await bond.numberOfRedemptionEpochsOwnedBy(
                 accounts[i])).toNumber();
         for (let index = 0; index < bond_count; index++) {
           let redemption = (
-              await bond.getRedemptionTimestampOwnedBy(
+              await bond.getRedemptionEpochOwnedBy(
                   accounts[i], index)).toNumber();
-          acb.redemption_timestamps[accounts[i]].push(redemption);
+          acb.redemption_epochs[accounts[i]].push(redemption);
         }
       }
       return acb;

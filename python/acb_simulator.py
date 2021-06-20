@@ -423,7 +423,7 @@ class ACBSimulator(unittest.TestCase):
             bond_budget = acb.bond_budget
             for redemption in redemptions:
                 count = voter.bonds[redemption]
-                if redemption > acb.get_timestamp():
+                if redemption > acb.oracle.epoch_id:
                     if bond_budget >= 0:
                         continue
                     count = min(count, -bond_budget)
