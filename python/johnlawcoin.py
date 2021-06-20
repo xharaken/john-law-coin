@@ -154,16 +154,16 @@ class JohnLawCoin:
 class JohnLawBond:
     # Constructor.
     def __init__(self):
-        # A mapping from a user account to the redemption timestamps of the
+        # A mapping from a user account to the redemption epochs of the
         # bonds owned by the user.
-        self.redemption_timestamps = {}
+        self.redemption_epochs = {}
 
         # A mapping from a user account to the number of bonds owned by the
         # account.
         self.number_of_bonds = {}
 
-        # bonds[account][redemption_timestamp] stores the number of the
-        # bonds owned by the |account| and have the |redemption_timestamp|.
+        # bonds[account][redemption_epoch] stores the number of the
+        # bonds owned by the |account| and have the |redemption_epoch|.
         self.bonds = {}
 
         # The total bond supply.
@@ -174,59 +174,59 @@ class JohnLawBond:
     # Parameters
     # ----------------
     # |account|: The account to which the bonds are minted.
-    # |redemption_timestamp|: The redemption timestamp of the bonds.
+    # |redemption_epoch|: The redemption epoch of the bonds.
     # |amount|: The amount to be minted.
     #
     # Returns
     # ----------------
     # None.
-    def mint(self, account, redemption_timestamp, amount):
+    def mint(self, account, redemption_epoch, amount):
         assert(amount >= 0)
         if account not in self.bonds:
             self.bonds[account] = {}
             self.number_of_bonds[account] = 0
-        if redemption_timestamp not in self.bonds[account]:
-            self.bonds[account][redemption_timestamp] = 0
-        self.bonds[account][redemption_timestamp] += amount
+        if redemption_epoch not in self.bonds[account]:
+            self.bonds[account][redemption_epoch] = 0
+        self.bonds[account][redemption_epoch] += amount
         self.total_supply += amount
         self.number_of_bonds[account] += amount
 
-        if account not in self.redemption_timestamps:
-            self.redemption_timestamps[account] = {}
-        if (self.bonds[account][redemption_timestamp] > 0 and
-            redemption_timestamp not in self.redemption_timestamps[account]):
-            self.redemption_timestamps[account][redemption_timestamp] = True
+        if account not in self.redemption_epochs:
+            self.redemption_epochs[account] = {}
+        if (self.bonds[account][redemption_epoch] > 0 and
+            redemption_epoch not in self.redemption_epochs[account]):
+            self.redemption_epochs[account][redemption_epoch] = True
 
     # Burn bonds from one account.
     #
     # Parameters
     # ----------------
     # |account|: The account from which the bonds are burned.
-    # |redemption_timestamp|: The redemption timestamp of the bonds.
+    # |redemption_epoch|: The redemption epoch of the bonds.
     # |amount|: The amount to be burned.
     #
     # Returns
     # ----------------
     # None.
-    def burn(self, account, redemption_timestamp, amount):
+    def burn(self, account, redemption_epoch, amount):
         assert(amount >= 0)
         if account not in self.bonds:
             self.bonds[account] = {}
             self.number_of_bonds[account] = 0
-        if redemption_timestamp not in self.bonds[account]:
-            self.bonds[account][redemption_timestamp] = 0
-        assert(self.bonds[account][redemption_timestamp] >= amount)
-        self.bonds[account][redemption_timestamp] -= amount
+        if redemption_epoch not in self.bonds[account]:
+            self.bonds[account][redemption_epoch] = 0
+        assert(self.bonds[account][redemption_epoch] >= amount)
+        self.bonds[account][redemption_epoch] -= amount
         assert(self.total_supply >= amount)
         self.total_supply -= amount
         assert(self.number_of_bonds[account] >= amount)
         self.number_of_bonds[account] -= amount
 
-        if account not in self.redemption_timestamps:
-            self.redemption_timestamps[account] = {}
-        if (self.bonds[account][redemption_timestamp] == 0 and
-            redemption_timestamp in self.redemption_timestamps[account]):
-            del self.redemption_timestamps[account][redemption_timestamp]
+        if account not in self.redemption_epochs:
+            self.redemption_epochs[account] = {}
+        if (self.bonds[account][redemption_epoch] == 0 and
+            redemption_epoch in self.redemption_epochs[account]):
+            del self.redemption_epochs[account][redemption_epoch]
 
     # Return the number of bonds owned by the |account|.
     def number_of_bonds_owned_by(self, account):
@@ -234,28 +234,28 @@ class JohnLawBond:
             return 0
         return self.number_of_bonds[account]
 
-    # Return the number of redemption timestamps of the bonds owned by the
+    # Return the number of redemption epochs of the bonds owned by the
     # |account|.
-    def number_of_redemption_timestamps_owned_by(self, account):
-        if account not in self.redemption_timestamps:
+    def number_of_redemption_epochs_owned_by(self, account):
+        if account not in self.redemption_epochs:
             return 0
-        return len(self.redemption_timestamps[account])
+        return len(self.redemption_epochs[account])
 
-    # Return the |index|-th redemption timestamp of the bonds owned by the
+    # Return the |index|-th redemption epoch of the bonds owned by the
     # |account|. |index| must be smaller than the value returned by
-    # numberOfRedemptionTimestampsOwnedBy(account).
-    def get_redemption_timestamp_owned_by(self, account, index):
+    # numberOfRedemptionEpochsOwnedBy(account).
+    def get_redemption_epoch_owned_by(self, account, index):
         assert(0 <= index and
-               index < self.number_of_redemption_timestamps_owned_by(account))
-        return list(self.redemption_timestamps[account].keys())[index]
+               index < self.number_of_redemption_epochs_owned_by(account))
+        return list(self.redemption_epochs[account].keys())[index]
 
     # Return the bond balance.
-    def balance_of(self, account, redemption_timestamp):
+    def balance_of(self, account, redemption_epoch):
         if account not in self.bonds:
             return 0
-        if redemption_timestamp not in self.bonds[account]:
+        if redemption_epoch not in self.bonds[account]:
             return 0
-        return self.bonds[account][redemption_timestamp]
+        return self.bonds[account][redemption_epoch]
 
 
 #-------------------------------------------------------------------------------
@@ -904,7 +904,7 @@ class ACB:
         # The bond price and the redemption period.
         ACB.BOND_PRICE = 996 # One bond is sold for 996 coins.
         ACB.BOND_REDEMPTION_PRICE = 1000 # One bond is redeemed for 1000 coins.
-        ACB.BOND_REDEMPTION_PERIOD = 84 * 24 * 60 * 60 # 12 weeks.
+        ACB.BOND_REDEMPTION_PERIOD = 12 # 12 epochs.
 
         # The duration of the oracle phase. The ACB adjusts the total coin
         # supply once per phase. Voters can vote once per phase.
@@ -954,7 +954,7 @@ class ACB:
         # The current timestamp.
         self.timestamp = 0
 
-        # The timestamp when the current phase started.
+        # The timestamp when the current epoch started.
         self.current_epoch_start = self.get_timestamp()
 
         # The oracle contract.
@@ -987,7 +987,7 @@ class ACB:
         assert(1 <= ACB.BOND_REDEMPTION_PRICE and
                ACB.BOND_REDEMPTION_PRICE <= 100000)
         assert(1 <= ACB.BOND_REDEMPTION_PERIOD and
-               ACB.BOND_REDEMPTION_PERIOD <= 365 * 24 * 60 * 60)
+               ACB.BOND_REDEMPTION_PERIOD <= 100)
         assert(1 <= ACB.EPOCH_DURATION and
                ACB.EPOCH_DURATION <= 30 * 24 * 60 * 60)
         assert(0 <= ACB.DEPOSIT_RATE and ACB.DEPOSIT_RATE <= 100)
@@ -1096,7 +1096,7 @@ class ACB:
     #
     # Returns
     # ----------------
-    # The redemption timestamp of the purchased bonds if it succeeds.
+    # The redemption epoch of the purchased bonds if it succeeds.
     # 0 otherwise.
     def purchase_bonds(self, sender, count):
         # The user must purchase at least one bond.
@@ -1108,39 +1108,39 @@ class ACB:
         # The user does not have enough coins to purchase the bonds.
         assert(self.coin.balance_of(sender) >= amount)
 
-        # Set the redemption timestamp of the bonds.
-        redemption_timestamp = self.get_timestamp() + ACB.BOND_REDEMPTION_PERIOD
+        # Set the redemption epoch of the bonds.
+        redemption_epoch = self.oracle.epoch_id + ACB.BOND_REDEMPTION_PERIOD
 
         # Issue new bonds.
-        self.bond.mint(sender, redemption_timestamp, count)
+        self.bond.mint(sender, redemption_epoch, count)
         self.bond_budget -= count
         assert(self.bond_budget >= 0)
         assert(self.bond.total_supply + self.bond_budget >= 0)
-        assert(self.bond.balance_of(sender, redemption_timestamp) > 0)
+        assert(self.bond.balance_of(sender, redemption_epoch) > 0)
 
         # Burn the corresponding coins.
         self.coin.burn(sender, amount)
 
         self.logging.purchased_bonds(count)
-        return redemption_timestamp
+        return redemption_epoch
 
     # Redeem bonds.
     #
     # Parameters
     # ----------------
     # |sender|: The sender account.
-    # |redemption_timestamps|: An array of bonds to be redeemed. Bonds are
-    # identified by their redemption timestamps.
+    # |redemption_epochs|: An array of bonds to be redeemed. Bonds are
+    # identified by their redemption epochs.
     #
     # Returns
     # ----------------
     # The number of successfully redeemed bonds.
-    def redeem_bonds(self, sender, redemption_timestamps):
+    def redeem_bonds(self, sender, redemption_epochs):
         count_total = 0
-        for redemption_timestamp in redemption_timestamps:
-            count = self.bond.balance_of(sender, redemption_timestamp)
-            if redemption_timestamp > self.get_timestamp():
-                # If the bonds have not yet hit their redemption timestamp, the
+        for redemption_epoch in redemption_epochs:
+            count = self.bond.balance_of(sender, redemption_epoch)
+            if redemption_epoch > self.oracle.epoch_id:
+                # If the bonds have not yet hit their redemption epoch, the
                 # ACB accepts the redemption as long as |self.bond_budget| is
                 # negative.
                 if self.bond_budget >= 0:
@@ -1154,7 +1154,7 @@ class ACB:
 
             # Burn the redeemed bonds.
             self.bond_budget += count
-            self.bond.burn(sender, redemption_timestamp, count)
+            self.bond.burn(sender, redemption_epoch, count)
             count_total += count
 
         assert(self.bond.total_supply + self.bond_budget >= 0)
@@ -1192,8 +1192,6 @@ class ACB:
             assert(self.bond_budget <= 0)
         else:
             assert(delta < 0)
-            assert(0 <= self.oracle_level and
-                   self.oracle_level < Oracle.LEVEL_MAX)
             # Issue new bonds to decrease the total coin supply.
             self.bond_budget = int(-delta / ACB.BOND_PRICE)
             assert(self.bond_budget >= 0)

@@ -382,7 +382,7 @@ class ACBSimulator(unittest.TestCase):
 
             coin_supply = acb.coin.total_supply
             bond_supply = acb.bond.total_supply
-            redemption = acb.get_timestamp() + ACB.BOND_REDEMPTION_PERIOD
+            redemption = acb.oracle.epoch_id + ACB.BOND_REDEMPTION_PERIOD
             if redemption in voter.bonds:
                 voter.bonds[redemption] += count
             else:
@@ -443,11 +443,11 @@ class ACBSimulator(unittest.TestCase):
             self.assertEqual(acb.bond_budget, bond_budget)
             self.assertEqual(acb.coin.balance_of(voter.address), voter.balance)
 
-            bond_count = acb.bond.number_of_redemption_timestamps_owned_by(
+            bond_count = acb.bond.number_of_redemption_epochs_owned_by(
                 voter.address)
             self.assertEqual(len(voter.bonds), bond_count)
             for index in range(bond_count):
-                redemption = acb.bond.get_redemption_timestamp_owned_by(
+                redemption = acb.bond.get_redemption_epoch_owned_by(
                     voter.address, index)
                 self.assertTrue(redemption in voter.bonds)
                 self.assertEqual(acb.bond.balance_of(voter.address, redemption),
@@ -706,7 +706,7 @@ def main():
     test = ACBSimulator(
         996,
         1000,
-        84,
+        12,
         7,
         90,
         10,
@@ -720,7 +720,7 @@ def main():
 
     for (bond_price, bond_redemption_price) in [
             (1, 3), (996, 1000), (1000, 1000)]:
-        for bond_redemption_period in [1, 84 * 24 * 60 * 60]:
+        for bond_redemption_period in [1, 12]:
             for epoch_duration in [1, 7 * 24 * 60 * 60]:
                 for proportional_reward_rate in [0, 90, 100]:
                     for deposit_rate in [0, 10, 100]:
