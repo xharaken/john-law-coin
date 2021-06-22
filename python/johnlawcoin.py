@@ -154,17 +154,20 @@ class JohnLawCoin:
 class JohnLawBond:
     # Constructor.
     def __init__(self):
-        # A mapping from a user account to the redemption epochs of the
-        # bonds owned by the user.
-        self.redemption_epochs = {}
-
-        # A mapping from a user account to the number of bonds owned by the
-        # account.
-        self.number_of_bonds = {}
-
         # bonds[account][redemption_epoch] stores the number of the
         # bonds owned by the |account| and have the |redemption_epoch|.
         self.bonds = {}
+
+        # redemption_epochs[account] is a set of the redemption epochs of the
+        # bonds owned by the |account|.
+        self.redemption_epochs = {}
+
+        # bond_count[account] is the number of bonds owned by the |account|.
+        self.bond_count = {}
+
+        # bond_supply[redemption_epoch] is the total number of bonds that have
+        # the |redemption_epoch|.
+        self.bond_supply = {}
 
         # The total bond supply.
         self.total_supply = 0
@@ -184,12 +187,15 @@ class JohnLawBond:
         assert(amount >= 0)
         if account not in self.bonds:
             self.bonds[account] = {}
-            self.number_of_bonds[account] = 0
+            self.bond_count[account] = 0
         if redemption_epoch not in self.bonds[account]:
             self.bonds[account][redemption_epoch] = 0
+        if redemption_epoch not in self.bond_supply:
+            self.bond_supply[redemption_epoch] = 0
         self.bonds[account][redemption_epoch] += amount
         self.total_supply += amount
-        self.number_of_bonds[account] += amount
+        self.bond_count[account] += amount
+        self.bond_supply[redemption_epoch] += amount
 
         if account not in self.redemption_epochs:
             self.redemption_epochs[account] = {}
@@ -212,15 +218,19 @@ class JohnLawBond:
         assert(amount >= 0)
         if account not in self.bonds:
             self.bonds[account] = {}
-            self.number_of_bonds[account] = 0
+            self.bond_count[account] = 0
         if redemption_epoch not in self.bonds[account]:
             self.bonds[account][redemption_epoch] = 0
+        if redemption_epoch not in self.bond_supply:
+            self.bond_supply[redemption_epoch] = 0
         assert(self.bonds[account][redemption_epoch] >= amount)
         self.bonds[account][redemption_epoch] -= amount
         assert(self.total_supply >= amount)
         self.total_supply -= amount
-        assert(self.number_of_bonds[account] >= amount)
-        self.number_of_bonds[account] -= amount
+        assert(self.bond_count[account] >= amount)
+        self.bond_count[account] -= amount
+        assert(self.bond_supply[redemption_epoch] >= amount)
+        self.bond_supply[redemption_epoch] -= amount
 
         if account not in self.redemption_epochs:
             self.redemption_epochs[account] = {}
@@ -230,9 +240,9 @@ class JohnLawBond:
 
     # Return the number of bonds owned by the |account|.
     def number_of_bonds_owned_by(self, account):
-        if account not in self.number_of_bonds:
+        if account not in self.bond_count:
             return 0
-        return self.number_of_bonds[account]
+        return self.bond_count[account]
 
     # Return the number of redemption epochs of the bonds owned by the
     # |account|.
@@ -256,6 +266,12 @@ class JohnLawBond:
         if redemption_epoch not in self.bonds[account]:
             return 0
         return self.bonds[account][redemption_epoch]
+
+    # Return the number of bonds whose redemption epoch is |redemption_epoch|.
+    def get_bond_supply_at(self, redemption_epoch):
+        if redemption_epoch not in self.bond_supply:
+            return 0
+        return self.bond_supply[redemption_epoch]
 
 
 #-------------------------------------------------------------------------------
@@ -901,10 +917,20 @@ class ACB:
         ACB.LEVEL_TO_EXCHANGE_RATE = [6, 7, 8, 9, 10, 11, 12, 13, 14]
         ACB.EXCHANGE_RATE_DIVISOR = 10
 
-        # The bond price and the redemption period.
+        # The bond structure.
+        #
+        # |<---BOND_REDEMPTION_PERIOD--->|<---BOND_REDEEMABLE_PERIOD--->|
+        # ^                              ^                              ^
+        # Issued                         Becomes redeemable             Expired
+        #
+        # During BOND_REDEMPTION_PERIOD, the bonds are redeemable as long as the
+        # ACB's bond budget is negative. During BOND_REDEEMABLE_PERIOD, the
+        # bonds are redeemable regardless of the ACB's bond budget. After
+        # BOND_REDEEMABLE_PERIOD, the bonds are expired.
         ACB.BOND_PRICE = 996 # One bond is sold for 996 coins.
         ACB.BOND_REDEMPTION_PRICE = 1000 # One bond is redeemed for 1000 coins.
         ACB.BOND_REDEMPTION_PERIOD = 12 # 12 epochs.
+        ACB.BOND_REDEEMABLE_PERIOD = 2 # 2 epochs.
 
         # The duration of the oracle phase. The ACB adjusts the total coin
         # supply once per phase. Voters can vote once per phase.
@@ -971,12 +997,13 @@ class ACB:
     # Test only.
     def override_constants_for_testing(
         self, bond_price, bond_redemption_price, bond_redemption_period,
-        epoch_duration, deposit_rate, damping_factor,
+        bond_redeemable_period, epoch_duration, deposit_rate, damping_factor,
         level_to_exchange_rate):
 
         ACB.BOND_PRICE = bond_price
         ACB.BOND_REDEMPTION_PRICE = bond_redemption_price
         ACB.BOND_REDEMPTION_PERIOD = bond_redemption_period
+        ACB.BOND_REDEEMABLE_PERIOD = bond_redeemable_period
         ACB.EPOCH_DURATION = epoch_duration
         ACB.DEPOSIT_RATE = deposit_rate
         ACB.DAMPING_FACTOR = damping_factor
@@ -988,6 +1015,8 @@ class ACB:
                ACB.BOND_REDEMPTION_PRICE <= 100000)
         assert(1 <= ACB.BOND_REDEMPTION_PERIOD and
                ACB.BOND_REDEMPTION_PERIOD <= 100)
+        assert(1 <= ACB.BOND_REDEEMABLE_PERIOD and
+               ACB.BOND_REDEEMABLE_PERIOD <= 100)
         assert(1 <= ACB.EPOCH_DURATION and
                ACB.EPOCH_DURATION <= 30 * 24 * 60 * 60)
         assert(0 <= ACB.DEPOSIT_RATE and ACB.DEPOSIT_RATE <= 100)
@@ -1047,9 +1076,6 @@ class ACB:
                 # multiply the damping factor.
                 delta = int(delta * ACB.DAMPING_FACTOR / 100)
 
-            # Increase or decrease the total coin supply.
-            mint = self._control_supply(delta)
-
             # Advance to the next phase. Provide the |tax| coins to the oracle
             # as a reward.
             tax = self.coin.balance_of(self.coin.tax_account)
@@ -1058,6 +1084,9 @@ class ACB:
             # Reset the tax account address just in case.
             self.coin.reset_tax_account()
             assert(self.coin.balance_of(self.coin.tax_account) == 0)
+
+            # Increase or decrease the total coin supply.
+            mint = self._control_supply(delta)
 
             self.logging.epoch_updated(
                 mint, burned, delta, self.bond_budget,
@@ -1115,7 +1144,7 @@ class ACB:
         self.bond.mint(sender, redemption_epoch, count)
         self.bond_budget -= count
         assert(self.bond_budget >= 0)
-        assert(self.bond.total_supply + self.bond_budget >= 0)
+        assert(self.valid_bond_supply() + self.bond_budget >= 0)
         assert(self.bond.balance_of(sender, redemption_epoch) > 0)
 
         # Burn the corresponding coins.
@@ -1136,10 +1165,10 @@ class ACB:
     # ----------------
     # The number of successfully redeemed bonds.
     def redeem_bonds(self, sender, redemption_epochs):
-        count_total = 0
+        count_valid = 0
         for redemption_epoch in redemption_epochs:
             count = self.bond.balance_of(sender, redemption_epoch)
-            if redemption_epoch > self.oracle.epoch_id:
+            if self.oracle.epoch_id < redemption_epoch:
                 # If the bonds have not yet hit their redemption epoch, the
                 # ACB accepts the redemption as long as |self.bond_budget| is
                 # negative.
@@ -1148,19 +1177,23 @@ class ACB:
                 if count > -self.bond_budget:
                     count = -self.bond_budget
 
-            # Mint the corresponding coins to the user account.
-            amount = count * ACB.BOND_REDEMPTION_PRICE
-            self.coin.mint(sender, amount)
+            if (self.oracle.epoch_id <
+                redemption_epoch + ACB.BOND_REDEEMABLE_PERIOD):
+                # If the bonds are not expired, mint the corresponding coins
+                # to the user account.
+                amount = count * ACB.BOND_REDEMPTION_PRICE
+                self.coin.mint(sender, amount)
 
-            # Burn the redeemed bonds.
-            self.bond_budget += count
+                # Burn the redeemed bonds.
+                self.bond_budget += count
+                count_valid += count
+
             self.bond.burn(sender, redemption_epoch, count)
-            count_total += count
 
-        assert(self.bond.total_supply + self.bond_budget >= 0)
+        assert(self.valid_bond_supply() + self.bond_budget >= 0)
 
-        self.logging.redeemed_bonds(count_total)
-        return count_total
+        self.logging.redeemed_bonds(count_valid)
+        return count_valid
 
     # Increase or decrease the total coin supply.
     #
@@ -1173,21 +1206,22 @@ class ACB:
     # The amount of coins that need to be newly minted by the ACB.
     def _control_supply(self, delta):
         mint = 0
+        bond_supply = self.valid_bond_supply()
         if delta == 0:
             # No change in the total coin supply.
             self.bond_budget = 0
         elif delta > 0:
             # Increase the total coin supply.
             count = int(delta / ACB.BOND_REDEMPTION_PRICE)
-            if count <= self.bond.total_supply:
+            if count <= bond_supply:
                 # If there are sufficient bonds to redeem, increase the total
                 # coin supply by redeeming bonds.
                 self.bond_budget = -count
             else:
                 # Otherwise, redeem all the issued bonds.
-                self.bond_budget = -self.bond.total_supply
+                self.bond_budget = -bond_supply
                 # The ACB needs to mint the remaining coins.
-                mint = ((count - self.bond.total_supply) *
+                mint = ((count - bond_supply) *
                         ACB.BOND_REDEMPTION_PRICE)
             assert(self.bond_budget <= 0)
         else:
@@ -1196,9 +1230,19 @@ class ACB:
             self.bond_budget = int(-delta / ACB.BOND_PRICE)
             assert(self.bond_budget >= 0)
 
-        assert(self.bond.total_supply + self.bond_budget >= 0)
+        assert(bond_supply + self.bond_budget >= 0)
         assert(mint >= 0)
         return mint
+
+    # Return the valid bond supply; i.e., the total supply of bonds that are
+    # not yet expired.
+    def valid_bond_supply(self):
+        count = 0
+        for redemption_epoch in range(
+                max(self.oracle.epoch_id - ACB.BOND_REDEEMABLE_PERIOD + 1, 0),
+                self.oracle.epoch_id + ACB.BOND_REDEMPTION_PERIOD + 1):
+            count += self.bond.get_bond_supply_at(redemption_epoch)
+        return count
 
     # Return the current timestamp in seconds.
     def get_timestamp(self):

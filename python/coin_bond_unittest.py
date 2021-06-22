@@ -290,6 +290,27 @@ class CoinBondUnitTest(unittest.TestCase):
         self.check_redemption_epochs(bond, accounts[1], [])
         self.check_redemption_epochs(bond, accounts[2], [])
 
+        # bond_supply_at
+        bond.mint(accounts[1], 1, 1)
+        bond.mint(accounts[2], 1, 2)
+        bond.mint(accounts[1], 2, 10)
+        bond.mint(accounts[2], 2, 20)
+        self.assertEqual(bond.get_bond_supply_at(0), 0)
+        self.assertEqual(bond.get_bond_supply_at(1), 3)
+        self.assertEqual(bond.get_bond_supply_at(2), 30)
+        bond.burn(accounts[1], 1, 1)
+        bond.burn(accounts[2], 1, 1)
+        bond.burn(accounts[1], 2, 10)
+        bond.burn(accounts[2], 2, 10)
+        self.assertEqual(bond.get_bond_supply_at(0), 0)
+        self.assertEqual(bond.get_bond_supply_at(1), 1)
+        self.assertEqual(bond.get_bond_supply_at(2), 10)
+        bond.burn(accounts[2], 1, 1)
+        bond.burn(accounts[2], 2, 10)
+        self.assertEqual(bond.get_bond_supply_at(0), 0)
+        self.assertEqual(bond.get_bond_supply_at(1), 0)
+        self.assertEqual(bond.get_bond_supply_at(2), 0)
+
     def check_redemption_epochs(self, bond, account, expected):
         count = bond.number_of_redemption_epochs_owned_by(account)
         self.assertEqual(count, len(expected))

@@ -34,6 +34,7 @@ class ACBSimulator(unittest.TestCase):
                  bond_price,
                  bond_redemption_price,
                  bond_redemption_period,
+                 bond_redeemable_period,
                  epoch_duration,
                  proportional_reward_rate,
                  deposit_rate,
@@ -44,12 +45,13 @@ class ACBSimulator(unittest.TestCase):
                  iteration):
         super().__init__()
 
-        print('bond_price=%d redemp_price=%d redemp_period=%d epoch_dur=%d '
-              'reward_rate=%d deposit_rate=%d damping=%d reclaim=%d '
-              'voter=%d iter=%d' %
+        print('bond_price=%d redemp_price=%d redemp_period=%d '
+              'redeem_period=%d epoch_dur=%d reward_rate=%d '
+              'deposit_rate=%d damping=%d reclaim=%d voter=%d iter=%d' %
               (bond_price,
                bond_redemption_price,
                bond_redemption_period,
+               bond_redeemable_period,
                epoch_duration,
                proportional_reward_rate,
                deposit_rate,
@@ -70,8 +72,8 @@ class ACBSimulator(unittest.TestCase):
             level_max, reclaim_threshold, proportional_reward_rate)
         self.acb.override_constants_for_testing(
             bond_price, bond_redemption_price, bond_redemption_period,
-            epoch_duration, deposit_rate, damping_factor,
-            level_to_exchange_rate)
+            bond_redeemable_period, epoch_duration, deposit_rate,
+            damping_factor, level_to_exchange_rate)
 
         self.tax_rate = JohnLawCoin.TAX_RATE
         self.lost_deposit = [0] * 3
@@ -96,6 +98,7 @@ class ACBSimulator(unittest.TestCase):
                 self.reward_miss = 0
                 self.redeem_count = 0
                 self.fast_redeem_count = 0
+                self.expired_count = 0
                 self.redemption_count = 0
                 self.redeem_hit = 0
                 self.purchase_hit = 0
@@ -122,6 +125,7 @@ class ACBSimulator(unittest.TestCase):
                 self.total_redemption_count = 0
                 self.total_redeem_count = 0
                 self.total_fast_redeem_count = 0
+                self.total_expired_count = 0
                 self.total_redeem_hit = 0
                 self.total_purchase_hit = 0
                 self.total_purchase_count = 0
@@ -144,6 +148,7 @@ class ACBSimulator(unittest.TestCase):
                     self.supply_nochange += 1
                 self.total_redeem_count += self.redeem_count
                 self.total_fast_redeem_count += self.fast_redeem_count
+                self.total_expired_count += self.expired_count
                 self.total_redemption_count += self.redemption_count
                 self.total_redeem_hit += self.redeem_hit
                 self.total_purchase_hit += self.purchase_hit
@@ -188,6 +193,7 @@ class ACBSimulator(unittest.TestCase):
             epoch += 1
             coin_supply2 = acb.coin.total_supply
             bond_supply = acb.bond.total_supply
+            valid_bond_supply = acb.valid_bond_supply()
             bond_budget = acb.bond_budget
             current_epoch_start = acb.current_epoch_start
 
@@ -228,8 +234,10 @@ class ACBSimulator(unittest.TestCase):
                       'reward_hit=%d/%d=%d%% purchase_hit=%d/%d=%d%% '
                       'redeem_hit=%d/%d=%d%% '
                       'redemptions=%d/%d=%d%% fast_redeem=%d/%d=%d%% '
+                      'expired=%d '
                       'delta=%d mint=%d lost=%d coin_supply=%d->%d->%d=%d '
-                      'bond_supply=%d->%d bond_budget=%d->%d tax=%d' %
+                      'bond_supply=%d->%d valid_bond_supply=%d->%d '
+                      'bond_budget=%d->%d tax=%d' %
                       (epoch,
                        self.metrics.reveal_hit,
                        self.metrics.reveal_hit + self.metrics.reveal_miss,
@@ -262,6 +270,7 @@ class ACBSimulator(unittest.TestCase):
                        self.metrics.redeem_count,
                        divide_or_zero(100 * self.metrics.fast_redeem_count,
                                       self.metrics.redeem_count),
+                       self.metrics.expired_count,
                        self.metrics.delta,
                        self.metrics.mint,
                        self.metrics.lost,
@@ -271,6 +280,8 @@ class ACBSimulator(unittest.TestCase):
                        acb.coin.total_supply - coin_supply1,
                        bond_supply,
                        acb.bond.total_supply,
+                       valid_bond_supply,
+                       acb.valid_bond_supply(),
                        bond_budget,
                        acb.bond_budget,
                        self.metrics.tax
@@ -281,9 +292,9 @@ class ACBSimulator(unittest.TestCase):
         print('epoch=%d reveal_hit=%d/%d=%d%% reclaim_hit=%d/%d=%d%% '
               'reward_hit=%d/%d=%d%% '
               'purchase_hit=%d/%d=%d%% redeem_hit=%d/%d=%d%% '
-              'redemptions=%d/%d=%d%% fast_redeem=%d/%d=%d%% '
+              'redemptions=%d/%d=%d%% fast_redeem=%d/%d=%d%% expired=%d '
               'supply=%d/%d/%d coin_supply=%d%% mint=%d lost=%d '
-              'bond_supply=%d tax=%d' %
+              'bond_supply=%d valid_bond_supply=%d tax=%d' %
               (epoch,
                self.metrics.total_reveal_hit,
                self.metrics.total_reveal_hit + self.metrics.total_reveal_miss,
@@ -316,6 +327,7 @@ class ACBSimulator(unittest.TestCase):
                self.metrics.total_redeem_count,
                divide_or_zero(100 * self.metrics.total_fast_redeem_count,
                               self.metrics.total_redeem_count),
+               self.metrics.total_expired_count,
                self.metrics.supply_increased,
                self.metrics.supply_nochange,
                self.metrics.supply_decreased,
@@ -323,6 +335,7 @@ class ACBSimulator(unittest.TestCase):
                self.metrics.total_mint,
                self.metrics.total_lost,
                acb.bond.total_supply,
+               acb.valid_bond_supply(),
                self.metrics.total_tax
                ))
         print("================")
@@ -382,6 +395,7 @@ class ACBSimulator(unittest.TestCase):
 
             coin_supply = acb.coin.total_supply
             bond_supply = acb.bond.total_supply
+            valid_bond_supply = acb.valid_bond_supply()
             redemption = acb.oracle.epoch_id + ACB.BOND_REDEMPTION_PERIOD
             if redemption in voter.bonds:
                 voter.bonds[redemption] += count
@@ -396,6 +410,8 @@ class ACBSimulator(unittest.TestCase):
                              coin_supply - bond_price * count)
             self.assertEqual(acb.bond.total_supply,
                              bond_supply + count)
+            self.assertEqual(acb.valid_bond_supply(),
+                             valid_bond_supply + count)
             self.assertEqual(acb.bond_budget,
                              bond_budget - count)
             self.assertEqual(acb.bond.balance_of(voter.address, redemption),
@@ -420,16 +436,21 @@ class ACBSimulator(unittest.TestCase):
 
             fast_redeem_count = 0
             redeem_count = 0
+            expired_count = 0
             bond_budget = acb.bond_budget
             for redemption in redemptions:
                 count = voter.bonds[redemption]
-                if redemption > acb.oracle.epoch_id:
+                if acb.oracle.epoch_id < redemption:
                     if bond_budget >= 0:
                         continue
                     count = min(count, -bond_budget)
                     fast_redeem_count += count
-                redeem_count += count
-                bond_budget += count
+                if (acb.oracle.epoch_id <
+                    redemption + ACB.BOND_REDEEMABLE_PERIOD):
+                    redeem_count += count
+                    bond_budget += count
+                else:
+                    expired_count += count
                 voter.bonds[redemption] -= count
                 assert(voter.bonds[redemption] >= 0)
                 if voter.bonds[redemption] == 0:
@@ -438,6 +459,7 @@ class ACBSimulator(unittest.TestCase):
 
             coin_supply = acb.coin.total_supply
             bond_supply = acb.bond.total_supply
+            valid_bond_supply = acb.valid_bond_supply()
             self.assertEqual(
                 acb.redeem_bonds(voter.address, redemptions), redeem_count)
             self.assertEqual(acb.bond_budget, bond_budget)
@@ -454,12 +476,15 @@ class ACBSimulator(unittest.TestCase):
                                  voter.bonds[redemption])
 
             self.assertEqual(acb.bond.total_supply,
-                             bond_supply - redeem_count)
+                             bond_supply - redeem_count - expired_count)
+            self.assertEqual(acb.valid_bond_supply(),
+                             valid_bond_supply - redeem_count)
             self.assertEqual(acb.coin.total_supply,
                              coin_supply + ACB.BOND_REDEMPTION_PRICE *
                              redeem_count)
 
             self.metrics.fast_redeem_count += fast_redeem_count
+            self.metrics.expired_count += expired_count
             self.metrics.redeem_count += redeem_count
             self.metrics.redemption_count += len(redemptions)
             self.metrics.redeem_hit += 1
@@ -527,20 +552,6 @@ class ACBSimulator(unittest.TestCase):
                          1 * ACB.EXCHANGE_RATE_DIVISOR) /
                         ACB.EXCHANGE_RATE_DIVISOR)
             delta = int(delta * ACB.DAMPING_FACTOR / 100)
-
-        mint = 0
-        redeemable_bonds = 0
-        issued_bonds = 0
-        if delta >= 0:
-            necessary_bonds = int(delta / ACB.BOND_REDEMPTION_PRICE)
-            if necessary_bonds <= acb.bond.total_supply:
-                redeemable_bonds = necessary_bonds
-            else:
-                redeemable_bonds = acb.bond.total_supply
-                mint = ((necessary_bonds - acb.bond.total_supply) *
-                        ACB.BOND_REDEMPTION_PRICE)
-        else:
-            issued_bonds = int(-delta / ACB.BOND_PRICE)
 
         target_level = random.randint(0, Oracle.LEVEL_MAX - 1)
         #target_level = int(epoch / 6) % 3
@@ -674,6 +685,20 @@ class ACBSimulator(unittest.TestCase):
                 self.metrics.reward_miss += 1
 
             if not commit_observed:
+                mint = 0
+                redeemable_bonds = 0
+                issued_bonds = 0
+                if delta >= 0:
+                    necessary_bonds = int(delta / ACB.BOND_REDEMPTION_PRICE)
+                    if necessary_bonds <= acb.valid_bond_supply():
+                        redeemable_bonds = necessary_bonds
+                    else:
+                        redeemable_bonds = acb.valid_bond_supply()
+                        mint = ((necessary_bonds - redeemable_bonds) *
+                                ACB.BOND_REDEMPTION_PRICE)
+                else:
+                    issued_bonds = int(-delta / ACB.BOND_PRICE)
+
                 self.assertEqual(acb.bond.total_supply, bond_supply)
                 if mode_level == Oracle.LEVEL_MAX:
                     self.assertEqual(acb.bond_budget, 0)
@@ -707,6 +732,7 @@ def main():
         996,
         1000,
         12,
+        2,
         7,
         90,
         10,
@@ -721,32 +747,33 @@ def main():
     for (bond_price, bond_redemption_price) in [
             (1, 3), (996, 1000), (1000, 1000)]:
         for bond_redemption_period in [1, 12]:
-            for epoch_duration in [1, 7 * 24 * 60 * 60]:
-                for proportional_reward_rate in [0, 90, 100]:
-                    for deposit_rate in [0, 10, 100]:
-                        for damping_factor in [10, 100]:
-                            p = bond_redemption_price
-                            for level_to_exchange_rate in [
-                                    [9, 11, 12],
-                                    [0, 1, 10, 11, 12],
-                                    [6, 7, 8, 9, 10, 11, 12, 13, 14]]:
-                                for reclaim_threshold in [0, 1, len(
-                                    level_to_exchange_rate) - 1]:
-                                    for voter_count in [1, 200]:
-                                        test = ACBSimulator(
-                                            bond_price,
-                                            bond_redemption_price,
-                                            bond_redemption_period,
-                                            epoch_duration,
-                                            proportional_reward_rate,
-                                            deposit_rate,
-                                            damping_factor,
-                                            level_to_exchange_rate,
-                                            reclaim_threshold,
-                                            voter_count,
-                                            iteration)
-                                        test.run()
-                                        test.teardown()
+            for bond_redeemable_period in [1, 2, 12]:
+                for epoch_duration in [1, 7 * 24 * 60 * 60]:
+                    for proportional_reward_rate in [0, 90, 100]:
+                        for deposit_rate in [0, 10, 100]:
+                            for damping_factor in [10, 100]:
+                                for level_to_exchange_rate in [
+                                        [9, 11, 12],
+                                        [0, 1, 10, 11, 12],
+                                        [6, 7, 8, 9, 10, 11, 12, 13, 14]]:
+                                    for reclaim_threshold in [0, 1, len(
+                                            level_to_exchange_rate) - 1]:
+                                        for voter_count in [1, 200]:
+                                            test = ACBSimulator(
+                                                bond_price,
+                                                bond_redemption_price,
+                                                bond_redemption_period,
+                                                bond_redeemable_period,
+                                                epoch_duration,
+                                                proportional_reward_rate,
+                                                deposit_rate,
+                                                damping_factor,
+                                                level_to_exchange_rate,
+                                                reclaim_threshold,
+                                                voter_count,
+                                                iteration)
+                                            test.run()
+                                            test.teardown()
 
 
 if __name__ == "__main__":

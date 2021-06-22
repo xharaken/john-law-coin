@@ -14,6 +14,7 @@ class ACBUnitTest(unittest.TestCase):
                  bond_price,
                  bond_redemption_price,
                  bond_redemption_period,
+                 bond_redeemable_period,
                  epoch_duration,
                  proportional_reward_rate,
                  deposit_rate,
@@ -23,11 +24,13 @@ class ACBUnitTest(unittest.TestCase):
                  tax):
         super().__init__()
 
-        print('bond_price=%d redemp_price=%d redemp_period=%d epoch_dur=%d '
-              'reward_rate=%d deposit_rate=%d damping=%d reclaim=%d tax=%d' %
+        print('bond_price=%d redemp_price=%d redemp_period=%d '
+              'redeem_period=%d epoch_dur=%d reward_rate=%d '
+              'deposit_rate=%d damping=%d reclaim=%d tax=%d' %
               (bond_price,
                bond_redemption_price,
                bond_redemption_period,
+               bond_redeemable_period,
                epoch_duration,
                proportional_reward_rate,
                deposit_rate,
@@ -50,8 +53,8 @@ class ACBUnitTest(unittest.TestCase):
             level_max, reclaim_threshold, proportional_reward_rate)
         self.acb.override_constants_for_testing(
             bond_price, bond_redemption_price, bond_redemption_period,
-            epoch_duration, deposit_rate, damping_factor,
-            level_to_exchange_rate)
+            bond_redeemable_period, epoch_duration, deposit_rate,
+            damping_factor, level_to_exchange_rate)
 
         self.initial_coin_supply = JohnLawCoin.INITIAL_COIN_SUPPLY
         self.bond_price = ACB.BOND_PRICE
@@ -72,10 +75,10 @@ class ACBUnitTest(unittest.TestCase):
         if (ACB.BOND_PRICE >= 2 and
             ACB.BOND_REDEMPTION_PRICE >= 2 and
             ACB.BOND_REDEMPTION_PERIOD >= 3 and
+            ACB.BOND_REDEEMABLE_PERIOD >= 3 and
             ACB.EPOCH_DURATION >= 2):
             self.run_non_vote_tests()
 
-        self.acb.set_timestamp(self.acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.run_vote_tests()
 
     def run_non_vote_tests(self):
@@ -690,6 +693,111 @@ class ACBUnitTest(unittest.TestCase):
         acb = self.acb
         accounts = self.accounts
 
+        # bond expire
+        self.assertEqual(acb._control_supply(-self.bond_price * 80), 0)
+        self.assertEqual(acb.bond.total_supply, 0)
+        self.assertEqual(acb.bond_budget, 80)
+        
+        acb.coin.move(accounts[1], accounts[2], self.bond_price * 30)
+        
+        self.advance_epoch(ACB.EPOCH_DURATION)
+        t1 = acb.oracle.epoch_id + ACB.BOND_REDEMPTION_PERIOD
+
+        self.assertEqual(acb.purchase_bonds(accounts[2], 10), t1)
+        self.assertEqual(acb.bond.total_supply, 10)
+        self.assertEqual(acb.valid_bond_supply(), 10)
+        self.assertEqual(acb.bond.balance_of(accounts[2], t1), 10)
+        self.check_redemption_epochs(acb.bond, accounts[2], [t1])
+
+        self.advance_epoch(ACB.EPOCH_DURATION)
+        t2 = acb.oracle.epoch_id + ACB.BOND_REDEMPTION_PERIOD
+
+        self.assertEqual(acb.purchase_bonds(accounts[2], 20), t2)
+        self.assertEqual(acb.bond.total_supply, 30)
+        self.assertEqual(acb.valid_bond_supply(), 30)
+        self.assertEqual(acb.bond.balance_of(accounts[2], t2), 20)
+        self.check_redemption_epochs(acb.bond, accounts[2], [t1, t2])
+
+        self.advance_epoch(ACB.EPOCH_DURATION *
+                           (ACB.BOND_REDEMPTION_PERIOD +
+                            ACB.BOND_REDEEMABLE_PERIOD - 2))
+        
+        self.assertEqual(acb.bond.total_supply, 30)
+        self.assertEqual(acb.valid_bond_supply(), 30)
+        self.assertEqual(acb.bond.balance_of(accounts[2], t1), 10)
+        self.assertEqual(acb.bond.balance_of(accounts[2], t2), 20)
+        self.check_redemption_epochs(acb.bond, accounts[2], [t1, t2])
+
+        self.assertEqual(acb.redeem_bonds(accounts[2], [t1]), 10)
+        self.assertEqual(acb.redeem_bonds(accounts[2], [t1]), 0)
+
+        self.advance_epoch(ACB.EPOCH_DURATION)
+        
+        self.assertEqual(acb.bond.total_supply, 20)
+        self.assertEqual(acb.valid_bond_supply(), 20)
+        self.assertEqual(acb.bond.balance_of(accounts[2], t1), 0)
+        self.assertEqual(acb.bond.balance_of(accounts[2], t2), 20)
+        self.check_redemption_epochs(acb.bond, accounts[2], [t2])
+
+        self.assertEqual(acb.redeem_bonds(accounts[2], [t2]), 20)
+        self.assertEqual(acb.redeem_bonds(accounts[2], [t2]), 0)
+
+        self.assertEqual(acb.bond.total_supply, 0)
+        self.assertEqual(acb.valid_bond_supply(), 0)
+        self.assertEqual(acb.bond.balance_of(accounts[2], t1), 0)
+        self.assertEqual(acb.bond.balance_of(accounts[2], t2), 0)
+        self.check_redemption_epochs(acb.bond, accounts[2], [])
+
+        acb.coin.move(accounts[1], accounts[2], self.bond_price * 30)
+        
+        self.advance_epoch(ACB.EPOCH_DURATION)
+        t1 = acb.oracle.epoch_id + ACB.BOND_REDEMPTION_PERIOD
+
+        self.assertEqual(acb.purchase_bonds(accounts[2], 10), t1)
+        self.assertEqual(acb.bond.total_supply, 10)
+        self.assertEqual(acb.valid_bond_supply(), 10)
+        self.assertEqual(acb.bond.balance_of(accounts[2], t1), 10)
+        self.check_redemption_epochs(acb.bond, accounts[2], [t1])
+
+        self.advance_epoch(ACB.EPOCH_DURATION)
+        t2 = acb.oracle.epoch_id + ACB.BOND_REDEMPTION_PERIOD
+
+        self.assertEqual(acb.purchase_bonds(accounts[2], 20), t2)
+        self.assertEqual(acb.bond.total_supply, 30)
+        self.assertEqual(acb.valid_bond_supply(), 30)
+        self.assertEqual(acb.bond.balance_of(accounts[2], t2), 20)
+        self.check_redemption_epochs(acb.bond, accounts[2], [t1, t2])
+
+        self.advance_epoch(ACB.EPOCH_DURATION *
+                           (ACB.BOND_REDEMPTION_PERIOD +
+                            ACB.BOND_REDEEMABLE_PERIOD - 1))
+        
+        self.assertEqual(acb.bond.total_supply, 30)
+        self.assertEqual(acb.valid_bond_supply(), 20)
+        self.assertEqual(acb.bond.balance_of(accounts[2], t1), 10)
+        self.assertEqual(acb.bond.balance_of(accounts[2], t2), 20)
+        self.check_redemption_epochs(acb.bond, accounts[2], [t1, t2])
+
+        self.assertEqual(acb.redeem_bonds(accounts[2], [t1]), 0)
+
+        self.advance_epoch(ACB.EPOCH_DURATION)
+        
+        self.assertEqual(acb.bond.total_supply, 20)
+        self.assertEqual(acb.valid_bond_supply(), 0)
+        self.assertEqual(acb.bond.balance_of(accounts[2], t1), 0)
+        self.assertEqual(acb.bond.balance_of(accounts[2], t2), 20)
+        self.check_redemption_epochs(acb.bond, accounts[2], [t2])
+
+        self.assertEqual(acb.redeem_bonds(accounts[2], [t2]), 0)
+
+        self.assertEqual(acb.bond.total_supply, 0)
+        self.assertEqual(acb.valid_bond_supply(), 0)
+        self.assertEqual(acb.bond.balance_of(accounts[2], t1), 0)
+        self.assertEqual(acb.bond.balance_of(accounts[2], t2), 0)
+        self.check_redemption_epochs(acb.bond, accounts[2], [])
+
+        self.acb.set_timestamp(self.acb.get_timestamp() + ACB.EPOCH_DURATION)
+        
         remainder = [0, 0, 0]
         deposit_4 = [0, 0, 0]
         deposit_5 = [0, 0, 0]
@@ -2669,11 +2777,15 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.bond.total_supply, 2)
 
         tax_total = 0
+        period = 1
+        valid_bond_supply = 0
         for level in range(2, Oracle.LEVEL_MAX + 2):
             now = (now + 1) % 3
             acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
 
             self.assertEqual(acb.bond.total_supply, 2)
+            valid_bond_supply = 2 if (period < ACB.BOND_REDEMPTION_PERIOD +
+                                      ACB.BOND_REDEEMABLE_PERIOD) else 0
             mint = 0
             bond_budget = 0
             delta = int(self.acb.coin.total_supply *
@@ -2682,18 +2794,19 @@ class ACBUnitTest(unittest.TestCase):
             if delta == 0:
                 mint = 0
                 issued_bonds = 0
-                redeemable_bonds = 0
             elif delta > 0:
                 necessary_bonds = int(delta / ACB.BOND_REDEMPTION_PRICE)
-                if necessary_bonds >= 2:
-                    mint = (necessary_bonds - 2) * ACB.BOND_REDEMPTION_PRICE
-                    bond_budget = -2
+                if necessary_bonds >= valid_bond_supply:
+                    mint = ((necessary_bonds - valid_bond_supply) *
+                            ACB.BOND_REDEMPTION_PRICE)
+                    bond_budget = -valid_bond_supply
                 else:
                     mint = 0
                     bond_budget = -necessary_bonds
             else:
                 mint = 0
                 bond_budget = int(-delta / self.bond_price)
+            period += 1
 
             coin_supply = acb.coin.total_supply
             reward_total = tax_total
@@ -2727,6 +2840,7 @@ class ACBUnitTest(unittest.TestCase):
                              remainder[(now - 1) % 3])
             self.assertEqual(acb.bond.total_supply, 2)
             self.assertEqual(acb.bond_budget, bond_budget)
+            self.assertEqual(acb.valid_bond_supply(), valid_bond_supply)
 
             tax_total = 0
             self.assertEqual(acb.coin.balance_of(acb.coin.tax_account), 0)
@@ -2745,9 +2859,8 @@ class ACBUnitTest(unittest.TestCase):
                 tax_total += tax
 
         now += 1
-        acb.set_timestamp(acb.get_timestamp() +
-                          ACB.BOND_REDEMPTION_PERIOD * ACB.EPOCH_DURATION)
-        self.assertEqual(acb.redeem_bonds(accounts[1], [t12]), 2)
+        self.assertEqual(acb.redeem_bonds(accounts[1], [t12]),
+                         valid_bond_supply)
 
         self.reset_balances();
         self.assertEqual(acb.bond.total_supply, 0)
@@ -2812,6 +2925,7 @@ def main():
     bond_price = 996
     bond_redemption_price = 1000
     bond_redemption_period = 12
+    bond_redeemable_period = 3
     epoch_duration = 7 * 24 * 60 * 60
     proportional_reward_rate = 90
     deposit_rate = 10
@@ -2824,6 +2938,7 @@ def main():
         bond_price,
         bond_redemption_price,
         bond_redemption_period,
+        bond_redeemable_period,
         epoch_duration,
         proportional_reward_rate,
         deposit_rate,
@@ -2837,31 +2952,32 @@ def main():
     for (bond_price, bond_redemption_price) in [
             (1, 3), (996, 1000), (1000, 1000)]:
         for bond_redemption_period in [1, 12]:
-            for epoch_duration in [1, 7 * 24 * 60 * 60]:
-                for proportional_reward_rate in [0, 1, 90, 100]:
-                    for deposit_rate in [0, 10, 100]:
-                        for damping_factor in [1, 10, 100]:
-                            p = bond_redemption_price
-                            for level_to_exchange_rate in [
-                                    [9, 11, 12],
-                                    [0, 1, 10, 11, 12],
-                                    [6, 7, 8, 9, 10, 11, 12, 13, 14]]:
-                                for reclaim_threshold in [0, 1, len(
-                                    level_to_exchange_rate) - 1]:
-                                    for tax in [0, 12345]:
-                                        test = ACBUnitTest(
-                                            bond_price,
-                                            bond_redemption_price,
-                                            bond_redemption_period,
-                                            epoch_duration,
-                                            proportional_reward_rate,
-                                            deposit_rate,
-                                            damping_factor,
-                                            level_to_exchange_rate,
-                                            reclaim_threshold,
-                                            tax)
-                                        test.run()
-                                        test.teardown()
+            for bond_redeemable_period in [1, 2, 12]:
+                for epoch_duration in [1, 7 * 24 * 60 * 60]:
+                    for proportional_reward_rate in [0, 1, 90, 100]:
+                        for deposit_rate in [0, 10, 100]:
+                            for damping_factor in [1, 10, 100]:
+                                for level_to_exchange_rate in [
+                                        [9, 11, 12],
+                                        [0, 1, 10, 11, 12],
+                                        [6, 7, 8, 9, 10, 11, 12, 13, 14]]:
+                                    for reclaim_threshold in [0, 1, len(
+                                            level_to_exchange_rate) - 1]:
+                                        for tax in [0, 12345]:
+                                            test = ACBUnitTest(
+                                                bond_price,
+                                                bond_redemption_price,
+                                                bond_redemption_period,
+                                                bond_redeemable_period,
+                                                epoch_duration,
+                                                proportional_reward_rate,
+                                                deposit_rate,
+                                                damping_factor,
+                                                level_to_exchange_rate,
+                                                reclaim_threshold,
+                                                tax)
+                                            test.run()
+                                            test.teardown()
 
 
 if __name__ == "__main__":
