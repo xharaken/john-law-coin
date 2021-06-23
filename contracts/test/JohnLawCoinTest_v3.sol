@@ -24,6 +24,7 @@ contract ACBForTesting_v3 is ACB_v3 {
   function overrideConstants(uint bond_price,
                              uint bond_redemption_price,
                              uint bond_redemption_period,
+                             uint bond_redeemable_period,
                              uint epoch_duration,
                              uint deposit_rate,
                              uint damping_factor,
@@ -32,6 +33,7 @@ contract ACBForTesting_v3 is ACB_v3 {
     BOND_PRICE = bond_price;
     BOND_REDEMPTION_PRICE = bond_redemption_price;
     BOND_REDEMPTION_PERIOD = bond_redemption_period;
+    BOND_REDEEMABLE_PERIOD = bond_redeemable_period;
     EPOCH_DURATION = epoch_duration;
     DEPOSIT_RATE = deposit_rate;
     DAMPING_FACTOR = damping_factor;

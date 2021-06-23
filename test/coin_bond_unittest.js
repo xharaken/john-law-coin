@@ -301,6 +301,27 @@ contract("CoinBondUnittest", function (accounts) {
     assert.equal(await bond.numberOfBondsOwnedBy(accounts[2]), 0);
     await check_redemption_epochs(bond, accounts[1], []);
     await check_redemption_epochs(bond, accounts[2], []);
+
+    // bond_supply_at
+    await bond.mint(accounts[1], 1, 1);
+    await bond.mint(accounts[2], 1, 2);
+    await bond.mint(accounts[1], 2, 10);
+    await bond.mint(accounts[2], 2, 20);
+    assert.equal(await bond.bondSupplyAt(0), 0);
+    assert.equal(await bond.bondSupplyAt(1), 3);
+    assert.equal(await bond.bondSupplyAt(2), 30);
+    await bond.burn(accounts[1], 1, 1);
+    await bond.burn(accounts[2], 1, 1);
+    await bond.burn(accounts[1], 2, 10);
+    await bond.burn(accounts[2], 2, 10);
+    assert.equal(await bond.bondSupplyAt(0), 0);
+    assert.equal(await bond.bondSupplyAt(1), 1);
+    assert.equal(await bond.bondSupplyAt(2), 10);
+    await bond.burn(accounts[2], 1, 1);
+    await bond.burn(accounts[2], 2, 10);
+    assert.equal(await bond.bondSupplyAt(0), 0);
+    assert.equal(await bond.bondSupplyAt(1), 0);
+    assert.equal(await bond.bondSupplyAt(2), 0);
   });
 
   it("Ownable", async function () {

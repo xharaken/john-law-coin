@@ -268,7 +268,7 @@ class JohnLawBond:
         return self.bonds[account][redemption_epoch]
 
     # Return the number of bonds whose redemption epoch is |redemption_epoch|.
-    def get_bond_supply_at(self, redemption_epoch):
+    def bond_supply_at(self, redemption_epoch):
         if redemption_epoch not in self.bond_supply:
             return 0
         return self.bond_supply[redemption_epoch]
@@ -1241,7 +1241,7 @@ class ACB:
         for redemption_epoch in range(
                 max(self.oracle.epoch_id - ACB.BOND_REDEEMABLE_PERIOD + 1, 0),
                 self.oracle.epoch_id + ACB.BOND_REDEMPTION_PERIOD + 1):
-            count += self.bond.get_bond_supply_at(redemption_epoch)
+            count += self.bond.bond_supply_at(redemption_epoch)
         return count
 
     # Return the current timestamp in seconds.

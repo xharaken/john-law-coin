@@ -37,6 +37,7 @@ contract ACBForTesting_v5 is ACB_v5 {
   function overrideConstants(uint bond_price,
                              uint bond_redemption_price,
                              uint bond_redemption_period,
+                             uint bond_redeemable_period,
                              uint epoch_duration,
                              uint deposit_rate,
                              uint damping_factor,
@@ -45,6 +46,7 @@ contract ACBForTesting_v5 is ACB_v5 {
     BOND_PRICE = bond_price;
     BOND_REDEMPTION_PRICE = bond_redemption_price;
     BOND_REDEMPTION_PERIOD = bond_redemption_period;
+    BOND_REDEEMABLE_PERIOD = bond_redeemable_period;
     EPOCH_DURATION = epoch_duration;
     DEPOSIT_RATE = deposit_rate;
     DAMPING_FACTOR = damping_factor;
@@ -55,9 +57,11 @@ contract ACBForTesting_v5 is ACB_v5 {
             "oc2");
     require(1 <= BOND_REDEMPTION_PERIOD &&
             BOND_REDEMPTION_PERIOD <= 100, "oc3");
-    require(1 <= EPOCH_DURATION && EPOCH_DURATION <= 30 * 24 * 60 * 60, "oc4");
-    require(0 <= DEPOSIT_RATE && DEPOSIT_RATE <= 100, "oc5");
-    require(1 <= DAMPING_FACTOR && DAMPING_FACTOR <= 100, "oc6");
+    require(1 <= BOND_REDEEMABLE_PERIOD &&
+            BOND_REDEEMABLE_PERIOD <= 100, "oc4");
+    require(1 <= EPOCH_DURATION && EPOCH_DURATION <= 30 * 24 * 60 * 60, "oc5");
+    require(0 <= DEPOSIT_RATE && DEPOSIT_RATE <= 100, "oc6");
+    require(1 <= DAMPING_FACTOR && DAMPING_FACTOR <= 100, "oc7");
   }
 
   function controlSupply(int delta)

@@ -38,7 +38,7 @@ const randint = common.randint;
 
 contract("ACBSimulator", function (accounts) {
   let args = common.custom_arguments();
-  assert.isTrue(args.length == 12);
+  assert.isTrue(args.length == 13);
   parameterized_test(accounts,
                      args[0],
                      args[1],
@@ -59,6 +59,7 @@ function parameterized_test(accounts,
                             _bond_price,
                             _bond_redemption_price,
                             _bond_redemption_period,
+                            _bond_redeemable_period,
                             _epoch_duration,
                             _proportional_reward_rate,
                             _deposit_rate,
@@ -72,6 +73,7 @@ function parameterized_test(accounts,
       " bond_price=" + _bond_price +
       " bond_redemp_price=" + _bond_redemption_price +
       " bond_redemp_period=" + _bond_redemption_period +
+      " bond_redeemable_period=" + _bond_redeemable_period +
       " epoch_duration=" + _epoch_duration +
       " reward_rate=" + _proportional_reward_rate +
       " deposit_rate=" + _deposit_rate +
@@ -110,6 +112,7 @@ function parameterized_test(accounts,
     await _acb.overrideConstants(_bond_price,
                                  _bond_redemption_price,
                                  _bond_redemption_period,
+                                 _bond_redeemable_period,
                                  _epoch_duration,
                                  _deposit_rate,
                                  _damping_factor,
@@ -150,6 +153,7 @@ function parameterized_test(accounts,
         this.reward_miss = 0;
         this.redeem_count = 0;
         this.fast_redeem_count = 0;
+        this.expired_count = 0;
         this.redemption_count = 0;
         this.redeem_hit = 0;
         this.purchase_hit = 0;
@@ -177,6 +181,7 @@ function parameterized_test(accounts,
         this.total_redemption_count = 0;
         this.total_redeem_count = 0;
         this.total_fast_redeem_count = 0;
+        this.total_expired_count = 0;
         this.total_redeem_hit = 0;
         this.total_purchase_hit = 0;
         this.total_purchase_count = 0;
@@ -201,6 +206,7 @@ function parameterized_test(accounts,
         }
         this.total_redeem_count += this.redeem_count;
         this.total_fast_redeem_count += this.fast_redeem_count;
+        this.total_expired_count += this.expired_count;
         this.total_redemption_count += this.redemption_count;
         this.total_redeem_hit += this.redeem_hit;
         this.total_purchase_hit += this.purchase_hit;
@@ -249,6 +255,7 @@ function parameterized_test(accounts,
 
       let coin_supply2 = await get_coin_supply();
       let bond_supply = await get_bond_supply();
+      let valid_bond_supply = (await _acb.validBondSupply()).toNumber();
       let bond_budget = (await _acb.bond_budget_()).toNumber();
 
       await redeem_bonds();
@@ -316,7 +323,8 @@ function parameterized_test(accounts,
                     "/" + _metrics.redeem_count +
                     "=" + divide_or_zero(100 * _metrics.fast_redeem_count,
                                          _metrics.redeem_count) +
-                    "% delta=" + _metrics.delta +
+                    "% expired=" + _metrics.expired_count +
+                    " delta=" + _metrics.delta +
                     " mint=" + _metrics.mint +
                     " lost=" + _metrics.lost +
                     " coin_supply=" + coin_supply1 +
@@ -325,6 +333,8 @@ function parameterized_test(accounts,
                     "=" + (coin_supply3 - coin_supply1) +
                     " bond_supply=" + bond_supply +
                     "->" + (await get_bond_supply()) +
+                    " valid_bond_supply=" + valid_bond_supply +
+                    "->" + (await _acb.validBondSupply()).toNumber() +
                     " bond_budget=" + bond_budget +
                     "->" + (await _acb.bond_budget_()).toNumber() +
                     " tax=" + tax
@@ -368,7 +378,8 @@ function parameterized_test(accounts,
                 "/" + _metrics.total_redeem_count +
                 "=" + divide_or_zero(100 * _metrics.total_fast_redeem_count,
                                      _metrics.total_redeem_count) +
-                "% supply=" + _metrics.supply_increased +
+                "% expired=" + _metrics.total_expired_count +
+                " supply=" + _metrics.supply_increased +
                 "/" + _metrics.supply_nochange +
                 "/" + _metrics.supply_decreased +
                 " coin_supply=" +
@@ -377,6 +388,7 @@ function parameterized_test(accounts,
                 "% mint=" + _metrics.total_mint +
                 " lost=" + _metrics.total_lost +
                 " bond_supply=" + (await get_bond_supply()) +
+                " valid_bond_supply=" + (await _acb.validBondSupply()) +
                 " tax=" + tax
                );
     console.log("================");
@@ -434,6 +446,7 @@ function parameterized_test(accounts,
 
         let coin_supply = await get_coin_supply();
         let bond_supply = await get_bond_supply();
+        let valid_bond_supply = (await _acb.validBondSupply()).toNumber();
         let redemption = (await _oracle.epoch_id_()).toNumber() +
             _bond_redemption_period;
         if (redemption in voter.bonds) {
@@ -449,6 +462,7 @@ function parameterized_test(accounts,
         assert.equal(await get_coin_supply(),
                      coin_supply - bond_price * count);
         assert.equal(await get_bond_supply(), bond_supply + count);
+        assert.equal(await _acb.validBondSupply(), valid_bond_supply + count);
         assert.equal(await _acb.bond_budget_(), bond_budget - count);
         assert.equal(await get_bond(voter.address, redemption),
                      voter.bonds[redemption]);
@@ -475,20 +489,25 @@ function parameterized_test(accounts,
 
         let fast_redeem_count = 0;
         let redeem_count = 0;
+        let expired_count = 0;
         let bond_budget = (await _acb.bond_budget_()).toNumber();
         let epoch_id = (await _oracle.epoch_id_()).toNumber();
         for (let redemption of redemptions) {
           assert.isTrue(redemption in voter.bonds);
           let count = voter.bonds[redemption];
-          if (redemption > epoch_id) {
+          if (epoch_id < redemption) {
             if (bond_budget >= 0) {
               continue;
             }
             count = Math.min(count, -bond_budget);
             fast_redeem_count += count;
           }
-          redeem_count += count;
-          bond_budget += count;
+          if (epoch_id < redemption + _bond_redeemable_period) {
+            redeem_count += count;
+            bond_budget += count;
+          } else {
+            expired_count += count;
+          }
           voter.bonds[redemption] -= count;
           assert.isTrue(voter.bonds[redemption] >= 0);
           if (voter.bonds[redemption] == 0) {
@@ -499,6 +518,7 @@ function parameterized_test(accounts,
 
         let coin_supply = await get_coin_supply();
         let bond_supply = await get_bond_supply();
+        let valid_bond_supply = (await _acb.validBondSupply()).toNumber();
         await check_redeem_bonds(redemptions,
                                  {from: voter.address}, redeem_count);
         assert.equal(await _acb.bond_budget_(), bond_budget);
@@ -516,11 +536,15 @@ function parameterized_test(accounts,
                        voter.bonds[redemption])
         }
 
-        assert.equal(await get_bond_supply(), bond_supply - redeem_count);
+        assert.equal(await get_bond_supply(),
+                     bond_supply - redeem_count - expired_count);
+        assert.equal(await _acb.validBondSupply(),
+                     valid_bond_supply - redeem_count);
         assert.equal(await get_coin_supply(),
                      coin_supply + _bond_redemption_price * redeem_count);
 
         _metrics.fast_redeem_count += fast_redeem_count;
+        _metrics.expired_count += expired_count;
         _metrics.redeem_count += redeem_count;
         _metrics.redemption_count += redemptions.length;
         _metrics.redeem_hit += 1;
@@ -595,22 +619,6 @@ function parameterized_test(accounts,
         delta = Math.trunc(coin_supply *
                            (_level_to_exchange_rate[mode_level] - 10) / 10);
         delta = Math.trunc(delta * _damping_factor / 100);
-      }
-
-      let mint = 0;
-      let redeemable_bonds = 0;
-      let issued_bonds = 0;
-      if (delta >= 0) {
-        let necessary_bonds = Math.trunc(delta / _bond_redemption_price);
-        if (necessary_bonds <= bond_supply) {
-          redeemable_bonds = necessary_bonds;
-        } else {
-          redeemable_bonds = bond_supply;
-          mint = (necessary_bonds - bond_supply) * _bond_redemption_price;
-        }
-      } else {
-        assert.isTrue(mode_level != _level_max);
-        issued_bonds = Math.trunc(-delta / _bond_price);
       }
 
       let target_level = randint(0, _level_max - 1);
@@ -749,6 +757,22 @@ function parameterized_test(accounts,
         }
 
         if (commit_observed == false) {
+          let mint = 0;
+          let redeemable_bonds = 0;
+          let issued_bonds = 0;
+          if (delta >= 0) {
+            let necessary_bonds = Math.trunc(delta / _bond_redemption_price);
+            if (necessary_bonds <= bond_supply) {
+              redeemable_bonds = necessary_bonds;
+            } else {
+              redeemable_bonds = bond_supply;
+              mint = (necessary_bonds - bond_supply) * _bond_redemption_price;
+            }
+          } else {
+            assert.isTrue(mode_level != _level_max);
+            issued_bonds = Math.trunc(-delta / _bond_price);
+          }
+
           assert.equal(await get_bond_supply(), bond_supply);
           if (mode_level == _level_max) {
             assert.equal(await _acb.bond_budget_(), 0);
