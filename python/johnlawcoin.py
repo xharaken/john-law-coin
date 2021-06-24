@@ -704,64 +704,63 @@ class Oracle:
 # The Logging contract records various metrics for analysis purpose.
 #-------------------------------------------------------------------------------
 class Logging:
-    # A struct to record metrics about the voting.
+    # A struct to record metrics about voting.
     class VoteLog:
-      def __init__(self, commit_succeeded, commit_failed,
-                   reveal_succeeded, reveal_failed, reclaim_succeeded,
-                   reward_succeeded, deposited, reclaimed, rewarded):
-          self.commit_succeeded = commit_succeeded
-          self.commit_failed = commit_failed
-          self.reveal_succeeded = reveal_succeeded
-          self.reveal_failed = reveal_failed
-          self.reclaim_succeeded = reclaim_succeeded
-          self.reward_succeeded = reward_succeeded
-          self.deposited = deposited
-          self.reclaimed = reclaimed
-          self.rewarded = rewarded
+      def __init__(self):
+          self.commit_succeeded = 0
+          self.commit_failed = 0
+          self.reveal_succeeded = 0
+          self.reveal_failed = 0
+          self.reclaim_succeeded = 0
+          self.reward_succeeded = 0
+          self.deposited = 0
+          self.reclaimed = 0
+          self.rewarded = 0
 
-    # A struct to record metrics about the ACB.
-    class ACBLog:
-      def __init__(self, minted_coins, burned_coins, coin_supply_delta,
-                   bond_budget, total_coin_supply, total_bond_supply,
-                   oracle_level, current_epoch_start, tax,
-                   purchased_bonds, redeemed_bonds):
-          self.minted_coins = minted_coins
-          self.burned_coins = burned_coins
-          self.coin_supply_delta = coin_supply_delta
-          self.bond_budget = bond_budget
-          self.total_coin_supply = total_coin_supply
-          self.total_bond_supply = total_bond_supply
-          self.oracle_level = oracle_level
-          self.current_epoch_start = current_epoch_start
-          self.tax = tax
-          self.purchased_bonds = purchased_bonds
-          self.redeemed_bonds = redeemed_bonds
+    # A struct to record metrics about epoch.
+    class EpochLog:
+      def __init__(self):
+          self.minted_coins = 0
+          self.burned_coins = 0
+          self.coin_supply_delta = 0
+          self.bond_budget = 0
+          self.total_coin_supply = 0
+          self.total_bond_supply = 0
+          self.valid_bond_supply = 0
+          self.oracle_level = 0
+          self.current_epoch_start = 0
+          self.tax = 0
+
+    # A struct to record metrics about bond operations.
+    class BondLog:
+      def __init__(self):
+          self.purchased_bonds = 0
+          self.redeemed_bonds = 0
+          self.expired_bonds = 0
 
     # Constructor.
     def __init__(self):
-        # The index of the current log.
-        self.log_index = 0
+        # Logs about voting.
+        self.vote_logs = {}
 
-        # Logs about the voting.
-        self.vote_logs = []
-        self.vote_logs.append(Logging.VoteLog(
-            0, 0, 0, 0, 0, 0, 0, 0, 0))
+        # Logs about epoch.
+        self.epoch_logs = {}
 
-        # Logs about the ACB.
-        self.acb_logs = []
-        self.acb_logs.append(Logging.ACBLog(
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+        # Logs about bond operations.
+        self.bond_logs = {}
 
     # Called when the oracle phase is updated.
     #
     # Parameters
     # ----------------
+    # |epoch_id|: The epoch ID.
     # |minted|: The amount of the minted coins.
     # |burned|: The amount of the burned coins.
     # |delta|: The delta of the total coin supply.
     # |bond_budget|: ACB.bond_budget_.
     # |total_coin_supply|: The total coin supply.
     # |total_bond_supply|: The total bond supply.
+    # |valid_bond_supply|: The valid bond supply.
     # |oracle_level|: ACB.oracle_level_.
     # |current_epoch_start|: ACB.current_epoch_start_.
     # |tax|: The amount of the tax collected in the phase.
@@ -769,29 +768,30 @@ class Logging:
     # Returns
     # ----------------
     # None.
-    def epoch_updated(self, minted, burned, delta, bond_budget,
-                      total_coin_supply, total_bond_supply,
+    def epoch_updated(self, epoch_id, minted, burned, delta, bond_budget,
+                      total_coin_supply, total_bond_supply, valid_bond_supply,
                       oracle_level, current_epoch_start, tax):
-        self.log_index += 1
-        self.vote_logs.append(Logging.VoteLog(
-            0, 0, 0, 0, 0, 0, 0, 0, 0))
-        self.acb_logs.append(Logging.ACBLog(
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+        if epoch_id not in self.epoch_logs:
+            self.epoch_logs[epoch_id] = Logging.EpochLog()
+            self.vote_logs[epoch_id] = Logging.VoteLog()
+            self.bond_logs[epoch_id] = Logging.BondLog()
 
-        self.acb_logs[self.log_index].minted_coins = minted
-        self.acb_logs[self.log_index].burned_coins = burned
-        self.acb_logs[self.log_index].coin_supply_delta = delta
-        self.acb_logs[self.log_index].bond_budget = bond_budget
-        self.acb_logs[self.log_index].total_coin_supply = total_coin_supply
-        self.acb_logs[self.log_index].total_bond_supply = total_bond_supply
-        self.acb_logs[self.log_index].oracle_level = oracle_level
-        self.acb_logs[self.log_index].current_epoch_start = current_epoch_start
-        self.acb_logs[self.log_index].tax = tax
+        self.epoch_logs[epoch_id].minted_coins = minted
+        self.epoch_logs[epoch_id].burned_coins = burned
+        self.epoch_logs[epoch_id].coin_supply_delta = delta
+        self.epoch_logs[epoch_id].bond_budget = bond_budget
+        self.epoch_logs[epoch_id].total_coin_supply = total_coin_supply
+        self.epoch_logs[epoch_id].total_bond_supply = total_bond_supply
+        self.epoch_logs[epoch_id].valid_bond_supply = valid_bond_supply
+        self.epoch_logs[epoch_id].oracle_level = oracle_level
+        self.epoch_logs[epoch_id].current_epoch_start = current_epoch_start
+        self.epoch_logs[epoch_id].tax = tax
 
     # Called when ACB.vote is called.
     #
     # Parameters
     # ----------------
+    # |epoch_id|: The epoch ID.
     # |commit_result|: Whether the commit succeeded or not.
     # |reveal_result|: Whether the reveal succeeded or not.
     # |deposited|: The amount of the deposited coins.
@@ -801,47 +801,65 @@ class Logging:
     # Returns
     # ----------------
     # None.
-    def voted(self, commit_result, reveal_result, deposited,
+    def voted(self, epoch_id, commit_result, reveal_result, deposited,
               reclaimed, rewarded):
+        if epoch_id not in self.vote_logs:
+            self.epoch_logs[epoch_id] = Logging.EpochLog()
+            self.vote_logs[epoch_id] = Logging.VoteLog()
+            self.bond_logs[epoch_id] = Logging.BondLog()
+            
         if commit_result:
-            self.vote_logs[self.log_index].commit_succeeded += 1
+            self.vote_logs[epoch_id].commit_succeeded += 1
         else:
-            self.vote_logs[self.log_index].commit_failed += 1
+            self.vote_logs[epoch_id].commit_failed += 1
         if reveal_result:
-            self.vote_logs[self.log_index].reveal_succeeded += 1
+            self.vote_logs[epoch_id].reveal_succeeded += 1
         else:
-            self.vote_logs[self.log_index].reveal_failed += 1
+            self.vote_logs[epoch_id].reveal_failed += 1
         if reclaimed > 0:
-            self.vote_logs[self.log_index].reclaim_succeeded += 1
+            self.vote_logs[epoch_id].reclaim_succeeded += 1
         if rewarded > 0:
-            self.vote_logs[self.log_index].reward_succeeded += 1
-        self.vote_logs[self.log_index].deposited += deposited
-        self.vote_logs[self.log_index].reclaimed += reclaimed
-        self.vote_logs[self.log_index].rewarded += rewarded
+            self.vote_logs[epoch_id].reward_succeeded += 1
+        self.vote_logs[epoch_id].deposited += deposited
+        self.vote_logs[epoch_id].reclaimed += reclaimed
+        self.vote_logs[epoch_id].rewarded += rewarded
 
     # Called when ACB.purchase_bonds is called.
     #
     # Parameters
     # ----------------
+    # |epoch_id|: The epoch ID.
     # |count|: The number of the purchased bonds.
     #
     # Returns
     # ----------------
     # None.
-    def purchased_bonds(self, count):
-        self.acb_logs[self.log_index].purchased_bonds += count
+    def purchased_bonds(self, epoch_id, count):
+        if epoch_id not in self.bond_logs:
+            self.epoch_logs[epoch_id] = Logging.EpochLog()
+            self.vote_logs[epoch_id] = Logging.VoteLog()
+            self.bond_logs[epoch_id] = Logging.BondLog()
+            
+        self.bond_logs[epoch_id].purchased_bonds += count
 
     # Called when ACB.redeem_bonds is called.
     #
     # Parameters
     # ----------------
+    # |epoch_id|: The epoch ID.
     # |count|: The number of the redeemded bonds.
     #
     # Returns
     # ----------------
     # None.
-    def redeemed_bonds(self, count):
-        self.acb_logs[self.log_index].redeemed_bonds += count
+    def redeemed_bonds(self, epoch_id, count_valid, count_expired):
+        if epoch_id not in self.bond_logs:
+            self.epoch_logs[epoch_id] = Logging.EpochLog()
+            self.vote_logs[epoch_id] = Logging.VoteLog()
+            self.bond_logs[epoch_id] = Logging.BondLog()
+            
+        self.bond_logs[epoch_id].redeemed_bonds += count_valid
+        self.bond_logs[epoch_id].expired_bonds += count_expired
 
 
 #-------------------------------------------------------------------------------
@@ -1089,9 +1107,10 @@ class ACB:
             mint = self._control_supply(delta)
 
             self.logging.epoch_updated(
-                mint, burned, delta, self.bond_budget,
+                self.oracle.epoch_id, mint, burned, delta, self.bond_budget,
                 self.coin.total_supply, self.bond.total_supply,
-                self.oracle_level, self.current_epoch_start, tax)
+                self.valid_bond_supply(), self.oracle_level,
+                self.current_epoch_start, tax)
 
         # Commit.
         #
@@ -1112,7 +1131,8 @@ class ACB:
         (reclaimed, rewarded) = self.oracle.reclaim(self.coin, sender)
 
         self.logging.voted(
-            commit_result, reveal_result, deposited, reclaimed, rewarded)
+            self.oracle.epoch_id, commit_result, reveal_result,
+            deposited, reclaimed, rewarded)
         return (commit_result, reveal_result, deposited, reclaimed, rewarded,
                 epoch_updated)
 
@@ -1150,7 +1170,7 @@ class ACB:
         # Burn the corresponding coins.
         self.coin.burn(sender, amount)
 
-        self.logging.purchased_bonds(count)
+        self.logging.purchased_bonds(self.oracle.epoch_id, count)
         return redemption_epoch
 
     # Redeem bonds.
@@ -1166,6 +1186,7 @@ class ACB:
     # The number of successfully redeemed bonds.
     def redeem_bonds(self, sender, redemption_epochs):
         count_valid = 0
+        count_expired = 0
         for redemption_epoch in redemption_epochs:
             count = self.bond.balance_of(sender, redemption_epoch)
             if self.oracle.epoch_id < redemption_epoch:
@@ -1187,12 +1208,15 @@ class ACB:
                 # Burn the redeemed bonds.
                 self.bond_budget += count
                 count_valid += count
+            else:
+                count_expired += count
 
             self.bond.burn(sender, redemption_epoch, count)
 
         assert(self.valid_bond_supply() + self.bond_budget >= 0)
 
-        self.logging.redeemed_bonds(count_valid)
+        self.logging.redeemed_bonds(
+            self.oracle.epoch_id, count_valid, count_expired)
         return count_valid
 
     # Increase or decrease the total coin supply.

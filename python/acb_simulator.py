@@ -200,20 +200,26 @@ class ACBSimulator(unittest.TestCase):
             self.redeem_bonds()
             self.purchase_bonds()
 
-            acb_log = logging.acb_logs[logging.log_index]
-            self.assertEqual(acb_log.minted_coins, self.metrics.mint)
-            self.assertEqual(acb_log.burned_coins, self.metrics.lost)
-            self.assertEqual(acb_log.coin_supply_delta, self.metrics.delta)
-            self.assertEqual(acb_log.bond_budget, bond_budget)
-            self.assertEqual(acb_log.total_coin_supply, coin_supply2)
-            self.assertEqual(acb_log.total_bond_supply, bond_supply)
-            self.assertEqual(acb_log.oracle_level, self.metrics.oracle_level)
-            self.assertEqual(acb_log.current_epoch_start, acb.get_timestamp())
-            self.assertEqual(acb_log.tax, tax)
-            self.assertEqual(acb_log.purchased_bonds,
+            epoch_id = acb.oracle.epoch_id
+            epoch_log = logging.epoch_logs[epoch_id]
+            self.assertEqual(epoch_log.minted_coins, self.metrics.mint)
+            self.assertEqual(epoch_log.burned_coins, self.metrics.lost)
+            self.assertEqual(epoch_log.coin_supply_delta, self.metrics.delta)
+            self.assertEqual(epoch_log.bond_budget, bond_budget)
+            self.assertEqual(epoch_log.total_coin_supply, coin_supply2)
+            self.assertEqual(epoch_log.total_bond_supply, bond_supply)
+            self.assertEqual(epoch_log.valid_bond_supply, valid_bond_supply)
+            self.assertEqual(epoch_log.oracle_level, self.metrics.oracle_level)
+            self.assertEqual(epoch_log.current_epoch_start, acb.get_timestamp())
+            self.assertEqual(epoch_log.tax, tax)
+            bond_log = logging.bond_logs[epoch_id]
+            self.assertEqual(bond_log.purchased_bonds,
                              self.metrics.purchase_count)
-            self.assertEqual(acb_log.redeemed_bonds, self.metrics.redeem_count)
-            vote_log = logging.vote_logs[logging.log_index]
+            self.assertEqual(bond_log.redeemed_bonds,
+                             self.metrics.redeem_count)
+            self.assertEqual(bond_log.expired_bonds,
+                             self.metrics.expired_count)
+            vote_log = logging.vote_logs[epoch_id]
             self.assertEqual(vote_log.commit_succeeded,
                              self.metrics.reveal_hit + self.metrics.reveal_miss)
             self.assertEqual(vote_log.deposited, self.metrics.deposited)

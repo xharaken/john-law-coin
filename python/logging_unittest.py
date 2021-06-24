@@ -17,55 +17,34 @@ class LoggingUnitTest(unittest.TestCase):
 
     def run(self):
         logging = Logging()
-        self.assertEqual(logging.log_index, 0)
-        acb_log = logging.acb_logs[logging.log_index]
-        self.assertEqual(acb_log.minted_coins, 0)
-        self.assertEqual(acb_log.burned_coins, 0)
-        self.assertEqual(acb_log.coin_supply_delta, 0)
-        self.assertEqual(acb_log.bond_budget, 0)
-        self.assertEqual(acb_log.total_coin_supply, 0)
-        self.assertEqual(acb_log.total_bond_supply, 0)
-        self.assertEqual(acb_log.oracle_level, 0)
-        self.assertEqual(acb_log.current_epoch_start, 0)
-        self.assertEqual(acb_log.tax, 0)
-        self.assertEqual(acb_log.purchased_bonds, 0)
-        self.assertEqual(acb_log.redeemed_bonds, 0)
-        vote_log = logging.vote_logs[logging.log_index]
-        self.assertEqual(vote_log.commit_succeeded, 0)
-        self.assertEqual(vote_log.deposited, 0)
-        self.assertEqual(vote_log.commit_failed, 0)
-        self.assertEqual(vote_log.reveal_succeeded, 0)
-        self.assertEqual(vote_log.reveal_failed, 0)
-        self.assertEqual(vote_log.reclaim_succeeded, 0)
-        self.assertEqual(vote_log.reward_succeeded, 0)
-        self.assertEqual(vote_log.reclaimed, 0)
-        self.assertEqual(vote_log.rewarded, 0)
+        for epoch_id in range(30):
+            logging.epoch_updated(epoch_id, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+            epoch_log = logging.epoch_logs[epoch_id]
+            self.assertEqual(epoch_log.minted_coins, 1)
+            self.assertEqual(epoch_log.burned_coins, 2)
+            self.assertEqual(epoch_log.coin_supply_delta, 3)
+            self.assertEqual(epoch_log.bond_budget, 4)
+            self.assertEqual(epoch_log.total_coin_supply, 5)
+            self.assertEqual(epoch_log.total_bond_supply, 6)
+            self.assertEqual(epoch_log.valid_bond_supply, 7)
+            self.assertEqual(epoch_log.oracle_level, 8)
+            self.assertEqual(epoch_log.current_epoch_start, 9)
+            self.assertEqual(epoch_log.tax, 10)
 
-        for i in range(50):
-            logging.epoch_updated(1, 2, 3, 4, 5, 6, 7, 8, 9)
-            logging.purchased_bonds(1)
-            logging.purchased_bonds(2)
-            logging.purchased_bonds(3)
-            logging.redeemed_bonds(1)
-            logging.redeemed_bonds(2)
-            logging.redeemed_bonds(3)
-            logging.redeemed_bonds(4)
-            self.assertEqual(logging.log_index, i + 1)
-            acb_log = logging.acb_logs[logging.log_index]
-            self.assertEqual(acb_log.minted_coins, 1)
-            self.assertEqual(acb_log.burned_coins, 2)
-            self.assertEqual(acb_log.coin_supply_delta, 3)
-            self.assertEqual(acb_log.bond_budget, 4)
-            self.assertEqual(acb_log.total_coin_supply, 5)
-            self.assertEqual(acb_log.total_bond_supply, 6)
-            self.assertEqual(acb_log.oracle_level, 7)
-            self.assertEqual(acb_log.current_epoch_start, 8)
-            self.assertEqual(acb_log.tax, 9)
-            self.assertEqual(acb_log.purchased_bonds, 6)
-            self.assertEqual(acb_log.redeemed_bonds, 10)
-
-            logging.voted(False, False, 0, 0, 0)
-            vote_log = logging.vote_logs[logging.log_index]
+            logging.purchased_bonds(epoch_id, 1)
+            logging.purchased_bonds(epoch_id, 2)
+            logging.purchased_bonds(epoch_id, 3)
+            logging.redeemed_bonds(epoch_id, 1, 10)
+            logging.redeemed_bonds(epoch_id, 2, 20)
+            logging.redeemed_bonds(epoch_id, 3, 30)
+            logging.redeemed_bonds(epoch_id, 4, 40)
+            logging.voted(epoch_id, False, False, 0, 0, 0)
+            bond_log = logging.bond_logs[epoch_id]
+            self.assertEqual(bond_log.purchased_bonds, 6)
+            self.assertEqual(bond_log.redeemed_bonds, 10)
+            self.assertEqual(bond_log.expired_bonds, 100)
+            
+            vote_log = logging.vote_logs[epoch_id]
             self.assertEqual(vote_log.commit_succeeded, 0)
             self.assertEqual(vote_log.deposited, 0)
             self.assertEqual(vote_log.commit_failed, 1)
@@ -76,8 +55,8 @@ class LoggingUnitTest(unittest.TestCase):
             self.assertEqual(vote_log.reclaimed, 0)
             self.assertEqual(vote_log.rewarded, 0)
 
-            logging.voted(False, True, 0, 0, 0)
-            vote_log = logging.vote_logs[logging.log_index]
+            logging.voted(epoch_id, False, True, 0, 0, 0)
+            vote_log = logging.vote_logs[epoch_id]
             self.assertEqual(vote_log.commit_succeeded, 0)
             self.assertEqual(vote_log.deposited, 0)
             self.assertEqual(vote_log.commit_failed, 2)
@@ -88,8 +67,8 @@ class LoggingUnitTest(unittest.TestCase):
             self.assertEqual(vote_log.reclaimed, 0)
             self.assertEqual(vote_log.rewarded, 0)
 
-            logging.voted(True, True, 10, 0, 0)
-            vote_log = logging.vote_logs[logging.log_index]
+            logging.voted(epoch_id, True, True, 10, 0, 0)
+            vote_log = logging.vote_logs[epoch_id]
             self.assertEqual(vote_log.commit_succeeded, 1)
             self.assertEqual(vote_log.deposited, 10)
             self.assertEqual(vote_log.commit_failed, 2)
@@ -100,8 +79,8 @@ class LoggingUnitTest(unittest.TestCase):
             self.assertEqual(vote_log.reclaimed, 0)
             self.assertEqual(vote_log.rewarded, 0)
 
-            logging.voted(True, False, 10, 0, 0)
-            vote_log = logging.vote_logs[logging.log_index]
+            logging.voted(epoch_id, True, False, 10, 0, 0)
+            vote_log = logging.vote_logs[epoch_id]
             self.assertEqual(vote_log.commit_succeeded, 2)
             self.assertEqual(vote_log.deposited, 20)
             self.assertEqual(vote_log.commit_failed, 2)
@@ -112,8 +91,8 @@ class LoggingUnitTest(unittest.TestCase):
             self.assertEqual(vote_log.reclaimed, 0)
             self.assertEqual(vote_log.rewarded, 0)
 
-            logging.voted(True, True, 10, 5, 6)
-            vote_log = logging.vote_logs[logging.log_index]
+            logging.voted(epoch_id, True, True, 10, 5, 6)
+            vote_log = logging.vote_logs[epoch_id]
             self.assertEqual(vote_log.commit_succeeded, 3)
             self.assertEqual(vote_log.deposited, 30)
             self.assertEqual(vote_log.commit_failed, 2)
@@ -124,8 +103,8 @@ class LoggingUnitTest(unittest.TestCase):
             self.assertEqual(vote_log.reclaimed, 5)
             self.assertEqual(vote_log.rewarded, 6)
 
-            logging.voted(True, True, 10, 5, 6)
-            vote_log = logging.vote_logs[logging.log_index]
+            logging.voted(epoch_id, True, True, 10, 5, 6)
+            vote_log = logging.vote_logs[epoch_id]
             self.assertEqual(vote_log.commit_succeeded, 4)
             self.assertEqual(vote_log.deposited, 40)
             self.assertEqual(vote_log.commit_failed, 2)
