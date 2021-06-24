@@ -3214,28 +3214,6 @@ function parameterized_test(accounts,
       assert.equal(current.bond_supply, 2);
       valid_bond_supply =
         period < _bond_redemption_period + _bond_redeemable_period ? 2 : 0;
-      mint = 0;
-      bond_budget = 0;
-      delta = Math.trunc(current.coin_supply *
-                         (_level_to_exchange_rate[level - 2] - 10) / 10);
-      delta = Math.trunc(delta * _damping_factor / 100);
-      if (delta == 0) {
-        mint = 0;
-        issued_bonds = 0;
-      } else if (delta > 0) {
-        necessary_bonds = Math.trunc(delta / _bond_redemption_price);
-        if (necessary_bonds >= valid_bond_supply) {
-          mint = (necessary_bonds - valid_bond_supply) * _bond_redemption_price;
-          bond_budget = -valid_bond_supply;
-        } else {
-          mint = 0;
-          bond_budget = -necessary_bonds;
-        }
-      } else {
-        mint = 0;
-        bond_budget = Math.trunc(-delta / _bond_price);
-      }
-      period += 1;
 
       coin_supply = current.coin_supply;
       reward_total = tax_total;
@@ -3259,7 +3237,31 @@ function parameterized_test(accounts,
                        deposit_4[mod(now - 2, 3)],
                        reward_4 + constant_reward,
                        true);
+
       current = await get_current(sub_accounts, []);
+      mint = 0;
+      bond_budget = 0;
+      delta = Math.trunc(current.coin_supply *
+                         (_level_to_exchange_rate[level - 2] - 10) / 10);
+      delta = Math.trunc(delta * _damping_factor / 100);
+      if (delta == 0) {
+        mint = 0;
+        issued_bonds = 0;
+      } else if (delta > 0) {
+        necessary_bonds = Math.trunc(delta / _bond_redemption_price);
+        if (necessary_bonds >= valid_bond_supply) {
+          mint = (necessary_bonds - valid_bond_supply) * _bond_redemption_price;
+          bond_budget = -valid_bond_supply;
+        } else {
+          mint = 0;
+          bond_budget = -necessary_bonds;
+        }
+      } else {
+        mint = 0;
+        bond_budget = Math.trunc(-delta / _bond_price);
+      }
+      period += 1;
+      
       assert.equal(current.oracle_level, level - 2);
       assert.equal(current.balances[accounts[4]],
                    balance_4 - deposit_4[mod(now, 3)] +

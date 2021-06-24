@@ -163,8 +163,6 @@ function parameterized_test(accounts,
         }
       }
 
-      assert.equal(await _oracle.getModeLevel(), mode_level);
-
       tax = randint(0, 200);
       let deposit_to_reclaim = 0;
       if (mode_level == _level_max) {
@@ -183,6 +181,7 @@ function parameterized_test(accounts,
 
       await _coin.mint(await _coin.tax_account_(), tax);
       await check_advance(tax, _prev_tax);
+      assert.equal(await _oracle.getModeLevel(), mode_level);
       _prev_tax = tax;
 
       let reclaim_total = 0;

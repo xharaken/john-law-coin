@@ -631,14 +631,18 @@ contract Oracle is OwnableUpgradeable {
   // None.
   function advance(JohnLawCoin coin)
       public onlyOwner returns (uint) {
+    // Advance the phase.
+    epoch_id_ += 1;
+
     // Step 1: Move the commit phase to the reveal phase.
-    Epoch storage epoch = epochs_[epoch_id_ % 3];
+    Epoch storage epoch = epochs_[(epoch_id_ - 1) % 3];
     require(epoch.phase == Phase.COMMIT, "ad1");
     epoch.phase = Phase.REVEAL;
 
     // Step 2: Move the reveal phase to the reclaim phase.
-    epoch = epochs_[(epoch_id_ - 1) % 3];
+    epoch = epochs_[(epoch_id_ - 2) % 3];
     require(epoch.phase == Phase.REVEAL, "ad2");
+    epoch.phase = Phase.RECLAIM;
 
     // The "truth" level is set to the mode of the weighted majority votes.
     uint mode_level = getModeLevel();
@@ -684,10 +688,9 @@ contract Oracle is OwnableUpgradeable {
 
     // Set the total amount of the reward.
     epoch.reward_total = coin.balanceOf(epoch.reward_account);
-    epoch.phase = Phase.RECLAIM;
 
     // Step 3: Move the reclaim phase to the commit phase.
-    uint epoch_index = (epoch_id_ - 2) % 3;
+    uint epoch_index = epoch_id_ % 3;
     epoch = epochs_[epoch_index];
     require(epoch.phase == Phase.RECLAIM, "ad7");
 
@@ -717,9 +720,6 @@ contract Oracle is OwnableUpgradeable {
     epoch.reward_total = 0;
     epoch.phase = Phase.COMMIT;
 
-    // Advance the phase.
-    epoch_id_ += 1;
-
     emit AdvancePhaseEvent(epoch_id_, tax, burned);
     return burned;
   }
@@ -739,8 +739,8 @@ contract Oracle is OwnableUpgradeable {
   // smallest mode. If there are no votes, return LEVEL_MAX.
   function getModeLevel()
       public onlyOwner view returns (uint) {
-    Epoch storage epoch = epochs_[(epoch_id_ - 1) % 3];
-    require(epoch.phase == Phase.REVEAL, "gm1");
+    Epoch storage epoch = epochs_[(epoch_id_ - 2) % 3];
+    require(epoch.phase == Phase.RECLAIM, "gm1");
     uint mode_level = LEVEL_MAX;
     uint max_deposit = 0;
     uint max_count = 0;
@@ -1302,6 +1302,17 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
       result.epoch_updated = true;
       current_epoch_start_ = getTimestamp();
       
+      // Advance to the next phase. Provide the |tax| coins to the oracle
+      // as a reward.
+      uint tax = coin_.balanceOf(coin_.tax_account_());
+      coin_.transferOwnership(address(oracle_));
+      uint burned = oracle_.advance(coin_);
+      oracle_.revokeOwnership(coin_);
+      
+      // Reset the tax account address just in case.
+      coin_.resetTaxAccount();
+      require(coin_.balanceOf(coin_.tax_account_()) == 0, "vo2");
+      
       int delta = 0;
       oracle_level_ = oracle_.getModeLevel();
       if (oracle_level_ != oracle_.getLevelMax()) {
@@ -1324,17 +1335,6 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
         delta = delta * int(DAMPING_FACTOR) / 100;
       }
 
-      // Advance to the next phase. Provide the |tax| coins to the oracle
-      // as a reward.
-      uint tax = coin_.balanceOf(coin_.tax_account_());
-      coin_.transferOwnership(address(oracle_));
-      uint burned = oracle_.advance(coin_);
-      oracle_.revokeOwnership(coin_);
-      
-      // Reset the tax account address just in case.
-      coin_.resetTaxAccount();
-      require(coin_.balanceOf(coin_.tax_account_()) == 0, "vo2");
-      
       // Increase or decrease the total coin supply.
       uint mint = _controlSupply(delta);
 

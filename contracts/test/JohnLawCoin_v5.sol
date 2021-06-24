@@ -314,14 +314,18 @@ contract Oracle_v5 is OwnableUpgradeable {
   // None.
   function advance(JohnLawCoin_v2 coin)
       public onlyOwner returns (uint) {
+    // Advance the phase.
+    epoch_id_ += 1;
+
     // Step 1: Move the commit phase to the reveal phase.
-    Epoch storage epoch = epochs_[epoch_id_ % 3];
+    Epoch storage epoch = epochs_[(epoch_id_ - 1) % 3];
     require(epoch.phase == Phase.COMMIT, "ad1");
     epoch.phase = Phase.REVEAL;
 
     // Step 2: Move the reveal phase to the reclaim phase.
-    epoch = epochs_[(epoch_id_ - 1) % 3];
+    epoch = epochs_[(epoch_id_ - 2) % 3];
     require(epoch.phase == Phase.REVEAL, "ad2");
+    epoch.phase = Phase.RECLAIM;
 
     // The "truth" level is set to the mode of the weighted majority votes.
     uint mode_level = getModeLevel();
@@ -367,10 +371,9 @@ contract Oracle_v5 is OwnableUpgradeable {
 
     // Set the total amount of the reward.
     epoch.reward_total = coin.balanceOf(epoch.reward_account);
-    epoch.phase = Phase.RECLAIM;
 
     // Step 3: Move the reclaim phase to the commit phase.
-    uint epoch_index = (epoch_id_ - 2) % 3;
+    uint epoch_index = epoch_id_ % 3;
     epoch = epochs_[epoch_index];
     require(epoch.phase == Phase.RECLAIM, "ad7");
 
@@ -400,9 +403,6 @@ contract Oracle_v5 is OwnableUpgradeable {
     epoch.reward_total = 0;
     epoch.phase = Phase.COMMIT;
 
-    // Advance the phase.
-    epoch_id_ += 1;
-
     emit AdvancePhaseEvent(epoch_id_, tax, burned);
     return burned;
   }
@@ -422,8 +422,8 @@ contract Oracle_v5 is OwnableUpgradeable {
   // smallest mode. If there are no votes, return LEVEL_MAX.
   function getModeLevel()
       public onlyOwner view returns (uint) {
-    Epoch storage epoch = epochs_[(epoch_id_ - 1) % 3];
-    require(epoch.phase == Phase.REVEAL, "gm1");
+    Epoch storage epoch = epochs_[(epoch_id_ - 2) % 3];
+    require(epoch.phase == Phase.RECLAIM, "gm1");
     uint mode_level = LEVEL_MAX;
     uint max_deposit = 0;
     uint max_count = 0;
@@ -567,7 +567,7 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
   int public bond_budget_;
   uint public oracle_level_;
   uint public current_epoch_start_;
-  uint epoch_id_;
+  uint age_;
 
   // Events.
   event PayableEvent(address indexed sender, uint value);
@@ -713,7 +713,7 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
     // The timestamp when the current epoch started.
     current_epoch_start_ = current_epoch_start;
 
-    epoch_id_ = 0;
+    age_ = 0;
 
     /*
     require(LEVEL_TO_EXCHANGE_RATE.length == oracle.getLevelMax(), "AC1");
@@ -778,7 +778,7 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
 
   function _getLevelMax()
       internal whenNotPaused view returns (uint) {
-    if (epoch_id_ <= 2) {
+    if (age_ <= 2) {
       return old_oracle_.getLevelMax();
     }
     return oracle_.getLevelMax();
@@ -786,7 +786,7 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
 
   function _getModeLevel()
       internal whenNotPaused view returns (uint) {
-    if (epoch_id_ <= 2) {
+    if (age_ <= 2) {
       return old_oracle_.getModeLevel();
     }
     return oracle_.getModeLevel();
@@ -823,35 +823,13 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
       // Start a new phase.
       result.epoch_updated = true;
       current_epoch_start_ = getTimestamp();
-      epoch_id_ += 1;
+      age_ += 1;
       
-      int delta = 0;
-      oracle_level_ = _getModeLevel();
-      if (oracle_level_ != _getLevelMax()) {
-        require(0 <= oracle_level_ &&
-                oracle_level_ < _getLevelMax(), "vo1");
-        // Translate the oracle level to the exchange rate.
-        uint exchange_rate = LEVEL_TO_EXCHANGE_RATE[oracle_level_];
-
-        // Calculate the amount of coins to be minted or burned based on the
-        // Quantity Theory of Money. If the exchange rate is 1.1 (i.e., 1 coin
-        // = 1.1 USD), the total coin supply is increased by 10%. If the
-        // exchange rate is 0.8 (i.e., 1 coin = 0.8 USD), the total coin supply
-        // is decreased by 20%.
-        delta = coin_.totalSupply().toInt256() *
-                (int(exchange_rate) - int(EXCHANGE_RATE_DIVISOR)) /
-                int(EXCHANGE_RATE_DIVISOR);
-
-        // To avoid increasing or decreasing too many coins in one phase,
-        // multiply the damping factor.
-        delta = delta * int(DAMPING_FACTOR) / 100;
-      }
-
       // Advance to the next phase. Provide the |tax| coins to the oracle
       // as a reward.
       uint tax = coin_.balanceOf(coin_.tax_account_());
       uint burned = 0;
-      if (epoch_id_ <= 2) {
+      if (age_ <= 2) {
         coin_.transferOwnership(address(old_oracle_));
         burned = old_oracle_.advance(coin_);
         old_oracle_.revokeOwnership(coin_);
@@ -860,7 +838,7 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
         uint ret = oracle_.advance(coin_);
         require(ret == 0, "vo2");
         oracle_.revokeOwnership(coin_);
-      } else if (epoch_id_ == 3) {
+      } else if (age_ == 3) {
         coin_.transferOwnership(address(old_oracle_));
         burned = old_oracle_.advance(coin_);
         old_oracle_.revokeOwnership(coin_);
@@ -884,6 +862,28 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
       coin_.resetTaxAccount();
       require(coin_.balanceOf(coin_.tax_account_()) == 0, "vo2");
       
+      int delta = 0;
+      oracle_level_ = _getModeLevel();
+      if (oracle_level_ != _getLevelMax()) {
+        require(0 <= oracle_level_ &&
+                oracle_level_ < _getLevelMax(), "vo1");
+        // Translate the oracle level to the exchange rate.
+        uint exchange_rate = LEVEL_TO_EXCHANGE_RATE[oracle_level_];
+
+        // Calculate the amount of coins to be minted or burned based on the
+        // Quantity Theory of Money. If the exchange rate is 1.1 (i.e., 1 coin
+        // = 1.1 USD), the total coin supply is increased by 10%. If the
+        // exchange rate is 0.8 (i.e., 1 coin = 0.8 USD), the total coin supply
+        // is decreased by 20%.
+        delta = coin_.totalSupply().toInt256() *
+                (int(exchange_rate) - int(EXCHANGE_RATE_DIVISOR)) /
+                int(EXCHANGE_RATE_DIVISOR);
+
+        // To avoid increasing or decreasing too many coins in one phase,
+        // multiply the damping factor.
+        delta = delta * int(DAMPING_FACTOR) / 100;
+      }
+
       // Increase or decrease the total coin supply.
       uint mint = _controlSupply(delta);
 
@@ -901,7 +901,7 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
     if (hash == NULL_HASH) {
       result.deposited = 0;
     }
-    if (epoch_id_ == 0) {
+    if (age_ == 0) {
       coin_.transferOwnership(address(old_oracle_));
       result.commit_result = old_oracle_.commit(
           coin_, msg.sender, hash, result.deposited);
@@ -917,7 +917,7 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
     }
 
     // Reveal.
-    if (epoch_id_ <= 1) {
+    if (age_ <= 1) {
       coin_.transferOwnership(address(old_oracle_));
       result.reveal_result = old_oracle_.reveal(msg.sender, oracle_level, salt);
       old_oracle_.revokeOwnership(coin_);
@@ -928,7 +928,7 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
     }
     
     // Reclaim.
-    if (epoch_id_ <= 2) {
+    if (age_ <= 2) {
       coin_.transferOwnership(address(old_oracle_));
       (result.reclaimed, result.rewarded) =
           old_oracle_.reclaim(coin_, msg.sender);
@@ -1097,7 +1097,7 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
   function encrypt(uint level, uint salt)
       public view returns (bytes32) {
     address sender = msg.sender;
-    if (epoch_id_ <= 2) {
+    if (age_ <= 2) {
       return old_oracle_.encrypt(sender, level, salt);
     }
     return oracle_.encrypt(sender, level, salt);
@@ -1109,7 +1109,7 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
       public view returns (uint) {
     uint count = 0;
     uint epoch_id = oracle_.epoch_id_();
-    if (epoch_id_ <= 2) {
+    if (age_ <= 2) {
         epoch_id = old_oracle_.epoch_id_();
     }
     for (uint redemption_epoch =

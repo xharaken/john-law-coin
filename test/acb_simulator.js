@@ -615,15 +615,6 @@ function parameterized_test(accounts,
         assert.equal(deposit_to_be_reclaimed, 0);
       }
 
-      let coin_supply = await get_coin_supply();
-      let bond_supply = await get_bond_supply();
-      let delta = 0;
-      if (mode_level != _level_max) {
-        delta = Math.trunc(coin_supply *
-                           (_level_to_exchange_rate[mode_level] - 10) / 10);
-        delta = Math.trunc(delta * _damping_factor / 100);
-      }
-
       let target_level = randint(0, _level_max - 1);
       let reward_total = deposit_total - deposit_to_be_reclaimed + tax;
       let reclaimed_total = 0;
@@ -760,6 +751,13 @@ function parameterized_test(accounts,
         }
 
         if (commit_observed == false) {
+          let delta = 0;
+          if (mode_level != _level_max) {
+            delta = Math.trunc(await get_coin_supply() *
+                               (_level_to_exchange_rate[mode_level] - 10) / 10);
+            delta = Math.trunc(delta * _damping_factor / 100);
+          }
+
           let mint = 0;
           let redeemable_bonds = 0;
           let issued_bonds = 0;

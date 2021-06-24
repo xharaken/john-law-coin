@@ -295,6 +295,17 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
       result.epoch_updated = true;
       current_epoch_start_ = getTimestamp();
       
+      // Advance to the next phase. Provide the |tax| coins to the oracle
+      // as a reward.
+      uint tax = coin_.balanceOf(coin_.tax_account_());
+      coin_.transferOwnership(address(oracle_));
+      uint burned = oracle_.advance(coin_);
+      oracle_.revokeOwnership(coin_);
+      
+      // Reset the tax account address just in case.
+      coin_.resetTaxAccount();
+      require(coin_.balanceOf(coin_.tax_account_()) == 0, "vo2");
+      
       int delta = 0;
       oracle_level_ = oracle_.getModeLevel();
       if (oracle_level_ != oracle_.getLevelMax()) {
@@ -317,17 +328,6 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
         delta = delta * int(DAMPING_FACTOR) / 100;
       }
 
-      // Advance to the next phase. Provide the |tax| coins to the oracle
-      // as a reward.
-      uint tax = coin_.balanceOf(coin_.tax_account_());
-      coin_.transferOwnership(address(oracle_));
-      uint burned = oracle_.advance(coin_);
-      oracle_.revokeOwnership(coin_);
-      
-      // Reset the tax account address just in case.
-      coin_.resetTaxAccount();
-      require(coin_.balanceOf(coin_.tax_account_()) == 0, "vo2");
-      
       // Increase or decrease the total coin supply.
       uint mint = _controlSupply(delta);
 
