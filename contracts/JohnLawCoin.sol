@@ -831,7 +831,7 @@ contract Oracle is OwnableUpgradeable {
 //------------------------------------------------------------------------------
 contract Logging is OwnableUpgradeable {
 
-  // A struct to record metrics about the voting.
+  // A struct to record metrics about voting.
   struct VoteLog {
     uint commit_succeeded;
     uint commit_failed;
@@ -844,71 +844,84 @@ contract Logging is OwnableUpgradeable {
     uint rewarded;
   }
 
-  // A struct to record metrics about the ACB.
-  struct ACBLog {
+  // A struct to record metrics about epoch.
+  struct EpochLog {
     uint minted_coins;
     uint burned_coins;
     int coin_supply_delta;
     int bond_budget;
     uint total_coin_supply;
     uint total_bond_supply;
+    uint valid_bond_supply;
     uint oracle_level;
     uint current_epoch_start;
     uint tax;
-    uint purchased_bonds;
-    uint redeemed_bonds;
   }
 
+  // A struct to record metrics about bond operations.
+  struct BondLog {
+    uint purchased_bonds;
+    uint redeemed_bonds;
+    uint expired_bonds;
+  }
+  
   // Attributes.
 
-  // Logs about the voting.
+  // Logs about voting.
   mapping (uint => VoteLog) public vote_logs_;
   
-  // Logs about the ACB.
-  mapping (uint => ACBLog) public acb_logs_;
+  // Logs about epoch.
+  mapping (uint => EpochLog) public epoch_logs_;
 
-  // The index of the current log.
-  uint public log_index_;
-  
+  // Logs about bond operations.
+  mapping (uint => BondLog) public bond_logs_;
+
   // Initializer.
   function initialize()
       public initializer {
     __Ownable_init();
-    
-    log_index_ = 0;
   }
 
-  // Public getter: Return the VoteLog at the |log_index|.
-  function getVoteLog(uint log_index)
+  // Public getter: Return the VoteLog of |epoch_id|.
+  function getVoteLog(uint epoch_id)
       public view returns (
           uint, uint, uint, uint, uint, uint, uint, uint, uint) {
-    VoteLog memory log = vote_logs_[log_index];
+    VoteLog memory log = vote_logs_[epoch_id];
     return (log.commit_succeeded, log.commit_failed, log.reveal_succeeded,
             log.reveal_failed, log.reclaim_succeeded, log.reward_succeeded,
             log.deposited, log.reclaimed, log.rewarded);
   }
 
-  // Public getter: Return the ACBLog at the |log_index|.
-  function getACBLog(uint log_index)
+  // Public getter: Return the EpochLog of |epoch_id|.
+  function getEpochLog(uint epoch_id)
       public view returns (
-          uint, uint, int, int, uint, uint, uint, uint, uint, uint, uint) {
-    ACBLog memory log = acb_logs_[log_index];
+          uint, uint, int, int, uint, uint, uint, uint, uint, uint) {
+    EpochLog memory log = epoch_logs_[epoch_id];
     return (log.minted_coins, log.burned_coins, log.coin_supply_delta,
             log.bond_budget, log.total_coin_supply, log.total_bond_supply,
-            log.oracle_level, log.current_epoch_start, log.tax,
-            log.purchased_bonds, log.redeemed_bonds);
+            log.valid_bond_supply, log.oracle_level, log.current_epoch_start,
+            log.tax);
+  }
+
+  // Public getter: Return the BondLog of |epoch_id|.
+  function getBondLog(uint epoch_id)
+      public view returns (uint, uint, uint) {
+    BondLog memory log = bond_logs_[epoch_id];
+    return (log.purchased_bonds, log.redeemed_bonds, log.expired_bonds);
   }
 
   // Called when the oracle phase is updated.
   //
   // Parameters
   // ----------------
+  // |epoch_id|: The epoch ID.
   // |minted|: The amount of the minted coins.
   // |burned|: The amount of the burned coins.
   // |delta|: The delta of the total coin supply.
   // |bond_budget|: ACB.bond_budget_.
   // |total_coin_supply|: The total coin supply.
   // |total_bond_supply|: The total bond supply.
+  // |valid_bond_supply|: The valid bond supply.
   // |oracle_level|: ACB.oracle_level_.
   // |current_epoch_start|: ACB.current_epoch_start_.
   // |tax|: The amount of the tax collected in the phase.
@@ -916,29 +929,28 @@ contract Logging is OwnableUpgradeable {
   // Returns
   // ----------------
   // None.
-  function phaseUpdated(uint minted, uint burned, int delta, int bond_budget,
-                        uint total_coin_supply, uint total_bond_supply,
+  function epochUpdated(uint epoch_id, uint minted, uint burned, int delta,
+                        int bond_budget, uint total_coin_supply,
+                        uint total_bond_supply, uint valid_bond_supply,
                         uint oracle_level, uint current_epoch_start, uint tax)
       public onlyOwner {
-    log_index_ += 1;
-    vote_logs_[log_index_] = VoteLog(0, 0, 0, 0, 0, 0, 0, 0, 0);
-    acb_logs_[log_index_] = ACBLog(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-      
-    acb_logs_[log_index_].minted_coins = minted;
-    acb_logs_[log_index_].burned_coins = burned;
-    acb_logs_[log_index_].coin_supply_delta = delta;
-    acb_logs_[log_index_].bond_budget = bond_budget;
-    acb_logs_[log_index_].total_coin_supply = total_coin_supply;
-    acb_logs_[log_index_].total_bond_supply = total_bond_supply;
-    acb_logs_[log_index_].oracle_level = oracle_level;
-    acb_logs_[log_index_].current_epoch_start = current_epoch_start;
-    acb_logs_[log_index_].tax = tax;
+    epoch_logs_[epoch_id].minted_coins = minted;
+    epoch_logs_[epoch_id].burned_coins = burned;
+    epoch_logs_[epoch_id].coin_supply_delta = delta;
+    epoch_logs_[epoch_id].bond_budget = bond_budget;
+    epoch_logs_[epoch_id].total_coin_supply = total_coin_supply;
+    epoch_logs_[epoch_id].total_bond_supply = total_bond_supply;
+    epoch_logs_[epoch_id].valid_bond_supply = valid_bond_supply;
+    epoch_logs_[epoch_id].oracle_level = oracle_level;
+    epoch_logs_[epoch_id].current_epoch_start = current_epoch_start;
+    epoch_logs_[epoch_id].tax = tax;
   }
 
   // Called when ACB.vote is called.
   //
   // Parameters
   // ----------------
+  // |epoch_id|: The epoch ID.
   // |commit_result|: Whether the commit succeeded or not.
   // |reveal_result|: Whether the reveal succeeded or not.
   // |deposited|: The amount of the deposited coins.
@@ -948,56 +960,60 @@ contract Logging is OwnableUpgradeable {
   // Returns
   // ----------------
   // None.
-  function voted(bool commit_result, bool reveal_result, uint deposited,
-                 uint reclaimed, uint rewarded)
+  function voted(uint epoch_id, bool commit_result, bool reveal_result,
+                 uint deposited, uint reclaimed, uint rewarded)
       public onlyOwner {
     if (commit_result) {
-      vote_logs_[log_index_].commit_succeeded += 1;
+      vote_logs_[epoch_id].commit_succeeded += 1;
     } else {
-      vote_logs_[log_index_].commit_failed += 1;
+      vote_logs_[epoch_id].commit_failed += 1;
     }
     if (reveal_result) {
-      vote_logs_[log_index_].reveal_succeeded += 1;
+      vote_logs_[epoch_id].reveal_succeeded += 1;
     } else {
-      vote_logs_[log_index_].reveal_failed += 1;
+      vote_logs_[epoch_id].reveal_failed += 1;
     }
     if (reclaimed > 0) {
-      vote_logs_[log_index_].reclaim_succeeded += 1;
+      vote_logs_[epoch_id].reclaim_succeeded += 1;
     }
     if (rewarded > 0) {
-      vote_logs_[log_index_].reward_succeeded += 1;
+      vote_logs_[epoch_id].reward_succeeded += 1;
     }
-    vote_logs_[log_index_].deposited += deposited;
-    vote_logs_[log_index_].reclaimed += reclaimed;
-    vote_logs_[log_index_].rewarded += rewarded;
+    vote_logs_[epoch_id].deposited += deposited;
+    vote_logs_[epoch_id].reclaimed += reclaimed;
+    vote_logs_[epoch_id].rewarded += rewarded;
   }
 
   // Called when ACB.purchaseBonds is called.
   //
   // Parameters
   // ----------------
-  // |count|: The number of the purchased bonds.
+  // |epoch_id|: The epoch ID.
+  // |count|: The number of purchased bonds.
   //
   // Returns
   // ----------------
   // None.
-  function purchasedBonds(uint count)
+  function purchasedBonds(uint epoch_id, uint count)
       public onlyOwner {
-    acb_logs_[log_index_].purchased_bonds += count;
+    bond_logs_[epoch_id].purchased_bonds += count;
   }
 
   // Called when ACB.redeemBonds is called.
   //
   // Parameters
   // ----------------
-  // |count|: The number of the redeemded bonds.
+  // |epoch_id|: The epoch ID.
+  // |count_valid|: The number of redeemded bonds.
+  // |count_expired|: The number of expired bonds.
   //
   // Returns
   // ----------------
   // None.
-  function redeemedBonds(uint count)
+  function redeemedBonds(uint epoch_id, uint count_valid, uint count_expired)
       public onlyOwner {
-    acb_logs_[log_index_].redeemed_bonds += count;
+    bond_logs_[epoch_id].redeemed_bonds += count_valid;
+    bond_logs_[epoch_id].expired_bonds += count_expired;
   }
 }
 
@@ -1322,8 +1338,9 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
       // Increase or decrease the total coin supply.
       uint mint = _controlSupply(delta);
 
-      logging_.phaseUpdated(mint, burned, delta, bond_budget_,
-                            coin_.totalSupply(), bond_.totalSupply(),
+      logging_.epochUpdated(oracle_.epoch_id_(), mint, burned, delta,
+                            bond_budget_, coin_.totalSupply(),
+                            bond_.totalSupply(), validBondSupply(),
                             oracle_level_, current_epoch_start_, tax);
     }
 
@@ -1351,8 +1368,9 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
 
     oracle_.revokeOwnership(coin_);
 
-    logging_.voted(result.commit_result, result.reveal_result,
-                   result.deposited, result.reclaimed, result.rewarded);
+    logging_.voted(oracle_.epoch_id_(), result.commit_result,
+                   result.reveal_result, result.deposited,
+                   result.reclaimed, result.rewarded);
     emit VoteEvent(
         msg.sender, hash, oracle_level, salt,
         result.commit_result, result.reveal_result, result.deposited,
@@ -1396,7 +1414,7 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
     // Burn the corresponding coins.
     coin_.burn(sender, amount);
 
-    logging_.purchasedBonds(count);
+    logging_.purchasedBonds(oracle_.epoch_id_(), count);
     emit PurchaseBondsEvent(sender, count, redemption_epoch);
     return redemption_epoch;
   }
@@ -1416,6 +1434,7 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
     address sender = msg.sender;
 
     uint count_valid = 0;
+    uint count_expired = 0;
     for (uint i = 0; i < redemption_epochs.length; i++) {
       uint redemption_epoch = redemption_epochs[i];
       uint count = bond_.balanceOf(sender, redemption_epoch);
@@ -1439,12 +1458,14 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
         // Burn the redeemed bonds.
         bond_budget_ += count.toInt256();
         count_valid += count;
+      } else {
+        count_expired += count;
       }
       bond_.burn(sender, redemption_epoch, count);
     }
     require(validBondSupply().toInt256() + bond_budget_ >= 0, "rb1");
     
-    logging_.redeemedBonds(count_valid);
+    logging_.redeemedBonds(oracle_.epoch_id_(), count_valid, count_expired);
     emit RedeemBondsEvent(sender, count_valid);
     return count_valid;
   }

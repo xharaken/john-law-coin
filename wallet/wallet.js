@@ -624,16 +624,19 @@ async function showOracleStatus() {
 
 async function showLoggingStatus() {
   let html = "";
-  const log_index =
-        parseInt(await _logging_contract.methods.log_index_().call());
-  for (let index of [log_index, log_index - 1]) {
-    if (index <= 0) {
+  const current_epoch_id =
+        parseInt(await _oracle_contract.methods.epoch_id_().call());
+  for (let epoch_id of [current_epoch_id, current_epoch_id - 1]) {
+    if (epoch_id <= 0) {
       continue;
     }
     const vote_log =
-          await _logging_contract.methods.getVoteLog(index).call();
-    const acb_log = await _logging_contract.methods.getACBLog(index).call();
-    html += index == log_index ? "Current" : "<br>Previous";
+          await _logging_contract.methods.getVoteLog(epoch_id).call();
+    const epoch_log =
+          await _logging_contract.methods.getEpochLog(epoch_id).call();
+    const bond_log =
+          await _logging_contract.methods.getBondLog(epoch_id).call();
+    html += epoch_id == current_epoch_id ? "Current" : "<br>Previous";
     html += "<br><table>";
     html += "<tr><td>commit_succeeded</td><td class='right'>" +
       vote_log[0] + "</td></tr>";
@@ -654,27 +657,31 @@ async function showLoggingStatus() {
     html += "<tr><td>rewarded</td><td class='right'>" +
       vote_log[8] + "</td></tr>";
     html += "<tr><td>minted_coins</td><td class='right'>" +
-      acb_log[0] + "</td></tr>";
+      epoch_log[0] + "</td></tr>";
     html += "<tr><td>burned_coins</td><td class='right'>" +
-      acb_log[1] + "</td></tr>";
+      epoch_log[1] + "</td></tr>";
     html += "<tr><td>coin_supply_delta</td><td class='right'>" +
-      acb_log[2] + "</td></tr>";
+      epoch_log[2] + "</td></tr>";
     html += "<tr><td>bond_budget</td><td class='right'>" +
-      acb_log[3] + "</td></tr>";
+      epoch_log[3] + "</td></tr>";
     html += "<tr><td>coin_total_supply</td><td class='right'>" +
-      acb_log[4] + "</td></tr>";
+      epoch_log[4] + "</td></tr>";
     html += "<tr><td>bond_total_supply</td><td class='right'>" +
-      acb_log[5] + "</td></tr>";
+      epoch_log[5] + "</td></tr>";
+    html += "<tr><td>valid_bond_supply</td><td class='right'>" +
+      epoch_log[6] + "</td></tr>";
     html += "<tr><td>oracle_level</td><td class='right'>" +
-      acb_log[6] + "</td></tr>";
+      epoch_log[7] + "</td></tr>";
     html += "<tr><td>current_epoch_start</td><td class='right'>" +
-      acb_log[7] + "</td></tr>";
+      epoch_log[8] + "</td></tr>";
     html += "<tr><td>burned_tax</td><td class='right'>" +
-      acb_log[8] + "</td></tr>";
+      epoch_log[9] + "</td></tr>";
     html += "<tr><td>purchased_bonds</td><td class='right'>" +
-      acb_log[9] + "</td></tr>";
+      bond_log[0] + "</td></tr>";
     html += "<tr><td>redeemed_bonds</td><td class='right'>" +
-      acb_log[10] + "</td></tr>";
+      bond_log[1] + "</td></tr>";
+    html += "<tr><td>expired_bonds</td><td class='right'>" +
+      bond_log[2] + "</td></tr>";
     html += "</table>"
   }
   showMessage($("logging_status"), html);
@@ -692,18 +699,21 @@ async function drawChart() {
   logs["minted_burned_tax"] = [];
   logs["coin_supply_delta"] = [];
   logs["bond_budget"] = [];
-  logs["purchased_redeemed"] = [];
+  logs["purchased_redeemed_expired"] = [];
   logs["coin_total_supply"] = [];
   logs["bond_total_supply"] = [];
   logs["oracle_level"] = [];
   
-  const log_index =
-        parseInt(await _logging_contract.methods.log_index_().call());
-  for (let index = 1; index <= log_index; index++) {
+  const current_epoch_id =
+        parseInt(await _oracle_contract.methods.epoch_id_().call());
+  for (let epoch_id = 1; epoch_id <= current_epoch_id; epoch_id++) {
     const vote_log =
-          await _logging_contract.methods.getVoteLog(index).call();
-    const acb_log = await _logging_contract.methods.getACBLog(index).call();
-    const date = new Date(parseInt(acb_log[7]) * 1000);
+          await _logging_contract.methods.getVoteLog(epoch_id).call();
+    const epoch_log =
+          await _logging_contract.methods.getEpochLog(epoch_id).call();
+    const bond_log =
+          await _logging_contract.methods.getBondLog(epoch_id).call();
+    const date = new Date(parseInt(epoch_log[8]) * 1000);
     logs["vote"].push([date,
                        parseInt(vote_log[0]),
                        parseInt(vote_log[1]),
@@ -716,17 +726,20 @@ async function drawChart() {
                                                parseInt(vote_log[7]),
                                                parseInt(vote_log[8])]);
     logs["minted_burned_tax"].push([date,
-                                    parseInt(acb_log[0]),
-                                    parseInt(acb_log[1]),
-                                    parseInt(acb_log[8])]);
-    logs["coin_supply_delta"].push([date, parseInt(acb_log[2])]);
-    logs["bond_budget"].push([date, parseInt(acb_log[3])]);
-    logs["purchased_redeemed"].push([date,
-                                     parseInt(acb_log[9]),
-                                     parseInt(acb_log[10])]);
-    logs["coin_total_supply"].push([date, parseInt(acb_log[4])]);
-    logs["bond_total_supply"].push([date, parseInt(acb_log[5])]);
-    logs["oracle_level"].push([date, parseInt(acb_log[6])]);
+                                    parseInt(epoch_log[0]),
+                                    parseInt(epoch_log[1]),
+                                    parseInt(epoch_log[9])]);
+    logs["coin_supply_delta"].push([date, parseInt(epoch_log[2])]);
+    logs["bond_budget"].push([date, parseInt(epoch_log[3])]);
+    logs["purchased_redeemed_expired"].push([date,
+                                             parseInt(bond_log[0]),
+                                             parseInt(bond_log[1]),
+                                             parseInt(bond_log[2])]);
+    logs["coin_total_supply"].push([date, parseInt(epoch_log[4])]);
+    logs["bond_total_supply"].push([date,
+                                    parseInt(epoch_log[5]),
+                                    parseInt(epoch_log[6]]);
+    logs["oracle_level"].push([date, parseInt(epoch_log[7])]);
   }
   
   {
@@ -798,11 +811,12 @@ async function drawChart() {
     table.addColumn("datetime", "");
     table.addColumn("number", "purchased_bonds");
     table.addColumn("number", "redeemed_bonds");
-    table.addRows(logs["purchased_redeemed"]);
-    const options = {title: "ACB: purchased / redeemed bonds",
+    table.addColumn("number", "expired_bonds");
+    table.addRows(logs["purchased_redeemed_expired"]);
+    const options = {title: "ACB: purchased / redeemed / expired bonds",
                      legend: {position: "bottom"}};
     const chart = new google.visualization.LineChart(
-      $("chart_purchased_redeemed"));
+      $("chart_purchased_redeemed_expired"));
     chart.draw(table, options);
   }
   {
@@ -820,8 +834,9 @@ async function drawChart() {
     const table = new google.visualization.DataTable();
     table.addColumn("datetime", "");
     table.addColumn("number", "bond_total_supply");
+    table.addColumn("number", "valid_bond_supply");
     table.addRows(logs["bond_total_supply"]);
-    const options = {title: "ACB: bond_total_supply",
+    const options = {title: "ACB: bond_total_supply / valid_bond_supply",
                      legend: {position: "bottom"}};
     const chart = new google.visualization.LineChart(
       $("chart_bond_total_supply"));

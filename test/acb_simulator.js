@@ -261,21 +261,24 @@ function parameterized_test(accounts,
       await redeem_bonds();
       await purchase_bonds();
 
-      let acb_log = await get_acb_logs(await _logging.log_index_());
-      assert.equal(acb_log.minted_coins, _metrics.mint);
-      assert.equal(acb_log.burned_coins, _metrics.lost);
-      assert.equal(acb_log.coin_supply_delta.toNumber(), _metrics.delta);
-      assert.equal(acb_log.bond_budget, bond_budget);
-      assert.equal(acb_log.coin_total_supply, coin_supply2);
-      assert.equal(acb_log.bond_total_supply, bond_supply);
-      assert.equal(acb_log.oracle_level, _metrics.oracle_level);
-      assert.equal(acb_log.current_epoch_start,
+      let epoch_id = (await _oracle.epoch_id_()).toNumber();
+      let epoch_log = await get_epoch_logs(epoch_id);
+      assert.equal(epoch_log.minted_coins, _metrics.mint);
+      assert.equal(epoch_log.burned_coins, _metrics.lost);
+      assert.equal(epoch_log.coin_supply_delta.toNumber(), _metrics.delta);
+      assert.equal(epoch_log.bond_budget, bond_budget);
+      assert.equal(epoch_log.coin_total_supply, coin_supply2);
+      assert.equal(epoch_log.bond_total_supply, bond_supply);
+      assert.equal(epoch_log.valid_bond_supply, valid_bond_supply);
+      assert.equal(epoch_log.oracle_level, _metrics.oracle_level);
+      assert.equal(epoch_log.current_epoch_start,
                    (await _acb.getTimestamp()).toNumber());
-      assert.equal(acb_log.tax, tax);
-      assert.equal(acb_log.purchased_bonds,
-                   _metrics.purchase_count);
-      assert.equal(acb_log.redeemed_bonds, _metrics.redeem_count);
-      let vote_log = await get_vote_logs(await _logging.log_index_());
+      assert.equal(epoch_log.tax, tax);
+      let bond_log = await get_bond_logs(epoch_id);
+      assert.equal(bond_log.purchased_bonds, _metrics.purchase_count);
+      assert.equal(bond_log.redeemed_bonds, _metrics.redeem_count);
+      assert.equal(bond_log.expired_bonds, _metrics.expired_count);
+      let vote_log = await get_vote_logs(epoch_id);
       assert.equal(vote_log.commit_succeeded,
                    _metrics.reveal_hit + _metrics.reveal_miss);
       assert.equal(vote_log.deposited, _metrics.deposited);
@@ -1033,8 +1036,8 @@ function parameterized_test(accounts,
       return (await _bond.totalSupply()).toNumber();
     }
 
-    async function get_vote_logs(log_index) {
-      const ret = await _logging.getVoteLog(log_index);
+    async function get_vote_logs(epoch_id) {
+      const ret = await _logging.getVoteLog(epoch_id);
       let vote_log = {};
       vote_log.commit_succeeded = ret[0];
       vote_log.commit_failed = ret[1];
@@ -1048,21 +1051,31 @@ function parameterized_test(accounts,
       return vote_log;
     }
 
-    async function get_acb_logs(log_index) {
-      const ret = await _logging.getACBLog(log_index);
-      let acb_log = {};
-      acb_log.minted_coins = ret[0];
-      acb_log.burned_coins = ret[1];
-      acb_log.coin_supply_delta = ret[2];
-      acb_log.bond_budget = ret[3];
-      acb_log.coin_total_supply = ret[4];
-      acb_log.bond_total_supply = ret[5];
-      acb_log.oracle_level = ret[6];
-      acb_log.current_epoch_start = ret[7];
-      acb_log.tax = ret[8];
-      acb_log.purchased_bonds = ret[9];
-      acb_log.redeemed_bonds = ret[10];
-      return acb_log;
+    async function get_epoch_logs(epoch_id) {
+      const ret = await _logging.getEpochLog(epoch_id);
+      let epoch_log = {};
+      epoch_log.minted_coins = ret[0];
+      epoch_log.burned_coins = ret[1];
+      epoch_log.coin_supply_delta = ret[2];
+      epoch_log.bond_budget = ret[3];
+      epoch_log.coin_total_supply = ret[4];
+      epoch_log.bond_total_supply = ret[5];
+      epoch_log.valid_bond_supply = ret[6];
+      epoch_log.oracle_level = ret[7];
+      epoch_log.current_epoch_start = ret[8];
+      epoch_log.tax = ret[9];
+      epoch_log.purchased_bonds = ret[10];
+      epoch_log.redeemed_bonds = ret[11];
+      return epoch_log;
+    }
+
+    async function get_bond_logs(epoch_id) {
+      const ret = await _logging.getBondLog(epoch_id);
+      let bond_log = {};
+      bond_log.purchased_bonds = ret[0];
+      bond_log.redeemed_bonds = ret[1];
+      bond_log.expired_bonds = ret[2];
+      return bond_log;
     }
   });
 }

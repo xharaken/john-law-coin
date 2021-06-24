@@ -15,55 +15,34 @@ contract("LoggingUnittest", function (accounts) {
     _logging = await deployProxy(Logging, []);
     common.print_contract_size(_logging, "Logging");
 
-    assert.equal(await _logging.log_index_(), 0);
-    let acb_log = await get_acb_logs(await _logging.log_index_());
-    assert.equal(acb_log.minted_coins, 0);
-    assert.equal(acb_log.burned_coins, 0);
-    assert.equal(acb_log.coin_supply_delta, 0);
-    assert.equal(acb_log.bond_budget, 0);
-    assert.equal(acb_log.coin_total_supply, 0);
-    assert.equal(acb_log.bond_total_supply, 0);
-    assert.equal(acb_log.oracle_level, 0);
-    assert.equal(acb_log.current_epoch_start, 0);
-    assert.equal(acb_log.tax, 0);
-    assert.equal(acb_log.purchased_bonds, 0);
-    assert.equal(acb_log.redeemed_bonds, 0);
-    let vote_log = await get_vote_logs(await _logging.log_index_());
-    assert.equal(vote_log.commit_succeeded, 0);
-    assert.equal(vote_log.deposited, 0);
-    assert.equal(vote_log.commit_failed, 0);
-    assert.equal(vote_log.reveal_succeeded, 0);
-    assert.equal(vote_log.reveal_failed, 0);
-    assert.equal(vote_log.reclaim_succeeded, 0);
-    assert.equal(vote_log.reward_succeeded, 0);
-    assert.equal(vote_log.reclaimed, 0);
-    assert.equal(vote_log.rewarded, 0);
+    for (let epoch_id = 0; epoch_id < 30; epoch_id++) {
+      await _logging.epochUpdated(epoch_id, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+      let epoch_log = await get_epoch_logs(epoch_id);
+      assert.equal(epoch_log.minted_coins, 1);
+      assert.equal(epoch_log.burned_coins, 2);
+      assert.equal(epoch_log.coin_supply_delta, 3);
+      assert.equal(epoch_log.bond_budget, 4);
+      assert.equal(epoch_log.coin_total_supply, 5);
+      assert.equal(epoch_log.bond_total_supply, 6);
+      assert.equal(epoch_log.valid_bond_supply, 7);
+      assert.equal(epoch_log.oracle_level, 8);
+      assert.equal(epoch_log.current_epoch_start, 9);
+      assert.equal(epoch_log.tax, 10);
 
-    for (let i = 0; i < 50; i++) {
-      await _logging.phaseUpdated(1, 2, 3, 4, 5, 6, 7, 8, 9);
-      await _logging.purchasedBonds(1);
-      await _logging.purchasedBonds(2);
-      await _logging.purchasedBonds(3);
-      await _logging.redeemedBonds(1);
-      await _logging.redeemedBonds(2);
-      await _logging.redeemedBonds(3);
-      await _logging.redeemedBonds(4);
-      assert.equal(await _logging.log_index_(), i + 1);
-      acb_log = await get_acb_logs(await _logging.log_index_());
-      assert.equal(acb_log.minted_coins, 1);
-      assert.equal(acb_log.burned_coins, 2);
-      assert.equal(acb_log.coin_supply_delta, 3);
-      assert.equal(acb_log.bond_budget, 4);
-      assert.equal(acb_log.coin_total_supply, 5);
-      assert.equal(acb_log.bond_total_supply, 6);
-      assert.equal(acb_log.oracle_level, 7);
-      assert.equal(acb_log.current_epoch_start, 8);
-      assert.equal(acb_log.tax, 9);
-      assert.equal(acb_log.purchased_bonds, 6);
-      assert.equal(acb_log.redeemed_bonds, 10);
-
-      await _logging.voted(false, false, 0, 0, 0);
-      vote_log = await get_vote_logs(await _logging.log_index_());
+      await _logging.purchasedBonds(epoch_id, 1);
+      await _logging.purchasedBonds(epoch_id, 2);
+      await _logging.purchasedBonds(epoch_id, 3);
+      await _logging.redeemedBonds(epoch_id, 1, 10);
+      await _logging.redeemedBonds(epoch_id, 2, 20);
+      await _logging.redeemedBonds(epoch_id, 3, 30);
+      await _logging.redeemedBonds(epoch_id, 4, 40);
+      let bond_log = await get_bond_logs(epoch_id);
+      assert.equal(bond_log.purchased_bonds, 6);
+      assert.equal(bond_log.redeemed_bonds, 10);
+      assert.equal(bond_log.expired_bonds, 100);
+      
+      await _logging.voted(epoch_id, false, false, 0, 0, 0);
+      let vote_log = await get_vote_logs(epoch_id);
       assert.equal(vote_log.commit_succeeded, 0);
       assert.equal(vote_log.deposited, 0);
       assert.equal(vote_log.commit_failed, 1);
@@ -74,8 +53,8 @@ contract("LoggingUnittest", function (accounts) {
       assert.equal(vote_log.reclaimed, 0);
       assert.equal(vote_log.rewarded, 0);
 
-      await _logging.voted(false, true, 0, 0, 0);
-      vote_log = await get_vote_logs(await _logging.log_index_());
+      await _logging.voted(epoch_id, false, true, 0, 0, 0);
+      vote_log = await get_vote_logs(epoch_id);
       assert.equal(vote_log.commit_succeeded, 0);
       assert.equal(vote_log.deposited, 0);
       assert.equal(vote_log.commit_failed, 2);
@@ -86,8 +65,8 @@ contract("LoggingUnittest", function (accounts) {
       assert.equal(vote_log.reclaimed, 0);
       assert.equal(vote_log.rewarded, 0);
 
-      await _logging.voted(true, true, 10, 0, 0);
-      vote_log = await get_vote_logs(await _logging.log_index_());
+      await _logging.voted(epoch_id, true, true, 10, 0, 0);
+      vote_log = await get_vote_logs(epoch_id);
       assert.equal(vote_log.commit_succeeded, 1);
       assert.equal(vote_log.deposited, 10);
       assert.equal(vote_log.commit_failed, 2);
@@ -98,8 +77,8 @@ contract("LoggingUnittest", function (accounts) {
       assert.equal(vote_log.reclaimed, 0);
       assert.equal(vote_log.rewarded, 0);
 
-      await _logging.voted(true, false, 10, 0, 0);
-      vote_log = await get_vote_logs(await _logging.log_index_());
+      await _logging.voted(epoch_id, true, false, 10, 0, 0);
+      vote_log = await get_vote_logs(epoch_id);
       assert.equal(vote_log.commit_succeeded, 2);
       assert.equal(vote_log.deposited, 20);
       assert.equal(vote_log.commit_failed, 2);
@@ -110,8 +89,8 @@ contract("LoggingUnittest", function (accounts) {
       assert.equal(vote_log.reclaimed, 0);
       assert.equal(vote_log.rewarded, 0);
 
-      await _logging.voted(true, true, 10, 5, 6);
-      vote_log = await get_vote_logs(await _logging.log_index_());
+      await _logging.voted(epoch_id, true, true, 10, 5, 6);
+      vote_log = await get_vote_logs(epoch_id);
       assert.equal(vote_log.commit_succeeded, 3);
       assert.equal(vote_log.deposited, 30);
       assert.equal(vote_log.commit_failed, 2);
@@ -122,8 +101,8 @@ contract("LoggingUnittest", function (accounts) {
       assert.equal(vote_log.reclaimed, 5);
       assert.equal(vote_log.rewarded, 6);
 
-      await _logging.voted(true, true, 10, 5, 6);
-      vote_log = await get_vote_logs(await _logging.log_index_());
+      await _logging.voted(epoch_id, true, true, 10, 5, 6);
+      vote_log = await get_vote_logs(epoch_id);
       assert.equal(vote_log.commit_succeeded, 4);
       assert.equal(vote_log.deposited, 40);
       assert.equal(vote_log.commit_failed, 2);
@@ -141,22 +120,23 @@ contract("LoggingUnittest", function (accounts) {
       await _logging.initialize({from: accounts[1]});
     }, "Initializable");
     await should_throw(async () => {
-      await _logging.phaseUpdated(1, 2, 3, 4, 5, 6, 7, 8, 9,
+      await _logging.epochUpdated(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
                                   {from: accounts[1]});
     }, "Ownable");
     await should_throw(async () => {
-      await _logging.voted(false, false, 0, 0, 0, {from: accounts[1]});
+      await _logging.voted(0, false, false, 0, 0, 0,
+                           {from: accounts[1]});
     }, "Ownable");
     await should_throw(async () => {
-      await _logging.purchasedBonds(1, {from: accounts[1]});
+      await _logging.purchasedBonds(0, 1, {from: accounts[1]});
     }, "Ownable");
     await should_throw(async () => {
-      await _logging.redeemedBonds(1, {from: accounts[1]});
+      await _logging.redeemedBonds(0, 1, 2, {from: accounts[1]});
     }, "Ownable");
   });
 
-  async function get_vote_logs(log_index) {
-    const ret = await _logging.getVoteLog(log_index);
+  async function get_vote_logs(epoch_id) {
+    const ret = await _logging.getVoteLog(epoch_id);
     let vote_log = {};
     vote_log.commit_succeeded = ret[0];
     vote_log.commit_failed = ret[1];
@@ -170,20 +150,28 @@ contract("LoggingUnittest", function (accounts) {
     return vote_log;
   }
 
-  async function get_acb_logs(log_index) {
-    const ret = await _logging.getACBLog(log_index);
-    let acb_log = {};
-    acb_log.minted_coins = ret[0];
-    acb_log.burned_coins = ret[1];
-    acb_log.coin_supply_delta = ret[2];
-    acb_log.bond_budget = ret[3];
-    acb_log.coin_total_supply = ret[4];
-    acb_log.bond_total_supply = ret[5];
-    acb_log.oracle_level = ret[6];
-    acb_log.current_epoch_start = ret[7];
-    acb_log.tax = ret[8];
-    acb_log.purchased_bonds = ret[9];
-    acb_log.redeemed_bonds = ret[10];
-    return acb_log;
+  async function get_epoch_logs(epoch_id) {
+    const ret = await _logging.getEpochLog(epoch_id);
+    let epoch_log = {};
+    epoch_log.minted_coins = ret[0];
+    epoch_log.burned_coins = ret[1];
+    epoch_log.coin_supply_delta = ret[2];
+    epoch_log.bond_budget = ret[3];
+    epoch_log.coin_total_supply = ret[4];
+    epoch_log.bond_total_supply = ret[5];
+    epoch_log.valid_bond_supply = ret[6];
+    epoch_log.oracle_level = ret[7];
+    epoch_log.current_epoch_start = ret[8];
+    epoch_log.tax = ret[9];
+    return epoch_log;
+  }
+
+  async function get_bond_logs(epoch_id) {
+    const ret = await _logging.getBondLog(epoch_id);
+    let bond_log = {};
+    bond_log.purchased_bonds = ret[0];
+    bond_log.redeemed_bonds = ret[1];
+    bond_log.expired_bonds = ret[2];
+    return bond_log;
   }
 });

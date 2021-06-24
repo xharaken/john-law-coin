@@ -829,7 +829,7 @@ class Logging:
     # Parameters
     # ----------------
     # |epoch_id|: The epoch ID.
-    # |count|: The number of the purchased bonds.
+    # |count|: The number of purchased bonds.
     #
     # Returns
     # ----------------
@@ -847,7 +847,8 @@ class Logging:
     # Parameters
     # ----------------
     # |epoch_id|: The epoch ID.
-    # |count|: The number of the redeemded bonds.
+    # |count_valid|: The number of redeemded bonds.
+    # |count_expired|: The number of expired bonds.
     #
     # Returns
     # ----------------
