@@ -143,8 +143,6 @@ class OracleSimulator(unittest.TestCase):
                 max_count = counts[level]
                 mode_level = level
 
-        self.assertEqual(self.oracle.get_mode_level(), mode_level)
-
         tax = random.randint(0, 200)
         deposit_to_reclaim = 0
         if mode_level == Oracle.LEVEL_MAX:
@@ -160,6 +158,7 @@ class OracleSimulator(unittest.TestCase):
 
         self.coin.mint(self.coin.tax_account, tax)
         burned = self.oracle.advance(self.coin)
+        self.assertEqual(self.oracle.get_mode_level(), mode_level)
         self.assertEqual(burned, self.prev_tax)
         self.prev_tax = tax
 

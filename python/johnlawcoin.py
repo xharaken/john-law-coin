@@ -562,14 +562,18 @@ class Oracle:
     # ----------------
     # None.
     def advance(self, coin):
+        # Advance the phase.
+        self.epoch_id += 1
+        
         # Step 1: Move the commit phase to the reveal phase.
-        epoch = self.epochs[self.epoch_id % 3]
+        epoch = self.epochs[(self.epoch_id - 1) % 3]
         assert(epoch.phase == Oracle.Phase.COMMIT)
         epoch.phase = Oracle.Phase.REVEAL
 
         # Step 2: Move the reveal phase to the reclaim phase.
-        epoch = self.epochs[(self.epoch_id - 1) % 3]
+        epoch = self.epochs[(self.epoch_id - 2) % 3]
         assert(epoch.phase == Oracle.Phase.REVEAL)
+        epoch.phase = Oracle.Phase.RECLAIM
 
         # The "truth" level is set to the mode of the weighted majority votes.
         mode_level = self.get_mode_level()
@@ -611,10 +615,9 @@ class Oracle:
 
         # Set the total amount of the reward.
         epoch.reward_total = coin.balance_of(epoch.reward_account)
-        epoch.phase = Oracle.Phase.RECLAIM
 
         # Step 3: Move the reclaim phase to the commit phase.
-        epoch_index = (self.epoch_id - 2) % 3
+        epoch_index = self.epoch_id % 3
         epoch = self.epochs[epoch_index]
         assert(epoch.phase == Oracle.Phase.RECLAIM)
 
@@ -642,8 +645,6 @@ class Oracle:
         epoch.reward_total = 0
         epoch.phase = Oracle.Phase.COMMIT
 
-        # Advance the phase.
-        self.epoch_id += 1
         return burned
 
     # Return the oracle level that got the largest amount of deposited coins.
@@ -660,8 +661,8 @@ class Oracle:
     # If there are multiple modes that have the largest votes, return the
     # smallest mode. If there are no votes, return LEVEL_MAX.
     def get_mode_level(self):
-        epoch = self.epochs[(self.epoch_id - 1) % 3]
-        assert(epoch.phase == Oracle.Phase.REVEAL)
+        epoch = self.epochs[(self.epoch_id - 2) % 3]
+        assert(epoch.phase == Oracle.Phase.RECLAIM)
         mode_level = Oracle.LEVEL_MAX
         max_deposit = 0
         max_count = 0
@@ -1074,6 +1075,15 @@ class ACB:
             epoch_updated = True
             self.current_epoch_start = timestamp
 
+            # Advance to the next phase. Provide the |tax| coins to the oracle
+            # as a reward.
+            tax = self.coin.balance_of(self.coin.tax_account)
+            burned = self.oracle.advance(self.coin)
+            
+            # Reset the tax account address just in case.
+            self.coin.reset_tax_account()
+            assert(self.coin.balance_of(self.coin.tax_account) == 0)
+
             delta = 0
             self.oracle_level = self.oracle.get_mode_level()
             if self.oracle_level != Oracle.LEVEL_MAX:
@@ -1094,15 +1104,6 @@ class ACB:
                 # To avoid increasing or decreasing too many coins in one phase,
                 # multiply the damping factor.
                 delta = int(delta * ACB.DAMPING_FACTOR / 100)
-
-            # Advance to the next phase. Provide the |tax| coins to the oracle
-            # as a reward.
-            tax = self.coin.balance_of(self.coin.tax_account)
-            burned = self.oracle.advance(self.coin)
-            
-            # Reset the tax account address just in case.
-            self.coin.reset_tax_account()
-            assert(self.coin.balance_of(self.coin.tax_account) == 0)
 
             # Increase or decrease the total coin supply.
             mint = self._control_supply(delta)

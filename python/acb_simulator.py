@@ -551,14 +551,6 @@ class ACBSimulator(unittest.TestCase):
         if mode_level == Oracle.LEVEL_MAX:
             assert(deposit_to_be_reclaimed == 0)
 
-        delta = 0
-        if mode_level != Oracle.LEVEL_MAX:
-            delta = int(acb.coin.total_supply *
-                        (ACB.LEVEL_TO_EXCHANGE_RATE[mode_level] -
-                         1 * ACB.EXCHANGE_RATE_DIVISOR) /
-                        ACB.EXCHANGE_RATE_DIVISOR)
-            delta = int(delta * ACB.DAMPING_FACTOR / 100)
-
         target_level = random.randint(0, Oracle.LEVEL_MAX - 1)
         #target_level = int(epoch / 6) % 3
         #target_level = epoch % 3
@@ -691,6 +683,14 @@ class ACBSimulator(unittest.TestCase):
                 self.metrics.reward_miss += 1
 
             if not commit_observed:
+                delta = 0
+                if mode_level != Oracle.LEVEL_MAX:
+                    delta = int(acb.coin.total_supply *
+                                (ACB.LEVEL_TO_EXCHANGE_RATE[mode_level] -
+                                 1 * ACB.EXCHANGE_RATE_DIVISOR) /
+                                ACB.EXCHANGE_RATE_DIVISOR)
+                    delta = int(delta * ACB.DAMPING_FACTOR / 100)
+
                 mint = 0
                 redeemable_bonds = 0
                 issued_bonds = 0

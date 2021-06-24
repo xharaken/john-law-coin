@@ -2785,28 +2785,6 @@ class ACBUnitTest(unittest.TestCase):
             self.assertEqual(acb.bond.total_supply, 2)
             valid_bond_supply = 2 if (period < ACB.BOND_REDEMPTION_PERIOD +
                                       ACB.BOND_REDEEMABLE_PERIOD) else 0
-            mint = 0
-            bond_budget = 0
-            delta = int(self.acb.coin.total_supply *
-                        (ACB.LEVEL_TO_EXCHANGE_RATE[level - 2] - 10) / 10)
-            delta = int(delta * ACB.DAMPING_FACTOR / 100)
-            if delta == 0:
-                mint = 0
-                issued_bonds = 0
-            elif delta > 0:
-                necessary_bonds = int(delta / ACB.BOND_REDEMPTION_PRICE)
-                if necessary_bonds >= valid_bond_supply:
-                    mint = ((necessary_bonds - valid_bond_supply) *
-                            ACB.BOND_REDEMPTION_PRICE)
-                    bond_budget = -valid_bond_supply
-                else:
-                    mint = 0
-                    bond_budget = -necessary_bonds
-            else:
-                mint = 0
-                bond_budget = int(-delta / self.bond_price)
-            period += 1
-
             coin_supply = acb.coin.total_supply
             reward_total = tax_total
             constant_reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
@@ -2829,6 +2807,29 @@ class ACBUnitTest(unittest.TestCase):
                               deposit_4[(now - 2) % 3],
                               reward_4 + constant_reward,
                               True))
+            
+            mint = 0
+            bond_budget = 0
+            delta = int(self.acb.coin.total_supply *
+                        (ACB.LEVEL_TO_EXCHANGE_RATE[level - 2] - 10) / 10)
+            delta = int(delta * ACB.DAMPING_FACTOR / 100)
+            if delta == 0:
+                mint = 0
+                issued_bonds = 0
+            elif delta > 0:
+                necessary_bonds = int(delta / ACB.BOND_REDEMPTION_PRICE)
+                if necessary_bonds >= valid_bond_supply:
+                    mint = ((necessary_bonds - valid_bond_supply) *
+                            ACB.BOND_REDEMPTION_PRICE)
+                    bond_budget = -valid_bond_supply
+                else:
+                    mint = 0
+                    bond_budget = -necessary_bonds
+            else:
+                mint = 0
+                bond_budget = int(-delta / self.bond_price)
+            period += 1
+
             self.assertEqual(acb.oracle_level, level - 2)
             self.assertEqual(acb.coin.balance_of(accounts[4]),
                              balance_4 - deposit_4[now] +

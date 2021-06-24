@@ -208,14 +208,12 @@ class OracleUnitTest(unittest.TestCase):
         self.assertEqual(_oracle.reveal(
             accounts[1], _mode_level, 1111), False)
 
-        self.assertEqual(_oracle.get_mode_level(), _mode_level)
-
         coin_supply = _coin.total_supply
         _coin.mint(_coin.tax_account, _tax)
         self.assertEqual(_oracle.advance(_coin), _tax)
         self.assertEqual(_coin.total_supply, coin_supply)
         self.assertEqual(_oracle.epoch_id % 3, 2)
-        self.assertEqual(_oracle.get_mode_level(), _level_max)
+        self.assertEqual(_oracle.get_mode_level(), _mode_level)
         self.assertEqual(_oracle.epochs[0].phase, Oracle.Phase.RECLAIM)
         self.assertEqual(len(_oracle.epochs[0].commits), 1)
         self.assertEqual(_oracle.epochs[0].commits[accounts[1]].hash,
@@ -341,14 +339,12 @@ class OracleUnitTest(unittest.TestCase):
         self.assertEqual(_coin.balance_of(accounts[1]), balance - _deposit)
 
 
-        self.assertEqual(_oracle.get_mode_level(), _mode_level)
-
         coin_supply = _coin.total_supply
         _coin.mint(_coin.tax_account, _tax)
         self.assertEqual(_oracle.advance(_coin), _tax)
         self.assertEqual(_coin.total_supply, coin_supply)
         self.assertEqual(_oracle.epoch_id % 3, 2)
-        self.assertEqual(_oracle.get_mode_level(), _level_max)
+        self.assertEqual(_oracle.get_mode_level(), _mode_level)
         self.assertEqual(_oracle.epochs[0].phase, Oracle.Phase.RECLAIM)
         self.assertEqual(len(_oracle.epochs[0].commits), 1)
         self.assertEqual(_oracle.epochs[0].commits[accounts[1]].hash,
@@ -410,8 +406,6 @@ class OracleUnitTest(unittest.TestCase):
         self.assertEqual(_coin.balance_of(accounts[1]), balance - _deposit)
 
 
-        self.assertEqual(_oracle.get_mode_level(), _mode_level)
-
         coin_supply = _coin.total_supply
         _coin.mint(_coin.tax_account, _tax)
         self.assertEqual(_oracle.advance(_coin),
@@ -419,7 +413,7 @@ class OracleUnitTest(unittest.TestCase):
         self.assertEqual(_coin.total_supply,
                          coin_supply + self._reward(_tax, 1) * 1)
         self.assertEqual(_oracle.epoch_id % 3, 0)
-        self.assertEqual(_oracle.get_mode_level(), _level_max)
+        self.assertEqual(_oracle.get_mode_level(), _mode_level)
         self.assertEqual(_oracle.epochs[0].phase, Oracle.Phase.COMMIT)
         self.assertEqual(len(_oracle.epochs[0].commits), 1)
         self.assertEqual(_coin.balance_of(_oracle.epochs[0].reward_account), 0)
@@ -472,8 +466,6 @@ class OracleUnitTest(unittest.TestCase):
         self.assertEqual(_oracle.reveal(
             accounts[1], _mode_level, 1111), True)
 
-        self.assertEqual(_oracle.get_mode_level(), _mode_level)
-
         coin_supply = _coin.total_supply
         _coin.mint(_coin.tax_account, _tax)
         self.assertEqual(_oracle.advance(_coin),
@@ -481,7 +473,7 @@ class OracleUnitTest(unittest.TestCase):
         self.assertEqual(_coin.total_supply,
                          coin_supply + self._reward(_tax, 1) * 1)
         self.assertEqual(_oracle.epoch_id % 3, 1)
-        self.assertEqual(_oracle.get_mode_level(), _level_max)
+        self.assertEqual(_oracle.get_mode_level(), _mode_level)
         self.assertEqual(_oracle.epochs[0].phase, Oracle.Phase.REVEAL)
         self.assertEqual(len(_oracle.epochs[0].commits), 1)
         self.assertEqual(_coin.balance_of(_oracle.epochs[0].reward_account), 0)
@@ -523,8 +515,6 @@ class OracleUnitTest(unittest.TestCase):
                          (_deposit, self._reward(_tax, 1)))
         self.assertEqual(_coin.balance_of(accounts[1]),
                          balance + reclaim_amount)
-
-        self.assertEqual(_oracle.get_mode_level(), _level_max)
 
         coin_supply = _coin.total_supply
         _coin.mint(_coin.tax_account, _tax)
@@ -678,14 +668,12 @@ class OracleUnitTest(unittest.TestCase):
         self.assertEqual(_oracle.reveal(
             accounts[7], _mode_level, 7777), False)
 
-        self.assertEqual(_oracle.get_mode_level(), _mode_level)
-
         coin_supply = _coin.total_supply
         _coin.mint(_coin.tax_account, _tax)
         self.assertEqual(_oracle.advance(_coin), _tax)
         self.assertEqual(_coin.total_supply, coin_supply)
         self.assertEqual(_oracle.epoch_id % 3, 2)
-        self.assertEqual(_oracle.get_mode_level(), _level_max)
+        self.assertEqual(_oracle.get_mode_level(), _mode_level)
         self.assertEqual(_oracle.epochs[0].phase, Oracle.Phase.RECLAIM)
         self.assertEqual(len(_oracle.epochs[0].commits), 6)
         self.assertEqual(_oracle.epochs[0].commits[accounts[1]].oracle_level,
@@ -887,14 +875,12 @@ class OracleUnitTest(unittest.TestCase):
         self.assertEqual(_oracle.reveal(
             accounts[7], _mode_level, 7777), False)
 
-        self.assertEqual(_oracle.get_mode_level(), _mode_level)
-
         coin_supply = _coin.total_supply
         _coin.mint(_coin.tax_account, _tax)
         self.assertEqual(_oracle.advance(_coin), _tax)
         self.assertEqual(_coin.total_supply, coin_supply)
         self.assertEqual(_oracle.epoch_id % 3, 2)
-        self.assertEqual(_oracle.get_mode_level(), _level_max)
+        self.assertEqual(_oracle.get_mode_level(), _mode_level)
         self.assertEqual(_oracle.epochs[0].phase, Oracle.Phase.RECLAIM)
         self.assertEqual(len(_oracle.epochs[0].commits), 6)
         self.assertEqual(_oracle.epochs[0].commits[accounts[1]].oracle_level,
@@ -1064,14 +1050,12 @@ class OracleUnitTest(unittest.TestCase):
         self.assertEqual(_oracle.reveal(
             accounts[7], _mode_level, 7777), False)
 
-        self.assertEqual(_oracle.get_mode_level(), _mode_level)
-
         coin_supply = _coin.total_supply
         _coin.mint(_coin.tax_account, _tax)
         self.assertEqual(_oracle.advance(_coin), _tax)
         self.assertEqual(_coin.total_supply, coin_supply)
         self.assertEqual(_oracle.epoch_id % 3, 2)
-        self.assertEqual(_oracle.get_mode_level(), _level_max)
+        self.assertEqual(_oracle.get_mode_level(), _mode_level)
         self.assertEqual(_oracle.epochs[0].phase, Oracle.Phase.RECLAIM)
         self.assertEqual(len(_oracle.epochs[0].commits), 6)
         self.assertEqual(_oracle.epochs[0].commits[accounts[1]].oracle_level,
@@ -1289,14 +1273,12 @@ class OracleUnitTest(unittest.TestCase):
         self.assertEqual(_oracle.reveal(
             accounts[7], _mode_level, 7777), False)
 
-        self.assertEqual(_oracle.get_mode_level(), _mode_level)
-
         coin_supply = _coin.total_supply
         _coin.mint(_coin.tax_account, _tax)
         self.assertEqual(_oracle.advance(_coin), _tax)
         self.assertEqual(_coin.total_supply, coin_supply)
         self.assertEqual(_oracle.epoch_id % 3, 2)
-        self.assertEqual(_oracle.get_mode_level(), _level_max)
+        self.assertEqual(_oracle.get_mode_level(), _mode_level)
         self.assertEqual(_oracle.epochs[0].phase, Oracle.Phase.RECLAIM)
         self.assertEqual(len(_oracle.epochs[0].commits), 6)
         self.assertEqual(_oracle.epochs[0].commits[accounts[1]].oracle_level,
@@ -1475,14 +1457,12 @@ class OracleUnitTest(unittest.TestCase):
         self.assertEqual(_oracle.reveal(
             accounts[7], real_mode_level, 7777), False)
 
-        self.assertEqual(_oracle.get_mode_level(), real_mode_level)
-
         coin_supply = _coin.total_supply
         _coin.mint(_coin.tax_account, _tax)
         self.assertEqual(_oracle.advance(_coin), _tax)
         self.assertEqual(_coin.total_supply, coin_supply)
         self.assertEqual(_oracle.epoch_id % 3, 2)
-        self.assertEqual(_oracle.get_mode_level(), _level_max)
+        self.assertEqual(_oracle.get_mode_level(), real_mode_level)
         self.assertEqual(_oracle.epochs[0].phase, Oracle.Phase.RECLAIM)
         self.assertEqual(len(_oracle.epochs[0].commits), 6)
         self.assertEqual(_oracle.epochs[0].commits[accounts[1]].oracle_level,
@@ -1703,15 +1683,13 @@ class OracleUnitTest(unittest.TestCase):
         self.assertEqual(_oracle.reveal(
             accounts[7], real_mode_level, 7777), False)
 
-        self.assertEqual(_oracle.get_mode_level(),
-                         min(real_mode_level, real_other_level))
-
         coin_supply = _coin.total_supply
         _coin.mint(_coin.tax_account, _tax)
         self.assertEqual(_oracle.advance(_coin), _tax)
         self.assertEqual(_coin.total_supply, coin_supply)
         self.assertEqual(_oracle.epoch_id % 3, 2)
-        self.assertEqual(_oracle.get_mode_level(), _level_max)
+        self.assertEqual(_oracle.get_mode_level(),
+                         min(real_mode_level, real_other_level))
         self.assertEqual(_oracle.epochs[0].phase, Oracle.Phase.RECLAIM)
         self.assertEqual(len(_oracle.epochs[0].commits), 6)
         self.assertEqual(_oracle.epochs[0].commits[accounts[1]].oracle_level,
@@ -1894,14 +1872,12 @@ class OracleUnitTest(unittest.TestCase):
         self.assertEqual(_oracle.reveal(
             accounts[7], _mode_level, 7777), False)
 
-        self.assertEqual(_oracle.get_mode_level(), _mode_level)
-
         coin_supply = _coin.total_supply
         _coin.mint(_coin.tax_account, _tax)
         self.assertEqual(_oracle.advance(_coin), _tax)
         self.assertEqual(_coin.total_supply, coin_supply)
         self.assertEqual(_oracle.epoch_id % 3, 2)
-        self.assertEqual(_oracle.get_mode_level(), _level_max)
+        self.assertEqual(_oracle.get_mode_level(), _mode_level)
         self.assertEqual(_oracle.epochs[0].phase, Oracle.Phase.RECLAIM)
         self.assertEqual(len(_oracle.epochs[0].commits), 6)
         self.assertEqual(_oracle.epochs[0].commits[accounts[1]].oracle_level,
@@ -2102,14 +2078,12 @@ class OracleUnitTest(unittest.TestCase):
         self.assertEqual(_oracle.reveal(
             accounts[7], _mode_level, 7777), False)
 
-        self.assertEqual(_oracle.get_mode_level(), _mode_level)
-
         coin_supply = _coin.total_supply
         _coin.mint(_coin.tax_account, _tax)
         self.assertEqual(_oracle.advance(_coin), _tax)
         self.assertEqual(_coin.total_supply, coin_supply)
         self.assertEqual(_oracle.epoch_id % 3, 2)
-        self.assertEqual(_oracle.get_mode_level(), _level_max)
+        self.assertEqual(_oracle.get_mode_level(), _mode_level)
         self.assertEqual(_oracle.epochs[0].phase, Oracle.Phase.RECLAIM)
         self.assertEqual(len(_oracle.epochs[0].commits), 6)
         self.assertEqual(_oracle.epochs[0].commits[accounts[1]].oracle_level,
