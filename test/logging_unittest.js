@@ -16,7 +16,7 @@ contract("LoggingUnittest", function (accounts) {
     common.print_contract_size(_logging, "Logging");
 
     for (let epoch_id = 0; epoch_id < 30; epoch_id++) {
-      await _logging.epochUpdated(epoch_id, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+      await _logging.updatedEpoch(epoch_id, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
       let epoch_log = await get_epoch_logs(epoch_id);
       assert.equal(epoch_log.minted_coins, 1);
       assert.equal(epoch_log.burned_coins, 2);
@@ -120,7 +120,7 @@ contract("LoggingUnittest", function (accounts) {
       await _logging.initialize({from: accounts[1]});
     }, "Initializable");
     await should_throw(async () => {
-      await _logging.epochUpdated(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+      await _logging.updatedEpoch(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
                                   {from: accounts[1]});
     }, "Ownable");
     await should_throw(async () => {

@@ -768,7 +768,7 @@ class Logging:
     # Returns
     # ----------------
     # None.
-    def epoch_updated(self, epoch_id, minted, burned, delta, bond_budget,
+    def updated_epoch(self, epoch_id, minted, burned, delta, bond_budget,
                       total_coin_supply, total_bond_supply, valid_bond_supply,
                       oracle_level, current_epoch_start, tax):
         if epoch_id not in self.epoch_logs:
@@ -829,38 +829,38 @@ class Logging:
     # Parameters
     # ----------------
     # |epoch_id|: The epoch ID.
-    # |count|: The number of purchased bonds.
+    # |purchased_bonds|: The number of purchased bonds.
     #
     # Returns
     # ----------------
     # None.
-    def purchased_bonds(self, epoch_id, count):
+    def purchased_bonds(self, epoch_id, purchased_bonds):
         if epoch_id not in self.bond_logs:
             self.epoch_logs[epoch_id] = Logging.EpochLog()
             self.vote_logs[epoch_id] = Logging.VoteLog()
             self.bond_logs[epoch_id] = Logging.BondLog()
             
-        self.bond_logs[epoch_id].purchased_bonds += count
+        self.bond_logs[epoch_id].purchased_bonds += purchased_bonds
 
     # Called when ACB.redeem_bonds is called.
     #
     # Parameters
     # ----------------
     # |epoch_id|: The epoch ID.
-    # |count_valid|: The number of redeemded bonds.
-    # |count_expired|: The number of expired bonds.
+    # |redeemed_bonds|: The number of redeemded bonds.
+    # |expired_bonds|: The number of expired bonds.
     #
     # Returns
     # ----------------
     # None.
-    def redeemed_bonds(self, epoch_id, count_valid, count_expired):
+    def redeemed_bonds(self, epoch_id, redeemed_bonds, expired_bonds):
         if epoch_id not in self.bond_logs:
             self.epoch_logs[epoch_id] = Logging.EpochLog()
             self.vote_logs[epoch_id] = Logging.VoteLog()
             self.bond_logs[epoch_id] = Logging.BondLog()
             
-        self.bond_logs[epoch_id].redeemed_bonds += count_valid
-        self.bond_logs[epoch_id].expired_bonds += count_expired
+        self.bond_logs[epoch_id].redeemed_bonds += redeemed_bonds
+        self.bond_logs[epoch_id].expired_bonds += expired_bonds
 
 
 #-------------------------------------------------------------------------------
@@ -1107,7 +1107,7 @@ class ACB:
             # Increase or decrease the total coin supply.
             mint = self._control_supply(delta)
 
-            self.logging.epoch_updated(
+            self.logging.updated_epoch(
                 self.oracle.epoch_id, mint, burned, delta, self.bond_budget,
                 self.coin.total_supply, self.bond.total_supply,
                 self.valid_bond_supply(), self.oracle_level,
@@ -1186,8 +1186,8 @@ class ACB:
     # ----------------
     # The number of successfully redeemed bonds.
     def redeem_bonds(self, sender, redemption_epochs):
-        count_valid = 0
-        count_expired = 0
+        redeemed_bonds = 0
+        expired_bonds = 0
         for redemption_epoch in redemption_epochs:
             count = self.bond.balance_of(sender, redemption_epoch)
             if self.oracle.epoch_id < redemption_epoch:
@@ -1208,17 +1208,17 @@ class ACB:
 
                 # Burn the redeemed bonds.
                 self.bond_budget += count
-                count_valid += count
+                redeemed_bonds += count
             else:
-                count_expired += count
+                expired_bonds += count
 
             self.bond.burn(sender, redemption_epoch, count)
 
         assert(self.valid_bond_supply() + self.bond_budget >= 0)
 
         self.logging.redeemed_bonds(
-            self.oracle.epoch_id, count_valid, count_expired)
-        return count_valid
+            self.oracle.epoch_id, redeemed_bonds, expired_bonds)
+        return redeemed_bonds
 
     # Increase or decrease the total coin supply.
     #

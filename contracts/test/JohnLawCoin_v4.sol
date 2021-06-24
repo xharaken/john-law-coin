@@ -331,7 +331,7 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
       // Increase or decrease the total coin supply.
       uint mint = _controlSupply(delta);
 
-      logging_.epochUpdated(oracle_.epoch_id_(), mint, burned, delta,
+      logging_.updatedEpoch(oracle_.epoch_id_(), mint, burned, delta,
                             bond_budget_, coin_.totalSupply(),
                             bond_.totalSupply(), validBondSupply(),
                             oracle_level_, current_epoch_start_, tax);
@@ -426,8 +426,8 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
       public whenNotPaused returns (uint) {
     address sender = msg.sender;
 
-    uint count_valid = 0;
-    uint count_expired = 0;
+    uint redeemed_bonds = 0;
+    uint expired_bonds = 0;
     for (uint i = 0; i < redemption_epochs.length; i++) {
       uint redemption_epoch = redemption_epochs[i];
       uint count = bond_.balanceOf(sender, redemption_epoch);
@@ -450,17 +450,17 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
 
         // Burn the redeemed bonds.
         bond_budget_ += count.toInt256();
-        count_valid += count;
+        redeemed_bonds += count;
       } else {
-        count_expired += count;
+        expired_bonds += count;
       }
       bond_.burn(sender, redemption_epoch, count);
     }
     require(validBondSupply().toInt256() + bond_budget_ >= 0, "rb1");
     
-    logging_.redeemedBonds(oracle_.epoch_id_(), count_valid, count_expired);
-    emit RedeemBondsEvent(sender, count_valid);
-    return count_valid;
+    logging_.redeemedBonds(oracle_.epoch_id_(), redeemed_bonds, expired_bonds);
+    emit RedeemBondsEvent(sender, redeemed_bonds);
+    return redeemed_bonds;
   }
 
   // Increase or decrease the total coin supply.

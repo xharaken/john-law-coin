@@ -929,7 +929,7 @@ contract Logging is OwnableUpgradeable {
   // Returns
   // ----------------
   // None.
-  function epochUpdated(uint epoch_id, uint minted, uint burned, int delta,
+  function updatedEpoch(uint epoch_id, uint minted, uint burned, int delta,
                         int bond_budget, uint total_coin_supply,
                         uint total_bond_supply, uint valid_bond_supply,
                         uint oracle_level, uint current_epoch_start, uint tax)
@@ -989,14 +989,14 @@ contract Logging is OwnableUpgradeable {
   // Parameters
   // ----------------
   // |epoch_id|: The epoch ID.
-  // |count|: The number of purchased bonds.
+  // |purchased_bonds|: The number of purchased bonds.
   //
   // Returns
   // ----------------
   // None.
-  function purchasedBonds(uint epoch_id, uint count)
+  function purchasedBonds(uint epoch_id, uint purchased_bonds)
       public onlyOwner {
-    bond_logs_[epoch_id].purchased_bonds += count;
+    bond_logs_[epoch_id].purchased_bonds += purchased_bonds;
   }
 
   // Called when ACB.redeemBonds is called.
@@ -1004,16 +1004,16 @@ contract Logging is OwnableUpgradeable {
   // Parameters
   // ----------------
   // |epoch_id|: The epoch ID.
-  // |count_valid|: The number of redeemded bonds.
-  // |count_expired|: The number of expired bonds.
+  // |redeemed_bonds|: The number of redeemded bonds.
+  // |expired_bonds|: The number of expired bonds.
   //
   // Returns
   // ----------------
   // None.
-  function redeemedBonds(uint epoch_id, uint count_valid, uint count_expired)
+  function redeemedBonds(uint epoch_id, uint redeemed_bonds, uint expired_bonds)
       public onlyOwner {
-    bond_logs_[epoch_id].redeemed_bonds += count_valid;
-    bond_logs_[epoch_id].expired_bonds += count_expired;
+    bond_logs_[epoch_id].redeemed_bonds += redeemed_bonds;
+    bond_logs_[epoch_id].expired_bonds += expired_bonds;
   }
 }
 
@@ -1338,7 +1338,7 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
       // Increase or decrease the total coin supply.
       uint mint = _controlSupply(delta);
 
-      logging_.epochUpdated(oracle_.epoch_id_(), mint, burned, delta,
+      logging_.updatedEpoch(oracle_.epoch_id_(), mint, burned, delta,
                             bond_budget_, coin_.totalSupply(),
                             bond_.totalSupply(), validBondSupply(),
                             oracle_level_, current_epoch_start_, tax);
@@ -1433,8 +1433,8 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
       public whenNotPaused returns (uint) {
     address sender = msg.sender;
 
-    uint count_valid = 0;
-    uint count_expired = 0;
+    uint redeemed_bonds = 0;
+    uint expired_bonds = 0;
     for (uint i = 0; i < redemption_epochs.length; i++) {
       uint redemption_epoch = redemption_epochs[i];
       uint count = bond_.balanceOf(sender, redemption_epoch);
@@ -1457,17 +1457,17 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
 
         // Burn the redeemed bonds.
         bond_budget_ += count.toInt256();
-        count_valid += count;
+        redeemed_bonds += count;
       } else {
-        count_expired += count;
+        expired_bonds += count;
       }
       bond_.burn(sender, redemption_epoch, count);
     }
     require(validBondSupply().toInt256() + bond_budget_ >= 0, "rb1");
     
-    logging_.redeemedBonds(oracle_.epoch_id_(), count_valid, count_expired);
-    emit RedeemBondsEvent(sender, count_valid);
-    return count_valid;
+    logging_.redeemedBonds(oracle_.epoch_id_(), redeemed_bonds, expired_bonds);
+    emit RedeemBondsEvent(sender, redeemed_bonds);
+    return redeemed_bonds;
   }
 
   // Increase or decrease the total coin supply.

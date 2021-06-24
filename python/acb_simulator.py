@@ -96,9 +96,9 @@ class ACBSimulator(unittest.TestCase):
                 self.reclaim_miss = 0
                 self.reward_hit = 0
                 self.reward_miss = 0
-                self.redeem_count = 0
-                self.fast_redeem_count = 0
-                self.expired_count = 0
+                self.redeemed_bonds = 0
+                self.fast_redeemed_bonds = 0
+                self.expired_bonds = 0
                 self.redemption_count = 0
                 self.redeem_hit = 0
                 self.purchase_hit = 0
@@ -123,9 +123,9 @@ class ACBSimulator(unittest.TestCase):
                 self.supply_decreased = 0
                 self.supply_nochange = 0
                 self.total_redemption_count = 0
-                self.total_redeem_count = 0
-                self.total_fast_redeem_count = 0
-                self.total_expired_count = 0
+                self.total_redeemed_bonds = 0
+                self.total_fast_redeemed_bonds = 0
+                self.total_expired_bonds = 0
                 self.total_redeem_hit = 0
                 self.total_purchase_hit = 0
                 self.total_purchase_count = 0
@@ -146,9 +146,9 @@ class ACBSimulator(unittest.TestCase):
                     self.supply_decreased += 1
                 else:
                     self.supply_nochange += 1
-                self.total_redeem_count += self.redeem_count
-                self.total_fast_redeem_count += self.fast_redeem_count
-                self.total_expired_count += self.expired_count
+                self.total_redeemed_bonds += self.redeemed_bonds
+                self.total_fast_redeemed_bonds += self.fast_redeemed_bonds
+                self.total_expired_bonds += self.expired_bonds
                 self.total_redemption_count += self.redemption_count
                 self.total_redeem_hit += self.redeem_hit
                 self.total_purchase_hit += self.purchase_hit
@@ -216,9 +216,9 @@ class ACBSimulator(unittest.TestCase):
             self.assertEqual(bond_log.purchased_bonds,
                              self.metrics.purchase_count)
             self.assertEqual(bond_log.redeemed_bonds,
-                             self.metrics.redeem_count)
+                             self.metrics.redeemed_bonds)
             self.assertEqual(bond_log.expired_bonds,
-                             self.metrics.expired_count)
+                             self.metrics.expired_bonds)
             vote_log = logging.vote_logs[epoch_id]
             self.assertEqual(vote_log.commit_succeeded,
                              self.metrics.reveal_hit + self.metrics.reveal_miss)
@@ -272,11 +272,11 @@ class ACBSimulator(unittest.TestCase):
                        self.metrics.redeem_hit,
                        divide_or_zero(100 * self.metrics.redemption_count,
                                       self.metrics.redeem_hit),
-                       self.metrics.fast_redeem_count,
-                       self.metrics.redeem_count,
-                       divide_or_zero(100 * self.metrics.fast_redeem_count,
-                                      self.metrics.redeem_count),
-                       self.metrics.expired_count,
+                       self.metrics.fast_redeemed_bonds,
+                       self.metrics.redeemed_bonds,
+                       divide_or_zero(100 * self.metrics.fast_redeemed_bonds,
+                                      self.metrics.redeemed_bonds),
+                       self.metrics.expired_bonds,
                        self.metrics.delta,
                        self.metrics.mint,
                        self.metrics.lost,
@@ -329,11 +329,11 @@ class ACBSimulator(unittest.TestCase):
                self.metrics.total_redeem_hit,
                divide_or_zero(100 * self.metrics.total_redemption_count,
                               self.metrics.total_redeem_hit),
-               self.metrics.total_fast_redeem_count,
-               self.metrics.total_redeem_count,
-               divide_or_zero(100 * self.metrics.total_fast_redeem_count,
-                              self.metrics.total_redeem_count),
-               self.metrics.total_expired_count,
+               self.metrics.total_fast_redeemed_bonds,
+               self.metrics.total_redeemed_bonds,
+               divide_or_zero(100 * self.metrics.total_fast_redeemed_bonds,
+                              self.metrics.total_redeemed_bonds),
+               self.metrics.total_expired_bonds,
                self.metrics.supply_increased,
                self.metrics.supply_nochange,
                self.metrics.supply_decreased,
@@ -440,9 +440,9 @@ class ACBSimulator(unittest.TestCase):
             if len(redemptions) == 0:
                 continue
 
-            fast_redeem_count = 0
-            redeem_count = 0
-            expired_count = 0
+            fast_redeemed_bonds = 0
+            redeemed_bonds = 0
+            expired_bonds = 0
             bond_budget = acb.bond_budget
             for redemption in redemptions:
                 count = voter.bonds[redemption]
@@ -450,24 +450,24 @@ class ACBSimulator(unittest.TestCase):
                     if bond_budget >= 0:
                         continue
                     count = min(count, -bond_budget)
-                    fast_redeem_count += count
+                    fast_redeemed_bonds += count
                 if (acb.oracle.epoch_id <
                     redemption + ACB.BOND_REDEEMABLE_PERIOD):
-                    redeem_count += count
+                    redeemed_bonds += count
                     bond_budget += count
                 else:
-                    expired_count += count
+                    expired_bonds += count
                 voter.bonds[redemption] -= count
                 assert(voter.bonds[redemption] >= 0)
                 if voter.bonds[redemption] == 0:
                     del voter.bonds[redemption]
-            voter.balance += ACB.BOND_REDEMPTION_PRICE * redeem_count
+            voter.balance += ACB.BOND_REDEMPTION_PRICE * redeemed_bonds
 
             coin_supply = acb.coin.total_supply
             bond_supply = acb.bond.total_supply
             valid_bond_supply = acb.valid_bond_supply()
             self.assertEqual(
-                acb.redeem_bonds(voter.address, redemptions), redeem_count)
+                acb.redeem_bonds(voter.address, redemptions), redeemed_bonds)
             self.assertEqual(acb.bond_budget, bond_budget)
             self.assertEqual(acb.coin.balance_of(voter.address), voter.balance)
 
@@ -482,16 +482,16 @@ class ACBSimulator(unittest.TestCase):
                                  voter.bonds[redemption])
 
             self.assertEqual(acb.bond.total_supply,
-                             bond_supply - redeem_count - expired_count)
+                             bond_supply - redeemed_bonds - expired_bonds)
             self.assertEqual(acb.valid_bond_supply(),
-                             valid_bond_supply - redeem_count)
+                             valid_bond_supply - redeemed_bonds)
             self.assertEqual(acb.coin.total_supply,
                              coin_supply + ACB.BOND_REDEMPTION_PRICE *
-                             redeem_count)
+                             redeemed_bonds)
 
-            self.metrics.fast_redeem_count += fast_redeem_count
-            self.metrics.expired_count += expired_count
-            self.metrics.redeem_count += redeem_count
+            self.metrics.fast_redeemed_bonds += fast_redeemed_bonds
+            self.metrics.expired_bonds += expired_bonds
+            self.metrics.redeemed_bonds += redeemed_bonds
             self.metrics.redemption_count += len(redemptions)
             self.metrics.redeem_hit += 1
 

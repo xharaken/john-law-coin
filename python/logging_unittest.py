@@ -18,7 +18,7 @@ class LoggingUnitTest(unittest.TestCase):
     def run(self):
         logging = Logging()
         for epoch_id in range(30):
-            logging.epoch_updated(epoch_id, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+            logging.updated_epoch(epoch_id, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
             epoch_log = logging.epoch_logs[epoch_id]
             self.assertEqual(epoch_log.minted_coins, 1)
             self.assertEqual(epoch_log.burned_coins, 2)
