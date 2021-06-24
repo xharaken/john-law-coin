@@ -72,16 +72,6 @@ class ACBUnitTest(unittest.TestCase):
         pass
 
     def run(self):
-        if (ACB.BOND_PRICE >= 2 and
-            ACB.BOND_REDEMPTION_PRICE >= 2 and
-            ACB.BOND_REDEMPTION_PERIOD >= 3 and
-            ACB.BOND_REDEEMABLE_PERIOD >= 3 and
-            ACB.EPOCH_DURATION >= 2):
-            self.run_non_vote_tests()
-
-        self.run_vote_tests()
-
-    def run_non_vote_tests(self):
         acb = self.acb
         accounts = self.accounts
 
@@ -179,7 +169,7 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb._control_supply(-self.bond_price * 100), 0)
         self.assertEqual(acb.bond.total_supply, 0)
         self.assertEqual(acb.bond_budget, 100)
-
+        
         self.assertEqual(acb.purchase_bonds(accounts[1], 50),
                          acb.oracle.epoch_id + ACB.BOND_REDEMPTION_PERIOD)
         self.assertEqual(acb.purchase_bonds(accounts[1], 50),
@@ -205,7 +195,8 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb._control_supply(
             ACB.BOND_REDEMPTION_PRICE - 1), 0)
         self.assertEqual(acb.bond_budget, 0)
-        self.assertEqual(acb._control_supply(ACB.BOND_REDEMPTION_PRICE * 200),
+        self.assertEqual(acb._control_supply(
+            ACB.BOND_REDEMPTION_PRICE * 200),
                          ACB.BOND_REDEMPTION_PRICE * 100)
         self.assertEqual(acb.bond_budget, -100)
         self.assertEqual(acb._control_supply(
@@ -214,7 +205,7 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb._control_supply(
             ACB.BOND_REDEMPTION_PRICE * 100), 0)
         self.assertEqual(acb.bond_budget, -100)
-
+        
         self.assertEqual(acb._control_supply(-self.bond_price * 100), 0)
         self.assertEqual(acb.bond.total_supply, 100)
         self.assertEqual(acb.bond_budget, 100)
@@ -236,19 +227,18 @@ class ACBUnitTest(unittest.TestCase):
             ACB.BOND_REDEMPTION_PRICE * 30 + 1), 0)
         self.assertEqual(acb.bond_budget, -30)
         self.assertEqual(acb._control_supply(
-            ACB.BOND_REDEMPTION_PRICE * 210), ACB.BOND_REDEMPTION_PRICE * 10)
+            ACB.BOND_REDEMPTION_PRICE * 210),
+                         ACB.BOND_REDEMPTION_PRICE * 10)
         self.assertEqual(acb.bond_budget, -200)
 
         self.assertEqual(acb.redeem_bonds(
-            accounts[1], [acb.oracle.epoch_id + ACB.BOND_REDEMPTION_PERIOD]),
-                         200)
+            accounts[1],
+            [acb.oracle.epoch_id + ACB.BOND_REDEMPTION_PERIOD]), 200)
         self.assertEqual(acb.bond.total_supply, 0)
         self.assertEqual(acb.bond_budget, 0)
 
         # timestamp
         self.assertEqual(acb.get_timestamp(), 0)
-        acb.set_timestamp(1)
-        self.assertEqual(acb.get_timestamp(), 1)
         acb.set_timestamp(ACB.EPOCH_DURATION)
         self.assertEqual(acb.get_timestamp(), ACB.EPOCH_DURATION)
         with self.assertRaises(Exception):
@@ -258,440 +248,448 @@ class ACBUnitTest(unittest.TestCase):
         with self.assertRaises(Exception):
             acb.set_timestamp(0)
 
-        # purchase_bonds
-        self.assertEqual(acb._control_supply(-self.bond_price * 80), 0)
-        self.assertEqual(acb.bond.total_supply, 0)
-        self.assertEqual(acb.bond_budget, 80)
+        if (ACB.BOND_PRICE >= 2 and
+            ACB.BOND_REDEMPTION_PRICE >= 2 and
+            ACB.BOND_REDEMPTION_PERIOD >= 3 and
+            ACB.BOND_REDEEMABLE_PERIOD >= 3 and
+            ACB.EPOCH_DURATION >= 2):
+
+            # purchase_bonds
+            self.assertEqual(acb._control_supply(-self.bond_price * 80), 0)
+            self.assertEqual(acb.bond.total_supply, 0)
+            self.assertEqual(acb.bond_budget, 80)
         
-        coin_supply = acb.coin.total_supply
+            coin_supply = acb.coin.total_supply
 
-        self.advance_epoch(ACB.EPOCH_DURATION)
-        t1 = acb.oracle.epoch_id + ACB.BOND_REDEMPTION_PERIOD
+            self.advance_epoch(ACB.EPOCH_DURATION)
+            t1 = acb.oracle.epoch_id + ACB.BOND_REDEMPTION_PERIOD
 
-        acb.coin.move(accounts[1], accounts[2], self.bond_price * 30)
-        acb.coin.move(accounts[1], accounts[3], self.bond_price * 50)
-        with self.assertRaises(Exception):
-            acb.purchase_bonds(accounts[4], 1)
-        with self.assertRaises(Exception):
-            acb.purchase_bonds(accounts[5], 1)
-        with self.assertRaises(Exception):
-            acb.purchase_bonds(accounts[1], 0)
-        with self.assertRaises(Exception):
-            acb.purchase_bonds(accounts[1], 81)
-        with self.assertRaises(Exception):
-            acb.purchase_bonds(accounts[2], 0)
-        with self.assertRaises(Exception):
-            acb.purchase_bonds(accounts[2], 81)
-        with self.assertRaises(Exception):
-            acb.purchase_bonds(accounts[2], 31)
-        with self.assertRaises(Exception):
-            acb.purchase_bonds(accounts[3], 0)
-        with self.assertRaises(Exception):
-            acb.purchase_bonds(accounts[3], 81)
-        with self.assertRaises(Exception):
-            acb.purchase_bonds(accounts[3], 51)
+            acb.coin.move(accounts[1], accounts[2], self.bond_price * 30)
+            acb.coin.move(accounts[1], accounts[3], self.bond_price * 50)
+            with self.assertRaises(Exception):
+                acb.purchase_bonds(accounts[4], 1)
+            with self.assertRaises(Exception):
+                acb.purchase_bonds(accounts[5], 1)
+            with self.assertRaises(Exception):
+                acb.purchase_bonds(accounts[1], 0)
+            with self.assertRaises(Exception):
+                acb.purchase_bonds(accounts[1], 81)
+            with self.assertRaises(Exception):
+                acb.purchase_bonds(accounts[2], 0)
+            with self.assertRaises(Exception):
+                acb.purchase_bonds(accounts[2], 81)
+            with self.assertRaises(Exception):
+                acb.purchase_bonds(accounts[2], 31)
+            with self.assertRaises(Exception):
+                acb.purchase_bonds(accounts[3], 0)
+            with self.assertRaises(Exception):
+                acb.purchase_bonds(accounts[3], 81)
+            with self.assertRaises(Exception):
+                acb.purchase_bonds(accounts[3], 51)
 
-        self.assertEqual(acb.purchase_bonds(accounts[2], 1), t1)
-        self.assertEqual(acb.bond.total_supply, 1)
-        self.assertEqual(acb.bond_budget, 79)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t1), 1)
-        self.check_redemption_epochs(acb.bond, accounts[2], [t1])
-        self.assertEqual(acb.coin.total_supply,
-                         coin_supply - self.bond_price * 1)
+            self.assertEqual(acb.purchase_bonds(accounts[2], 1), t1)
+            self.assertEqual(acb.bond.total_supply, 1)
+            self.assertEqual(acb.bond_budget, 79)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t1), 1)
+            self.check_redemption_epochs(acb.bond, accounts[2], [t1])
+            self.assertEqual(acb.coin.total_supply,
+                             coin_supply - self.bond_price * 1)
+            
+            self.assertEqual(acb.purchase_bonds(accounts[2], 10), t1)
+            self.assertEqual(acb.bond.total_supply, 11)
+            self.assertEqual(acb.bond_budget, 69)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t1), 11)
+            self.check_redemption_epochs(acb.bond, accounts[2], [t1])
+            self.assertEqual(acb.coin.total_supply,
+                             coin_supply - self.bond_price * 11)
 
-        self.assertEqual(acb.purchase_bonds(accounts[2], 10), t1)
-        self.assertEqual(acb.bond.total_supply, 11)
-        self.assertEqual(acb.bond_budget, 69)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t1), 11)
-        self.check_redemption_epochs(acb.bond, accounts[2], [t1])
-        self.assertEqual(acb.coin.total_supply,
-                         coin_supply - self.bond_price * 11)
+            with self.assertRaises(Exception):
+                acb.purchase_bonds(accounts[1], 70)
+            with self.assertRaises(Exception):
+                acb.purchase_bonds(accounts[3], 70)
 
-        with self.assertRaises(Exception):
-            acb.purchase_bonds(accounts[1], 70)
-        with self.assertRaises(Exception):
-            acb.purchase_bonds(accounts[3], 70)
+            self.advance_epoch(ACB.EPOCH_DURATION)
+            t2 = acb.oracle.epoch_id + ACB.BOND_REDEMPTION_PERIOD
 
-        self.advance_epoch(ACB.EPOCH_DURATION)
-        t2 = acb.oracle.epoch_id + ACB.BOND_REDEMPTION_PERIOD
+            self.assertEqual(acb.purchase_bonds(accounts[2], 1), t2)
+            self.assertEqual(acb.bond.total_supply, 12)
+            self.assertEqual(acb.bond_budget, 68)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t2), 1)
+            self.check_redemption_epochs(acb.bond, accounts[2], [t1, t2])
+            self.assertEqual(acb.coin.total_supply,
+                             coin_supply - self.bond_price * 12)
 
-        self.assertEqual(acb.purchase_bonds(accounts[2], 1), t2)
-        self.assertEqual(acb.bond.total_supply, 12)
-        self.assertEqual(acb.bond_budget, 68)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t2), 1)
-        self.check_redemption_epochs(acb.bond, accounts[2], [t1, t2])
-        self.assertEqual(acb.coin.total_supply,
-                         coin_supply - self.bond_price * 12)
+            self.assertEqual(acb.purchase_bonds(accounts[2], 10), t2)
+            self.assertEqual(acb.bond.total_supply, 22)
+            self.assertEqual(acb.bond_budget, 58)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t2), 11)
+            self.check_redemption_epochs(acb.bond, accounts[2], [t1, t2])
+            self.assertEqual(acb.coin.total_supply,
+                             coin_supply - self.bond_price * 22)
 
-        self.assertEqual(acb.purchase_bonds(accounts[2], 10), t2)
-        self.assertEqual(acb.bond.total_supply, 22)
-        self.assertEqual(acb.bond_budget, 58)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t2), 11)
-        self.check_redemption_epochs(acb.bond, accounts[2], [t1, t2])
-        self.assertEqual(acb.coin.total_supply,
-                         coin_supply - self.bond_price * 22)
+            with self.assertRaises(Exception):
+                acb.purchase_bonds(accounts[1], 59)
+            with self.assertRaises(Exception):
+                acb.purchase_bonds(accounts[3], 59)
 
-        with self.assertRaises(Exception):
-            acb.purchase_bonds(accounts[1], 59)
-        with self.assertRaises(Exception):
-            acb.purchase_bonds(accounts[3], 59)
+            self.assertEqual(acb.purchase_bonds(accounts[1], 10), t2)
+            self.assertEqual(acb.bond.total_supply, 32)
+            self.assertEqual(acb.bond_budget, 48)
+            self.assertEqual(acb.bond.balance_of(accounts[1], t2), 10)
+            self.check_redemption_epochs(acb.bond, accounts[1], [t2])
+            self.assertEqual(acb.coin.total_supply,
+                             coin_supply - self.bond_price * 32)
 
-        self.assertEqual(acb.purchase_bonds(accounts[1], 10), t2)
-        self.assertEqual(acb.bond.total_supply, 32)
-        self.assertEqual(acb.bond_budget, 48)
-        self.assertEqual(acb.bond.balance_of(accounts[1], t2), 10)
-        self.check_redemption_epochs(acb.bond, accounts[1], [t2])
-        self.assertEqual(acb.coin.total_supply,
-                         coin_supply - self.bond_price * 32)
+            self.advance_epoch(ACB.EPOCH_DURATION)
+            t3 = acb.oracle.epoch_id + ACB.BOND_REDEMPTION_PERIOD
 
-        self.advance_epoch(ACB.EPOCH_DURATION)
-        t3 = acb.oracle.epoch_id + ACB.BOND_REDEMPTION_PERIOD
+            with self.assertRaises(Exception):
+                acb.purchase_bonds(accounts[3], 49)
+            self.assertEqual(acb.purchase_bonds(accounts[3], 48), t3)
+            self.assertEqual(acb.bond.total_supply, 80)
+            self.assertEqual(acb.bond_budget, 0)
+            self.assertEqual(acb.bond.balance_of(accounts[3], t3), 48)
+            self.check_redemption_epochs(acb.bond, accounts[3], [t3])
+            self.assertEqual(acb.coin.total_supply,
+                             coin_supply - self.bond_price * 80)
 
-        with self.assertRaises(Exception):
-            acb.purchase_bonds(accounts[3], 49)
-        self.assertEqual(acb.purchase_bonds(accounts[3], 48), t3)
-        self.assertEqual(acb.bond.total_supply, 80)
-        self.assertEqual(acb.bond_budget, 0)
-        self.assertEqual(acb.bond.balance_of(accounts[3], t3), 48)
-        self.check_redemption_epochs(acb.bond, accounts[3], [t3])
-        self.assertEqual(acb.coin.total_supply,
-                         coin_supply - self.bond_price * 80)
+            acb.coin.move(accounts[1], accounts[2], self.bond_price * 10)
+            acb.coin.move(accounts[1], accounts[3], self.bond_price * 10)
+            with self.assertRaises(Exception):
+                acb.purchase_bonds(accounts[2], 1)
+            self.assertEqual(acb.bond.total_supply, 80)
+            self.assertEqual(acb.bond_budget, 0)
+            self.assertEqual(acb.bond.balance_of(accounts[3], t3), 48)
+            self.check_redemption_epochs(acb.bond, accounts[3], [t3])
+            self.assertEqual(acb.coin.total_supply,
+                             coin_supply - self.bond_price * 80)
+            with self.assertRaises(Exception):
+                acb.purchase_bonds(accounts[3], 1)
+            self.assertEqual(acb.bond.total_supply, 80)
+            self.assertEqual(acb.bond_budget, 0)
+            self.assertEqual(acb.bond.balance_of(accounts[3], t3), 48)
+            self.check_redemption_epochs(acb.bond, accounts[3], [t3])
+            self.assertEqual(acb.coin.total_supply,
+                             coin_supply - self.bond_price * 80)
 
-        acb.coin.move(accounts[1], accounts[2], self.bond_price * 10)
-        acb.coin.move(accounts[1], accounts[3], self.bond_price * 10)
-        with self.assertRaises(Exception):
-            acb.purchase_bonds(accounts[2], 1)
-        self.assertEqual(acb.bond.total_supply, 80)
-        self.assertEqual(acb.bond_budget, 0)
-        self.assertEqual(acb.bond.balance_of(accounts[3], t3), 48)
-        self.check_redemption_epochs(acb.bond, accounts[3], [t3])
-        self.assertEqual(acb.coin.total_supply,
-                         coin_supply - self.bond_price * 80)
-        with self.assertRaises(Exception):
-            acb.purchase_bonds(accounts[3], 1)
-        self.assertEqual(acb.bond.total_supply, 80)
-        self.assertEqual(acb.bond_budget, 0)
-        self.assertEqual(acb.bond.balance_of(accounts[3], t3), 48)
-        self.check_redemption_epochs(acb.bond, accounts[3], [t3])
-        self.assertEqual(acb.coin.total_supply,
-                         coin_supply - self.bond_price * 80)
+            self.assertEqual(acb.coin.balance_of(accounts[2]),
+                             (30 + 10 - 22) * self.bond_price)
+            self.assertEqual(acb.coin.balance_of(accounts[3]),
+                             (50 + 10 - 48) * self.bond_price)
 
-        self.assertEqual(acb.coin.balance_of(accounts[2]),
-                         (30 + 10 - 22) * self.bond_price)
-        self.assertEqual(acb.coin.balance_of(accounts[3]),
-                         (50 + 10 - 48) * self.bond_price)
+            # redeem_bonds
+            self.assertEqual(acb.bond.balance_of(accounts[2], t1), 11)
+            self.assertEqual(acb.bond.balance_of(accounts[1], t2), 10)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t2), 11)
+            self.assertEqual(acb.bond.balance_of(accounts[3], t3), 48)
+            self.assertEqual(
+                acb.bond.number_of_bonds_owned_by(accounts[1]), 10);
+            self.assertEqual(
+                acb.bond.number_of_bonds_owned_by(accounts[2]), 22);
+            self.assertEqual(
+                acb.bond.number_of_bonds_owned_by(accounts[3]), 48);
+            self.check_redemption_epochs(acb.bond, accounts[1], [t2])
+            self.check_redemption_epochs(acb.bond, accounts[2], [t1, t2])
+            self.check_redemption_epochs(acb.bond, accounts[3], [t3])
 
-        # redeem_bonds
-        self.assertEqual(acb.bond.balance_of(accounts[2], t1), 11)
-        self.assertEqual(acb.bond.balance_of(accounts[1], t2), 10)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t2), 11)
-        self.assertEqual(acb.bond.balance_of(accounts[3], t3), 48)
-        self.assertEqual(acb.bond.number_of_bonds_owned_by(accounts[1]), 10);
-        self.assertEqual(acb.bond.number_of_bonds_owned_by(accounts[2]), 22);
-        self.assertEqual(acb.bond.number_of_bonds_owned_by(accounts[3]), 48);
-        self.check_redemption_epochs(acb.bond, accounts[1], [t2])
-        self.check_redemption_epochs(acb.bond, accounts[2], [t1, t2])
-        self.check_redemption_epochs(acb.bond, accounts[3], [t3])
+            self.advance_epoch(ACB.EPOCH_DURATION * ACB.BOND_REDEMPTION_PERIOD)
+            t4 = acb.oracle.epoch_id + ACB.BOND_REDEMPTION_PERIOD
 
-        self.advance_epoch(ACB.EPOCH_DURATION * ACB.BOND_REDEMPTION_PERIOD)
-        t4 = acb.oracle.epoch_id + ACB.BOND_REDEMPTION_PERIOD
+            self.assertEqual(acb.redeem_bonds(accounts[4], [t1]), 0)
+            self.assertEqual(acb.redeem_bonds(accounts[2], []), 0)
 
-        self.assertEqual(acb.redeem_bonds(accounts[4], [t1]), 0)
-        self.assertEqual(acb.redeem_bonds(accounts[2], []), 0)
+            coin_supply = acb.coin.total_supply
+            bond_supply = acb.bond.total_supply
+            balance = acb.coin.balance_of(accounts[2])
+            self.assertEqual(acb.bond_budget, 0)
+            self.assertEqual(acb.redeem_bonds(accounts[2], [t1]), 11)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t1), 0)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t2), 11)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t3), 0)
+            self.check_redemption_epochs(acb.bond, accounts[2], [t2])
+            self.assertEqual(acb.coin.balance_of(accounts[2]),
+                             balance + 11 * ACB.BOND_REDEMPTION_PRICE)
+            self.assertEqual(acb.bond_budget, 11)
+            self.assertEqual(acb.bond.total_supply, bond_supply - 11)
+            self.assertEqual(acb.coin.total_supply, coin_supply +
+                             11 * ACB.BOND_REDEMPTION_PRICE)
 
-        coin_supply = acb.coin.total_supply
-        bond_supply = acb.bond.total_supply
-        balance = acb.coin.balance_of(accounts[2])
-        self.assertEqual(acb.bond_budget, 0)
-        self.assertEqual(acb.redeem_bonds(accounts[2], [t1]), 11)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t1), 0)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t2), 11)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t3), 0)
-        self.check_redemption_epochs(acb.bond, accounts[2], [t2])
-        self.assertEqual(acb.coin.balance_of(accounts[2]),
-                         balance + 11 * ACB.BOND_REDEMPTION_PRICE)
-        self.assertEqual(acb.bond_budget, 11)
-        self.assertEqual(acb.bond.total_supply, bond_supply - 11)
-        self.assertEqual(acb.coin.total_supply, coin_supply +
-                         11 * ACB.BOND_REDEMPTION_PRICE)
+            self.assertEqual(acb.redeem_bonds(accounts[2], [t2, 123456]), 11)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t1), 0)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t2), 0)
+            self.check_redemption_epochs(acb.bond, accounts[2], [])
+            self.assertEqual(acb.coin.balance_of(accounts[2]),
+                             balance + 22 * ACB.BOND_REDEMPTION_PRICE)
+            self.assertEqual(acb.bond_budget, 22)
+            self.assertEqual(acb.bond.total_supply, bond_supply - 22)
+            self.assertEqual(acb.coin.total_supply, coin_supply +
+                             22 * ACB.BOND_REDEMPTION_PRICE)
 
-        self.assertEqual(acb.redeem_bonds(accounts[2], [t2, 123456]), 11)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t1), 0)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t2), 0)
-        self.check_redemption_epochs(acb.bond, accounts[2], [])
-        self.assertEqual(acb.coin.balance_of(accounts[2]),
-                         balance + 22 * ACB.BOND_REDEMPTION_PRICE)
-        self.assertEqual(acb.bond_budget, 22)
-        self.assertEqual(acb.bond.total_supply, bond_supply - 22)
-        self.assertEqual(acb.coin.total_supply, coin_supply +
-                         22 * ACB.BOND_REDEMPTION_PRICE)
+            self.assertEqual(acb.redeem_bonds(accounts[2], [t3]), 0)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t1), 0)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t2), 0)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t3), 0)
+            self.check_redemption_epochs(acb.bond, accounts[2], [])
+            self.assertEqual(acb.coin.balance_of(accounts[2]),
+                             balance + 22 * ACB.BOND_REDEMPTION_PRICE)
+            self.assertEqual(acb.bond_budget, 22)
+            self.assertEqual(acb.bond.total_supply, bond_supply - 22)
+            self.assertEqual(acb.coin.total_supply, coin_supply +
+                             22 * ACB.BOND_REDEMPTION_PRICE)
 
-        self.assertEqual(acb.redeem_bonds(accounts[2], [t3]), 0)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t1), 0)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t2), 0)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t3), 0)
-        self.check_redemption_epochs(acb.bond, accounts[2], [])
-        self.assertEqual(acb.coin.balance_of(accounts[2]),
-                         balance + 22 * ACB.BOND_REDEMPTION_PRICE)
-        self.assertEqual(acb.bond_budget, 22)
-        self.assertEqual(acb.bond.total_supply, bond_supply - 22)
-        self.assertEqual(acb.coin.total_supply, coin_supply +
-                         22 * ACB.BOND_REDEMPTION_PRICE)
+            balance = acb.coin.balance_of(accounts[3])
+            self.assertEqual(acb.redeem_bonds(accounts[3], [t2, t2, t1]), 0)
+            self.assertEqual(acb.bond.balance_of(accounts[3], t1), 0)
+            self.assertEqual(acb.bond.balance_of(accounts[3], t2), 0)
+            self.assertEqual(acb.bond.balance_of(accounts[3], t3), 48)
+            self.check_redemption_epochs(acb.bond, accounts[3], [t3])
+            self.assertEqual(acb.coin.balance_of(accounts[3]), balance)
+            self.assertEqual(acb.bond_budget, 22)
+            self.assertEqual(acb.bond.total_supply, bond_supply - 22)
+            self.assertEqual(acb.coin.total_supply, coin_supply +
+                             22 * ACB.BOND_REDEMPTION_PRICE)
 
-        balance = acb.coin.balance_of(accounts[3])
-        self.assertEqual(acb.redeem_bonds(accounts[3], [t2, t2, t1]), 0)
-        self.assertEqual(acb.bond.balance_of(accounts[3], t1), 0)
-        self.assertEqual(acb.bond.balance_of(accounts[3], t2), 0)
-        self.assertEqual(acb.bond.balance_of(accounts[3], t3), 48)
-        self.check_redemption_epochs(acb.bond, accounts[3], [t3])
-        self.assertEqual(acb.coin.balance_of(accounts[3]), balance)
-        self.assertEqual(acb.bond_budget, 22)
-        self.assertEqual(acb.bond.total_supply, bond_supply - 22)
-        self.assertEqual(acb.coin.total_supply, coin_supply +
-                         22 * ACB.BOND_REDEMPTION_PRICE)
+            self.assertEqual(acb.redeem_bonds(accounts[3], [t3, t3, t3]), 48)
+            self.assertEqual(acb.bond.balance_of(accounts[3], t1), 0)
+            self.assertEqual(acb.bond.balance_of(accounts[3], t2), 0)
+            self.assertEqual(acb.bond.balance_of(accounts[3], t3), 0)
+            self.check_redemption_epochs(acb.bond, accounts[3], [])
+            self.assertEqual(acb.coin.balance_of(accounts[3]),
+                             balance + 48 * ACB.BOND_REDEMPTION_PRICE)
+            self.assertEqual(acb.bond_budget, 70)
+            self.assertEqual(acb.bond.total_supply, bond_supply - 70)
+            self.assertEqual(acb.coin.total_supply, coin_supply +
+                             70 * ACB.BOND_REDEMPTION_PRICE)
 
-        self.assertEqual(acb.redeem_bonds(accounts[3], [t3, t3, t3]), 48)
-        self.assertEqual(acb.bond.balance_of(accounts[3], t1), 0)
-        self.assertEqual(acb.bond.balance_of(accounts[3], t2), 0)
-        self.assertEqual(acb.bond.balance_of(accounts[3], t3), 0)
-        self.check_redemption_epochs(acb.bond, accounts[3], [])
-        self.assertEqual(acb.coin.balance_of(accounts[3]),
-                         balance + 48 * ACB.BOND_REDEMPTION_PRICE)
-        self.assertEqual(acb.bond_budget, 70)
-        self.assertEqual(acb.bond.total_supply, bond_supply - 70)
-        self.assertEqual(acb.coin.total_supply, coin_supply +
-                         70 * ACB.BOND_REDEMPTION_PRICE)
+            balance = acb.coin.balance_of(accounts[1])
+            self.assertEqual(acb.redeem_bonds(accounts[1], [t2]), 10)
+            self.assertEqual(acb.bond.balance_of(accounts[1], t2), 0)
+            self.assertEqual(acb.bond.number_of_bonds_owned_by(accounts[1]), 0);
+            self.assertEqual(acb.bond.number_of_bonds_owned_by(accounts[2]), 0);
+            self.assertEqual(acb.bond.number_of_bonds_owned_by(accounts[3]), 0);
+            self.check_redemption_epochs(acb.bond, accounts[1], [])
+            self.assertEqual(acb.coin.balance_of(accounts[1]),
+                             balance + 10 * ACB.BOND_REDEMPTION_PRICE)
+            self.assertEqual(acb.bond_budget, 80)
+            self.assertEqual(acb.bond.total_supply, bond_supply - 80)
+            self.assertEqual(acb.coin.total_supply, coin_supply +
+                             80 * ACB.BOND_REDEMPTION_PRICE)
+            self.assertEqual(acb.bond.total_supply, 0)
 
-        balance = acb.coin.balance_of(accounts[1])
-        self.assertEqual(acb.redeem_bonds(accounts[1], [t2]), 10)
-        self.assertEqual(acb.bond.balance_of(accounts[1], t2), 0)
-        self.assertEqual(acb.bond.number_of_bonds_owned_by(accounts[1]), 0);
-        self.assertEqual(acb.bond.number_of_bonds_owned_by(accounts[2]), 0);
-        self.assertEqual(acb.bond.number_of_bonds_owned_by(accounts[3]), 0);
-        self.check_redemption_epochs(acb.bond, accounts[1], [])
-        self.assertEqual(acb.coin.balance_of(accounts[1]),
-                         balance + 10 * ACB.BOND_REDEMPTION_PRICE)
-        self.assertEqual(acb.bond_budget, 80)
-        self.assertEqual(acb.bond.total_supply, bond_supply - 80)
-        self.assertEqual(acb.coin.total_supply, coin_supply +
-                         80 * ACB.BOND_REDEMPTION_PRICE)
-        self.assertEqual(acb.bond.total_supply, 0)
+            self.assertEqual(acb.bond_budget, 80)
+            self.assertEqual(acb._control_supply(-100 * self.bond_price), 0)
+            self.assertEqual(acb.bond_budget, 100)
 
-        self.assertEqual(acb.bond_budget, 80)
-        self.assertEqual(acb._control_supply(-100 * self.bond_price), 0)
-        self.assertEqual(acb.bond_budget, 100)
+            balance = acb.coin.balance_of(accounts[2])
+            acb.coin.move(accounts[2], accounts[1], balance)
+            self.assertEqual(acb.coin.balance_of(accounts[2]), 0)
+            acb.coin.move(accounts[1], accounts[2], 100 * self.bond_price)
+            self.assertEqual(acb.purchase_bonds(accounts[2], 20), t4)
+            self.advance_epoch(1)
+            t5 = acb.oracle.epoch_id + ACB.BOND_REDEMPTION_PERIOD
+            self.assertEqual(acb.purchase_bonds(accounts[2], 20), t5)
+            self.advance_epoch(
+                ACB.EPOCH_DURATION * ACB.BOND_REDEMPTION_PERIOD - 2)
+            t6 = acb.oracle.epoch_id + ACB.BOND_REDEMPTION_PERIOD
+            self.assertEqual(acb.purchase_bonds(accounts[2], 20), t6)
+            self.advance_epoch(1)
+            t7 = acb.oracle.epoch_id + ACB.BOND_REDEMPTION_PERIOD
+            self.assertEqual(acb.purchase_bonds(accounts[2], 20), t7)
+            self.advance_epoch(ACB.EPOCH_DURATION)
+            t8 = acb.oracle.epoch_id + ACB.BOND_REDEMPTION_PERIOD
+            self.assertEqual(acb.purchase_bonds(accounts[2], 20), t8)
+            self.assertEqual(acb.coin.balance_of(accounts[2]), 0)
+            self.assertEqual(t4, t5)
+            self.assertNotEqual(t4, t6)
+            self.assertEqual(t7 - t4, ACB.BOND_REDEMPTION_PERIOD)
+            self.assertEqual(t8 - t7, 1)
 
-        balance = acb.coin.balance_of(accounts[2])
-        acb.coin.move(accounts[2], accounts[1], balance)
-        self.assertEqual(acb.coin.balance_of(accounts[2]), 0)
-        acb.coin.move(accounts[1], accounts[2], 100 * self.bond_price)
-        self.assertEqual(acb.purchase_bonds(accounts[2], 20), t4)
-        self.advance_epoch(1)
-        t5 = acb.oracle.epoch_id + ACB.BOND_REDEMPTION_PERIOD
-        self.assertEqual(acb.purchase_bonds(accounts[2], 20), t5)
-        self.advance_epoch(ACB.EPOCH_DURATION * ACB.BOND_REDEMPTION_PERIOD - 2)
-        t6 = acb.oracle.epoch_id + ACB.BOND_REDEMPTION_PERIOD
-        self.assertEqual(acb.purchase_bonds(accounts[2], 20), t6)
-        self.advance_epoch(1)
-        t7 = acb.oracle.epoch_id + ACB.BOND_REDEMPTION_PERIOD
-        self.assertEqual(acb.purchase_bonds(accounts[2], 20), t7)
-        self.advance_epoch(ACB.EPOCH_DURATION)
-        t8 = acb.oracle.epoch_id + ACB.BOND_REDEMPTION_PERIOD
-        self.assertEqual(acb.purchase_bonds(accounts[2], 20), t8)
-        self.assertEqual(acb.coin.balance_of(accounts[2]), 0)
-        self.assertEqual(t4, t5)
-        self.assertNotEqual(t4, t6)
-        self.assertEqual(t7 - t4, ACB.BOND_REDEMPTION_PERIOD)
-        self.assertEqual(t8 - t7, 1)
+            self.assertEqual(acb.bond_budget, 0)
 
-        self.assertEqual(acb.bond_budget, 0)
+            coin_supply = acb.coin.total_supply
+            bond_supply = acb.bond.total_supply
+            self.assertEqual(acb.redeem_bonds(
+                accounts[2], [t4, t5, t6, t7, t8]), 40)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t4), 0)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t5), 0)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t6), 20)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t7), 20)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t8), 20)
+            self.assertEqual(acb.bond.number_of_bonds_owned_by(accounts[1]), 0);
+            self.assertEqual(
+                acb.bond.number_of_bonds_owned_by(accounts[2]), 60);
+            self.assertEqual(
+                acb.bond.number_of_bonds_owned_by(accounts[3]), 0);
+            self.check_redemption_epochs(acb.bond, accounts[2], [t6, t7, t8])
+            self.assertEqual(acb.coin.total_supply,
+                             coin_supply + 40 * ACB.BOND_REDEMPTION_PRICE)
+            self.assertEqual(acb.bond.total_supply, bond_supply - 40)
+            self.assertEqual(acb.bond_budget, 40)
 
-        coin_supply = acb.coin.total_supply
-        bond_supply = acb.bond.total_supply
-        self.assertEqual(acb.redeem_bonds(
-            accounts[2], [t4, t5, t6, t7, t8]), 40)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t4), 0)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t5), 0)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t6), 20)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t7), 20)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t8), 20)
-        self.assertEqual(acb.bond.number_of_bonds_owned_by(accounts[1]), 0);
-        self.assertEqual(acb.bond.number_of_bonds_owned_by(accounts[2]), 60);
-        self.assertEqual(acb.bond.number_of_bonds_owned_by(accounts[3]), 0);
-        self.check_redemption_epochs(acb.bond, accounts[2], [t6, t7, t8])
-        self.assertEqual(acb.coin.total_supply,
-                         coin_supply + 40 * ACB.BOND_REDEMPTION_PRICE)
-        self.assertEqual(acb.bond.total_supply, bond_supply - 40)
-        self.assertEqual(acb.bond_budget, 40)
+            coin_supply = acb.coin.total_supply
+            bond_supply = acb.bond.total_supply
+            self.assertEqual(acb.redeem_bonds(accounts[2], [t6, t7, t8]), 0)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t6), 20)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t7), 20)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t8), 20)
+            self.check_redemption_epochs(acb.bond, accounts[2], [t6, t7, t8])
+            self.assertEqual(acb.coin.total_supply, coin_supply)
+            self.assertEqual(acb.bond.total_supply, bond_supply)
+            self.assertEqual(acb.bond_budget, 40)
 
-        coin_supply = acb.coin.total_supply
-        bond_supply = acb.bond.total_supply
-        self.assertEqual(acb.redeem_bonds(accounts[2], [t6, t7, t8]), 0)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t6), 20)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t7), 20)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t8), 20)
-        self.check_redemption_epochs(acb.bond, accounts[2], [t6, t7, t8])
-        self.assertEqual(acb.coin.total_supply, coin_supply)
-        self.assertEqual(acb.bond.total_supply, bond_supply)
-        self.assertEqual(acb.bond_budget, 40)
+            self.assertEqual(acb._control_supply(
+                5 * ACB.BOND_REDEMPTION_PRICE), 0)
+            self.assertEqual(acb.bond_budget, -5)
 
-        self.assertEqual(acb._control_supply(
-            5 * ACB.BOND_REDEMPTION_PRICE), 0)
-        self.assertEqual(acb.bond_budget, -5)
+            coin_supply = acb.coin.total_supply
+            bond_supply = acb.bond.total_supply
+            self.assertEqual(acb.redeem_bonds(accounts[2], [t6, t7, t8]), 5)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t6), 15)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t7), 20)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t8), 20)
+            self.check_redemption_epochs(acb.bond, accounts[2], [t6, t7, t8])
+            self.assertEqual(acb.coin.total_supply,
+                             coin_supply + 5 * ACB.BOND_REDEMPTION_PRICE)
+            self.assertEqual(acb.bond.total_supply, bond_supply - 5)
+            self.assertEqual(acb.bond_budget, 0)
 
-        coin_supply = acb.coin.total_supply
-        bond_supply = acb.bond.total_supply
-        self.assertEqual(acb.redeem_bonds(accounts[2], [t6, t7, t8]), 5)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t6), 15)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t7), 20)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t8), 20)
-        self.check_redemption_epochs(acb.bond, accounts[2], [t6, t7, t8])
-        self.assertEqual(acb.coin.total_supply,
-                         coin_supply + 5 * ACB.BOND_REDEMPTION_PRICE)
-        self.assertEqual(acb.bond.total_supply, bond_supply - 5)
-        self.assertEqual(acb.bond_budget, 0)
+            self.assertEqual(acb.bond_budget, 0)
+            self.assertEqual(acb._control_supply(
+                5 * ACB.BOND_REDEMPTION_PRICE), 0)
+            self.assertEqual(acb.bond_budget, -5)
 
-        self.assertEqual(acb.bond_budget, 0)
-        self.assertEqual(acb._control_supply(
-            5 * ACB.BOND_REDEMPTION_PRICE), 0)
-        self.assertEqual(acb.bond_budget, -5)
+            coin_supply = acb.coin.total_supply
+            bond_supply = acb.bond.total_supply
+            self.assertEqual(acb.redeem_bonds(accounts[2], [t8, t7, t6]), 5)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t6), 15)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t7), 20)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t8), 15)
+            self.check_redemption_epochs(acb.bond, accounts[2], [t6, t7, t8])
+            self.assertEqual(acb.coin.total_supply,
+                             coin_supply + 5 * ACB.BOND_REDEMPTION_PRICE)
+            self.assertEqual(acb.bond.total_supply, bond_supply - 5)
+            self.assertEqual(acb.bond_budget, 0)
 
-        coin_supply = acb.coin.total_supply
-        bond_supply = acb.bond.total_supply
-        self.assertEqual(acb.redeem_bonds(accounts[2], [t8, t7, t6]), 5)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t6), 15)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t7), 20)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t8), 15)
-        self.check_redemption_epochs(acb.bond, accounts[2], [t6, t7, t8])
-        self.assertEqual(acb.coin.total_supply,
-                         coin_supply + 5 * ACB.BOND_REDEMPTION_PRICE)
-        self.assertEqual(acb.bond.total_supply, bond_supply - 5)
-        self.assertEqual(acb.bond_budget, 0)
+            self.assertEqual(acb.bond_budget, 0)
+            self.assertEqual(acb._control_supply(
+                5 * ACB.BOND_REDEMPTION_PRICE), 0)
+            self.assertEqual(acb.bond_budget, -5)
 
-        self.assertEqual(acb.bond_budget, 0)
-        self.assertEqual(acb._control_supply(
-            5 * ACB.BOND_REDEMPTION_PRICE), 0)
-        self.assertEqual(acb.bond_budget, -5)
+            coin_supply = acb.coin.total_supply
+            bond_supply = acb.bond.total_supply
+            self.assertEqual(acb.redeem_bonds(accounts[2], [t7]), 5)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t6), 15)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t7), 15)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t8), 15)
+            self.check_redemption_epochs(acb.bond, accounts[2], [t6, t7, t8])
+            self.assertEqual(acb.coin.total_supply,
+                             coin_supply + 5 * ACB.BOND_REDEMPTION_PRICE)
+            self.assertEqual(acb.bond.total_supply, bond_supply - 5)
+            self.assertEqual(acb.bond_budget, 0)
 
-        coin_supply = acb.coin.total_supply
-        bond_supply = acb.bond.total_supply
-        self.assertEqual(acb.redeem_bonds(accounts[2], [t7]), 5)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t6), 15)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t7), 15)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t8), 15)
-        self.check_redemption_epochs(acb.bond, accounts[2], [t6, t7, t8])
-        self.assertEqual(acb.coin.total_supply,
-                         coin_supply + 5 * ACB.BOND_REDEMPTION_PRICE)
-        self.assertEqual(acb.bond.total_supply, bond_supply - 5)
-        self.assertEqual(acb.bond_budget, 0)
+            self.advance_epoch(ACB.EPOCH_DURATION * ACB.BOND_REDEMPTION_PERIOD -
+                               ACB.EPOCH_DURATION - 1)
+            t9 = acb.oracle.epoch_id + ACB.BOND_REDEMPTION_PERIOD
 
-        self.advance_epoch(ACB.EPOCH_DURATION * ACB.BOND_REDEMPTION_PERIOD -
-                           ACB.EPOCH_DURATION - 1)
-        t9 = acb.oracle.epoch_id + ACB.BOND_REDEMPTION_PERIOD
+            self.assertEqual(acb.bond_budget, 0)
+            self.assertEqual(acb._control_supply(
+                20 * ACB.BOND_REDEMPTION_PRICE), 0)
+            self.assertEqual(acb.bond_budget, -20)
 
-        self.assertEqual(acb.bond_budget, 0)
-        self.assertEqual(acb._control_supply(
-            20 * ACB.BOND_REDEMPTION_PRICE), 0)
-        self.assertEqual(acb.bond_budget, -20)
+            coin_supply = acb.coin.total_supply
+            bond_supply = acb.bond.total_supply
+            self.assertEqual(t9 - t6, ACB.BOND_REDEMPTION_PERIOD)
+            self.assertEqual(t6 <= acb.oracle.epoch_id, True)
+            self.assertEqual(acb.redeem_bonds(accounts[2], [t6, t8, t7]), 20)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t6), 0)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t7), 15)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t8), 10)
+            self.check_redemption_epochs(acb.bond, accounts[2], [t7, t8])
+            self.assertEqual(acb.coin.total_supply,
+                             coin_supply + 20 * ACB.BOND_REDEMPTION_PRICE)
+            self.assertEqual(acb.bond.total_supply, bond_supply - 20)
+            self.assertEqual(acb.bond_budget, 0)
 
-        coin_supply = acb.coin.total_supply
-        bond_supply = acb.bond.total_supply
-        self.assertEqual(t9 - t6, ACB.BOND_REDEMPTION_PERIOD)
-        self.assertEqual(t6 <= acb.oracle.epoch_id, True)
-        self.assertEqual(acb.redeem_bonds(accounts[2], [t6, t8, t7]), 20)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t6), 0)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t7), 15)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t8), 10)
-        self.check_redemption_epochs(acb.bond, accounts[2], [t7, t8])
-        self.assertEqual(acb.coin.total_supply,
-                         coin_supply + 20 * ACB.BOND_REDEMPTION_PRICE)
-        self.assertEqual(acb.bond.total_supply, bond_supply - 20)
-        self.assertEqual(acb.bond_budget, 0)
+            self.assertEqual(acb._control_supply(
+                15 * ACB.BOND_REDEMPTION_PRICE), 0)
+            self.assertEqual(acb.bond_budget, -15)
+            self.assertEqual(acb._control_supply(
+                30 * ACB.BOND_REDEMPTION_PRICE), 5 * ACB.BOND_REDEMPTION_PRICE)
+            self.assertEqual(acb.bond_budget, -25)
+            self.assertEqual(acb._control_supply(
+                1 * ACB.BOND_REDEMPTION_PRICE), 0)
+            self.assertEqual(acb.bond_budget, -1)
 
-        self.assertEqual(acb._control_supply(
-            15 * ACB.BOND_REDEMPTION_PRICE), 0)
-        self.assertEqual(acb.bond_budget, -15)
-        self.assertEqual(acb._control_supply(
-            30 * ACB.BOND_REDEMPTION_PRICE), 5 * ACB.BOND_REDEMPTION_PRICE)
-        self.assertEqual(acb.bond_budget, -25)
-        self.assertEqual(acb._control_supply(
-            1 * ACB.BOND_REDEMPTION_PRICE), 0)
-        self.assertEqual(acb.bond_budget, -1)
+            coin_supply = acb.coin.total_supply
+            bond_supply = acb.bond.total_supply
+            self.assertEqual(acb.redeem_bonds(accounts[2], [t7, t8]), 1)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t6), 0)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t7), 14)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t8), 10)
+            self.check_redemption_epochs(acb.bond, accounts[2], [t7, t8])
+            self.assertEqual(acb.coin.total_supply,
+                             coin_supply + 1 * ACB.BOND_REDEMPTION_PRICE)
+            self.assertEqual(acb.bond.total_supply, bond_supply - 1)
+            self.assertEqual(acb.bond_budget, 0)
 
-        coin_supply = acb.coin.total_supply
-        bond_supply = acb.bond.total_supply
-        self.assertEqual(acb.redeem_bonds(accounts[2], [t7, t8]), 1)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t6), 0)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t7), 14)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t8), 10)
-        self.check_redemption_epochs(acb.bond, accounts[2], [t7, t8])
-        self.assertEqual(acb.coin.total_supply,
-                         coin_supply + 1 * ACB.BOND_REDEMPTION_PRICE)
-        self.assertEqual(acb.bond.total_supply, bond_supply - 1)
-        self.assertEqual(acb.bond_budget, 0)
+            self.advance_epoch(1)
+            t10 = acb.oracle.epoch_id + ACB.BOND_REDEMPTION_PERIOD
 
-        self.advance_epoch(1)
-        t10 = acb.oracle.epoch_id + ACB.BOND_REDEMPTION_PERIOD
+            self.assertEqual(acb._control_supply(
+                2 * ACB.BOND_REDEMPTION_PRICE), 0)
+            self.assertEqual(acb.bond_budget, -2)
 
-        self.assertEqual(acb._control_supply(
-            2 * ACB.BOND_REDEMPTION_PRICE), 0)
-        self.assertEqual(acb.bond_budget, -2)
+            coin_supply = acb.coin.total_supply
+            bond_supply = acb.bond.total_supply
+            self.assertEqual(acb.redeem_bonds(accounts[2], [t8, t7]), 16)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t6), 0)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t7), 0)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t8), 8)
+            self.check_redemption_epochs(acb.bond, accounts[2], [t8])
+            self.assertEqual(acb.coin.total_supply,
+                             coin_supply + 16 * ACB.BOND_REDEMPTION_PRICE)
+            self.assertEqual(acb.bond.total_supply, bond_supply - 16)
+            self.assertEqual(acb.bond_budget, 14)
 
-        coin_supply = acb.coin.total_supply
-        bond_supply = acb.bond.total_supply
-        self.assertEqual(acb.redeem_bonds(accounts[2], [t8, t7]), 16)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t6), 0)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t7), 0)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t8), 8)
-        self.check_redemption_epochs(acb.bond, accounts[2], [t8])
-        self.assertEqual(acb.coin.total_supply,
-                         coin_supply + 16 * ACB.BOND_REDEMPTION_PRICE)
-        self.assertEqual(acb.bond.total_supply, bond_supply - 16)
-        self.assertEqual(acb.bond_budget, 14)
+            self.assertEqual(acb._control_supply(
+                1 * ACB.BOND_REDEMPTION_PRICE), 0)
+            self.assertEqual(acb.bond_budget, -1)
 
-        self.assertEqual(acb._control_supply(
-            1 * ACB.BOND_REDEMPTION_PRICE), 0)
-        self.assertEqual(acb.bond_budget, -1)
+            coin_supply = acb.coin.total_supply
+            bond_supply = acb.bond.total_supply
+            self.assertEqual(acb.redeem_bonds(accounts[2], [t8]), 1)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t6), 0)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t7), 0)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t8), 7)
+            self.check_redemption_epochs(acb.bond, accounts[2], [t8])
+            self.assertEqual(acb.coin.total_supply,
+                             coin_supply + 1 * ACB.BOND_REDEMPTION_PRICE)
+            self.assertEqual(acb.bond.total_supply, bond_supply - 1)
+            self.assertEqual(acb.bond_budget, 0)
 
-        coin_supply = acb.coin.total_supply
-        bond_supply = acb.bond.total_supply
-        self.assertEqual(acb.redeem_bonds(accounts[2], [t8]), 1)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t6), 0)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t7), 0)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t8), 7)
-        self.check_redemption_epochs(acb.bond, accounts[2], [t8])
-        self.assertEqual(acb.coin.total_supply,
-                         coin_supply + 1 * ACB.BOND_REDEMPTION_PRICE)
-        self.assertEqual(acb.bond.total_supply, bond_supply - 1)
-        self.assertEqual(acb.bond_budget, 0)
+            self.advance_epoch(ACB.EPOCH_DURATION)
+            t11 = acb.oracle.epoch_id + ACB.BOND_REDEMPTION_PERIOD
 
-        self.advance_epoch(ACB.EPOCH_DURATION)
-        t11 = acb.oracle.epoch_id + ACB.BOND_REDEMPTION_PERIOD
+            coin_supply = acb.coin.total_supply
+            bond_supply = acb.bond.total_supply
+            self.assertEqual(acb.redeem_bonds(accounts[2], [t8]), 7)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t6), 0)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t7), 0)
+            self.assertEqual(acb.bond.balance_of(accounts[2], t8), 0)
+            self.assertEqual(acb.bond.number_of_bonds_owned_by(accounts[1]), 0);
+            self.assertEqual(acb.bond.number_of_bonds_owned_by(accounts[2]), 0);
+            self.assertEqual(acb.bond.number_of_bonds_owned_by(accounts[3]), 0);
+            self.check_redemption_epochs(acb.bond, accounts[2], [])
+            self.assertEqual(acb.coin.total_supply,
+                             coin_supply + 7 * ACB.BOND_REDEMPTION_PRICE)
+            self.assertEqual(acb.bond.total_supply, bond_supply - 7)
+            self.assertEqual(acb.bond_budget, 7)
 
-        coin_supply = acb.coin.total_supply
-        bond_supply = acb.bond.total_supply
-        self.assertEqual(acb.redeem_bonds(accounts[2], [t8]), 7)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t6), 0)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t7), 0)
-        self.assertEqual(acb.bond.balance_of(accounts[2], t8), 0)
-        self.assertEqual(acb.bond.number_of_bonds_owned_by(accounts[1]), 0);
-        self.assertEqual(acb.bond.number_of_bonds_owned_by(accounts[2]), 0);
-        self.assertEqual(acb.bond.number_of_bonds_owned_by(accounts[3]), 0);
-        self.check_redemption_epochs(acb.bond, accounts[2], [])
-        self.assertEqual(acb.coin.total_supply,
-                         coin_supply + 7 * ACB.BOND_REDEMPTION_PRICE)
-        self.assertEqual(acb.bond.total_supply, bond_supply - 7)
-        self.assertEqual(acb.bond_budget, 7)
-
-        self.assertEqual(acb.bond.total_supply, 0)
-        self.assertEqual(acb.bond_budget, 7)
-        self.assertEqual(acb._control_supply(
-            5 * ACB.BOND_REDEMPTION_PRICE), 5 * ACB.BOND_REDEMPTION_PRICE)
-        self.assertEqual(acb.bond_budget, 0)
-
-    def run_vote_tests(self):
-        acb = self.acb
-        accounts = self.accounts
+            self.assertEqual(acb.bond.total_supply, 0)
+            self.assertEqual(acb.bond_budget, 7)
+            self.assertEqual(acb._control_supply(
+                5 * ACB.BOND_REDEMPTION_PRICE), 5 * ACB.BOND_REDEMPTION_PRICE)
+            self.assertEqual(acb.bond_budget, 0)
 
         # bond expire
         self.assertEqual(acb._control_supply(-self.bond_price * 80), 0)

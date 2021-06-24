@@ -114,223 +114,221 @@ function parameterized_test(accounts,
     let redemptions = [];
     let sub_accounts = accounts.slice(1, 4);
 
+    // initial coin supply
+    current = await get_current(sub_accounts, []);
+    assert.isTrue(_initial_coin_supply > 10000);
+    assert.equal(current.balances[accounts[2]], 0);
+    assert.equal(current.balances[accounts[3]], 0);
+
+    // transfer
+    await should_throw(async () => {
+      await _coin.transfer.call(
+        accounts[1], 1, {from: accounts[4]});
+    }, "ERC20");
+    await _coin.transfer(accounts[2], 0, {from: accounts[1]});
+    await should_throw(async () => {
+      await _coin.transfer.call(
+        accounts[1], 1, {from: accounts[2]});
+    }, "ERC20");
+    await should_throw(async () => {
+      await _coin.transfer.call(
+        accounts[2], _initial_coin_supply + 1, {from: accounts[1]});
+    }, "ERC20");
+    await _coin.transfer(accounts[2], 1, {from: accounts[1]});
+    await _coin.transfer(accounts[3], 10, {from: accounts[1]});
+    await _coin.transfer(accounts[2], 5, {from: accounts[3]});
+    current = await get_current(sub_accounts, []);
+    assert.equal(current.balances[accounts[1]],
+                 _initial_coin_supply - 11);
+    assert.equal(current.balances[accounts[2]], 6);
+    assert.equal(current.balances[accounts[3]], 5);
+    await _coin.transfer(accounts[2], 0, {from: accounts[2]});
+    assert.equal(current.balances[accounts[1]],
+                 _initial_coin_supply - 11);
+    assert.equal(current.balances[accounts[2]], 6);
+    assert.equal(current.balances[accounts[3]], 5);
+    await _coin.transfer(accounts[3], 0, {from: accounts[2]});
+    await should_throw(async () => {
+      await _coin.transfer.call(
+        accounts[3], 7, {from: accounts[2]});
+    }, "ERC20");
+    await _coin.transfer(accounts[3], 6, {from: accounts[2]});
+    current = await get_current(sub_accounts, []);
+    assert.equal(current.balances[accounts[1]],
+                 _initial_coin_supply - 11);
+    assert.equal(current.balances[accounts[2]], 0);
+    assert.equal(current.balances[accounts[3]], 11);
+    await _coin.transfer(accounts[1], 11, {from: accounts[3]});
+    current = await get_current(sub_accounts, []);
+    assert.equal(current.balances[accounts[1]], _initial_coin_supply);
+    assert.equal(current.balances[accounts[2]], 0);
+    assert.equal(current.balances[accounts[3]], 0);
+    assert.equal(current.coin_supply, _initial_coin_supply);
+    await _coin.transfer(accounts[2], 1000, {from: accounts[1]});
+    current = await get_current(sub_accounts, []);
+    assert.equal(current.balances[accounts[1]], _initial_coin_supply - 1000);
+    assert.equal(current.balances[accounts[2]], 990);
+    assert.equal(await _coin.balanceOf(await _coin.tax_account_()), 10);
+    await _coin.transfer(accounts[1], 990, {from: accounts[2]});
+    current = await get_current(sub_accounts, []);
+    assert.equal(current.balances[accounts[1]], _initial_coin_supply - 19);
+    assert.equal(current.balances[accounts[2]], 0);
+    assert.equal(await _coin.balanceOf(await _coin.tax_account_()), 19);
+    await _acb.moveCoin(await _coin.tax_account_(), accounts[1], 19,
+                        {from: accounts[1]});
+    current = await get_current(sub_accounts, []);
+    assert.equal(current.balances[accounts[1]], _initial_coin_supply);
+    assert.equal(current.balances[accounts[2]], 0);
+    assert.equal(current.balances[accounts[3]], 0);
+    assert.equal(current.coin_supply, _initial_coin_supply);
+
+    // controlSupply
+    await _acb.setOracleLevel(_level_max - 1, {from: accounts[1]});
+    current = await get_current([], []);
+    assert.equal(current.bond_supply, 0);
+    assert.equal(current.bond_budget, 0);
+    await check_controlSupply(_bond_redemption_price - 1, 0, 0);
+    current = await get_current([], []);
+    assert.equal(current.bond_budget, 0);
+    await check_controlSupply(_bond_redemption_price, 0,
+                              _bond_redemption_price);
+    current = await get_current([], []);
+    assert.equal(current.bond_budget, 0);
+    await check_controlSupply(_bond_redemption_price + 1, 0,
+                              _bond_redemption_price);
+    current = await get_current([], []);
+    assert.equal(current.bond_budget, 0);
+    await check_controlSupply(_bond_redemption_price * 10, 0,
+                              _bond_redemption_price * 10);
+    current = await get_current([], []);
+    assert.equal(current.bond_budget, 0);
+
+    await check_controlSupply(-(_bond_price - 1), 0, 0);
+    current = await get_current([], []);
+    assert.equal(current.bond_supply, 0);
+    assert.equal(current.bond_budget, 0);
+    await check_controlSupply(-_bond_price, 1, 0);
+    current = await get_current([], []);
+    assert.equal(current.bond_supply, 0, 0);
+    assert.equal(current.bond_budget, 1);
+    await check_controlSupply(0, 0, 0);
+    current = await get_current([], []);
+    assert.equal(current.bond_supply, 0);
+    assert.equal(current.bond_budget, 0);
+    await check_controlSupply(-_bond_price * 99, 99, 0);
+    current = await get_current([], []);
+    assert.equal(current.bond_supply, 0);
+    assert.equal(current.bond_budget, 99);
+    await check_controlSupply(0, 0, 0);
+    current = await get_current([], []);
+    assert.equal(current.bond_supply, 0);
+    assert.equal(current.bond_budget, 0);
+    await check_controlSupply(-_bond_price * 100, 100, 0);
+    current = await get_current([], []);
+    assert.equal(current.bond_supply, 0);
+    assert.equal(current.bond_budget, 100);
+
+    await check_purchase_bonds(50, {from: accounts[1]},
+                               (await _oracle.epoch_id_()).toNumber() +
+                               _bond_redemption_period);
+    await check_purchase_bonds(50, {from: accounts[1]},
+                               (await _oracle.epoch_id_()).toNumber() +
+                               _bond_redemption_period);
+    current = await get_current([], []);
+    assert.equal(current.bond_supply, 100);
+    assert.equal(current.bond_budget, 0);
+
+    await check_controlSupply(_bond_redemption_price - 1, 0, 0);
+    current = await get_current([], []);
+    await check_controlSupply(_bond_redemption_price, -1, 0);
+    current = await get_current([], []);
+    assert.equal(current.bond_budget, -1);
+    await check_controlSupply(_bond_redemption_price + 1, -1, 0);
+    current = await get_current([], []);
+    assert.equal(current.bond_budget, -1);
+    await check_controlSupply(_bond_redemption_price * 68, -68, 0);
+    current = await get_current([], []);
+    assert.equal(current.bond_budget, -68);
+    await check_controlSupply(0, 0, 0);
+    current = await get_current([], []);
+    assert.equal(current.bond_budget, 0);
+    await check_controlSupply(_bond_redemption_price * 30, -30, 0);
+    current = await get_current([], []);
+    assert.equal(current.bond_budget, -30);
+    await check_controlSupply(_bond_redemption_price - 1, 0, 0);
+    current = await get_current([], []);
+    assert.equal(current.bond_budget, 0);
+    await check_controlSupply(_bond_redemption_price * 200,
+                              -100,
+                              _bond_redemption_price * 100);
+    current = await get_current([], []);
+    assert.equal(current.bond_budget, -100);
+    await check_controlSupply(_bond_redemption_price * 100, -100, 0);
+    current = await get_current([], []);
+    assert.equal(current.bond_budget, -100);
+    await check_controlSupply(_bond_redemption_price * 100, -100, 0);
+    current = await get_current([], []);
+    assert.equal(current.bond_budget, -100);
+
+    await check_controlSupply(-_bond_price * 100, 100, 0);
+    current = await get_current([], []);
+    assert.equal(current.bond_supply, 100);
+    assert.equal(current.bond_budget, 100);
+
+    await check_purchase_bonds(50, {from: accounts[1]},
+                               (await _oracle.epoch_id_()).toNumber() +
+                               _bond_redemption_period);
+    await check_purchase_bonds(50, {from: accounts[1]},
+                               (await _oracle.epoch_id_()).toNumber() +
+                               _bond_redemption_period);
+    current = await get_current([], []);
+    assert.equal(current.bond_supply, 200);
+    assert.equal(current.bond_budget, 0);
+
+    await check_controlSupply(_bond_redemption_price * 30 - 1, -29, 0);
+    current = await get_current([], []);
+    assert.equal(current.bond_budget, -29);
+    await check_controlSupply(_bond_redemption_price * 30, -30, 0);
+    current = await get_current([], []);
+    assert.equal(current.bond_budget, -30);
+    await check_controlSupply(_bond_redemption_price * 30 + 1, -30, 0);
+    current = await get_current([], []);
+    assert.equal(current.bond_budget, -30);
+    await check_controlSupply(_bond_redemption_price * 210,
+                              -200,
+                              _bond_redemption_price * 10);
+    current = await get_current([], []);
+    assert.equal(current.bond_budget, -200);
+
+    await check_redeem_bonds(
+      [(await _oracle.epoch_id_()).toNumber() + _bond_redemption_period],
+      {from: accounts[1]}, 200);
+    current = await get_current([], []);
+    assert.equal(current.bond_supply, 0);
+    assert.equal(current.bond_budget, 0);
+
+    // timestamp
+    assert.equal(await _acb.getTimestamp(), 0);
+    await _acb.setTimestamp(_epoch_duration, {from: accounts[1]});
+    assert.equal(await _acb.getTimestamp(), _epoch_duration);
+
+    await should_throw(async () => {
+      await _acb.setTimestamp(_epoch_duration - 1, {from: accounts[1]});
+    }, "st1");
+
+    await should_throw(async () => {
+      await _acb.setTimestamp(_epoch_duration, {from: accounts[1]});
+    }, "st1");
+
+    await should_throw(async () => {
+      await _acb.setTimestamp(0, {from: accounts[1]});
+    }, "st1");
+
     if (_bond_price >= 2 &&
         _bond_redemption_price >= 2 &&
         _bond_redemption_period >= 3 &&
         _bond_redeemable_period >= 3 &&
         _epoch_duration >= 2) {
-
-      // initial coin supply
-      current = await get_current(sub_accounts, []);
-      assert.isTrue(_initial_coin_supply > 10000);
-      assert.equal(current.balances[accounts[2]], 0);
-      assert.equal(current.balances[accounts[3]], 0);
-
-      // transfer
-      await should_throw(async () => {
-        await _coin.transfer.call(
-          accounts[1], 1, {from: accounts[4]});
-      }, "ERC20");
-      await _coin.transfer(accounts[2], 0, {from: accounts[1]});
-      await should_throw(async () => {
-        await _coin.transfer.call(
-          accounts[1], 1, {from: accounts[2]});
-      }, "ERC20");
-      await should_throw(async () => {
-        await _coin.transfer.call(
-          accounts[2], _initial_coin_supply + 1, {from: accounts[1]});
-      }, "ERC20");
-      await _coin.transfer(accounts[2], 1, {from: accounts[1]});
-      await _coin.transfer(accounts[3], 10, {from: accounts[1]});
-      await _coin.transfer(accounts[2], 5, {from: accounts[3]});
-      current = await get_current(sub_accounts, []);
-      assert.equal(current.balances[accounts[1]],
-                   _initial_coin_supply - 11);
-      assert.equal(current.balances[accounts[2]], 6);
-      assert.equal(current.balances[accounts[3]], 5);
-      await _coin.transfer(accounts[2], 0, {from: accounts[2]});
-      assert.equal(current.balances[accounts[1]],
-                   _initial_coin_supply - 11);
-      assert.equal(current.balances[accounts[2]], 6);
-      assert.equal(current.balances[accounts[3]], 5);
-      await _coin.transfer(accounts[3], 0, {from: accounts[2]});
-      await should_throw(async () => {
-        await _coin.transfer.call(
-          accounts[3], 7, {from: accounts[2]});
-      }, "ERC20");
-      await _coin.transfer(accounts[3], 6, {from: accounts[2]});
-      current = await get_current(sub_accounts, []);
-      assert.equal(current.balances[accounts[1]],
-                   _initial_coin_supply - 11);
-      assert.equal(current.balances[accounts[2]], 0);
-      assert.equal(current.balances[accounts[3]], 11);
-      await _coin.transfer(accounts[1], 11, {from: accounts[3]});
-      current = await get_current(sub_accounts, []);
-      assert.equal(current.balances[accounts[1]], _initial_coin_supply);
-      assert.equal(current.balances[accounts[2]], 0);
-      assert.equal(current.balances[accounts[3]], 0);
-      assert.equal(current.coin_supply, _initial_coin_supply);
-      await _coin.transfer(accounts[2], 1000, {from: accounts[1]});
-      current = await get_current(sub_accounts, []);
-      assert.equal(current.balances[accounts[1]], _initial_coin_supply - 1000);
-      assert.equal(current.balances[accounts[2]], 990);
-      assert.equal(await _coin.balanceOf(await _coin.tax_account_()), 10);
-      await _coin.transfer(accounts[1], 990, {from: accounts[2]});
-      current = await get_current(sub_accounts, []);
-      assert.equal(current.balances[accounts[1]], _initial_coin_supply - 19);
-      assert.equal(current.balances[accounts[2]], 0);
-      assert.equal(await _coin.balanceOf(await _coin.tax_account_()), 19);
-      await _acb.moveCoin(await _coin.tax_account_(), accounts[1], 19,
-                          {from: accounts[1]});
-      current = await get_current(sub_accounts, []);
-      assert.equal(current.balances[accounts[1]], _initial_coin_supply);
-      assert.equal(current.balances[accounts[2]], 0);
-      assert.equal(current.balances[accounts[3]], 0);
-      assert.equal(current.coin_supply, _initial_coin_supply);
-
-      // controlSupply
-      await _acb.setOracleLevel(_level_max - 1, {from: accounts[1]});
-      current = await get_current([], []);
-      assert.equal(current.bond_supply, 0);
-      assert.equal(current.bond_budget, 0);
-      await check_controlSupply(_bond_redemption_price - 1, 0, 0);
-      current = await get_current([], []);
-      assert.equal(current.bond_budget, 0);
-      await check_controlSupply(_bond_redemption_price, 0,
-                                 _bond_redemption_price);
-      current = await get_current([], []);
-      assert.equal(current.bond_budget, 0);
-      await check_controlSupply(_bond_redemption_price + 1, 0,
-                                 _bond_redemption_price);
-      current = await get_current([], []);
-      assert.equal(current.bond_budget, 0);
-      await check_controlSupply(_bond_redemption_price * 10, 0,
-                                 _bond_redemption_price * 10);
-      current = await get_current([], []);
-      assert.equal(current.bond_budget, 0);
-
-      await check_controlSupply(-(_bond_price - 1), 0, 0);
-      current = await get_current([], []);
-      assert.equal(current.bond_supply, 0);
-      assert.equal(current.bond_budget, 0);
-      await check_controlSupply(-_bond_price, 1, 0);
-      current = await get_current([], []);
-      assert.equal(current.bond_supply, 0, 0);
-      assert.equal(current.bond_budget, 1);
-      await check_controlSupply(0, 0, 0);
-      current = await get_current([], []);
-      assert.equal(current.bond_supply, 0);
-      assert.equal(current.bond_budget, 0);
-      await check_controlSupply(-_bond_price * 99, 99, 0);
-      current = await get_current([], []);
-      assert.equal(current.bond_supply, 0);
-      assert.equal(current.bond_budget, 99);
-      await check_controlSupply(0, 0, 0);
-      current = await get_current([], []);
-      assert.equal(current.bond_supply, 0);
-      assert.equal(current.bond_budget, 0);
-      await check_controlSupply(-_bond_price * 100, 100, 0);
-      current = await get_current([], []);
-      assert.equal(current.bond_supply, 0);
-      assert.equal(current.bond_budget, 100);
-
-      await check_purchase_bonds(50, {from: accounts[1]},
-                                 (await _oracle.epoch_id_()).toNumber() +
-                                 _bond_redemption_period);
-      await check_purchase_bonds(50, {from: accounts[1]},
-                                 (await _oracle.epoch_id_()).toNumber() +
-                                 _bond_redemption_period);
-      current = await get_current([], []);
-      assert.equal(current.bond_supply, 100);
-      assert.equal(current.bond_budget, 0);
-
-      await check_controlSupply(_bond_redemption_price - 1, 0, 0);
-      current = await get_current([], []);
-      await check_controlSupply(_bond_redemption_price, -1, 0);
-      current = await get_current([], []);
-      assert.equal(current.bond_budget, -1);
-      await check_controlSupply(_bond_redemption_price + 1, -1, 0);
-      current = await get_current([], []);
-      assert.equal(current.bond_budget, -1);
-      await check_controlSupply(_bond_redemption_price * 68, -68, 0);
-      current = await get_current([], []);
-      assert.equal(current.bond_budget, -68);
-      await check_controlSupply(0, 0, 0);
-      current = await get_current([], []);
-      assert.equal(current.bond_budget, 0);
-      await check_controlSupply(_bond_redemption_price * 30, -30, 0);
-      current = await get_current([], []);
-      assert.equal(current.bond_budget, -30);
-      await check_controlSupply(_bond_redemption_price - 1, 0, 0);
-      current = await get_current([], []);
-      assert.equal(current.bond_budget, 0);
-      await check_controlSupply(_bond_redemption_price * 200,
-                                 -100,
-                                 _bond_redemption_price * 100);
-      current = await get_current([], []);
-      assert.equal(current.bond_budget, -100);
-      await check_controlSupply(_bond_redemption_price * 100, -100, 0);
-      current = await get_current([], []);
-      assert.equal(current.bond_budget, -100);
-      await check_controlSupply(_bond_redemption_price * 100, -100, 0);
-      current = await get_current([], []);
-      assert.equal(current.bond_budget, -100);
-
-      await check_controlSupply(-_bond_price * 100, 100, 0);
-      current = await get_current([], []);
-      assert.equal(current.bond_supply, 100);
-      assert.equal(current.bond_budget, 100);
-
-      await check_purchase_bonds(50, {from: accounts[1]},
-                                 (await _oracle.epoch_id_()).toNumber() +
-                                 _bond_redemption_period);
-      await check_purchase_bonds(50, {from: accounts[1]},
-                                 (await _oracle.epoch_id_()).toNumber() +
-                                 _bond_redemption_period);
-      current = await get_current([], []);
-      assert.equal(current.bond_supply, 200);
-      assert.equal(current.bond_budget, 0);
-
-      await check_controlSupply(_bond_redemption_price * 30 - 1, -29, 0);
-      current = await get_current([], []);
-      assert.equal(current.bond_budget, -29);
-      await check_controlSupply(_bond_redemption_price * 30, -30, 0);
-      current = await get_current([], []);
-      assert.equal(current.bond_budget, -30);
-      await check_controlSupply(_bond_redemption_price * 30 + 1, -30, 0);
-      current = await get_current([], []);
-      assert.equal(current.bond_budget, -30);
-      await check_controlSupply(_bond_redemption_price * 210,
-                                 -200,
-                                 _bond_redemption_price * 10);
-      current = await get_current([], []);
-      assert.equal(current.bond_budget, -200);
-
-      await check_redeem_bonds(
-        [(await _oracle.epoch_id_()).toNumber() + _bond_redemption_period],
-        {from: accounts[1]}, 200);
-      current = await get_current([], []);
-      assert.equal(current.bond_supply, 0);
-      assert.equal(current.bond_budget, 0);
-
-      // timestamp
-      assert.equal(await _acb.getTimestamp(), 0);
-      await _acb.setTimestamp(1, {from: accounts[1]});
-      assert.equal(await _acb.getTimestamp(), 1);
-      await _acb.setTimestamp(_epoch_duration, {from: accounts[1]});
-      assert.equal(await _acb.getTimestamp(), _epoch_duration);
-
-      await should_throw(async () => {
-        await _acb.setTimestamp(_epoch_duration - 1, {from: accounts[1]});
-      }, "st1");
-
-      await should_throw(async () => {
-        await _acb.setTimestamp(_epoch_duration, {from: accounts[1]});
-      }, "st1");
-
-      await should_throw(async () => {
-        await _acb.setTimestamp(0, {from: accounts[1]});
-      }, "st1");
 
       // purchase_bonds
       await check_controlSupply(-_bond_price * 80, 80, 0);
