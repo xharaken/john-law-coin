@@ -2641,7 +2641,8 @@ class ACBUnitTest(unittest.TestCase):
         coin_supply = acb.coin.total_supply
         reclaim_4 = 0
         in_threshold = False
-        if Oracle.LEVEL_MAX - 1 - self.default_level <= Oracle.RECLAIM_THRESHOLD:
+        if (Oracle.LEVEL_MAX - 1 - self.default_level <=
+            Oracle.RECLAIM_THRESHOLD):
             in_threshold = True
             reclaim_4 = deposit_4[(now - 2) % 3]
         reward_total = (deposit_4[(now - 2) % 3] - reclaim_4 +
