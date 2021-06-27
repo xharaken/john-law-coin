@@ -531,11 +531,6 @@ contract Oracle_v5 is OwnableUpgradeable {
 // in a development phase.
 //------------------------------------------------------------------------------
 
-contract TestUpgradeable is OwnableUpgradeable {
-    event TestUpgradeableEvent(uint indexed args1, uint args2);
-
-}
-
 contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
   using SafeCast for uint;
   using SafeCast for int;
@@ -576,9 +571,10 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
                   bool commit_result, bool reveal_result,
                   uint deposited, uint reclaimed, uint rewarded,
                   bool epoch_updated);
-  event PurchaseBondsEvent(address indexed sender, uint count,
+  event PurchaseBondsEvent(address indexed sender, uint purchased_bonds,
                            uint redemption_epoch);
-  event RedeemBondsEvent(address indexed sender, uint count);
+  event RedeemBondsEvent(address indexed sender, uint redeemed_bonds,
+                         uint expired_bonds);
   event ControlSupplyEvent(int delta, int bond_budget, uint mint);
 
   // Initializer. The ownership of the contracts needs to be transferred to the
@@ -830,6 +826,7 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
       uint tax = coin_.balanceOf(coin_.tax_account_());
       uint burned = 0;
       if (age_ <= 2) {
+        // Advance the old oracle first to give the tax to the old oracle.
         coin_.transferOwnership(address(old_oracle_));
         burned = old_oracle_.advance(coin_);
         old_oracle_.revokeOwnership(coin_);
@@ -839,23 +836,25 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
         require(ret == 0, "vo2");
         oracle_.revokeOwnership(coin_);
       } else if (age_ == 3) {
-        coin_.transferOwnership(address(old_oracle_));
-        burned = old_oracle_.advance(coin_);
-        old_oracle_.revokeOwnership(coin_);
-        
+        // Advance the new oracle first to give the tax to the new oracle.
         coin_.transferOwnership(address(oracle_));
         uint ret = oracle_.advance(coin_);
         require(ret == 0, "vo3");
         oracle_.revokeOwnership(coin_);
+        
+        coin_.transferOwnership(address(old_oracle_));
+        burned = old_oracle_.advance(coin_);
+        old_oracle_.revokeOwnership(coin_);
       } else {
+        // Advance the new oracle first to give the tax to the new oracle.
+        coin_.transferOwnership(address(oracle_));
+        burned = oracle_.advance(coin_);
+        oracle_.revokeOwnership(coin_);
+        
         coin_.transferOwnership(address(old_oracle_));
         uint ret = old_oracle_.advance(coin_);
         require(ret == 0, "vo4");
         old_oracle_.revokeOwnership(coin_);
-        
-        coin_.transferOwnership(address(oracle_));
-        burned = oracle_.advance(coin_);
-        oracle_.revokeOwnership(coin_);
       }
 
       // Reset the tax account address just in case.
@@ -892,6 +891,8 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
                             bond_.totalSupply(), validBondSupply(),
                             oracle_level_, current_epoch_start_, tax);
     }
+
+    require(age_ >= 1, "vo5");
 
     // Commit.
     //
@@ -1007,10 +1008,11 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
 
     uint redeemed_bonds = 0;
     uint expired_bonds = 0;
+    uint epoch_id = oracle_.epoch_id_();
     for (uint i = 0; i < redemption_epochs.length; i++) {
       uint redemption_epoch = redemption_epochs[i];
       uint count = bond_.balanceOf(sender, redemption_epoch);
-      if (oracle_.epoch_id_() < redemption_epoch) {
+      if (epoch_id < redemption_epoch) {
         // If the bonds have not yet hit their redemption epoch, the ACB
         // accepts the redemption as long as |bond_budget_| is negative.
         if (bond_budget_ >= 0) {
@@ -1020,8 +1022,7 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
           count = (-bond_budget_).toUint256();
         }
       }
-      if (oracle_.epoch_id_() <
-          redemption_epoch + BOND_REDEEMABLE_PERIOD) {
+      if (epoch_id < redemption_epoch + BOND_REDEEMABLE_PERIOD) {
         // If the bonds are not expired, mint the corresponding coins to the
         // user account.
         uint amount = count * BOND_REDEMPTION_PRICE;
@@ -1037,8 +1038,8 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
     }
     require(validBondSupply().toInt256() + bond_budget_ >= 0, "rb1");
     
-    logging_.redeemedBonds(oracle_.epoch_id_(), redeemed_bonds, expired_bonds);
-    emit RedeemBondsEvent(sender, redeemed_bonds);
+    logging_.redeemedBonds(epoch_id, redeemed_bonds, expired_bonds);
+    emit RedeemBondsEvent(sender, redeemed_bonds, expired_bonds);
     return redeemed_bonds;
   }
 
@@ -1109,12 +1110,13 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
       public view returns (uint) {
     uint count = 0;
     uint epoch_id = oracle_.epoch_id_();
-    if (age_ <= 2) {
-        epoch_id = old_oracle_.epoch_id_();
-    }
     for (uint redemption_epoch =
-             Math.max(epoch_id - BOND_REDEEMABLE_PERIOD + 1, 0);
-         redemption_epoch < epoch_id + BOND_REDEMPTION_PERIOD + 1;
+             (epoch_id > BOND_REDEEMABLE_PERIOD ?
+              epoch_id - BOND_REDEEMABLE_PERIOD + 1 : 0);
+         // The previous versions of the smart contract might have used a larger
+         // BOND_REDEMPTION_PERIOD. Add 20 to look up all the redemption
+         // epochs that might have set in the previous versions.
+         redemption_epoch <= epoch_id + BOND_REDEMPTION_PERIOD + 20;
          redemption_epoch++) {
       count += bond_.bondSupplyAt(redemption_epoch);
     }

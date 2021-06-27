@@ -22,8 +22,8 @@ contract("LoggingUnittest", function (accounts) {
       assert.equal(epoch_log.burned_coins, 2);
       assert.equal(epoch_log.coin_supply_delta, 3);
       assert.equal(epoch_log.bond_budget, 4);
-      assert.equal(epoch_log.coin_total_supply, 5);
-      assert.equal(epoch_log.bond_total_supply, 6);
+      assert.equal(epoch_log.total_coin_supply, 5);
+      assert.equal(epoch_log.total_bond_supply, 6);
       assert.equal(epoch_log.valid_bond_supply, 7);
       assert.equal(epoch_log.oracle_level, 8);
       assert.equal(epoch_log.current_epoch_start, 9);
@@ -157,8 +157,8 @@ contract("LoggingUnittest", function (accounts) {
     epoch_log.burned_coins = ret[1];
     epoch_log.coin_supply_delta = ret[2];
     epoch_log.bond_budget = ret[3];
-    epoch_log.coin_total_supply = ret[4];
-    epoch_log.bond_total_supply = ret[5];
+    epoch_log.total_coin_supply = ret[4];
+    epoch_log.total_bond_supply = ret[5];
     epoch_log.valid_bond_supply = ret[6];
     epoch_log.oracle_level = ret[7];
     epoch_log.current_epoch_start = ret[8];

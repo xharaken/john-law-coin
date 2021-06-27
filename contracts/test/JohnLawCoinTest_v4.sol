@@ -33,7 +33,7 @@ contract ACBForTesting_v4 is ACB_v4 {
     require(1 <= BOND_REDEMPTION_PRICE && BOND_REDEMPTION_PRICE <= 100000,
             "oc2");
     require(1 <= BOND_REDEMPTION_PERIOD &&
-            BOND_REDEMPTION_PERIOD <= 100, "oc3");
+            BOND_REDEMPTION_PERIOD <= 20, "oc3");
     require(1 <= BOND_REDEEMABLE_PERIOD &&
             BOND_REDEEMABLE_PERIOD <= 100, "oc4");
     require(1 <= EPOCH_DURATION && EPOCH_DURATION <= 30 * 24 * 60 * 60, "oc5");

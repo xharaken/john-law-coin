@@ -175,7 +175,6 @@ class ACBSimulator(unittest.TestCase):
             acb.coin.mint(self.voters[i].address, self.voters[i].balance)
         initial_coin_supply = acb.coin.total_supply
 
-        epoch = 0
         tax = 0
         for i in range(self.iteration):
             if acb.coin.total_supply >= initial_coin_supply * 100:
@@ -186,11 +185,10 @@ class ACBSimulator(unittest.TestCase):
             coin_supply1 = acb.coin.total_supply
 
             acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
-            commit_observed = self.vote(epoch, tax)
+            commit_observed = self.vote(tax)
             if not commit_observed:
                 continue
 
-            epoch += 1
             coin_supply2 = acb.coin.total_supply
             bond_supply = acb.bond.total_supply
             valid_bond_supply = acb.valid_bond_supply()
@@ -244,7 +242,7 @@ class ACBSimulator(unittest.TestCase):
                       'delta=%d mint=%d lost=%d coin_supply=%d->%d->%d=%d '
                       'bond_supply=%d->%d valid_bond_supply=%d->%d '
                       'bond_budget=%d->%d tax=%d' %
-                      (epoch,
+                      (self.oracle.epoch_id,
                        self.metrics.reveal_hit,
                        self.metrics.reveal_hit + self.metrics.reveal_miss,
                        divide_or_zero(100 * self.metrics.reveal_hit,
@@ -301,7 +299,7 @@ class ACBSimulator(unittest.TestCase):
               'redemptions=%d/%d=%d%% fast_redeem=%d/%d=%d%% expired=%d '
               'supply=%d/%d/%d coin_supply=%d%% mint=%d lost=%d '
               'bond_supply=%d valid_bond_supply=%d tax=%d' %
-              (epoch,
+              (self.oracle.epoch_id,
                self.metrics.total_reveal_hit,
                self.metrics.total_reveal_hit + self.metrics.total_reveal_miss,
                divide_or_zero(100 * self.metrics.total_reveal_hit,
@@ -318,13 +316,13 @@ class ACBSimulator(unittest.TestCase):
                               (self.metrics.total_reward_hit +
                                self.metrics.total_reward_miss)),
                self.metrics.total_purchase_hit,
-               self.voter_count * epoch,
+               self.voter_count * self.iteration,
                divide_or_zero(100 * self.metrics.total_purchase_hit,
-                              self.voter_count * epoch),
+                              self.voter_count * self.iteration),
                self.metrics.total_redeem_hit,
-               self.voter_count * epoch,
+               self.voter_count * self.iteration,
                divide_or_zero(100 * self.metrics.total_redeem_hit,
-                              self.voter_count * epoch),
+                              self.voter_count * self.iteration),
                self.metrics.total_redemption_count,
                self.metrics.total_redeem_hit,
                divide_or_zero(100 * self.metrics.total_redemption_count,
@@ -496,12 +494,13 @@ class ACBSimulator(unittest.TestCase):
             self.metrics.redeem_hit += 1
 
 
-    def vote(self, epoch, tax):
+    def vote(self, tax):
         acb = self.acb
         voters = self.voters
-        current = epoch % 3
-        prev = (epoch - 1) % 3
-        prev_prev = (epoch - 2) % 3
+        epoch_id = self.oracle.epoch_id
+        current = epoch_id % 3
+        prev = (epoch_id - 1) % 3
+        prev_prev = (epoch_id - 2) % 3
 
         revealed_deposits = [0] * Oracle.LEVEL_MAX
         revealed_counts = [0] * Oracle.LEVEL_MAX
@@ -552,8 +551,8 @@ class ACBSimulator(unittest.TestCase):
             assert(deposit_to_be_reclaimed == 0)
 
         target_level = random.randint(0, Oracle.LEVEL_MAX - 1)
-        #target_level = int(epoch / 6) % 3
-        #target_level = epoch % 3
+        #target_level = int(epoch_id / 6) % 3
+        #target_level = epoch_id % 3
 
         reward_total = deposit_total - deposit_to_be_reclaimed + tax
         reclaimed_total = 0
@@ -712,22 +711,22 @@ class ACBSimulator(unittest.TestCase):
                     self.assertEqual(acb.bond_budget, -redeemable_bonds)
                 else:
                     self.assertEqual(acb.bond_budget, issued_bonds)
-                self.assertEqual(acb.coin.total_supply,
-                                 coin_supply -
-                                 self.lost_deposit[(epoch - 1) % 3])
+                self.assertEqual(
+                    acb.coin.total_supply,
+                    coin_supply - self.lost_deposit[(epoch_id - 1) % 3])
                 self.assertEqual(acb.oracle_level, mode_level)
                 commit_observed = True
 
                 self.metrics.delta = delta
                 self.metrics.mint = mint
-                self.metrics.lost = self.lost_deposit[(epoch - 1) % 3]
+                self.metrics.lost = self.lost_deposit[(epoch_id - 1) % 3]
                 self.metrics.oracle_level = mode_level
             else:
                 self.assertEqual(acb.oracle_level, mode_level)
                 self.assertEqual(acb.bond.total_supply, bond_supply)
                 self.assertEqual(acb.bond_budget, bond_budget)
 
-        self.lost_deposit[epoch % 3] =  deposit_total + tax - reclaimed_total
+        self.lost_deposit[epoch_id % 3] = deposit_total + tax - reclaimed_total
         return commit_observed
 
 

@@ -149,9 +149,9 @@ contract JohnLawCoin_v2 is ERC20PausableUpgradeable, OwnableUpgradeable {
   function resetTaxAccount_v2()
       public onlyOwner {
     address old_tax_account = tax_account_v2_;
-    tax_account_ = address(uint160(uint(keccak256(abi.encode(
-        "tax", block.number)))));
-    move(old_tax_account, tax_account_, balanceOf(old_tax_account));
+    tax_account_v2_ = address(uint160(uint(keccak256(abi.encode(
+        "tax_v2", block.number)))));
+    move(old_tax_account, tax_account_v2_, balanceOf(old_tax_account));
     tax_account_v2_ = tax_account_;
   }
 
@@ -217,6 +217,9 @@ contract JohnLawBond_v2 is OwnableUpgradeable {
   function upgrade()
       public onlyOwner {
     _total_supply_v2 = _total_supply;
+    for (uint epoch = 0; epoch < 100; epoch++) {
+        _bond_supply_v2[epoch] = _bond_supply[epoch];
+    }
   }
   
   // Mint bonds to one account. Only the ACB can call this method.
@@ -273,9 +276,9 @@ contract JohnLawBond_v2 is OwnableUpgradeable {
     _bonds_v2[account][redemption_epoch] += amount;
     _total_supply_v2 -= amount;
     _bond_count[account] -= amount;
-    _bond_count_v2[account] += amount;
+    _bond_count_v2[account] += amount;  // Use + to avoid underflow.
     _bond_supply[redemption_epoch] -= amount;
-    _bond_supply_v2[redemption_epoch] += amount;
+    _bond_supply_v2[redemption_epoch] -= amount;
     if (_bonds[account][redemption_epoch] == 0) {
       _redemption_epochs[account].remove(redemption_epoch);
       _redemption_epochs_v2[account].remove(redemption_epoch);
@@ -1005,7 +1008,7 @@ contract Logging_v2 is OwnableUpgradeable {
                         uint oracle_level, uint current_epoch_start, uint tax)
       public onlyOwner {
     updatedEpoch_v2(epoch_id, minted, burned, delta, bond_budget,
-                    total_coin_supply, valid_bond_supply, total_bond_supply,
+                    total_coin_supply, total_bond_supply, valid_bond_supply,
                     oracle_level, current_epoch_start, tax);
   }
 
@@ -1197,9 +1200,10 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
                   bool commit_result, bool reveal_result,
                   uint deposited, uint reclaimed, uint rewarded,
                   bool epoch_updated);
-  event PurchaseBondsEvent(address indexed sender, uint count,
+  event PurchaseBondsEvent(address indexed sender, uint purchased_bonds,
                            uint redemption_epoch);
-  event RedeemBondsEvent(address indexed sender, uint count);
+  event RedeemBondsEvent(address indexed sender, uint redeemed_bonds,
+                         uint expired_bonds);
   event ControlSupplyEvent(int delta, int bond_budget, uint mint);
 
   function upgrade(JohnLawCoin_v2 coin, JohnLawBond_v2 bond,
@@ -1350,7 +1354,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
       // Increase or decrease the total coin supply.
       uint mint = _controlSupply(delta);
 
-      logging_v2_.updatedEpoch(oracle_.epoch_id_(), mint, burned, delta,
+      logging_v2_.updatedEpoch(oracle_v2_.epoch_id_(), mint, burned, delta,
                                bond_budget_, coin_v2_.totalSupply(),
                                bond_v2_.totalSupply(), validBondSupply(),
                                oracle_level_, current_epoch_start_v2_, tax);
@@ -1381,7 +1385,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
 
     oracle_v2_.revokeOwnership(coin_v2_);
     
-    logging_v2_.voted(oracle_.epoch_id_(), result.commit_result,
+    logging_v2_.voted(oracle_v2_.epoch_id_(), result.commit_result,
                       result.reveal_result, result.deposited,
                       result.reclaimed, result.rewarded);
     emit VoteEvent(
@@ -1432,7 +1436,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
     // Burn the corresponding coins.
     coin_v2_.burn(sender, amount);
 
-    logging_v2_.purchasedBonds(oracle_.epoch_id_(), count);
+    logging_v2_.purchasedBonds(oracle_v2_.epoch_id_(), count);
     emit PurchaseBondsEvent(sender, count, redemption_epoch);
     return redemption_epoch;
   }
@@ -1458,10 +1462,11 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
 
     uint redeemed_bonds = 0;
     uint expired_bonds = 0;
+    uint epoch_id = oracle_v2_.epoch_id_();
     for (uint i = 0; i < redemption_epochs.length; i++) {
       uint redemption_epoch = redemption_epochs[i];
       uint count = bond_v2_.balanceOf(sender, redemption_epoch);
-      if (oracle_v2_.epoch_id_() < redemption_epoch) {
+      if (epoch_id < redemption_epoch) {
         // If the bonds have not yet hit their redemption epoch, the ACB
         // accepts the redemption as long as |bond_budget_| is negative.
         if (bond_budget_ >= 0) {
@@ -1471,8 +1476,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
           count = (-bond_budget_).toUint256();
         }
       }
-      if (oracle_v2_.epoch_id_() <
-          redemption_epoch + BOND_REDEEMABLE_PERIOD) {
+      if (epoch_id < redemption_epoch + BOND_REDEEMABLE_PERIOD) {
         // If the bonds are not expired, mint the corresponding coins to the
         // user account.
         uint amount = count * BOND_REDEMPTION_PRICE;
@@ -1488,8 +1492,8 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
     }
     require(validBondSupply().toInt256() + bond_budget_ >= 0, "rb1");
     
-    logging_v2_.redeemedBonds(oracle_.epoch_id_(), redeemed_bonds, expired_bonds);
-    emit RedeemBondsEvent(sender, redeemed_bonds);
+    logging_v2_.redeemedBonds(epoch_id, redeemed_bonds, expired_bonds);
+    emit RedeemBondsEvent(sender, redeemed_bonds, expired_bonds);
     return redeemed_bonds;
   }
 
@@ -1552,10 +1556,10 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
   // The calculated hash value.
   function encrypt(uint level, uint salt)
       public view returns (bytes32) {
-    return hash_v2(level, salt);
+    return encrypt_v2(level, salt);
   }
 
-  function hash_v2(uint level, uint salt)
+  function encrypt_v2(uint level, uint salt)
       public view returns (bytes32) {
     address sender = msg.sender;
     return oracle_v2_.encrypt(sender, level, salt);
@@ -1573,10 +1577,14 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
     uint count = 0;
     uint epoch_id = oracle_v2_.epoch_id_();
     for (uint redemption_epoch =
-             Math.max(epoch_id - BOND_REDEEMABLE_PERIOD + 1, 0);
-         redemption_epoch < epoch_id + BOND_REDEMPTION_PERIOD + 1;
+             (epoch_id > BOND_REDEEMABLE_PERIOD ?
+              epoch_id - BOND_REDEEMABLE_PERIOD + 1 : 0);
+         // The previous versions of the smart contract might have used a larger
+         // BOND_REDEMPTION_PERIOD. Add 20 to look up all the redemption
+         // epochs that might have set in the previous versions.
+         redemption_epoch <= epoch_id + BOND_REDEMPTION_PERIOD + 20;
          redemption_epoch++) {
-      count += bond_.bondSupplyAt(redemption_epoch);
+      count += bond_v2_.bondSupplyAt(redemption_epoch);
     }
     return count;
   }

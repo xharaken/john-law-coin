@@ -231,14 +231,13 @@ function parameterized_test(accounts,
     }
     let initial_coin_supply = await get_coin_supply();
 
-    let epoch = 0;
     let tax = 0;
     for (let iter = 0; iter < _iteration; iter++) {
       if ((await get_coin_supply()) >= initial_coin_supply * 100) {
         break;
       }
 
-      await upgrade_contract_if_needed(epoch);
+      await upgrade_contract_if_needed();
 
       _metrics.reset_local();
 
@@ -246,12 +245,10 @@ function parameterized_test(accounts,
 
       await _acb.setTimestamp(
           (await _acb.getTimestamp()).toNumber() + _epoch_duration);
-      let commit_observed = await vote(epoch, tax);
+      let commit_observed = await vote(tax);
       if (commit_observed == false) {
         continue;
       }
-
-      epoch += 1;
 
       let coin_supply2 = await get_coin_supply();
       let bond_supply = await get_bond_supply();
@@ -267,8 +264,8 @@ function parameterized_test(accounts,
       assert.equal(epoch_log.burned_coins, _metrics.lost);
       assert.equal(epoch_log.coin_supply_delta.toNumber(), _metrics.delta);
       assert.equal(epoch_log.bond_budget, bond_budget);
-      assert.equal(epoch_log.coin_total_supply, coin_supply2);
-      assert.equal(epoch_log.bond_total_supply, bond_supply);
+      assert.equal(epoch_log.total_coin_supply, coin_supply2);
+      assert.equal(epoch_log.total_bond_supply, bond_supply);
       assert.equal(epoch_log.valid_bond_supply, valid_bond_supply);
       assert.equal(epoch_log.oracle_level, _metrics.oracle_level);
       assert.equal(epoch_log.current_epoch_start,
@@ -294,7 +291,7 @@ function parameterized_test(accounts,
 
       if (true) {
         let coin_supply3 = await get_coin_supply();
-        console.log("epoch=" + epoch +
+        console.log("epoch=" + (await _oracle.epoch_id_()).toNumber() +
                     " reveal_hit=" + _metrics.reveal_hit +
                     "/" + (_metrics.reveal_hit + _metrics.reveal_miss) +
                     "=" + divide_or_zero(100 * _metrics.reveal_hit,
@@ -346,7 +343,7 @@ function parameterized_test(accounts,
       _metrics.update_total();
     }
     console.log("================");
-    console.log("epoch=" + epoch +
+    console.log("epoch=" + (await _oracle.epoch_id_()).toNumber() +
                 " reveal_hit=" + _metrics.total_reveal_hit +
                 "/" + (_metrics.total_reveal_hit +
                        _metrics.total_reveal_miss) +
@@ -366,13 +363,13 @@ function parameterized_test(accounts,
                                      (_metrics.total_reward_hit +
                                       _metrics.total_reward_miss)) +
                 "% purchase_hit=" + _metrics.total_purchase_hit +
-                "/" + _voter_count * epoch +
+                "/" + _voter_count * _iteration +
                 "=" + divide_or_zero(100 * _metrics.total_purchase_hit,
-                                     _voter_count * epoch) +
+                                     _voter_count * _iteration) +
                 "% redeem_hit=" + _metrics.total_redeem_hit +
-                "/" + _voter_count * epoch +
+                "/" + _voter_count * _iteration +
                 "=" + divide_or_zero(100 * _metrics.total_redeem_hit,
-                                     _voter_count * epoch) +
+                                     _voter_count * _iteration) +
                 "% redemptions=" + _metrics.total_redemption_count +
                 "/" + _metrics.total_redeem_hit +
                 "=" + divide_or_zero(100 * _metrics.total_redemption_count,
@@ -484,7 +481,7 @@ function parameterized_test(accounts,
         let voter = _voters[(start_index + index) % _voter_count];
         let redemptions = [];
         for (let redemption in voter.bonds) {
-          redemptions.push(redemption);
+          redemptions.push(parseInt(redemption));
         }
         if (redemptions.length == 0) {
           continue;
@@ -523,7 +520,8 @@ function parameterized_test(accounts,
         let bond_supply = await get_bond_supply();
         let valid_bond_supply = (await _acb.validBondSupply()).toNumber();
         await check_redeem_bonds(redemptions,
-                                 {from: voter.address}, redeemed_bonds);
+                                 {from: voter.address}, redeemed_bonds,
+                                 expired_bonds);
         assert.equal(await _acb.bond_budget_(), bond_budget);
         assert.equal(await get_balance(voter.address),
                      voter.balance);
@@ -554,10 +552,11 @@ function parameterized_test(accounts,
       }
     }
 
-    async function vote(epoch, tax) {
-      let current = mod(epoch, 3);
-      let prev = mod(epoch - 1, 3);
-      let prev_prev = mod(epoch - 2, 3);
+    async function vote(tax) {
+      let epoch_id = (await _oracle.epoch_id_()).toNumber();
+      let current = mod(epoch_id, 3);
+      let prev = mod(epoch_id - 1, 3);
+      let prev_prev = mod(epoch_id - 2, 3);
 
       let revealed_deposits = new Array(_level_max).fill(0);
       let revealed_counts = new Array(_level_max).fill(0);
@@ -761,13 +760,15 @@ function parameterized_test(accounts,
           let mint = 0;
           let redeemable_bonds = 0;
           let issued_bonds = 0;
+          let valid_bond_supply = (await _acb.validBondSupply()).toNumber();
           if (delta >= 0) {
             let necessary_bonds = Math.trunc(delta / _bond_redemption_price);
-            if (necessary_bonds <= bond_supply) {
+            if (necessary_bonds <= valid_bond_supply) {
               redeemable_bonds = necessary_bonds;
             } else {
-              redeemable_bonds = bond_supply;
-              mint = (necessary_bonds - bond_supply) * _bond_redemption_price;
+              redeemable_bonds = valid_bond_supply;
+              mint = (necessary_bonds - valid_bond_supply) *
+                _bond_redemption_price;
             }
           } else {
             assert.isTrue(mode_level != _level_max);
@@ -784,13 +785,13 @@ function parameterized_test(accounts,
           }
           assert.equal(await get_coin_supply(),
                        coin_supply -
-                       _lost_deposit[mod(epoch - 1, 3)]);
+                       _lost_deposit[mod(epoch_id - 1, 3)]);
           assert.equal(await _acb.oracle_level_(), mode_level);
           commit_observed = true;
 
           _metrics.delta = delta;
           _metrics.mint = mint;
-          _metrics.lost = _lost_deposit[mod(epoch - 1, 3)];
+          _metrics.lost = _lost_deposit[mod(epoch_id - 1, 3)];
           _metrics.oracle_level = mode_level;
         } else {
           assert.equal(await _acb.oracle_level_(), mode_level);
@@ -799,19 +800,22 @@ function parameterized_test(accounts,
         }
       }
 
-      _lost_deposit[mod(epoch, 3)] =  deposit_total + tax - reclaimed_total;
+      _lost_deposit[mod(epoch_id, 3)] =  deposit_total + tax - reclaimed_total;
       return commit_observed;
     }
 
-    async function upgrade_contract_if_needed(epoch) {
+    async function upgrade_contract_if_needed() {
       if (!_should_upgrade) {
         return;
       }
 
-      if (epoch == 5) {
+      let epoch_offset = (await _oracle.epoch_id_()).toNumber() - 3;
+      let repeat = 3;
+      if (epoch_offset == repeat * 1) {
         _tmp_bond_price = _bond_price;
         _tmp_bond_redemption_price = _bond_redemption_price;
         _tmp_bond_redemption_period = _bond_redemption_period;
+        _tmp_bond_redeemable_period = _bond_redeemable_period;
         _tmp_epoch_duration = _epoch_duration;
         _tmp_proportional_reward_rate = _proportional_reward_rate;
         _tmp_deposit_rate = _deposit_rate;
@@ -822,6 +826,7 @@ function parameterized_test(accounts,
         _bond_price += 100;
         _bond_redemption_price += 100;
         _bond_redemption_period = 2;
+        _bond_redeemable_period = 12;
         _epoch_duration = 10;
         _proportional_reward_rate = 50;
         _deposit_rate = 50;
@@ -845,6 +850,7 @@ function parameterized_test(accounts,
         await _acb.overrideConstants(_bond_price,
                                      _bond_redemption_price,
                                      _bond_redemption_period,
+                                     _bond_redeemable_period,
                                      _epoch_duration,
                                      _deposit_rate,
                                      _damping_factor,
@@ -852,10 +858,11 @@ function parameterized_test(accounts,
         common.print_contract_size(_acb, "ACBForTesting_v2");
         await _acb.upgrade(_coin.address, _bond.address,
                            _oracle.address, _logging.address);
-      } else if (epoch == 10) {
+      } else if (epoch_offset == repeat * 2) {
         _bond_price = _tmp_bond_price;
         _bond_redemption_price = _tmp_bond_redemption_price;
         _bond_redemption_period = _tmp_bond_redemption_period;
+        _bond_redeemable_period = _tmp_bond_redeemable_period;
         _epoch_duration = _tmp_epoch_duration;
         _proportional_reward_rate = _tmp_proportional_reward_rate;
         _deposit_rate = _tmp_deposit_rate;
@@ -872,15 +879,17 @@ function parameterized_test(accounts,
         await _acb.overrideConstants(_bond_price,
                                      _bond_redemption_price,
                                      _bond_redemption_period,
+                                     _bond_redeemable_period,
                                      _epoch_duration,
                                      _deposit_rate,
                                      _damping_factor,
                                      _level_to_exchange_rate);
         await _acb.upgrade(_oracle.address);
-      } else if (epoch == 15) {
+      } else if (epoch_offset == repeat * 3) {
         _tmp_bond_price = _bond_price;
         _tmp_bond_redemption_price = _bond_redemption_price;
         _tmp_bond_redemption_period = _bond_redemption_period;
+        _tmp_bond_redeemable_period = _bond_redeemable_period;
         _tmp_epoch_duration = _epoch_duration;
         _tmp_proportional_reward_rate = _proportional_reward_rate;
         _tmp_deposit_rate = _deposit_rate;
@@ -891,6 +900,7 @@ function parameterized_test(accounts,
         _bond_price += 100;
         _bond_redemption_price += 100;
         _bond_redemption_period = 2;
+        _bond_redeemable_period = 12;
         _epoch_duration = 10;
         _proportional_reward_rate = 50;
         _deposit_rate = 50;
@@ -920,15 +930,17 @@ function parameterized_test(accounts,
         await _acb.overrideConstants(_bond_price,
                                      _bond_redemption_price,
                                      _bond_redemption_period,
+                                     _bond_redeemable_period,
                                      _epoch_duration,
                                      _deposit_rate,
                                      _damping_factor,
                                      _level_to_exchange_rate);
         await _acb.setTimestamp((await old_acb.getTimestamp()).toNumber());
-      } else if (epoch == 20) {
+      } else if (epoch_offset == repeat * 4) {
         _bond_price = _tmp_bond_price;
         _bond_redemption_price = _tmp_bond_redemption_price;
         _bond_redemption_period = _tmp_bond_redemption_period;
+        _bond_redeemable_period = _tmp_bond_redeemable_period;
         _epoch_duration = _tmp_epoch_duration;
         _proportional_reward_rate = _tmp_proportional_reward_rate;
         _deposit_rate = _tmp_deposit_rate;
@@ -942,7 +954,7 @@ function parameterized_test(accounts,
         let old_oracle = _oracle;
         _oracle = await deployProxy(
             OracleForTesting_v5,
-            [(await old_oracle.epoch_id_()).toNumber() + 1]);
+            [(await old_oracle.epoch_id_()).toNumber()]);
         common.print_contract_size(_oracle, "OracleForTesting_v5");
         await _oracle.overrideConstants(_level_max, _reclaim_threshold,
                                         _proportional_reward_rate);
@@ -966,6 +978,7 @@ function parameterized_test(accounts,
         await _acb.overrideConstants(_bond_price,
                                      _bond_redemption_price,
                                      _bond_redemption_period,
+                                     _bond_redeemable_period,
                                      _epoch_duration,
                                      _deposit_rate,
                                      _damping_factor,
@@ -1001,21 +1014,23 @@ function parameterized_test(accounts,
       assert.equal(args.value, amount);
     }
 
-    async function check_purchase_bonds(count, option, redemption) {
-      let receipt = await _acb.purchaseBonds(count, option);
+    async function check_purchase_bonds(purchased_bonds, option, redemption) {
+      let receipt = await _acb.purchaseBonds(purchased_bonds, option);
       let args =
           receipt.logs.filter(e => e.event == 'PurchaseBondsEvent')[0].args;
       assert.equal(args.sender, option.from);
-      assert.equal(args.count, count);
+      assert.equal(args.purchased_bonds, purchased_bonds);
       assert.equal(args.redemption_epoch, redemption);
     }
 
-    async function check_redeem_bonds(redemptions, option, count_total) {
+    async function check_redeem_bonds(redemptions, option, redeemed_bonds,
+                                      expired_bonds) {
       let receipt = await _acb.redeemBonds(redemptions, option);
       let args =
           receipt.logs.filter(e => e.event == 'RedeemBondsEvent')[0].args;
       assert.equal(args.sender, option.from);
-      assert.equal(args.count, count_total);
+      assert.equal(args.redeemed_bonds, redeemed_bonds);
+      assert.equal(args.expired_bonds, expired_bonds);
     }
 
     async function get_balance(address) {
@@ -1056,14 +1071,12 @@ function parameterized_test(accounts,
       epoch_log.burned_coins = ret[1];
       epoch_log.coin_supply_delta = ret[2];
       epoch_log.bond_budget = ret[3];
-      epoch_log.coin_total_supply = ret[4];
-      epoch_log.bond_total_supply = ret[5];
+      epoch_log.total_coin_supply = ret[4];
+      epoch_log.total_bond_supply = ret[5];
       epoch_log.valid_bond_supply = ret[6];
       epoch_log.oracle_level = ret[7];
       epoch_log.current_epoch_start = ret[8];
       epoch_log.tax = ret[9];
-      epoch_log.purchased_bonds = ret[10];
-      epoch_log.redeemed_bonds = ret[11];
       return epoch_log;
     }
 
