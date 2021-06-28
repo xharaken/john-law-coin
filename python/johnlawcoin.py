@@ -556,7 +556,7 @@ class Oracle:
     #
     # Parameters
     # ----------------
-    # |coin|: JohnLawCoin.
+    # |coin|: The JohnLawCoin contract.
     #
     # Returns
     # ----------------
@@ -863,7 +863,216 @@ class Logging:
         self.bond_logs[epoch_id].redeemed_bonds += redeemed_bonds
         self.bond_logs[epoch_id].expired_bonds += expired_bonds
 
+#-------------------------------------------------------------------------------
+# [BondOperation contract]
+#
+# The BondOperation contract issues / redeems bonds to decrease / increase the
+# total coin supply. The bond budget is updated by the ACB every epoch.
+#-------------------------------------------------------------------------------
+class BondOperation:
+    
+    # Constructor.
+    #
+    # Parameters
+    # ----------------
+    # |bond|: The JohnLawBond contract.
+    def __init__(self, bond):
+        # ----------------
+        # Constants
+        # ----------------
+        
+        # The bond structure.
+        #
+        # |<---BOND_REDEMPTION_PERIOD--->|<---BOND_REDEEMABLE_PERIOD--->|
+        # ^                              ^                              ^
+        # Issued                         Becomes redeemable             Expired
+        #
+        # During BOND_REDEMPTION_PERIOD, the bonds are redeemable as long as the
+        # ACB's bond budget is negative. During BOND_REDEEMABLE_PERIOD, the
+        # bonds are redeemable regardless of the ACB's bond budget. After
+        # BOND_REDEEMABLE_PERIOD, the bonds are expired.
+        #
+        # One bond is sold for 996 coins.
+        BondOperation.BOND_PRICE = 996
+        # One bond is redeemed for 1000 coins.
+        BondOperation.BOND_REDEMPTION_PRICE = 1000
+        # 12 epochs.
+        BondOperation.BOND_REDEMPTION_PERIOD = 12
+        # 2 epochs.
+        BondOperation.BOND_REDEEMABLE_PERIOD = 2
 
+        # ----------------
+        # Attributes
+        # ----------------
+
+        # The JohnLawBond contract.
+        self.bond = bond
+
+        # If |bond_budget| is positive, it indicates the number of bonds the ACB
+        # can issue to decrease the total coin supply. If |bond_budget| is
+        # negative, it indicates the number of bonds the ACB can redeem to
+        # increase the total coin supply.
+        self.bond_budget = 0
+
+    # Test only.
+    def override_constants_for_testing(
+        self, bond_price, bond_redemption_price, bond_redemption_period,
+        bond_redeemable_period):
+
+        BondOperation.BOND_PRICE = bond_price
+        BondOperation.BOND_REDEMPTION_PRICE = bond_redemption_price
+        BondOperation.BOND_REDEMPTION_PERIOD = bond_redemption_period
+        BondOperation.BOND_REDEEMABLE_PERIOD = bond_redeemable_period
+
+        assert(1 <= BondOperation.BOND_PRICE and
+               BondOperation.BOND_PRICE <= BondOperation.BOND_REDEMPTION_PRICE)
+        assert(1 <= BondOperation.BOND_REDEMPTION_PRICE and
+               BondOperation.BOND_REDEMPTION_PRICE <= 100000)
+        assert(1 <= BondOperation.BOND_REDEMPTION_PERIOD and
+               BondOperation.BOND_REDEMPTION_PERIOD <= 20)
+        assert(1 <= BondOperation.BOND_REDEEMABLE_PERIOD and
+               BondOperation.BOND_REDEEMABLE_PERIOD <= 20)
+        
+    # Purchase bonds.
+    #
+    # Parameters
+    # ----------------
+    # |sender|: The sender account.
+    # |count|: The number of bonds to purchase.
+    # |epoch_id|: The current epoch ID.
+    # |coin|: The JohnLawCoin contract.
+    #
+    # Returns
+    # ----------------
+    # The redemption epoch of the purchased bonds if it succeeds.
+    # 0 otherwise.
+    def purchase_bonds(self, sender, count, epoch_id, coin):
+        # The user must purchase at least one bond.
+        assert(count > 0)
+        # The BondOperation does not have enough bonds to issue.
+        assert(self.bond_budget >= count)
+
+        amount = BondOperation.BOND_PRICE * count
+        # The user does not have enough coins to purchase the bonds.
+        assert(coin.balance_of(sender) >= amount)
+
+        # Set the redemption epoch of the bonds.
+        redemption_epoch = epoch_id + BondOperation.BOND_REDEMPTION_PERIOD
+
+        # Issue new bonds.
+        self.bond.mint(sender, redemption_epoch, count)
+        self.bond_budget -= count
+        assert(self.bond_budget >= 0)
+        assert(self.valid_bond_supply(epoch_id) + self.bond_budget >= 0)
+        assert(self.bond.balance_of(sender, redemption_epoch) > 0)
+
+        # Burn the corresponding coins.
+        coin.burn(sender, amount)
+        return redemption_epoch
+
+    # Redeem bonds.
+    #
+    # Parameters
+    # ----------------
+    # |sender|: The sender account.
+    # |redemption_epochs|: An array of bonds to be redeemed. Bonds are
+    # identified by their redemption epochs.
+    # |epoch_id|: The current epoch ID.
+    # |coin|: The JohnLawCoin contract.
+    #
+    # Returns
+    # ----------------
+    # A tuple of two values:
+    # - The number of redeemed bonds.
+    # - The number of expired bonds.
+    def redeem_bonds(self, sender, redemption_epochs, epoch_id, coin):
+        redeemed_bonds = 0
+        expired_bonds = 0
+        for redemption_epoch in redemption_epochs:
+            count = self.bond.balance_of(sender, redemption_epoch)
+            if epoch_id < redemption_epoch:
+                # If the bonds have not yet hit their redemption epoch, the
+                # BondOperation accepts the redemption as long as
+                # |self.bond_budget| is negative.
+                if self.bond_budget >= 0:
+                    continue
+                if count > -self.bond_budget:
+                    count = -self.bond_budget
+
+            if (epoch_id <
+                redemption_epoch + BondOperation.BOND_REDEEMABLE_PERIOD):
+                # If the bonds are not expired, mint the corresponding coins
+                # to the user account.
+                amount = count * BondOperation.BOND_REDEMPTION_PRICE
+                coin.mint(sender, amount)
+
+                self.bond_budget += count
+                redeemed_bonds += count
+            else:
+                expired_bonds += count
+
+            # Burn the redeemed / expired bonds.
+            self.bond.burn(sender, redemption_epoch, count)
+
+        assert(self.valid_bond_supply(epoch_id) + self.bond_budget >= 0)
+        return (redeemed_bonds, expired_bonds)
+
+    # Update the bond budget to increase or decrease the total coin supply.
+    #
+    # Parameters
+    # ----------------
+    # |delta|: The target increase or decrease of the total coin supply.
+    # |epoch_id|: The current epoch ID.
+    #
+    # Returns
+    # ----------------
+    # The amount of coins that cannot be increased by adjusting the bond budget
+    # and thus need to be newly minted.
+    def update(self, delta, epoch_id):
+        mint = 0
+        bond_supply = self.valid_bond_supply(epoch_id)
+        if delta == 0:
+            # No change in the total coin supply.
+            self.bond_budget = 0
+        elif delta > 0:
+            # Increase the total coin supply.
+            count = int(delta / BondOperation.BOND_REDEMPTION_PRICE)
+            if count <= bond_supply:
+                # If there are sufficient bonds to redeem, increase the total
+                # coin supply by redeeming bonds.
+                self.bond_budget = -count
+            else:
+                # Otherwise, redeem all the issued bonds.
+                self.bond_budget = -bond_supply
+                # The remaining coins need to be newly minted.
+                mint = ((count - bond_supply) *
+                        BondOperation.BOND_REDEMPTION_PRICE)
+            assert(self.bond_budget <= 0)
+        else:
+            assert(delta < 0)
+            # Issue new bonds to decrease the total coin supply.
+            self.bond_budget = int(-delta / BondOperation.BOND_PRICE)
+            assert(self.bond_budget >= 0)
+
+        assert(bond_supply + self.bond_budget >= 0)
+        assert(mint >= 0)
+        return mint
+
+    # Return the valid bond supply; i.e., the total supply of bonds that are
+    # not yet expired.
+    #
+    # Parameters
+    # ----------------
+    # |epoch_id|: The current epoch ID.
+    def valid_bond_supply(self, epoch_id):
+        count = 0
+        for redemption_epoch in range(
+                max(epoch_id - BondOperation.BOND_REDEEMABLE_PERIOD + 1, 0),
+                epoch_id + BondOperation.BOND_REDEMPTION_PERIOD + 1):
+            count += self.bond.bond_supply_at(redemption_epoch)
+        return count
+
+    
 #-------------------------------------------------------------------------------
 # [ACB contract]
 #
@@ -880,7 +1089,6 @@ class Logging:
 # 4. If the exchange rate is smaller than 1.0, the ACB decreases the total coin
 #    supply by issuing new bonds.
 #-------------------------------------------------------------------------------
-
 class ACB:
     NULL_HASH = 0
 
@@ -889,10 +1097,10 @@ class ACB:
     # Parameters
     # ----------------
     # |coin|: The JohnLawCoin contract.
-    # |bond|: The JohnLawBond contract.
     # |oracle|: The Oracle contract.
+    # |bond_operation|: The BondOperation contract.
     # |logging|: The Logging contract.
-    def __init__(self, coin, bond, oracle, logging):
+    def __init__(self, coin, oracle, bond_operation, logging):
         # ----------------
         # Constants
         # ----------------
@@ -937,21 +1145,6 @@ class ACB:
         ACB.LEVEL_TO_EXCHANGE_RATE = [6, 7, 8, 9, 10, 11, 12, 13, 14]
         ACB.EXCHANGE_RATE_DIVISOR = 10
 
-        # The bond structure.
-        #
-        # |<---BOND_REDEMPTION_PERIOD--->|<---BOND_REDEEMABLE_PERIOD--->|
-        # ^                              ^                              ^
-        # Issued                         Becomes redeemable             Expired
-        #
-        # During BOND_REDEMPTION_PERIOD, the bonds are redeemable as long as the
-        # ACB's bond budget is negative. During BOND_REDEEMABLE_PERIOD, the
-        # bonds are redeemable regardless of the ACB's bond budget. After
-        # BOND_REDEEMABLE_PERIOD, the bonds are expired.
-        ACB.BOND_PRICE = 996 # One bond is sold for 996 coins.
-        ACB.BOND_REDEMPTION_PRICE = 1000 # One bond is redeemed for 1000 coins.
-        ACB.BOND_REDEMPTION_PERIOD = 12 # 12 epochs.
-        ACB.BOND_REDEEMABLE_PERIOD = 2 # 2 epochs.
-
         # The duration of the oracle phase. The ACB adjusts the total coin
         # supply once per phase. Voters can vote once per phase.
         ACB.EPOCH_DURATION = 7 * 24 * 60 * 60 # 1 week.
@@ -988,15 +1181,6 @@ class ACB:
         # loses its power, moving the oracle to a fully decentralized system.
         self.coin = coin
 
-        # The JohnLawBond contract.
-        self.bond = bond
-
-        # If |bond_budget| is positive, it indicates the number of bonds the ACB
-        # can issue to decrease the total coin supply. If |bond_budget| is
-        # negative, it indicates the number of bonds the ACB can redeem to
-        # increase the total coin supply.
-        self.bond_budget = 0
-
         # The current timestamp.
         self.timestamp = 0
 
@@ -1009,6 +1193,9 @@ class ACB:
         # The current oracle level.
         self.oracle_level = Oracle.LEVEL_MAX
 
+        # The bond operation contract.
+        self.bond_operation = bond_operation
+
         # The logging contract.
         self.logging = logging
 
@@ -1016,27 +1203,14 @@ class ACB:
 
     # Test only.
     def override_constants_for_testing(
-        self, bond_price, bond_redemption_price, bond_redemption_period,
-        bond_redeemable_period, epoch_duration, deposit_rate, damping_factor,
-        level_to_exchange_rate):
+            self, epoch_duration, deposit_rate, damping_factor,
+            level_to_exchange_rate):
 
-        ACB.BOND_PRICE = bond_price
-        ACB.BOND_REDEMPTION_PRICE = bond_redemption_price
-        ACB.BOND_REDEMPTION_PERIOD = bond_redemption_period
-        ACB.BOND_REDEEMABLE_PERIOD = bond_redeemable_period
         ACB.EPOCH_DURATION = epoch_duration
         ACB.DEPOSIT_RATE = deposit_rate
         ACB.DAMPING_FACTOR = damping_factor
         ACB.LEVEL_TO_EXCHANGE_RATE = level_to_exchange_rate
 
-        assert(1 <= ACB.BOND_PRICE and
-               ACB.BOND_PRICE <= ACB.BOND_REDEMPTION_PRICE)
-        assert(1 <= ACB.BOND_REDEMPTION_PRICE and
-               ACB.BOND_REDEMPTION_PRICE <= 100000)
-        assert(1 <= ACB.BOND_REDEMPTION_PERIOD and
-               ACB.BOND_REDEMPTION_PERIOD <= 100)
-        assert(1 <= ACB.BOND_REDEEMABLE_PERIOD and
-               ACB.BOND_REDEEMABLE_PERIOD <= 100)
         assert(1 <= ACB.EPOCH_DURATION and
                ACB.EPOCH_DURATION <= 30 * 24 * 60 * 60)
         assert(0 <= ACB.DEPOSIT_RATE and ACB.DEPOSIT_RATE <= 100)
@@ -1105,14 +1279,15 @@ class ACB:
                 # multiply the damping factor.
                 delta = int(delta * ACB.DAMPING_FACTOR / 100)
 
-            # Increase or decrease the total coin supply.
-            mint = self._control_supply(delta)
+            # Update the bond budget.
+            epoch_id = self.oracle.epoch_id
+            mint = self.bond_operation.update(delta, epoch_id)
 
             self.logging.updated_epoch(
-                self.oracle.epoch_id, mint, burned, delta, self.bond_budget,
-                self.coin.total_supply, self.bond.total_supply,
-                self.valid_bond_supply(), self.oracle_level,
-                self.current_epoch_start, tax)
+                epoch_id, mint, burned, delta, self.bond_operation.bond_budget,
+                self.coin.total_supply, self.bond_operation.bond.total_supply,
+                self.bond_operation.valid_bond_supply(epoch_id),
+                self.oracle_level, self.current_epoch_start, tax)
 
         # Commit.
         #
@@ -1150,28 +1325,8 @@ class ACB:
     # The redemption epoch of the purchased bonds if it succeeds.
     # 0 otherwise.
     def purchase_bonds(self, sender, count):
-        # The user must purchase at least one bond.
-        assert(count > 0)
-        # The ACB does not have enough bonds to issue.
-        assert(self.bond_budget >= count)
-
-        amount = ACB.BOND_PRICE * count
-        # The user does not have enough coins to purchase the bonds.
-        assert(self.coin.balance_of(sender) >= amount)
-
-        # Set the redemption epoch of the bonds.
-        redemption_epoch = self.oracle.epoch_id + ACB.BOND_REDEMPTION_PERIOD
-
-        # Issue new bonds.
-        self.bond.mint(sender, redemption_epoch, count)
-        self.bond_budget -= count
-        assert(self.bond_budget >= 0)
-        assert(self.valid_bond_supply() + self.bond_budget >= 0)
-        assert(self.bond.balance_of(sender, redemption_epoch) > 0)
-
-        # Burn the corresponding coins.
-        self.coin.burn(sender, amount)
-
+        redemption_epoch = self.bond_operation.purchase_bonds(
+            sender, count, self.oracle.epoch_id, self.coin)
         self.logging.purchased_bonds(self.oracle.epoch_id, count)
         return redemption_epoch
 
@@ -1187,88 +1342,11 @@ class ACB:
     # ----------------
     # The number of successfully redeemed bonds.
     def redeem_bonds(self, sender, redemption_epochs):
-        redeemed_bonds = 0
-        expired_bonds = 0
-        for redemption_epoch in redemption_epochs:
-            count = self.bond.balance_of(sender, redemption_epoch)
-            if self.oracle.epoch_id < redemption_epoch:
-                # If the bonds have not yet hit their redemption epoch, the
-                # ACB accepts the redemption as long as |self.bond_budget| is
-                # negative.
-                if self.bond_budget >= 0:
-                    continue
-                if count > -self.bond_budget:
-                    count = -self.bond_budget
-
-            if (self.oracle.epoch_id <
-                redemption_epoch + ACB.BOND_REDEEMABLE_PERIOD):
-                # If the bonds are not expired, mint the corresponding coins
-                # to the user account.
-                amount = count * ACB.BOND_REDEMPTION_PRICE
-                self.coin.mint(sender, amount)
-
-                # Burn the redeemed bonds.
-                self.bond_budget += count
-                redeemed_bonds += count
-            else:
-                expired_bonds += count
-
-            self.bond.burn(sender, redemption_epoch, count)
-
-        assert(self.valid_bond_supply() + self.bond_budget >= 0)
-
+        (redeemed_bonds, expired_bonds) = self.bond_operation.redeem_bonds(
+            sender, redemption_epochs, self.oracle.epoch_id, self.coin)
         self.logging.redeemed_bonds(
             self.oracle.epoch_id, redeemed_bonds, expired_bonds)
         return redeemed_bonds
-
-    # Increase or decrease the total coin supply.
-    #
-    # Parameters
-    # ----------------
-    # |delta|: The target increase or decrease to the total coin supply.
-    #
-    # Returns
-    # ----------------
-    # The amount of coins that need to be newly minted by the ACB.
-    def _control_supply(self, delta):
-        mint = 0
-        bond_supply = self.valid_bond_supply()
-        if delta == 0:
-            # No change in the total coin supply.
-            self.bond_budget = 0
-        elif delta > 0:
-            # Increase the total coin supply.
-            count = int(delta / ACB.BOND_REDEMPTION_PRICE)
-            if count <= bond_supply:
-                # If there are sufficient bonds to redeem, increase the total
-                # coin supply by redeeming bonds.
-                self.bond_budget = -count
-            else:
-                # Otherwise, redeem all the issued bonds.
-                self.bond_budget = -bond_supply
-                # The ACB needs to mint the remaining coins.
-                mint = ((count - bond_supply) *
-                        ACB.BOND_REDEMPTION_PRICE)
-            assert(self.bond_budget <= 0)
-        else:
-            assert(delta < 0)
-            # Issue new bonds to decrease the total coin supply.
-            self.bond_budget = int(-delta / ACB.BOND_PRICE)
-            assert(self.bond_budget >= 0)
-
-        assert(bond_supply + self.bond_budget >= 0)
-        assert(mint >= 0)
-        return mint
-
-    # Return the valid bond supply; i.e., the total supply of bonds that are
-    # not yet expired.
-    def valid_bond_supply(self):
-        count = 0
-        for redemption_epoch in range(
-                max(self.oracle.epoch_id - ACB.BOND_REDEEMABLE_PERIOD + 1, 0),
-                self.oracle.epoch_id + ACB.BOND_REDEMPTION_PERIOD + 1):
-            count += self.bond.bond_supply_at(redemption_epoch)
-        return count
 
     # Return the current timestamp in seconds.
     def get_timestamp(self):

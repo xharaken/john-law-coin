@@ -1455,12 +1455,12 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
         uint amount = count * BOND_REDEMPTION_PRICE;
         coin_.mint(sender, amount);
 
-        // Burn the redeemed bonds.
         bond_budget_ += count.toInt256();
         redeemed_bonds += count;
       } else {
         expired_bonds += count;
       }
+      // Burn the redeemed / expired bonds.
       bond_.burn(sender, redemption_epoch, count);
     }
     require(validBondSupply().toInt256() + bond_budget_ >= 0, "rb1");
@@ -1474,7 +1474,7 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
   //
   // Parameters
   // ----------------
-  // |delta|: The target increase or decrease to the total coin supply.
+  // |delta|: The target increase or decrease of the total coin supply.
   //
   // Returns
   // ----------------

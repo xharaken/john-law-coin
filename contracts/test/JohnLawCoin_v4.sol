@@ -468,7 +468,7 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
   //
   // Parameters
   // ----------------
-  // |delta|: The target increase or decrease to the total coin supply.
+  // |delta|: The target increase or decrease of the total coin supply.
   //
   // Returns
   // ----------------
