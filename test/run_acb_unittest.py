@@ -7,7 +7,7 @@
 
 import common
 
-# Need 10 parameters:
+# Need 11 parameters:
 # - bond_price
 # - bond_redemption_price
 # - bond_redemption_period

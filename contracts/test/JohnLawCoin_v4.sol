@@ -40,10 +40,6 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
   // Constants. The values are defined in initialize(). The values never
   // change during the contract execution but use 'public' (instead of
   // 'constant') because tests want to override the values.
-  uint public BOND_PRICE;
-  uint public BOND_REDEMPTION_PRICE;
-  uint public BOND_REDEMPTION_PERIOD;
-  uint public BOND_REDEEMABLE_PERIOD;
   uint[] public LEVEL_TO_EXCHANGE_RATE;
   uint public EXCHANGE_RATE_DIVISOR;
   uint public EPOCH_DURATION;
@@ -56,10 +52,9 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
 
   // Attributes. See the comment in initialize().
   JohnLawCoin_v2 public coin_;
-  JohnLawBond_v2 public bond_;
   Oracle_v3 public oracle_;
+  BondOperation_v2 public bond_operation_;
   Logging_v2 public logging_;
-  int public bond_budget_;
   uint public oracle_level_;
   uint public current_epoch_start_;
 
@@ -70,11 +65,6 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
                   bool commit_result, bool reveal_result,
                   uint deposited, uint reclaimed, uint rewarded,
                   bool epoch_updated);
-  event PurchaseBondsEvent(address indexed sender, uint purchased_bonds,
-                           uint redemption_epoch);
-  event RedeemBondsEvent(address indexed sender, uint redeemed_bonds,
-                         uint expired_bonds);
-  event ControlSupplyEvent(int delta, int bond_budget, uint mint);
 
   // Initializer. The ownership of the contracts needs to be transferred to the
   // ACB just after the initializer is invoked.
@@ -82,13 +72,12 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
   // Parameters
   // ----------------
   // |coin|: The JohnLawCoin contract.
-  // |bond|: The JohnLawBond contract.
   // |oracle|: The Oracle contract.
+  // |bond_operation|: The BondOperation contract.
   // |logging|: The Logging contract.
-  function initialize(JohnLawCoin_v2 coin, JohnLawBond_v2 bond,
-                      Oracle_v3 oracle, Logging_v2 logging,
-                      int bond_budget, uint oracle_level,
-                      uint current_epoch_start)
+  function initialize(JohnLawCoin_v2 coin, Oracle_v3 oracle,
+                      BondOperation_v2 bond_operation, Logging_v2 logging,
+                      uint oracle_level, uint current_epoch_start)
       public initializer {
     __Ownable_init();
     __Pausable_init();
@@ -134,21 +123,6 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
     LEVEL_TO_EXCHANGE_RATE = [6, 7, 8, 9, 10, 11, 12, 13, 14];
     EXCHANGE_RATE_DIVISOR = 10;
 
-    // The bond structure.
-    //
-    // |<---BOND_REDEMPTION_PERIOD--->|<---BOND_REDEEMABLE_PERIOD--->|
-    // ^                              ^                              ^
-    // Issued                         Becomes redeemable             Expired
-    //
-    // During BOND_REDEMPTION_PERIOD, the bonds are redeemable as long as the
-    // ACB's bond budget is negative. During BOND_REDEEMABLE_PERIOD, the
-    // bonds are redeemable regardless of the ACB's bond budget. After
-    // BOND_REDEEMABLE_PERIOD, the bonds are expired.
-    BOND_PRICE = 996; // One bond is sold for 996 coins.
-    BOND_REDEMPTION_PRICE = 1000; // One bond is redeemed for 1000 coins.
-    BOND_REDEMPTION_PERIOD = 12; // 12 epochs.
-    BOND_REDEEMABLE_PERIOD = 2; // 2 epochs.
-
     // The duration of the oracle phase. The ACB adjusts the total coin supply
     // once per phase. Voters can vote once per phase.
     EPOCH_DURATION = 60; // 1 week.
@@ -183,21 +157,15 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
     // its power, moving the oracle to a fully decentralized system.
     coin_ = coin;
     
-    // The JohnLawBond contract.
-    bond_ = bond;
-    
     // The Oracle contract.
     oracle_ = oracle;
+
+    // The BondOperation contract.
+    bond_operation_ = bond_operation;
 
     // The Logging contract.
     logging_ = logging;
 
-    // If |bond_budget_| is positive, it indicates the number of bonds the ACB
-    // can issue to decrease the total coin supply. If |bond_budget_| is
-    // negative, it indicates the number of bonds the ACB can redeem to
-    // increase the total coin supply.
-    bond_budget_ = bond_budget;
-    
     // The current oracle level.
     oracle_level_ = oracle_level;
 
@@ -213,8 +181,8 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
   function deprecate()
       public onlyOwner {
     coin_.transferOwnership(msg.sender);
-    bond_.transferOwnership(msg.sender);
     oracle_.transferOwnership(msg.sender);
+    bond_operation_.transferOwnership(msg.sender);
     logging_.transferOwnership(msg.sender);
   }
 
@@ -329,14 +297,18 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
         delta = delta * int(DAMPING_FACTOR) / 100;
       }
 
-      // Increase or decrease the total coin supply.
-      uint mint = _controlSupply(delta);
+      // Update the bond budget.
+      uint mint = bond_operation_.update(delta, oracle_.epoch_id_());
 
-      logging_.updatedEpoch(oracle_.epoch_id_(), mint, burned, delta,
-                            bond_budget_, coin_.totalSupply(),
-                            bond_.totalSupply(), validBondSupply(),
-                            oracle_level_, current_epoch_start_, tax);
+      logging_.updatedEpoch(
+          oracle_.epoch_id_(), mint, burned, delta,
+          bond_operation_.bond_budget_(),
+          coin_.totalSupply(),
+          bond_operation_.bond_().totalSupply(),
+          bond_operation_.validBondSupply(oracle_.epoch_id_()),
+          oracle_level_, current_epoch_start_, tax);
     }
+    
 
     coin_.transferOwnership(address(oracle_));
 
@@ -385,31 +357,14 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
   // otherwise.
   function purchaseBonds(uint count)
       public whenNotPaused returns (uint) {
-    address sender = msg.sender;
+    uint epoch_id = oracle_.epoch_id_();
     
-    require(count > 0, "PurchaseBonds: You must purchase at least one bond.");
-    require(bond_budget_ >= count.toInt256(),
-            "PurchaseBonds: The ACB's bond budget is not enough.");
-
-    uint amount = BOND_PRICE * count;
-    require(coin_.balanceOf(sender) >= amount,
-            "PurchaseBonds: Your coin balance is not enough.");
-
-    // Set the redemption epoch of the bonds.
-    uint redemption_epoch = oracle_.epoch_id_() + BOND_REDEMPTION_PERIOD;
-
-    // Issue new bonds.
-    bond_.mint(sender, redemption_epoch, count);
-    bond_budget_ -= count.toInt256();
-    require(bond_budget_ >= 0, "pb1");
-    require((validBondSupply().toInt256()) + bond_budget_ >= 0, "pb2");
-    require(bond_.balanceOf(sender, redemption_epoch) > 0, "pb3");
-
-    // Burn the corresponding coins.
-    coin_.burn(sender, amount);
-
-    logging_.purchasedBonds(oracle_.epoch_id_(), count);
-    emit PurchaseBondsEvent(sender, count, redemption_epoch);
+    coin_.transferOwnership(address(bond_operation_));
+    uint redemption_epoch =
+        bond_operation_.purchaseBonds(count, epoch_id, coin_);
+    bond_operation_.revokeOwnership(coin_);
+    
+    logging_.purchasedBonds(epoch_id, count);
     return redemption_epoch;
   }
   
@@ -425,84 +380,15 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
   // The number of successfully redeemed bonds.
   function redeemBonds(uint[] memory redemption_epochs)
       public whenNotPaused returns (uint) {
-    address sender = msg.sender;
-
-    uint redeemed_bonds = 0;
-    uint expired_bonds = 0;
     uint epoch_id = oracle_.epoch_id_();
-    for (uint i = 0; i < redemption_epochs.length; i++) {
-      uint redemption_epoch = redemption_epochs[i];
-      uint count = bond_.balanceOf(sender, redemption_epoch);
-      if (epoch_id < redemption_epoch) {
-        // If the bonds have not yet hit their redemption epoch, the ACB
-        // accepts the redemption as long as |bond_budget_| is negative.
-        if (bond_budget_ >= 0) {
-          continue;
-        }
-        if (count > (-bond_budget_).toUint256()) {
-          count = (-bond_budget_).toUint256();
-        }
-      }
-      if (epoch_id < redemption_epoch + BOND_REDEEMABLE_PERIOD) {
-        // If the bonds are not expired, mint the corresponding coins to the
-        // user account.
-        uint amount = count * BOND_REDEMPTION_PRICE;
-        coin_.mint(sender, amount);
-
-        // Burn the redeemed bonds.
-        bond_budget_ += count.toInt256();
-        redeemed_bonds += count;
-      } else {
-        expired_bonds += count;
-      }
-      bond_.burn(sender, redemption_epoch, count);
-    }
-    require(validBondSupply().toInt256() + bond_budget_ >= 0, "rb1");
+    
+    coin_.transferOwnership(address(bond_operation_));
+    (uint redeemed_bonds, uint expired_bonds) =
+        bond_operation_.redeemBonds(redemption_epochs, epoch_id, coin_);
+    bond_operation_.revokeOwnership(coin_);
     
     logging_.redeemedBonds(epoch_id, redeemed_bonds, expired_bonds);
-    emit RedeemBondsEvent(sender, redeemed_bonds, expired_bonds);
     return redeemed_bonds;
-  }
-
-  // Increase or decrease the total coin supply.
-  //
-  // Parameters
-  // ----------------
-  // |delta|: The target increase or decrease of the total coin supply.
-  //
-  // Returns
-  // ----------------
-  // The amount of coins that need to be newly minted by the ACB.
-  function _controlSupply(int delta)
-      internal whenNotPaused returns (uint) {
-    uint mint = 0;
-    uint bond_supply = validBondSupply();
-    if (delta == 0) {
-      // No change in the total coin supply.
-      bond_budget_ = 0;
-    } else if (delta > 0) {
-      // Increase the total coin supply.
-      uint count = delta.toUint256() / BOND_REDEMPTION_PRICE;
-      if (count <= bond_supply) {
-        // If there are sufficient bonds to redeem, increase the total coin
-        // supply by redeeming the bonds.
-        bond_budget_ = -count.toInt256();
-      } else {
-        // Otherwise, redeem all the issued bonds.
-        bond_budget_ = -bond_supply.toInt256();
-        // The ACB needs to mint the remaining coins.
-        mint = (count - bond_supply) * BOND_REDEMPTION_PRICE;
-      }
-      require(bond_budget_ <= 0, "cs1");
-    } else {
-      // Issue new bonds to decrease the total coin supply.
-      bond_budget_ = -delta / BOND_PRICE.toInt256();
-      require(bond_budget_ >= 0, "cs2");
-    }
-
-    require(bond_supply.toInt256() + bond_budget_ >= 0, "cs3");
-    emit ControlSupplyEvent(delta, bond_budget_, mint);
-    return mint;
   }
 
   // Calculate a hash to be committed to the oracle. Voters are expected to
@@ -520,25 +406,6 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
       public view returns (bytes32) {
     address sender = msg.sender;
     return oracle_.encrypt(sender, level, salt);
-  }
-
-  // Public getter: Return the valid bond supply; i.e., the total supply of
-  // not-yet-expired bonds.
-  function validBondSupply()
-      public view returns (uint) {
-    uint count = 0;
-    uint epoch_id = oracle_.epoch_id_();
-    for (uint redemption_epoch =
-             (epoch_id > BOND_REDEEMABLE_PERIOD ?
-              epoch_id - BOND_REDEEMABLE_PERIOD + 1 : 0);
-         // The previous versions of the smart contract might have used a larger
-         // BOND_REDEMPTION_PERIOD. Add 20 to look up all the redemption
-         // epochs that might have set in the previous versions.
-         redemption_epoch <= epoch_id + BOND_REDEMPTION_PERIOD + 20;
-         redemption_epoch++) {
-      count += bond_.bondSupplyAt(redemption_epoch);
-    }
-    return count;
   }
 
   // Public getter: Return the current timestamp in seconds.
