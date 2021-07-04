@@ -21,7 +21,7 @@ import common
 # - tax
 
 common.reset_network(8)
-command = ("truffle test acb_unittest.js " +
+command = ("truffle test test/acb_unittest.js " +
            "'996 1000 12 2 604800 90 10 10 [1, 11, 20] 1 12345'")
 common.run_test(command)
 
@@ -39,7 +39,7 @@ for (bond_price, bond_redemption_price) in [(996, 1000)]:
                                         level_to_exchange_rate) - 1]:
                                     tax = 12345
                                     command = (
-                                        "truffle test acb_unittest.js '" +
+                                        "truffle test test/acb_unittest.js '" +
                                         str(bond_price) + " " +
                                         str(bond_redemption_price) + " " +
                                         str(bond_redemption_period) + " " +

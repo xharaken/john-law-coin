@@ -5,7 +5,7 @@
 // This software is released under the MIT License.
 // http://opensource.org/licenses/mit-license.php
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.6;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
@@ -224,10 +224,8 @@ contract JohnLawBond is OwnableUpgradeable {
   uint private _total_supply;
 
   // Events.
-  event MintEvent(address indexed account,
-                  uint redemption_epoch, uint amount);
-  event BurnEvent(address indexed account,
-                  uint redemption_epoch, uint amount);
+  event MintEvent(address indexed account, uint redemption_epoch, uint amount);
+  event BurnEvent(address indexed account, uint redemption_epoch, uint amount);
 
   // Initializer.
   function initialize()
@@ -410,11 +408,12 @@ contract Oracle is OwnableUpgradeable {
   uint public epoch_id_;
 
   // Events.
-  event CommitEvent(address indexed sender,
+  event CommitEvent(address indexed sender, uint indexed epoch_id,
                     bytes32 hash, uint deposited);
-  event RevealEvent(address indexed sender,
+  event RevealEvent(address indexed sender, uint indexed epoch_id,
                     uint oracle_level, uint salt);
-  event ReclaimEvent(address indexed sender, uint reclaimed, uint rewarded);
+  event ReclaimEvent(address indexed sender, uint indexed epoch_id,
+                     uint reclaimed, uint rewarded);
   event AdvancePhaseEvent(uint indexed epoch_id, uint tax, uint burned);
 
   // Initializer.
@@ -480,8 +479,7 @@ contract Oracle is OwnableUpgradeable {
   // Returns
   // ----------------
   // True if the commit succeeded. False otherwise.
-  function commit(JohnLawCoin coin, address sender,
-                  bytes32 hash, uint deposit)
+  function commit(JohnLawCoin coin, address sender, bytes32 hash, uint deposit)
       public onlyOwner returns (bool) {
     Epoch storage epoch = epochs_[epoch_id_ % 3];
     require(epoch.phase == Phase.COMMIT, "co1");
@@ -501,7 +499,7 @@ contract Oracle is OwnableUpgradeable {
 
     // Move the deposited coins to the deposit account.
     coin.move(sender, epoch.deposit_account, deposit);
-    emit CommitEvent(sender, hash, deposit);
+    emit CommitEvent(sender, epoch_id_, hash, deposit);
     return true;
   }
 
@@ -547,7 +545,7 @@ contract Oracle is OwnableUpgradeable {
     // Count up the vote.
     epoch.votes[oracle_level].deposit += epoch.commits[sender].deposit;
     epoch.votes[oracle_level].count += 1;
-    emit RevealEvent(sender, oracle_level, salt);
+    emit RevealEvent(sender, epoch_id_, oracle_level, salt);
     return true;
   }
 
@@ -614,7 +612,7 @@ contract Oracle is OwnableUpgradeable {
                 (uint(100) * epoch.votes[oracle_level].count);
       coin.move(epoch.reward_account, sender, reward);
     }
-    emit ReclaimEvent(sender, deposit, reward);
+    emit ReclaimEvent(sender, epoch_id_, deposit, reward);
     return (deposit, reward);
   }
 
@@ -1039,11 +1037,12 @@ contract BondOperation is OwnableUpgradeable {
   int public bond_budget_;
 
   // Events.
-  event PurchaseBondsEvent(address indexed sender, uint purchased_bonds,
-                           uint redemption_epoch);
-  event RedeemBondsEvent(address indexed sender, uint redeemed_bonds,
-                         uint expired_bonds);
-  event UpdateEvent(int delta, int bond_budget, uint mint);
+  event PurchaseBondsEvent(address indexed sender, uint indexed epoch_id,
+                           uint purchased_bonds, uint redemption_epoch);
+  event RedeemBondsEvent(address indexed sender, uint indexed epoch_id,
+                         uint redeemed_bonds, uint expired_bonds);
+  event UpdateEvent(uint indexed epoch_id, int delta,
+                    int bond_budget, uint mint);
 
   // Initializer. The ownership of the contracts needs to be transferred to the
   // ACB just after the initializer is invoked.
@@ -1091,8 +1090,6 @@ contract BondOperation is OwnableUpgradeable {
     bond_.transferOwnership(msg.sender);
   }
 
-  event DebugEvent(uint, uint, uint);
-
   // Purchase bonds.
   //
   // Parameters
@@ -1128,7 +1125,7 @@ contract BondOperation is OwnableUpgradeable {
 
     // Burn the corresponding coins.
     coin.burn(sender, amount);
-    emit PurchaseBondsEvent(sender, count, redemption_epoch);
+    emit PurchaseBondsEvent(sender, epoch_id, count, redemption_epoch);
     return redemption_epoch;
   }
   
@@ -1181,7 +1178,7 @@ contract BondOperation is OwnableUpgradeable {
       bond_.burn(sender, redemption_epoch, count);
     }
     require(validBondSupply(epoch_id).toInt256() + bond_budget_ >= 0, "rb1");
-    emit RedeemBondsEvent(sender, redeemed_bonds, expired_bonds);
+    emit RedeemBondsEvent(sender, epoch_id, redeemed_bonds, expired_bonds);
     return (redeemed_bonds, expired_bonds);
   }
 
@@ -1224,7 +1221,7 @@ contract BondOperation is OwnableUpgradeable {
     }
 
     require(bond_supply.toInt256() + bond_budget_ >= 0, "cs3");
-    emit UpdateEvent(delta, bond_budget_, mint);
+    emit UpdateEvent(epoch_id, delta, bond_budget_, mint);
     return mint;
   }
 
@@ -1309,11 +1306,17 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
 
   // Events.
   event PayableEvent(address indexed sender, uint value);
-  event VoteEvent(address indexed sender, bytes32 hash,
-                  uint oracle_level, uint salt,
+  event UpdateEpochEvent(uint epoch_id, uint current_epoch_start, uint tax,
+                         uint burned, int delta, uint mint);
+  event VoteEvent(address indexed sender, uint indexed epoch_id,
+                  bytes32 hash, uint oracle_level, uint salt,
                   bool commit_result, bool reveal_result,
                   uint deposited, uint reclaimed, uint rewarded,
                   bool epoch_updated);
+  event PurchaseBondsEvent(address indexed sender, uint indexed epoch_id,
+                           uint purchased_bonds, uint redemption_epoch);
+  event RedeemBondsEvent(address indexed sender, uint indexed epoch_id,
+                         uint redeemed_bonds, uint expired_bonds);
 
   // Initializer. The ownership of the contracts needs to be transferred to the
   // ACB just after the initializer is invoked.
@@ -1556,6 +1559,8 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
           bond_operation_.bond_().totalSupply(),
           bond_operation_.validBondSupply(oracle_.epoch_id_()),
           oracle_level_, current_epoch_start_, tax);
+      emit UpdateEpochEvent(oracle_.epoch_id_(), current_epoch_start_, tax,
+                            burned, delta, mint);
     }
 
     coin_.transferOwnership(address(oracle_));
@@ -1586,7 +1591,7 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
                    result.reveal_result, result.deposited,
                    result.reclaimed, result.rewarded);
     emit VoteEvent(
-        msg.sender, hash, oracle_level, salt,
+        msg.sender, oracle_.epoch_id_(), hash, oracle_level, salt,
         result.commit_result, result.reveal_result, result.deposited,
         result.reclaimed, result.rewarded, result.epoch_updated);
     return (result.commit_result, result.reveal_result, result.deposited,
@@ -1614,6 +1619,8 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
     bond_operation_.revokeOwnership(coin_);
     
     logging_.purchasedBonds(epoch_id, count);
+    emit PurchaseBondsEvent(address(msg.sender), epoch_id,
+                            count, redemption_epoch);
     return redemption_epoch;
   }
   
@@ -1638,6 +1645,8 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
     bond_operation_.revokeOwnership(coin_);
     
     logging_.redeemedBonds(epoch_id, redeemed_bonds, expired_bonds);
+    emit RedeemBondsEvent(address(msg.sender), epoch_id,
+                          redeemed_bonds, expired_bonds);
     return redeemed_bonds;
   }
 

@@ -60,11 +60,17 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
 
   // Events.
   event PayableEvent(address indexed sender, uint value);
-  event VoteEvent(address indexed sender, bytes32 hash,
-                  uint oracle_level, uint salt,
+  event UpdateEpochEvent(uint epoch_id, uint current_epoch_start, uint tax,
+                         uint burned, int delta, uint mint);
+  event VoteEvent(address indexed sender, uint indexed epoch_id,
+                  bytes32 hash, uint oracle_level, uint salt,
                   bool commit_result, bool reveal_result,
                   uint deposited, uint reclaimed, uint rewarded,
                   bool epoch_updated);
+  event PurchaseBondsEvent(address indexed sender, uint indexed epoch_id,
+                           uint purchased_bonds, uint redemption_epoch);
+  event RedeemBondsEvent(address indexed sender, uint indexed epoch_id,
+                         uint redeemed_bonds, uint expired_bonds);
 
   // Initializer. The ownership of the contracts needs to be transferred to the
   // ACB just after the initializer is invoked.
@@ -307,8 +313,9 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
           bond_operation_.bond_().totalSupply(),
           bond_operation_.validBondSupply(oracle_.epoch_id_()),
           oracle_level_, current_epoch_start_, tax);
+      emit UpdateEpochEvent(oracle_.epoch_id_(), current_epoch_start_,
+                            tax, burned, delta, mint);
     }
-    
 
     coin_.transferOwnership(address(oracle_));
 
@@ -338,7 +345,7 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
                    result.reveal_result, result.deposited,
                    result.reclaimed, result.rewarded);
     emit VoteEvent(
-        msg.sender, hash, oracle_level, salt,
+        msg.sender, oracle_.epoch_id_(), hash, oracle_level, salt,
         result.commit_result, result.reveal_result, result.deposited,
         result.reclaimed, result.rewarded, result.epoch_updated);
     return (result.commit_result, result.reveal_result, result.deposited,
@@ -361,10 +368,13 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
     
     coin_.transferOwnership(address(bond_operation_));
     uint redemption_epoch =
-        bond_operation_.purchaseBonds(count, epoch_id, coin_);
+        bond_operation_.purchaseBonds(address(msg.sender), count,
+                                      epoch_id, coin_);
     bond_operation_.revokeOwnership(coin_);
     
     logging_.purchasedBonds(epoch_id, count);
+    emit PurchaseBondsEvent(address(msg.sender), epoch_id,
+                            count, redemption_epoch);
     return redemption_epoch;
   }
   
@@ -384,10 +394,13 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
     
     coin_.transferOwnership(address(bond_operation_));
     (uint redeemed_bonds, uint expired_bonds) =
-        bond_operation_.redeemBonds(redemption_epochs, epoch_id, coin_);
+        bond_operation_.redeemBonds(address(msg.sender), redemption_epochs,
+                                    epoch_id, coin_);
     bond_operation_.revokeOwnership(coin_);
     
     logging_.redeemedBonds(epoch_id, redeemed_bonds, expired_bonds);
+    emit RedeemBondsEvent(address(msg.sender), epoch_id,
+                          redeemed_bonds, expired_bonds);
     return redeemed_bonds;
   }
 

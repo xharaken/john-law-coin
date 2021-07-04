@@ -23,7 +23,7 @@ import common
 # - should_upgrade
 
 common.reset_network(41)
-command = ("truffle test acb_simulator.js " +
+command = ("truffle test test/acb_simulator.js " +
            "'996 1000 12 2 7 90 10 10 [6, 7, 8, 9, 10, 11, 12, 13, 14] " +
            "1 40 100 0'")
 common.run_test(command)
@@ -43,7 +43,7 @@ for (bond_price, bond_redemption_price) in [(996, 1000)]:
                                         level_to_exchange_rate) - 1]:
                                     for voter_count in [40]:
                                         command = (
-                                            "truffle test acb_simulator.js '" +
+                                            "truffle test test/acb_simulator.js '" +
                                             str(bond_price) + " " +
                                             str(bond_redemption_price) + " " +
                                             str(bond_redemption_period) + " " +

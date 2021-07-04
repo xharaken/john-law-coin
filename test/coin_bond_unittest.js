@@ -520,7 +520,7 @@ contract("CoinBondUnittest", function (accounts) {
 
     await should_throw(async () => {
       await bond.getRedemptionEpochOwnedBy(account, count);
-    }, "EnumerableSet");
+    }, "revert");
 
     for (let index = 0; index < count; index++) {
       let value = await bond.getRedemptionEpochOwnedBy(account, index);

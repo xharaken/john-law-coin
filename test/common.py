@@ -28,7 +28,7 @@ def kill_ganache():
         subprocess.run(command, shell=True)
 
 def reset_network(voters):
-    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    # os.chdir(os.path.dirname(os.path.abspath(__file__)))
     kill_ganache()
     time.sleep(6)
     network = subprocess.Popen(

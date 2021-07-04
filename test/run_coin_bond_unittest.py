@@ -8,5 +8,5 @@
 import common
 
 common.reset_network(8)
-command = ("truffle test coin_bond_unittest.js")
+command = ("truffle test test/coin_bond_unittest.js")
 common.run_test(command)

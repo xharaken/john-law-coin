@@ -723,12 +723,13 @@ function parameterized_test(accounts,
                               reclaimed + reward);
         reclaimed_total += reclaimed + reward;
 
-        await check_vote(hash,
-                         _voters[i].oracle_level[prev],
-                         _voters[i].salt[prev],
-                         {from: _voters[i].address},
-                         true, reveal_result, _voters[i].deposit[current],
-                         reclaimed, reward, !commit_observed);
+        let receipt = await check_vote(
+          hash,
+          _voters[i].oracle_level[prev],
+          _voters[i].salt[prev],
+          {from: _voters[i].address},
+          true, reveal_result, _voters[i].deposit[current],
+          reclaimed, reward, !commit_observed);
 
         assert.equal(await get_balance(_voters[i].address),
                      _voters[i].balance);
@@ -782,6 +783,15 @@ function parameterized_test(accounts,
             assert.isTrue(mode_level != _level_max);
             issued_bonds = Math.trunc(-delta / _bond_price);
           }
+
+          let args = receipt.logs.filter(
+            e => e.event == 'UpdateEpochEvent')[0].args;
+          assert.equal(args.epoch_id, new_epoch_id);
+          assert.equal(args.current_epoch_start, (await _acb.getTimestamp()).toNumber());
+          assert.equal(args.tax, tax);
+          assert.equal(args.burned, _lost_deposit[mod((new_epoch_id - 2), 3)]);
+          assert.equal(args.delta, delta);
+          assert.equal(args.mint, mint);
 
           assert.equal(await get_bond_supply(), bond_supply);
           if (mode_level == _level_max) {
@@ -1008,8 +1018,7 @@ function parameterized_test(accounts,
         hash, oracle_level, salt, option,
         commit_result, reveal_result, deposited, reclaimed, rewarded,
         epoch_updated) {
-      let receipt = await _acb.vote(
-          hash, oracle_level, salt, option);
+      let receipt = await _acb.vote(hash, oracle_level, salt, option);
       let args = receipt.logs.filter(e => e.event == 'VoteEvent')[0].args;
       assert.equal(args.sender, option.from);
       assert.equal(args.hash, hash);
@@ -1021,6 +1030,7 @@ function parameterized_test(accounts,
       assert.equal(args.reclaimed, reclaimed);
       assert.equal(args.rewarded, rewarded);
       assert.equal(args.epoch_updated, epoch_updated);
+      return receipt;
     }
 
     async function check_transfer(receiver, amount, option) {
@@ -1033,7 +1043,6 @@ function parameterized_test(accounts,
 
     async function check_purchase_bonds(purchased_bonds, option, redemption) {
       let receipt = await _acb.purchaseBonds(purchased_bonds, option);
-      console.log(receipt.logs);
       let args =
           receipt.logs.filter(e => e.event == 'PurchaseBondsEvent')[0].args;
       assert.equal(args.sender, option.from);

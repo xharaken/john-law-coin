@@ -2430,12 +2430,12 @@ function parameterized_test(accounts,
 
     assert.equal(current.bond_supply, 0);
     assert.equal(current.bond_budget, 0);
-    await check_update_bond_operation(-_bond_price * 2, 2, 0);
+    await check_update_bond_budget(-_bond_price * 2, 2, 0);
     current = await get_current(sub_accounts, []);
     assert.equal(current.bond_supply, 0);
     assert.equal(current.bond_budget, 2);
     let t0 = (await _oracle.epoch_id_()).toNumber() + _bond_redemption_period;
-    await check_purchase_bonds(2, {from: accounts[1]}, t12);
+    await check_purchase_bonds(2, {from: accounts[1]}, t0);
     current = await get_current(sub_accounts, []);
     assert.equal(current.bond_supply, 2);
 
@@ -2642,7 +2642,7 @@ function parameterized_test(accounts,
       await bond.burn(accounts[1], 1111, 1);
     }, "Ownable");
 
-    let oracle = await Oracle.at(await _acb.oracle_());
+    let oracle = await OracleForTesting.at(await _acb.oracle_());
     await should_throw(async () => {
       await oracle.getModeLevel();
     }, "Ownable");
@@ -2685,7 +2685,7 @@ function parameterized_test(accounts,
     }, "Pausable");
 
     await should_throw(async () => {
-      await _acb.redeemBonds([t12], {from: accounts[1]});
+      await _acb.redeemBonds([t0], {from: accounts[1]});
     }, "Pausable");
 
     await _acb.unpause({from: accounts[1]});
@@ -2704,7 +2704,7 @@ function parameterized_test(accounts,
     }, "Ownable");
 
     await _coin.transferOwnership(_acb.address, {from: accounts[1]});
-    await _bond.transferOwnership(_acb.address, {from: accounts[1]});
+    await _bond_operation.transferOwnership(_acb.address, {from: accounts[1]});
     await _logging.transferOwnership(_acb.address, {from: accounts[1]});
     await _oracle.transferOwnership(_acb.address, {from: accounts[1]});
 
@@ -2781,14 +2781,9 @@ function parameterized_test(accounts,
       assert.equal(args.expired_bonds, expired_bonds);
     }
 
-    async function check_update_bond_operation(delta, bond_budget, mint) {
-      let receipt = await _acb.updateBondOperation(
+    async function check_update_bond_budget(delta, bond_budget, mint) {
+      await _acb.updateBondBudget(
         delta, (await _oracle.epoch_id_()), {from: accounts[1]});
-      let args =
-          receipt.logs.filter(e => e.event == 'UpdateEvent')[0].args;
-      assert.equal(args.delta, delta);
-      assert.equal(args.bond_budget, bond_budget);
-      assert.equal(args.mint, mint);
     }
 
     async function get_current(accounts, redemptions) {
