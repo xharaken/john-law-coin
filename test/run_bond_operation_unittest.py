@@ -26,6 +26,6 @@ for (bond_price, bond_redemption_price) in [(1, 3), (996, 1000), (1000, 1000)]:
                 str(bond_price) + " " +
                 str(bond_redemption_price) + " " +
                 str(bond_redemption_period) + " " +
-                str(bond_redeemable_period) + " ")
+                str(bond_redeemable_period) + "'")
             common.reset_network(8)
             common.run_test(command)

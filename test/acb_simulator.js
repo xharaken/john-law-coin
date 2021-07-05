@@ -787,7 +787,8 @@ function parameterized_test(accounts,
           let args = receipt.logs.filter(
             e => e.event == 'UpdateEpochEvent')[0].args;
           assert.equal(args.epoch_id, new_epoch_id);
-          assert.equal(args.current_epoch_start, (await _acb.getTimestamp()).toNumber());
+          assert.equal(args.current_epoch_start,
+                       (await _acb.getTimestamp()).toNumber());
           assert.equal(args.tax, tax);
           assert.equal(args.burned, _lost_deposit[mod((new_epoch_id - 2), 3)]);
           assert.equal(args.delta, delta);

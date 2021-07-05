@@ -332,6 +332,10 @@ contract("CoinBondUnittest", function (accounts) {
     assert.equal(await coin.balanceOf(accounts[1]), 10 + initial_coin_supply);
 
     await should_throw(async () => {
+      await coin.initialize({from: accounts[1]});
+    }, "Initializable");
+
+    await should_throw(async () => {
       await coin.mint(accounts[1], 1);
     }, "Ownable");
 
@@ -385,6 +389,10 @@ contract("CoinBondUnittest", function (accounts) {
 
     let bond = await JohnLawBond.new({from: accounts[1]});
     await bond.initialize({from: accounts[1]});
+
+    await should_throw(async () => {
+      await bond.initialize({from: accounts[1]});
+    }, "Initializable");
 
     await should_throw(async () => {
       await bond.mint(accounts[1], 1111, 1);
