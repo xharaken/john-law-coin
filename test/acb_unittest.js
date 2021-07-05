@@ -207,7 +207,7 @@ function parameterized_test(accounts,
       (await _acb.getTimestamp()).toNumber() + _epoch_duration,
       {from: accounts[1]});
 
-    let remainder = [0, 0, 0];
+    let burned = [0, 0, 0];
     let deposit_4 = [0, 0, 0];
     let deposit_5 = [0, 0, 0];
     let deposit_6 = [0, 0, 0];
@@ -293,7 +293,7 @@ function parameterized_test(accounts,
       reward += Math.trunc(_proportional_reward_rate *
                            _tax / 100);
     }
-    remainder[mod(now, 3)] = _tax - reward;
+    burned[mod(now, 3)] = _tax - reward;
     deposit_4[mod(now, 3)] = Math.trunc(balance * _deposit_rate / 100);
     assert.equal(current.current_epoch_start,
                  await _acb.getTimestamp() - _epoch_duration);
@@ -325,7 +325,7 @@ function parameterized_test(accounts,
     current = await get_current(sub_accounts, []);
     balance = current.balances[accounts[4]];
     coin_supply = current.coin_supply;
-    remainder[mod(now, 3)] = deposit_4[mod(now - 2, 3)] + _tax;
+    burned[mod(now, 3)] = deposit_4[mod(now - 2, 3)] + _tax;
     deposit_4[mod(now, 3)] = Math.trunc(balance * _deposit_rate / 100);
     await check_vote(await _acb.encrypt(_default_level, 4, {from: accounts[4]}),
                      _default_level, 3, {from: accounts[4]},
@@ -342,7 +342,7 @@ function parameterized_test(accounts,
     assert.equal(current.balances[accounts[4]], balance);
     assert.equal(current.coin_supply,
                  coin_supply -
-                 remainder[mod(now - 1, 3)]);
+                 burned[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
@@ -360,7 +360,7 @@ function parameterized_test(accounts,
       reward += Math.trunc(_proportional_reward_rate *
                            _tax / 100);
     }
-    remainder[mod(now, 3)] = _tax - reward;
+    burned[mod(now, 3)] = _tax - reward;
     deposit_4[mod(now, 3)] = Math.trunc(balance * _deposit_rate / 100);
     await check_vote(await _acb.encrypt(_default_level, 5, {from: accounts[4]}),
                      _default_level, 4, {from: accounts[4]},
@@ -379,7 +379,7 @@ function parameterized_test(accounts,
     assert.equal(current.balances[accounts[4]], balance);
     assert.equal(current.coin_supply,
                  coin_supply -
-                 remainder[mod(now - 1, 3)]);
+                 burned[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
@@ -397,7 +397,7 @@ function parameterized_test(accounts,
       reward += Math.trunc(_proportional_reward_rate *
                            _tax / 100);
     }
-    remainder[mod(now, 3)] = _tax - reward;
+    burned[mod(now, 3)] = _tax - reward;
     deposit_4[mod(now, 3)] = Math.trunc(balance * _deposit_rate / 100);
     await check_vote(await _acb.encrypt(_default_level, 6, {from: accounts[4]}),
                      _default_level, 5, {from: accounts[4]},
@@ -416,7 +416,7 @@ function parameterized_test(accounts,
     assert.equal(current.balances[accounts[4]], balance);
     assert.equal(current.coin_supply,
                  coin_supply -
-                 remainder[mod(now - 1, 3)]);
+                 burned[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
@@ -437,7 +437,7 @@ function parameterized_test(accounts,
       reward += Math.trunc(_proportional_reward_rate *
                            _tax / 100);
     }
-    remainder[mod(now, 3)] = _tax - reward;
+    burned[mod(now, 3)] = _tax - reward;
     deposit_4[mod(now, 3)] = Math.trunc(balance * _deposit_rate / 100);
     await check_vote(await _acb.encrypt(_default_level, 7, {from: accounts[4]}),
                      _default_level, 6, {from: accounts[4]},
@@ -456,7 +456,7 @@ function parameterized_test(accounts,
     assert.equal(current.balances[accounts[4]], balance);
     assert.equal(current.coin_supply,
                  coin_supply -
-                 remainder[mod(now - 1, 3)]);
+                 burned[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
@@ -474,7 +474,7 @@ function parameterized_test(accounts,
       reward += Math.trunc(_proportional_reward_rate *
                            _tax / 100);
     }
-    remainder[mod(now, 3)] = _tax - reward;
+    burned[mod(now, 3)] = _tax - reward;
     deposit_4[mod(now, 3)] = Math.trunc(balance * _deposit_rate / 100);
     await check_vote(await _acb.encrypt(_default_level, 8, {from: accounts[4]}),
                      _default_level, 6, {from: accounts[4]},
@@ -493,7 +493,7 @@ function parameterized_test(accounts,
     assert.equal(current.balances[accounts[4]], balance);
     assert.equal(current.coin_supply,
                  coin_supply -
-                 remainder[mod(now - 1, 3)]);
+                 burned[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
@@ -506,7 +506,7 @@ function parameterized_test(accounts,
     balance = current.balances[accounts[4]];
     coin_supply = current.coin_supply;
     reward = 0;
-    remainder[mod(now, 3)] = deposit_4[mod(now - 2, 3)] + _tax - reward;
+    burned[mod(now, 3)] = deposit_4[mod(now - 2, 3)] + _tax - reward;
     deposit_4[mod(now, 3)] = 0;
     await check_vote(await _acb.NULL_HASH(), _default_level,
                      7, {from: accounts[4]},
@@ -524,7 +524,7 @@ function parameterized_test(accounts,
     assert.equal(current.balances[accounts[4]], balance);
     assert.equal(current.coin_supply,
                  coin_supply -
-                 remainder[mod(now - 1, 3)]);
+                 burned[mod(now - 1, 3)]);
 
     // 3 commits on the stable level.
     await reset_balances(accounts);
@@ -544,7 +544,7 @@ function parameterized_test(accounts,
 
     current = await get_current(sub_accounts, []);
     coin_supply = current.coin_supply;
-    remainder[mod(now, 3)] = deposit_4[mod(now - 2, 3)] + _tax;
+    burned[mod(now, 3)] = deposit_4[mod(now - 2, 3)] + _tax;
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
     await check_vote(
@@ -575,7 +575,7 @@ function parameterized_test(accounts,
                  balance_6 - deposit_6[mod(now, 3)]);
     assert.equal(current.coin_supply,
                  coin_supply -
-                 remainder[mod(now - 1, 3)]);
+                 burned[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
@@ -586,7 +586,7 @@ function parameterized_test(accounts,
 
     current = await get_current(sub_accounts, []);
     coin_supply = current.coin_supply;
-    remainder[mod(now, 3)] = deposit_4[mod(now - 2, 3)] + _tax;
+    burned[mod(now, 3)] = deposit_4[mod(now - 2, 3)] + _tax;
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.encrypt(_default_level, 1, {from: accounts[4]}),
@@ -614,7 +614,7 @@ function parameterized_test(accounts,
                  balance_6 - deposit_6[mod(now, 3)]);
     assert.equal(current.coin_supply,
                  coin_supply -
-                 remainder[mod(now - 1, 3)]);
+                 burned[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
@@ -625,7 +625,7 @@ function parameterized_test(accounts,
 
     current = await get_current(sub_accounts, []);
     coin_supply = current.coin_supply;
-    remainder[mod(now, 3)] = (deposit_4[mod(now - 2, 3)] +
+    burned[mod(now, 3)] = (deposit_4[mod(now - 2, 3)] +
                               deposit_5[mod(now - 2, 3)] +
                               deposit_6[mod(now - 2, 3)] + _tax);
     balance_4 = current.balances[accounts[4]];
@@ -655,7 +655,7 @@ function parameterized_test(accounts,
                  balance_6 - deposit_6[mod(now, 3)]);
     assert.equal(current.coin_supply,
                  coin_supply -
-                 remainder[mod(now - 1, 3)]);
+                 burned[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
@@ -683,7 +683,7 @@ function parameterized_test(accounts,
                             reward_total * deposit_6[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
-    remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
+    burned[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
@@ -724,7 +724,7 @@ function parameterized_test(accounts,
                  reward_6 + constant_reward);
     assert.equal(current.coin_supply,
                  coin_supply -
-                 remainder[mod(now - 1, 3)]);
+                 burned[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
@@ -752,7 +752,7 @@ function parameterized_test(accounts,
                             reward_total * deposit_6[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
-    remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
+    burned[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
@@ -794,7 +794,7 @@ function parameterized_test(accounts,
 
     assert.equal(current.coin_supply,
                  coin_supply -
-                 remainder[mod(now - 1, 3)]);
+                 burned[mod(now - 1, 3)]);
 
     await reset_balances(accounts);
 
@@ -824,7 +824,7 @@ function parameterized_test(accounts,
                             reward_total * deposit_6[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
-    remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
+    burned[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
@@ -868,7 +868,7 @@ function parameterized_test(accounts,
     assert.equal(deposit_6[mod(now, 3)], 0);
     assert.equal(current.coin_supply,
                  coin_supply -
-                 remainder[mod(now - 1, 3)]);
+                 burned[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
@@ -896,7 +896,7 @@ function parameterized_test(accounts,
                             reward_total * deposit_6[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
-    remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
+    burned[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
@@ -937,7 +937,7 @@ function parameterized_test(accounts,
                  reward_6 + constant_reward);
     assert.equal(current.coin_supply,
                  coin_supply -
-                 remainder[mod(now - 1, 3)]);
+                 burned[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
@@ -954,7 +954,7 @@ function parameterized_test(accounts,
     reward_4 = 0;
     reward_5 = 0;
     reward_6 = 0;
-    remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
+    burned[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
@@ -995,7 +995,7 @@ function parameterized_test(accounts,
                  reward_6 + constant_reward);
     assert.equal(current.coin_supply,
                  coin_supply -
-                 remainder[mod(now - 1, 3)]);
+                 burned[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
@@ -1019,7 +1019,7 @@ function parameterized_test(accounts,
                             reward_total * deposit_5[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
-    remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
+    burned[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 2);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
@@ -1057,7 +1057,7 @@ function parameterized_test(accounts,
                  reward_6);
     assert.equal(current.coin_supply,
                  coin_supply -
-                 remainder[mod(now - 1, 3)]);
+                 burned[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
@@ -1079,7 +1079,7 @@ function parameterized_test(accounts,
       reward_6 = Math.trunc(_proportional_reward_rate *
                             reward_total / 100);
     }
-    remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
+    burned[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 1);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
@@ -1112,7 +1112,7 @@ function parameterized_test(accounts,
                  reward_6 + constant_reward);
     assert.equal(current.coin_supply,
                  coin_supply -
-                 remainder[mod(now - 1, 3)]);
+                 burned[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
@@ -1129,7 +1129,7 @@ function parameterized_test(accounts,
     reward_4 = 0;
     reward_5 = 0;
     reward_6 = 0;
-    remainder[mod(now, 3)] = reward_total;
+    burned[mod(now, 3)] = reward_total;
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
     await check_vote(
@@ -1160,7 +1160,7 @@ function parameterized_test(accounts,
                  balance_6 - deposit_6[mod(now, 3)]);
     assert.equal(current.coin_supply,
                  coin_supply -
-                 remainder[mod(now - 1, 3)]);
+                 burned[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
@@ -1185,7 +1185,7 @@ function parameterized_test(accounts,
                             reward_total * deposit_6[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
-    remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
+    burned[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 2 + deposit_4[mod(now - 2, 3)]);
     balance_5 = current.balances[accounts[5]];
     deposit_5[mod(now, 3)] = Math.trunc(balance_5 * _deposit_rate / 100);
@@ -1216,7 +1216,7 @@ function parameterized_test(accounts,
                  reward_6 + constant_reward);
     assert.equal(current.coin_supply,
                  coin_supply -
-                 remainder[mod(now - 1, 3)]);
+                 burned[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
@@ -1237,7 +1237,7 @@ function parameterized_test(accounts,
                             reward_total * deposit_6[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
-    remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
+    burned[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward + deposit_5[mod(now - 2, 3)]);
     balance_6 = current.balances[accounts[6]];
     deposit_6[mod(now, 3)] = Math.trunc(balance_6 * _deposit_rate / 100);
@@ -1255,7 +1255,7 @@ function parameterized_test(accounts,
                  reward_6 + constant_reward);
     assert.equal(current.coin_supply,
                  coin_supply -
-                 remainder[mod(now - 1, 3)]);
+                 burned[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
@@ -1272,7 +1272,7 @@ function parameterized_test(accounts,
     reward_4 = 0;
     reward_5 = 0;
     reward_6 = 0;
-    remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
+    burned[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 0 + deposit_6[mod(now - 2, 3)]);
     deposit13 = Math.trunc(
         current.balances[accounts[1]] * _deposit_rate / 100);
@@ -1284,7 +1284,7 @@ function parameterized_test(accounts,
     assert.equal(current.oracle_level, _default_level);
     assert.equal(current.coin_supply,
                  coin_supply -
-                 remainder[mod(now - 1, 3)]);
+                 burned[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
@@ -1295,7 +1295,7 @@ function parameterized_test(accounts,
 
     current = await get_current([accounts[1]], []);
     coin_supply = current.coin_supply;
-    remainder[mod(now, 3)] = deposit_6[mod(now - 2, 3)] + _tax;
+    burned[mod(now, 3)] = deposit_6[mod(now - 2, 3)] + _tax;
     deposit14 = Math.trunc(
         current.balances[accounts[1]] * _deposit_rate / 100);
     await check_vote(
@@ -1306,7 +1306,7 @@ function parameterized_test(accounts,
     assert.equal(current.oracle_level, _level_max);
     assert.equal(current.coin_supply,
                  coin_supply -
-                 remainder[mod(now - 1, 3)]);
+                 burned[mod(now - 1, 3)]);
 
     // 3 commits on the stable level and another level.
 
@@ -1330,7 +1330,7 @@ function parameterized_test(accounts,
     reward_4 = 0;
     reward_5 = 0;
     reward_6 = 0;
-    remainder[mod(now, 3)] = reward_total;
+    burned[mod(now, 3)] = reward_total;
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.encrypt(0, 1, {from: accounts[4]}),
@@ -1358,7 +1358,7 @@ function parameterized_test(accounts,
                  balance_6 - deposit_6[mod(now, 3)]);
     assert.equal(current.coin_supply,
                  coin_supply -
-                 remainder[mod(now - 1, 3)]);
+                 burned[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
@@ -1374,7 +1374,7 @@ function parameterized_test(accounts,
     reward_4 = 0;
     reward_5 = 0;
     reward_6 = 0;
-    remainder[mod(now, 3)] = reward_total;
+    burned[mod(now, 3)] = reward_total;
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
     await check_vote(await _acb.encrypt(_default_level, 2, {from: accounts[4]}),
@@ -1402,7 +1402,7 @@ function parameterized_test(accounts,
                  balance_6 - deposit_6[mod(now, 3)]);
     assert.equal(current.coin_supply,
                  coin_supply -
-                 remainder[mod(now - 1, 3)]);
+                 burned[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
@@ -1433,7 +1433,7 @@ function parameterized_test(accounts,
                             reward_total * deposit_6[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
-    remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
+    burned[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 2);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
@@ -1470,7 +1470,7 @@ function parameterized_test(accounts,
                  reward_6 + constant_reward);
     assert.equal(current.coin_supply,
                  coin_supply -
-                 remainder[mod(now - 1, 3)]);
+                 burned[mod(now - 1, 3)]);
 
     // 0, 0, stable
     tmp_deposit_rate = _deposit_rate;
@@ -1510,7 +1510,7 @@ function parameterized_test(accounts,
                             reward_total * deposit_6[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
-    remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
+    burned[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
@@ -1551,7 +1551,7 @@ function parameterized_test(accounts,
                  reward_6 + constant_reward);
     assert.equal(current.coin_supply,
                  coin_supply -
-                 remainder[mod(now - 1, 3)]);
+                 burned[mod(now - 1, 3)]);
 
     _deposit_rate = tmp_deposit_rate;
     _acb.setDepositRate(_deposit_rate, {from: accounts[1]});
@@ -1582,7 +1582,7 @@ function parameterized_test(accounts,
                             reward_total * deposit_6[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
-    remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
+    burned[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
@@ -1624,7 +1624,7 @@ function parameterized_test(accounts,
                  reward_6 + constant_reward);
     assert.equal(current.coin_supply,
                  coin_supply -
-                 remainder[mod(now - 1, 3)]);
+                 burned[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
@@ -1654,7 +1654,7 @@ function parameterized_test(accounts,
                             reward_total * deposit_6[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
-    remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
+    burned[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 1);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
@@ -1687,7 +1687,7 @@ function parameterized_test(accounts,
                  reward_6 + constant_reward);
     assert.equal(current.coin_supply,
                  coin_supply -
-                 remainder[mod(now - 1, 3)]);
+                 burned[mod(now - 1, 3)]);
 
     // stable, stable, level_max - 1
     now = mod(now + 1, 3);
@@ -1721,7 +1721,7 @@ function parameterized_test(accounts,
                             reward_total * deposit_6[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
-    remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
+    burned[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
@@ -1762,7 +1762,7 @@ function parameterized_test(accounts,
                  reward_6 + constant_reward);
     assert.equal(current.coin_supply,
                  coin_supply -
-                 remainder[mod(now - 1, 3)]);
+                 burned[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
@@ -1790,7 +1790,7 @@ function parameterized_test(accounts,
                             reward_total * deposit_6[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
-    remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
+    burned[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
@@ -1831,7 +1831,7 @@ function parameterized_test(accounts,
                  reward_6 + constant_reward);
     assert.equal(current.coin_supply,
                  coin_supply -
-                 remainder[mod(now - 1, 3)]);
+                 burned[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
@@ -1862,7 +1862,7 @@ function parameterized_test(accounts,
                             reward_total * deposit_5[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
-    remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
+    burned[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 2);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
@@ -1899,7 +1899,7 @@ function parameterized_test(accounts,
                  balance_6 - deposit_6[mod(now, 3)] + reclaim_6);
     assert.equal(current.coin_supply,
                  coin_supply -
-                 remainder[mod(now - 1, 3)]);
+                 burned[mod(now - 1, 3)]);
 
     // stable, level_max - 1, level_max - 1
     tmp_deposit_rate = _deposit_rate;
@@ -1939,7 +1939,7 @@ function parameterized_test(accounts,
                             reward_total * deposit_6[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
-    remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
+    burned[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
@@ -1983,7 +1983,7 @@ function parameterized_test(accounts,
                  reward_6 + constant_reward);
     assert.equal(current.coin_supply,
                  coin_supply -
-                 remainder[mod(now - 1, 3)]);
+                 burned[mod(now - 1, 3)]);
 
     _deposit_rate = tmp_deposit_rate;
     _acb.setDepositRate(_deposit_rate, {from: accounts[1]});
@@ -2014,7 +2014,7 @@ function parameterized_test(accounts,
                             reward_total * deposit_6[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
-    remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
+    burned[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
@@ -2058,7 +2058,7 @@ function parameterized_test(accounts,
                  reward_6 + constant_reward);
     assert.equal(current.coin_supply,
                  coin_supply -
-                 remainder[mod(now - 1, 3)]);
+                 burned[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
@@ -2088,7 +2088,7 @@ function parameterized_test(accounts,
                             reward_total * deposit_4[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
-    remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
+    burned[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 1);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
@@ -2124,7 +2124,7 @@ function parameterized_test(accounts,
                  balance_6 - deposit_6[mod(now, 3)] + reclaim_6);
     assert.equal(current.coin_supply,
                  coin_supply -
-                 remainder[mod(now - 1, 3)]);
+                 burned[mod(now - 1, 3)]);
 
     // stable, stable, level_max - 1; deposit is the same
     now = mod(now + 1, 3);
@@ -2158,7 +2158,7 @@ function parameterized_test(accounts,
                             reward_total * deposit_6[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
-    remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
+    burned[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
@@ -2202,7 +2202,7 @@ function parameterized_test(accounts,
                  reward_6 + constant_reward);
     assert.equal(current.coin_supply,
                  coin_supply -
-                 remainder[mod(now - 1, 3)]);
+                 burned[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
@@ -2230,7 +2230,7 @@ function parameterized_test(accounts,
                             reward_total * deposit_6[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
-    remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
+    burned[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 3);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
@@ -2274,7 +2274,7 @@ function parameterized_test(accounts,
                  reward_6 + constant_reward);
     assert.equal(current.coin_supply,
                  coin_supply -
-                 remainder[mod(now - 1, 3)]);
+                 burned[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
@@ -2305,7 +2305,7 @@ function parameterized_test(accounts,
                             reward_total * deposit_6[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
-    remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
+    burned[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 2);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
@@ -2345,7 +2345,7 @@ function parameterized_test(accounts,
                  reward_6 + constant_reward);
     assert.equal(current.coin_supply,
                  coin_supply -
-                 remainder[mod(now - 1, 3)]);
+                 burned[mod(now - 1, 3)]);
 
     // all levels
     now = mod(now + 1, 3);
@@ -2369,7 +2369,7 @@ function parameterized_test(accounts,
                             reward_total * deposit_4[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
-    remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
+    burned[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 1 + deposit_5[mod(now - 2, 3)] +
                               deposit_6[mod(now - 2, 3)]);
     balance_4 = current.balances[accounts[4]];
@@ -2387,7 +2387,7 @@ function parameterized_test(accounts,
                  reward_4 + constant_reward);
     assert.equal(current.coin_supply,
                  coin_supply -
-                 remainder[mod(now - 1, 3)]);
+                 burned[mod(now - 1, 3)]);
 
     now = mod(now + 1, 3);
     await _acb.setTimestamp((
@@ -2409,7 +2409,7 @@ function parameterized_test(accounts,
                             reward_total * deposit_4[mod(now - 2, 3)] /
                             (deposit_total * 100));
     }
-    remainder[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
+    burned[mod(now, 3)] = (reward_total - reward_4 - reward_5 - reward_6 -
                               constant_reward * 1);
     balance_4 = current.balances[accounts[4]];
     deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
@@ -2426,7 +2426,7 @@ function parameterized_test(accounts,
                  reward_4 + constant_reward);
     assert.equal(current.coin_supply,
                  coin_supply -
-                 remainder[mod(now - 1, 3)]);
+                 burned[mod(now - 1, 3)]);
 
     assert.equal(current.bond_supply, 0);
     assert.equal(current.bond_budget, 0);
@@ -2464,7 +2464,7 @@ function parameterized_test(accounts,
                               reward_total * deposit_4[mod(now - 2, 3)] /
                               (deposit_total * 100));
       }
-      remainder[mod(now, 3)] = (reward_total - reward_4 - constant_reward * 1);
+      burned[mod(now, 3)] = (reward_total - reward_4 - constant_reward * 1);
       balance_4 = current.balances[accounts[4]];
       deposit_4[mod(now, 3)] = Math.trunc(balance_4 * _deposit_rate / 100);
       await check_vote(await _acb.encrypt(level, 4444, {from: accounts[4]}),
@@ -2507,7 +2507,7 @@ function parameterized_test(accounts,
                    reward_4 + constant_reward);
       assert.equal(current.coin_supply,
                    coin_supply -
-                   remainder[mod(now - 1, 3)]);
+                   burned[mod(now - 1, 3)]);
       assert.equal(current.bond_supply, 2);
       assert.equal(current.bond_budget, bond_budget);
       assert.equal(current.valid_bond_supply, valid_bond_supply);
@@ -2538,7 +2538,7 @@ function parameterized_test(accounts,
     assert.equal(current.bond_supply, 0);
     assert.equal(current.coin_supply,
                  _initial_coin_supply + deposit_4[mod(now - 2, 3)] +
-                 deposit_4[mod(now - 1, 3)] + remainder[mod(now - 1, 3)] +
+                 deposit_4[mod(now - 1, 3)] + burned[mod(now - 1, 3)] +
                  tax_total);
 
     // Payable functions

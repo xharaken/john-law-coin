@@ -769,9 +769,9 @@ class Logging:
     # Returns
     # ----------------
     # None.
-    def updated_epoch(self, epoch_id, minted, burned, delta, bond_budget,
-                      total_coin_supply, total_bond_supply, valid_bond_supply,
-                      oracle_level, current_epoch_start, tax):
+    def update_epoch(self, epoch_id, minted, burned, delta, bond_budget,
+                     total_coin_supply, total_bond_supply, valid_bond_supply,
+                     oracle_level, current_epoch_start, tax):
         if epoch_id not in self.epoch_logs:
             self.epoch_logs[epoch_id] = Logging.EpochLog()
             self.vote_logs[epoch_id] = Logging.VoteLog()
@@ -802,8 +802,8 @@ class Logging:
     # Returns
     # ----------------
     # None.
-    def voted(self, epoch_id, commit_result, reveal_result, deposited,
-              reclaimed, rewarded):
+    def vote(self, epoch_id, commit_result, reveal_result, deposited,
+             reclaimed, rewarded):
         if epoch_id not in self.vote_logs:
             self.epoch_logs[epoch_id] = Logging.EpochLog()
             self.vote_logs[epoch_id] = Logging.VoteLog()
@@ -835,7 +835,7 @@ class Logging:
     # Returns
     # ----------------
     # None.
-    def purchased_bonds(self, epoch_id, purchased_bonds):
+    def purchase_bonds(self, epoch_id, purchased_bonds):
         if epoch_id not in self.bond_logs:
             self.epoch_logs[epoch_id] = Logging.EpochLog()
             self.vote_logs[epoch_id] = Logging.VoteLog()
@@ -854,7 +854,7 @@ class Logging:
     # Returns
     # ----------------
     # None.
-    def redeemed_bonds(self, epoch_id, redeemed_bonds, expired_bonds):
+    def redeem_bonds(self, epoch_id, redeemed_bonds, expired_bonds):
         if epoch_id not in self.bond_logs:
             self.epoch_logs[epoch_id] = Logging.EpochLog()
             self.vote_logs[epoch_id] = Logging.VoteLog()
@@ -1028,7 +1028,7 @@ class BondOperation:
     # ----------------
     # The amount of coins that cannot be increased by adjusting the bond budget
     # and thus need to be newly minted.
-    def update(self, delta, epoch_id):
+    def update_bond_budget(self, delta, epoch_id):
         mint = 0
         bond_supply = self.valid_bond_supply(epoch_id)
         if delta == 0:
@@ -1281,9 +1281,9 @@ class ACB:
 
             # Update the bond budget.
             epoch_id = self.oracle.epoch_id
-            mint = self.bond_operation.update(delta, epoch_id)
+            mint = self.bond_operation.update_bond_budget(delta, epoch_id)
 
-            self.logging.updated_epoch(
+            self.logging.update_epoch(
                 epoch_id, mint, burned, delta, self.bond_operation.bond_budget,
                 self.coin.total_supply, self.bond_operation.bond.total_supply,
                 self.bond_operation.valid_bond_supply(epoch_id),
@@ -1307,7 +1307,7 @@ class ACB:
         # Reclaim.
         (reclaimed, rewarded) = self.oracle.reclaim(self.coin, sender)
 
-        self.logging.voted(
+        self.logging.vote(
             self.oracle.epoch_id, commit_result, reveal_result,
             deposited, reclaimed, rewarded)
         return (commit_result, reveal_result, deposited, reclaimed, rewarded,
@@ -1327,7 +1327,7 @@ class ACB:
     def purchase_bonds(self, sender, count):
         redemption_epoch = self.bond_operation.purchase_bonds(
             sender, count, self.oracle.epoch_id, self.coin)
-        self.logging.purchased_bonds(self.oracle.epoch_id, count)
+        self.logging.purchase_bonds(self.oracle.epoch_id, count)
         return redemption_epoch
 
     # Redeem bonds.
@@ -1344,7 +1344,7 @@ class ACB:
     def redeem_bonds(self, sender, redemption_epochs):
         (redeemed_bonds, expired_bonds) = self.bond_operation.redeem_bonds(
             sender, redemption_epochs, self.oracle.epoch_id, self.coin)
-        self.logging.redeemed_bonds(
+        self.logging.redeem_bonds(
             self.oracle.epoch_id, redeemed_bonds, expired_bonds)
         return redeemed_bonds
 

@@ -16,7 +16,7 @@ contract("LoggingUnittest", function (accounts) {
     common.print_contract_size(_logging, "Logging");
 
     for (let epoch_id = 0; epoch_id < 30; epoch_id++) {
-      await _logging.updatedEpoch(epoch_id, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+      await _logging.updateEpoch(epoch_id, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
       let epoch_log = await get_epoch_logs(epoch_id);
       assert.equal(epoch_log.minted_coins, 1);
       assert.equal(epoch_log.burned_coins, 2);
@@ -29,19 +29,19 @@ contract("LoggingUnittest", function (accounts) {
       assert.equal(epoch_log.current_epoch_start, 9);
       assert.equal(epoch_log.tax, 10);
 
-      await _logging.purchasedBonds(epoch_id, 1);
-      await _logging.purchasedBonds(epoch_id, 2);
-      await _logging.purchasedBonds(epoch_id, 3);
-      await _logging.redeemedBonds(epoch_id, 1, 10);
-      await _logging.redeemedBonds(epoch_id, 2, 20);
-      await _logging.redeemedBonds(epoch_id, 3, 30);
-      await _logging.redeemedBonds(epoch_id, 4, 40);
+      await _logging.purchaseBonds(epoch_id, 1);
+      await _logging.purchaseBonds(epoch_id, 2);
+      await _logging.purchaseBonds(epoch_id, 3);
+      await _logging.redeemBonds(epoch_id, 1, 10);
+      await _logging.redeemBonds(epoch_id, 2, 20);
+      await _logging.redeemBonds(epoch_id, 3, 30);
+      await _logging.redeemBonds(epoch_id, 4, 40);
       let bond_log = await get_bond_logs(epoch_id);
       assert.equal(bond_log.purchased_bonds, 6);
       assert.equal(bond_log.redeemed_bonds, 10);
       assert.equal(bond_log.expired_bonds, 100);
       
-      await _logging.voted(epoch_id, false, false, 0, 0, 0);
+      await _logging.vote(epoch_id, false, false, 0, 0, 0);
       let vote_log = await get_vote_logs(epoch_id);
       assert.equal(vote_log.commit_succeeded, 0);
       assert.equal(vote_log.deposited, 0);
@@ -53,7 +53,7 @@ contract("LoggingUnittest", function (accounts) {
       assert.equal(vote_log.reclaimed, 0);
       assert.equal(vote_log.rewarded, 0);
 
-      await _logging.voted(epoch_id, false, true, 0, 0, 0);
+      await _logging.vote(epoch_id, false, true, 0, 0, 0);
       vote_log = await get_vote_logs(epoch_id);
       assert.equal(vote_log.commit_succeeded, 0);
       assert.equal(vote_log.deposited, 0);
@@ -65,7 +65,7 @@ contract("LoggingUnittest", function (accounts) {
       assert.equal(vote_log.reclaimed, 0);
       assert.equal(vote_log.rewarded, 0);
 
-      await _logging.voted(epoch_id, true, true, 10, 0, 0);
+      await _logging.vote(epoch_id, true, true, 10, 0, 0);
       vote_log = await get_vote_logs(epoch_id);
       assert.equal(vote_log.commit_succeeded, 1);
       assert.equal(vote_log.deposited, 10);
@@ -77,7 +77,7 @@ contract("LoggingUnittest", function (accounts) {
       assert.equal(vote_log.reclaimed, 0);
       assert.equal(vote_log.rewarded, 0);
 
-      await _logging.voted(epoch_id, true, false, 10, 0, 0);
+      await _logging.vote(epoch_id, true, false, 10, 0, 0);
       vote_log = await get_vote_logs(epoch_id);
       assert.equal(vote_log.commit_succeeded, 2);
       assert.equal(vote_log.deposited, 20);
@@ -89,7 +89,7 @@ contract("LoggingUnittest", function (accounts) {
       assert.equal(vote_log.reclaimed, 0);
       assert.equal(vote_log.rewarded, 0);
 
-      await _logging.voted(epoch_id, true, true, 10, 5, 6);
+      await _logging.vote(epoch_id, true, true, 10, 5, 6);
       vote_log = await get_vote_logs(epoch_id);
       assert.equal(vote_log.commit_succeeded, 3);
       assert.equal(vote_log.deposited, 30);
@@ -101,7 +101,7 @@ contract("LoggingUnittest", function (accounts) {
       assert.equal(vote_log.reclaimed, 5);
       assert.equal(vote_log.rewarded, 6);
 
-      await _logging.voted(epoch_id, true, true, 10, 5, 6);
+      await _logging.vote(epoch_id, true, true, 10, 5, 6);
       vote_log = await get_vote_logs(epoch_id);
       assert.equal(vote_log.commit_succeeded, 4);
       assert.equal(vote_log.deposited, 40);
@@ -120,18 +120,18 @@ contract("LoggingUnittest", function (accounts) {
       await _logging.initialize({from: accounts[1]});
     }, "Initializable");
     await should_throw(async () => {
-      await _logging.updatedEpoch(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-                                  {from: accounts[1]});
+      await _logging.updateEpoch(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+                                 {from: accounts[1]});
     }, "Ownable");
     await should_throw(async () => {
-      await _logging.voted(0, false, false, 0, 0, 0,
-                           {from: accounts[1]});
+      await _logging.vote(0, false, false, 0, 0, 0,
+                          {from: accounts[1]});
     }, "Ownable");
     await should_throw(async () => {
-      await _logging.purchasedBonds(0, 1, {from: accounts[1]});
+      await _logging.purchaseBonds(0, 1, {from: accounts[1]});
     }, "Ownable");
     await should_throw(async () => {
-      await _logging.redeemedBonds(0, 1, 2, {from: accounts[1]});
+      await _logging.redeemBonds(0, 1, 2, {from: accounts[1]});
     }, "Ownable");
   });
 

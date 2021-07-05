@@ -74,6 +74,6 @@ contract ACBForTesting_v3 is ACB_v3 {
 
   function updateBondBudget(int delta, uint epoch_id)
       public onlyOwner returns (uint) {
-      return bond_operation_.update(delta, epoch_id);
+      return bond_operation_.updateBondBudget(delta, epoch_id);
   }
 }

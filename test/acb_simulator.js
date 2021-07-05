@@ -117,7 +117,7 @@ function parameterized_test(accounts,
     await _logging.transferOwnership(_acb.address);
 
     let _tax_rate = await _coin.TAX_RATE();
-    let _lost_deposit = [0, 0, 0];
+    let _burned = [0, 0, 0];
 
     let _voters = [];
     for (let i = 0; i < _voter_count; i++) {
@@ -790,7 +790,7 @@ function parameterized_test(accounts,
           assert.equal(args.current_epoch_start,
                        (await _acb.getTimestamp()).toNumber());
           assert.equal(args.tax, tax);
-          assert.equal(args.burned, _lost_deposit[mod((new_epoch_id - 2), 3)]);
+          assert.equal(args.burned, _burned[mod((new_epoch_id - 2), 3)]);
           assert.equal(args.delta, delta);
           assert.equal(args.mint, mint);
 
@@ -806,13 +806,13 @@ function parameterized_test(accounts,
           }
           assert.equal(await get_coin_supply(),
                        coin_supply -
-                       _lost_deposit[mod((new_epoch_id - 2), 3)]);
+                       _burned[mod((new_epoch_id - 2), 3)]);
           assert.equal(await _acb.oracle_level_(), mode_level);
           commit_observed = true;
 
           _metrics.delta = delta;
           _metrics.mint = mint;
-          _metrics.lost = _lost_deposit[mod((new_epoch_id - 2), 3)];
+          _metrics.lost = _burned[mod((new_epoch_id - 2), 3)];
           _metrics.oracle_level = mode_level;
         } else {
           assert.equal(await _acb.oracle_level_(), mode_level);
@@ -821,7 +821,7 @@ function parameterized_test(accounts,
         }
       }
 
-      _lost_deposit[mod(epoch_id, 3)] =  deposit_total + tax - reclaimed_total;
+      _burned[mod(epoch_id, 3)] =  deposit_total + tax - reclaimed_total;
       return commit_observed;
     }
 

@@ -60,6 +60,6 @@ contract ACBForTesting_v4 is ACB_v4 {
 
   function updateBondBudget(int delta, uint epoch_id)
       public onlyOwner returns (uint) {
-      return bond_operation_.update(delta, epoch_id);
+      return bond_operation_.updateBondBudget(delta, epoch_id);
   }
 }

@@ -228,10 +228,10 @@ function parameterized_test(accounts,
       }
 
       assert.equal(deposit_to_reclaim + reward_total, deposit_total + tax);
-      let remainder = deposit_total + tax - reclaim_total;
+      let burned = deposit_total + tax - reclaim_total;
       tax = randint(0, 200);
       await _coin.mint(await _coin.tax_account_(), tax);
-      await check_advance(tax, remainder);
+      await check_advance(tax, burned);
       _prev_tax = tax;
 
       assert.equal(await _coin.totalSupply(), _prev_tax + initial_coin_supply);

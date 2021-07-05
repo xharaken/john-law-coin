@@ -1001,21 +1001,21 @@ contract Logging_v2 is OwnableUpgradeable {
   // Returns
   // ----------------
   // None.
-  function updatedEpoch(uint epoch_id, uint minted, uint burned, int delta,
-                        int bond_budget, uint total_coin_supply,
-                        uint total_bond_supply, uint valid_bond_supply,
-                        uint oracle_level, uint current_epoch_start, uint tax)
+  function updateEpoch(uint epoch_id, uint minted, uint burned, int delta,
+                       int bond_budget, uint total_coin_supply,
+                       uint total_bond_supply, uint valid_bond_supply,
+                       uint oracle_level, uint current_epoch_start, uint tax)
       public onlyOwner {
-    updatedEpoch_v2(epoch_id, minted, burned, delta, bond_budget,
-                    total_coin_supply, total_bond_supply, valid_bond_supply,
-                    oracle_level, current_epoch_start, tax);
+    updateEpoch_v2(epoch_id, minted, burned, delta, bond_budget,
+                   total_coin_supply, total_bond_supply, valid_bond_supply,
+                   oracle_level, current_epoch_start, tax);
   }
 
-  function updatedEpoch_v2(uint epoch_id, uint minted, uint burned, int delta,
-                           int bond_budget, uint total_coin_supply,
-                           uint total_bond_supply, uint valid_bond_supply,
-                           uint oracle_level, uint current_epoch_start,
-                           uint tax)
+  function updateEpoch_v2(uint epoch_id, uint minted, uint burned, int delta,
+                          int bond_budget, uint total_coin_supply,
+                          uint total_bond_supply, uint valid_bond_supply,
+                          uint oracle_level, uint current_epoch_start,
+                          uint tax)
       public onlyOwner {
     epoch_logs_[epoch_id].minted_coins = minted;
     epoch_logs_[epoch_id].burned_coins = burned;
@@ -1048,15 +1048,15 @@ contract Logging_v2 is OwnableUpgradeable {
   // Returns
   // ----------------
   // None.
-  function voted(uint epoch_id, bool commit_result, bool reveal_result,
-                 uint deposit, uint reclaimed, uint rewarded)
+  function vote(uint epoch_id, bool commit_result, bool reveal_result,
+                uint deposit, uint reclaimed, uint rewarded)
       public onlyOwner {
-    voted_v2(epoch_id, commit_result, reveal_result, deposit,
-             reclaimed, rewarded);
+    vote_v2(epoch_id, commit_result, reveal_result, deposit,
+            reclaimed, rewarded);
   }
 
-  function voted_v2(uint epoch_id, bool commit_result, bool reveal_result,
-                    uint deposit, uint reclaimed, uint rewarded)
+  function vote_v2(uint epoch_id, bool commit_result, bool reveal_result,
+                   uint deposit, uint reclaimed, uint rewarded)
       public onlyOwner {
     if (commit_result) {
       vote_logs_[epoch_id].commit_succeeded += 1;
@@ -1094,12 +1094,12 @@ contract Logging_v2 is OwnableUpgradeable {
   // Returns
   // ----------------
   // None.
-  function purchasedBonds(uint epoch_id, uint purchased_bonds)
+  function purchaseBonds(uint epoch_id, uint purchased_bonds)
       public onlyOwner {
-    purchasedBonds_v2(epoch_id, purchased_bonds);
+    purchaseBonds_v2(epoch_id, purchased_bonds);
   }
 
-  function purchasedBonds_v2(uint epoch_id, uint purchased_bonds)
+  function purchaseBonds_v2(uint epoch_id, uint purchased_bonds)
       public onlyOwner {
     bond_logs_[epoch_id].purchased_bonds += purchased_bonds;
     bond_logs_[epoch_id].new_value1 += purchased_bonds;
@@ -1116,12 +1116,12 @@ contract Logging_v2 is OwnableUpgradeable {
   // Returns
   // ----------------
   // None.
-  function redeemedBonds(uint epoch_id, uint redeemed_bonds, uint expired_bonds)
+  function redeemBonds(uint epoch_id, uint redeemed_bonds, uint expired_bonds)
       public onlyOwner {
-    redeemedBonds_v2(epoch_id, redeemed_bonds, expired_bonds);
+    redeemBonds_v2(epoch_id, redeemed_bonds, expired_bonds);
   }
   
-  function redeemedBonds_v2(uint epoch_id, uint redeemed_bonds, uint expired_bonds)
+  function redeemBonds_v2(uint epoch_id, uint redeemed_bonds, uint expired_bonds)
       public onlyOwner {
     bond_logs_[epoch_id].redeemed_bonds += redeemed_bonds;
     bond_logs_[epoch_id].expired_bonds += expired_bonds;
@@ -1160,8 +1160,8 @@ contract BondOperation_v2 is OwnableUpgradeable {
                            uint purchased_bonds, uint redemption_epoch);
   event RedeemBondsEvent(address indexed sender, uint indexed epoch_id,
                          uint redeemed_bonds, uint expired_bonds);
-  event UpdateEvent(uint indexed epoch_id, int delta,
-                    int bond_budget, uint mint);
+  event UpdateBondBudgetEvent(uint indexed epoch_id, int delta,
+                              int bond_budget, uint mint);
 
   function upgrade(JohnLawBond_v2 bond)
       public onlyOwner {
@@ -1289,12 +1289,12 @@ contract BondOperation_v2 is OwnableUpgradeable {
   // ----------------
   // The amount of coins that cannot be increased by adjusting the bond budget
   // and thus need to be newly minted.
-  function update(int delta, uint epoch_id)
+  function updateBondBudget(int delta, uint epoch_id)
       public onlyOwner returns (uint) {
-    return update_v2(delta, epoch_id);
+    return updateBondBudget_v2(delta, epoch_id);
   }
   
-  function update_v2(int delta, uint epoch_id)
+  function updateBondBudget_v2(int delta, uint epoch_id)
       public onlyOwner returns (uint) {
     uint mint = 0;
     uint bond_supply = validBondSupply(epoch_id);
@@ -1322,7 +1322,7 @@ contract BondOperation_v2 is OwnableUpgradeable {
     }
 
     require(bond_supply.toInt256() + bond_budget_v2_ >= 0, "cs3");
-    emit UpdateEvent(epoch_id, delta, bond_budget_v2_, mint);
+    emit UpdateBondBudgetEvent(epoch_id, delta, bond_budget_v2_, mint);
     return mint;
   }
 
@@ -1500,6 +1500,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
   // A struct to pack local variables. This is needed to avoid a stack-too-deep
   // error of Solidity.
   struct VoteResult {
+    uint epoch_id;
     bool epoch_updated;
     bool reveal_result;
     bool commit_result;
@@ -1540,11 +1541,13 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
                    uint salt)
       public whenNotPaused returns (bool, bool, uint, uint, uint, bool) {
     VoteResult memory result;
-    
+
+    result.epoch_id = oracle_v2_.epoch_id_();
     result.epoch_updated = false;
     if (getTimestamp() >= current_epoch_start_v2_ + EPOCH_DURATION) {
       // Start a new phase.
       result.epoch_updated = true;
+      result.epoch_id += 1;
       current_epoch_start_v2_ = getTimestamp();
       current_epoch_start_ = current_epoch_start_v2_;
       
@@ -1582,16 +1585,17 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
       }
 
       // Update the bond budget.
-      uint mint = bond_operation_v2_.update(delta, oracle_v2_.epoch_id_());
+      uint mint =
+          bond_operation_v2_.updateBondBudget(delta, result.epoch_id);
 
-      logging_v2_.updatedEpoch(
-          oracle_v2_.epoch_id_(), mint, burned, delta,
+      logging_v2_.updateEpoch(
+          result.epoch_id, mint, burned, delta,
           bond_operation_v2_.bond_budget_v2_(),
           coin_v2_.totalSupply(),
           bond_operation_v2_.bond_v2_().totalSupply(),
-          bond_operation_v2_.validBondSupply(oracle_.epoch_id_()),
+          bond_operation_v2_.validBondSupply(result.epoch_id),
           oracle_level_, current_epoch_start_v2_, tax);
-      emit UpdateEpochEvent(oracle_v2_.epoch_id_(), current_epoch_start_v2_,
+      emit UpdateEpochEvent(result.epoch_id, current_epoch_start_v2_,
                             tax, burned, delta, mint);
     }
     
@@ -1620,11 +1624,11 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
 
     oracle_v2_.revokeOwnership(coin_v2_);
     
-    logging_v2_.voted(oracle_v2_.epoch_id_(), result.commit_result,
-                      result.reveal_result, result.deposited,
-                      result.reclaimed, result.rewarded);
+    logging_v2_.vote(result.epoch_id, result.commit_result,
+                     result.reveal_result, result.deposited,
+                     result.reclaimed, result.rewarded);
     emit VoteEvent(
-        msg.sender, oracle_v2_.epoch_id_(), hash, oracle_level, salt,
+        msg.sender, result.epoch_id, hash, oracle_level, salt,
         result.commit_result, result.reveal_result, result.deposited,
         result.reclaimed, result.rewarded, result.epoch_updated);
     return (result.commit_result, result.reveal_result, result.deposited,
@@ -1656,7 +1660,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
                                          epoch_id, coin_v2_);
     bond_operation_v2_.revokeOwnership(coin_v2_);
     
-    logging_v2_.purchasedBonds(epoch_id, count);
+    logging_v2_.purchaseBonds(epoch_id, count);
     emit PurchaseBondsEvent(address(msg.sender), epoch_id,
                             count, redemption_epoch);
     return redemption_epoch;
@@ -1687,7 +1691,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
                                        epoch_id, coin_v2_);
     bond_operation_v2_.revokeOwnership(coin_v2_);
     
-    logging_v2_.redeemedBonds(epoch_id, redeemed_bonds, expired_bonds);
+    logging_v2_.redeemBonds(epoch_id, redeemed_bonds, expired_bonds);
     emit RedeemBondsEvent(address(msg.sender), epoch_id,
                           redeemed_bonds, expired_bonds);
     return redeemed_bonds;

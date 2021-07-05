@@ -79,7 +79,7 @@ class ACBSimulator(unittest.TestCase):
             level_to_exchange_rate)
 
         self.tax_rate = JohnLawCoin.TAX_RATE
-        self.lost_deposit = [0] * 3
+        self.burned = [0] * 3
         self.iteration = iteration
 
         self.voter_count = voter_count
@@ -727,20 +727,20 @@ class ACBSimulator(unittest.TestCase):
                         self.bond_operation.bond_budget, issued_bonds)
                 self.assertEqual(
                     acb.coin.total_supply,
-                    coin_supply - self.lost_deposit[(new_epoch_id - 2) % 3])
+                    coin_supply - self.burned[(new_epoch_id - 2) % 3])
                 self.assertEqual(acb.oracle_level, mode_level)
                 commit_observed = True
 
                 self.metrics.delta = delta
                 self.metrics.mint = mint
-                self.metrics.lost = self.lost_deposit[(new_epoch_id - 2) % 3]
+                self.metrics.lost = self.burned[(new_epoch_id - 2) % 3]
                 self.metrics.oracle_level = mode_level
             else:
                 self.assertEqual(acb.oracle_level, mode_level)
                 self.assertEqual(self.bond.total_supply, bond_supply)
                 self.assertEqual(self.bond_operation.bond_budget, bond_budget)
 
-        self.lost_deposit[epoch_id % 3] = deposit_total + tax - reclaimed_total
+        self.burned[epoch_id % 3] = deposit_total + tax - reclaimed_total
         return commit_observed
 
 

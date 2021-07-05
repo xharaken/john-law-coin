@@ -149,7 +149,7 @@ class ACBUnitTest(unittest.TestCase):
 
         self.acb.set_timestamp(self.acb.get_timestamp() + ACB.EPOCH_DURATION)
         
-        remainder = [0, 0, 0]
+        burned = [0, 0, 0]
         deposit_4 = [0, 0, 0]
         deposit_5 = [0, 0, 0]
         deposit_6 = [0, 0, 0]
@@ -224,7 +224,7 @@ class ACBUnitTest(unittest.TestCase):
         if deposit_4[(now - 2) % 3] > 0:
             reward += int(Oracle.PROPORTIONAL_REWARD_RATE *
                           self.tax / 100)
-        remainder[now] = self.tax - reward
+        burned[now] = self.tax - reward
         deposit_4[now] = int(balance * ACB.DEPOSIT_RATE / 100)
         self.assertEqual(acb.current_epoch_start,
                          acb.get_timestamp() - ACB.EPOCH_DURATION)
@@ -254,7 +254,7 @@ class ACBUnitTest(unittest.TestCase):
 
         balance = acb.coin.balance_of(accounts[4])
         coin_supply = acb.coin.total_supply
-        remainder[now] = deposit_4[(now - 2) % 3] + self.tax
+        burned[now] = deposit_4[(now - 2) % 3] + self.tax
         deposit_4[now] = int(balance * ACB.DEPOSIT_RATE / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
@@ -271,7 +271,7 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.balance_of(accounts[4]), balance)
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
-                         remainder[(now - 1) % 3])
+                         burned[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
@@ -285,7 +285,7 @@ class ACBUnitTest(unittest.TestCase):
         if deposit_4[(now - 2) % 3] > 0:
             reward += int(Oracle.PROPORTIONAL_REWARD_RATE *
                           self.tax / 100)
-        remainder[now] = self.tax - reward
+        burned[now] = self.tax - reward
         deposit_4[now] = int(balance * ACB.DEPOSIT_RATE / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
@@ -305,7 +305,7 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.balance_of(accounts[4]), balance)
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
-                         remainder[(now - 1) % 3])
+                         burned[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
@@ -319,7 +319,7 @@ class ACBUnitTest(unittest.TestCase):
         if deposit_4[(now - 2) % 3] > 0:
             reward += int(Oracle.PROPORTIONAL_REWARD_RATE *
                           self.tax / 100)
-        remainder[now] = self.tax - reward
+        burned[now] = self.tax - reward
         deposit_4[now] = int(balance * ACB.DEPOSIT_RATE / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
@@ -338,7 +338,7 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.balance_of(accounts[4]), balance)
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
-                         remainder[(now - 1) % 3])
+                         burned[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
@@ -353,7 +353,7 @@ class ACBUnitTest(unittest.TestCase):
         if deposit_4[(now - 2) % 3] > 0:
             reward += int(Oracle.PROPORTIONAL_REWARD_RATE *
                           self.tax / 100)
-        remainder[now] = self.tax - reward
+        burned[now] = self.tax - reward
         deposit_4[now] = int(balance * ACB.DEPOSIT_RATE / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
@@ -373,7 +373,7 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.balance_of(accounts[4]), balance)
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
-                         remainder[(now - 1) % 3])
+                         burned[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
@@ -387,7 +387,7 @@ class ACBUnitTest(unittest.TestCase):
         if deposit_4[(now - 2) % 3] > 0:
             reward += int(Oracle.PROPORTIONAL_REWARD_RATE *
                           self.tax / 100)
-        remainder[now] = self.tax - reward
+        burned[now] = self.tax - reward
         deposit_4[now] = int(balance * ACB.DEPOSIT_RATE / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
@@ -407,7 +407,7 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.balance_of(accounts[4]), balance)
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
-                         remainder[(now - 1) % 3])
+                         burned[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
@@ -417,7 +417,7 @@ class ACBUnitTest(unittest.TestCase):
         balance = acb.coin.balance_of(accounts[4])
         coin_supply = acb.coin.total_supply
         reward = 0
-        remainder[now] = deposit_4[(now - 2) % 3] + self.tax - reward
+        burned[now] = deposit_4[(now - 2) % 3] + self.tax - reward
         deposit_4[now] = 0
         self.assertEqual(acb.vote(
             accounts[4], ACB.NULL_HASH, self.default_level, 7),
@@ -434,7 +434,7 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.balance_of(accounts[4]), balance)
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
-                         remainder[(now - 1) % 3])
+                         burned[(now - 1) % 3])
 
         # 3 commits on the stable level.
         self.reset_balances()
@@ -450,7 +450,7 @@ class ACBUnitTest(unittest.TestCase):
         mint = 0
 
         coin_supply = acb.coin.total_supply
-        remainder[now] = deposit_4[(now - 2) % 3] + self.tax
+        burned[now] = deposit_4[(now - 2) % 3] + self.tax
         balance_4 = acb.coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * ACB.DEPOSIT_RATE / 100)
         self.assertEqual(acb.vote(
@@ -478,7 +478,7 @@ class ACBUnitTest(unittest.TestCase):
                          balance_6 - deposit_6[now])
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
-                         remainder[(now - 1) % 3])
+                         burned[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
@@ -486,7 +486,7 @@ class ACBUnitTest(unittest.TestCase):
         mint = 0
 
         coin_supply = acb.coin.total_supply
-        remainder[now] = deposit_4[(now - 2) % 3] + self.tax
+        burned[now] = deposit_4[(now - 2) % 3] + self.tax
         balance_4 = acb.coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * ACB.DEPOSIT_RATE / 100)
         self.assertEqual(acb.vote(
@@ -514,7 +514,7 @@ class ACBUnitTest(unittest.TestCase):
                          balance_6 - deposit_6[now])
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
-                         remainder[(now - 1) % 3])
+                         burned[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
@@ -522,7 +522,7 @@ class ACBUnitTest(unittest.TestCase):
         mint = 0
 
         coin_supply = acb.coin.total_supply
-        remainder[now] = (deposit_4[(now - 2) % 3] + deposit_5[(now - 2) % 3] +
+        burned[now] = (deposit_4[(now - 2) % 3] + deposit_5[(now - 2) % 3] +
                           deposit_6[(now - 2) % 3] + self.tax)
         balance_4 = acb.coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * ACB.DEPOSIT_RATE / 100)
@@ -551,7 +551,7 @@ class ACBUnitTest(unittest.TestCase):
                          balance_6 - deposit_6[now])
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
-                         remainder[(now - 1) % 3])
+                         burned[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
@@ -575,7 +575,7 @@ class ACBUnitTest(unittest.TestCase):
             reward_6 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_6[(now - 2) % 3] /
                            (deposit_total * 100))
-        remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
+        burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 3)
         balance_4 = acb.coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * ACB.DEPOSIT_RATE / 100)
@@ -613,7 +613,7 @@ class ACBUnitTest(unittest.TestCase):
                          reward_6 + constant_reward)
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
-                         remainder[(now - 1) % 3])
+                         burned[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
@@ -637,7 +637,7 @@ class ACBUnitTest(unittest.TestCase):
             reward_6 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_6[(now - 2) % 3] /
                            (deposit_total * 100))
-        remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
+        burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 3)
         balance_4 = acb.coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * ACB.DEPOSIT_RATE / 100)
@@ -676,7 +676,7 @@ class ACBUnitTest(unittest.TestCase):
 
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
-                         remainder[(now - 1) % 3])
+                         burned[(now - 1) % 3])
 
         self.reset_balances()
         now = (now + 1) % 3
@@ -701,7 +701,7 @@ class ACBUnitTest(unittest.TestCase):
             reward_6 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_6[(now - 2) % 3] /
                            (deposit_total * 100))
-        remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
+        burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 3)
         balance_4 = acb.coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * ACB.DEPOSIT_RATE / 100)
@@ -742,7 +742,7 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(deposit_6[now], 0)
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
-                         remainder[(now - 1) % 3])
+                         burned[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
@@ -766,7 +766,7 @@ class ACBUnitTest(unittest.TestCase):
             reward_6 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_6[(now - 2) % 3] /
                            (deposit_total * 100))
-        remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
+        burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 3)
         balance_4 = acb.coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * ACB.DEPOSIT_RATE / 100)
@@ -804,7 +804,7 @@ class ACBUnitTest(unittest.TestCase):
                          reward_6 + constant_reward)
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
-                         remainder[(now - 1) % 3])
+                         burned[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
@@ -818,7 +818,7 @@ class ACBUnitTest(unittest.TestCase):
         reward_4 = 0
         reward_5 = 0
         reward_6 = 0
-        remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
+        burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 3)
         balance_4 = acb.coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * ACB.DEPOSIT_RATE / 100)
@@ -856,7 +856,7 @@ class ACBUnitTest(unittest.TestCase):
                          reward_6 + constant_reward)
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
-                         remainder[(now - 1) % 3])
+                         burned[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
@@ -876,7 +876,7 @@ class ACBUnitTest(unittest.TestCase):
             reward_5 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_5[(now - 2) % 3] /
                            (deposit_total * 100))
-        remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
+        burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 2)
         balance_4 = acb.coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * ACB.DEPOSIT_RATE / 100)
@@ -912,7 +912,7 @@ class ACBUnitTest(unittest.TestCase):
                          reward_6)
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
-                         remainder[(now - 1) % 3])
+                         burned[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
@@ -930,7 +930,7 @@ class ACBUnitTest(unittest.TestCase):
         if deposit_6[(now - 2) % 3] > 0:
             reward_6 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total / 100)
-        remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
+        burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 1)
         balance_4 = acb.coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * ACB.DEPOSIT_RATE / 100)
@@ -962,7 +962,7 @@ class ACBUnitTest(unittest.TestCase):
                          reward_6 + constant_reward)
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
-                         remainder[(now - 1) % 3])
+                         burned[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
@@ -976,7 +976,7 @@ class ACBUnitTest(unittest.TestCase):
         reward_4 = 0
         reward_5 = 0
         reward_6 = 0
-        remainder[now] = reward_total
+        burned[now] = reward_total
         balance_4 = acb.coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * ACB.DEPOSIT_RATE / 100)
         self.assertEqual(acb.vote(
@@ -1004,7 +1004,7 @@ class ACBUnitTest(unittest.TestCase):
                          balance_6 - deposit_6[now])
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
-                         remainder[(now - 1) % 3])
+                         burned[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
@@ -1025,7 +1025,7 @@ class ACBUnitTest(unittest.TestCase):
             reward_6 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_6[(now - 2) % 3] /
                            (deposit_total * 100))
-        remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
+        burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 2 + deposit_4[(now - 2) % 3])
         balance_5 = acb.coin.balance_of(accounts[5])
         deposit_5[now] = int(balance_5 * ACB.DEPOSIT_RATE / 100)
@@ -1052,7 +1052,7 @@ class ACBUnitTest(unittest.TestCase):
                          reward_6 + constant_reward)
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
-                         remainder[(now - 1) % 3])
+                         burned[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
@@ -1069,7 +1069,7 @@ class ACBUnitTest(unittest.TestCase):
             reward_6 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_6[(now - 2) % 3] /
                            (deposit_total * 100))
-        remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
+        burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward + deposit_5[(now - 2) % 3])
         balance_6 = acb.coin.balance_of(accounts[6])
         deposit_6[now] = int(balance_6 * ACB.DEPOSIT_RATE / 100)
@@ -1085,7 +1085,7 @@ class ACBUnitTest(unittest.TestCase):
                          reward_6 + constant_reward)
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
-                         remainder[(now - 1) % 3])
+                         burned[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
@@ -1099,7 +1099,7 @@ class ACBUnitTest(unittest.TestCase):
         reward_4 = 0
         reward_5 = 0
         reward_6 = 0
-        remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
+        burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 0 + deposit_6[(now - 2) % 3])
         deposit13 = int(
             acb.coin.balance_of(accounts[1]) * ACB.DEPOSIT_RATE / 100)
@@ -1110,7 +1110,7 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.oracle_level, self.default_level)
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
-                         remainder[(now - 1) % 3])
+                         burned[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
@@ -1118,7 +1118,7 @@ class ACBUnitTest(unittest.TestCase):
         mint = 0
 
         coin_supply = acb.coin.total_supply
-        remainder[now] = deposit_6[(now - 2) % 3] + self.tax
+        burned[now] = deposit_6[(now - 2) % 3] + self.tax
         deposit14 = int(
             acb.coin.balance_of(accounts[1]) * ACB.DEPOSIT_RATE / 100)
         self.assertEqual(acb.vote(
@@ -1128,7 +1128,7 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.oracle_level, Oracle.LEVEL_MAX)
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
-                         remainder[(now - 1) % 3])
+                         burned[(now - 1) % 3])
 
         # 3 commits on the stable level and another level.
 
@@ -1149,7 +1149,7 @@ class ACBUnitTest(unittest.TestCase):
         reward_4 = 0
         reward_5 = 0
         reward_6 = 0
-        remainder[now] = reward_total
+        burned[now] = reward_total
         balance_4 = acb.coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * ACB.DEPOSIT_RATE / 100)
         self.assertEqual(acb.vote(
@@ -1177,7 +1177,7 @@ class ACBUnitTest(unittest.TestCase):
                          balance_6 - deposit_6[now])
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
-                         remainder[(now - 1) % 3])
+                         burned[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
@@ -1190,7 +1190,7 @@ class ACBUnitTest(unittest.TestCase):
         reward_4 = 0
         reward_5 = 0
         reward_6 = 0
-        remainder[now] = reward_total
+        burned[now] = reward_total
         balance_4 = acb.coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * ACB.DEPOSIT_RATE / 100)
         self.assertEqual(acb.vote(
@@ -1218,7 +1218,7 @@ class ACBUnitTest(unittest.TestCase):
                          balance_6 - deposit_6[now])
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
-                         remainder[(now - 1) % 3])
+                         burned[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
@@ -1244,7 +1244,7 @@ class ACBUnitTest(unittest.TestCase):
             reward_6 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_6[(now - 2) % 3] /
                            (deposit_total * 100))
-        remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
+        burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 2)
         balance_4 = acb.coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * ACB.DEPOSIT_RATE / 100)
@@ -1280,7 +1280,7 @@ class ACBUnitTest(unittest.TestCase):
                          reward_6 + constant_reward)
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
-                         remainder[(now - 1) % 3])
+                         burned[(now - 1) % 3])
 
         # 0, 0, stable
         tmp_deposit_rate = ACB.DEPOSIT_RATE
@@ -1314,7 +1314,7 @@ class ACBUnitTest(unittest.TestCase):
             reward_6 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_6[(now - 2) % 3] /
                            (deposit_total * 100))
-        remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
+        burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 3)
         balance_4 = acb.coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * ACB.DEPOSIT_RATE / 100)
@@ -1349,7 +1349,7 @@ class ACBUnitTest(unittest.TestCase):
                          reward_6 + constant_reward)
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
-                         remainder[(now - 1) % 3])
+                         burned[(now - 1) % 3])
 
         ACB.DEPOSIT_RATE = tmp_deposit_rate
 
@@ -1375,7 +1375,7 @@ class ACBUnitTest(unittest.TestCase):
             reward_6 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                        reward_total * deposit_6[(now - 2) % 3] /
                            (deposit_total * 100))
-        remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
+        burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 3)
         balance_4 = acb.coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * ACB.DEPOSIT_RATE / 100)
@@ -1410,7 +1410,7 @@ class ACBUnitTest(unittest.TestCase):
                          reward_6 + constant_reward)
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
-                         remainder[(now - 1) % 3])
+                         burned[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
@@ -1435,7 +1435,7 @@ class ACBUnitTest(unittest.TestCase):
             reward_6 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_6[(now - 2) % 3] /
                            (deposit_total * 100))
-        remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
+        burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 1)
         balance_4 = acb.coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * ACB.DEPOSIT_RATE / 100)
@@ -1466,7 +1466,7 @@ class ACBUnitTest(unittest.TestCase):
                          reward_6 + constant_reward)
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
-                         remainder[(now - 1) % 3])
+                         burned[(now - 1) % 3])
 
         # stable, stable, level_max - 1
         now = (now + 1) % 3
@@ -1496,7 +1496,7 @@ class ACBUnitTest(unittest.TestCase):
             reward_6 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_6[(now - 2) % 3] /
                            (deposit_total * 100))
-        remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
+        burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 3)
         balance_4 = acb.coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * ACB.DEPOSIT_RATE / 100)
@@ -1534,7 +1534,7 @@ class ACBUnitTest(unittest.TestCase):
                          reward_6 + constant_reward)
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
-                         remainder[(now - 1) % 3])
+                         burned[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
@@ -1558,7 +1558,7 @@ class ACBUnitTest(unittest.TestCase):
             reward_6 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_6[(now - 2) % 3] /
                            (deposit_total * 100))
-        remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
+        burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 3)
         balance_4 = acb.coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * ACB.DEPOSIT_RATE / 100)
@@ -1596,7 +1596,7 @@ class ACBUnitTest(unittest.TestCase):
                          reward_6 + constant_reward)
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
-                         remainder[(now - 1) % 3])
+                         burned[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
@@ -1623,7 +1623,7 @@ class ACBUnitTest(unittest.TestCase):
             reward_5 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_5[(now - 2) % 3] /
                            (deposit_total * 100))
-        remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
+        burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 2)
         balance_4 = acb.coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * ACB.DEPOSIT_RATE / 100)
@@ -1659,7 +1659,7 @@ class ACBUnitTest(unittest.TestCase):
                          balance_6 - deposit_6[now] + reclaim_6)
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
-                         remainder[(now - 1) % 3])
+                         burned[(now - 1) % 3])
 
         # stable, level_max - 1, level_max - 1
         tmp_deposit_rate = ACB.DEPOSIT_RATE
@@ -1693,7 +1693,7 @@ class ACBUnitTest(unittest.TestCase):
             reward_6 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_6[(now - 2) % 3] /
                            (deposit_total * 100))
-        remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
+        burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 3)
         balance_4 = acb.coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * ACB.DEPOSIT_RATE / 100)
@@ -1731,7 +1731,7 @@ class ACBUnitTest(unittest.TestCase):
                          reward_6 + constant_reward)
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
-                         remainder[(now - 1) % 3])
+                         burned[(now - 1) % 3])
 
         ACB.DEPOSIT_RATE = tmp_deposit_rate
 
@@ -1757,7 +1757,7 @@ class ACBUnitTest(unittest.TestCase):
             reward_6 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_6[(now - 2) % 3] /
                            (deposit_total * 100))
-        remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
+        burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 3)
         balance_4 = acb.coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * ACB.DEPOSIT_RATE / 100)
@@ -1795,7 +1795,7 @@ class ACBUnitTest(unittest.TestCase):
                          reward_6 + constant_reward)
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
-                         remainder[(now - 1) % 3])
+                         burned[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
@@ -1820,7 +1820,7 @@ class ACBUnitTest(unittest.TestCase):
             reward_4 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_4[(now - 2) % 3] /
                            (deposit_total * 100))
-        remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
+        burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 1)
         balance_4 = acb.coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * ACB.DEPOSIT_RATE / 100)
@@ -1854,7 +1854,7 @@ class ACBUnitTest(unittest.TestCase):
                          balance_6 - deposit_6[now] + reclaim_6)
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
-                         remainder[(now - 1) % 3])
+                         burned[(now - 1) % 3])
 
         # stable, stable, level_max - 1; deposit is the same
         now = (now + 1) % 3
@@ -1884,7 +1884,7 @@ class ACBUnitTest(unittest.TestCase):
             reward_6 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_6[(now - 2) % 3] /
                            (deposit_total * 100))
-        remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
+        burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 3)
         balance_4 = acb.coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * ACB.DEPOSIT_RATE / 100)
@@ -1922,7 +1922,7 @@ class ACBUnitTest(unittest.TestCase):
                          reward_6 + constant_reward)
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
-                         remainder[(now - 1) % 3])
+                         burned[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
@@ -1946,7 +1946,7 @@ class ACBUnitTest(unittest.TestCase):
             reward_6 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_6[(now - 2) % 3] /
                            (deposit_total * 100))
-        remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
+        burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 3)
         balance_4 = acb.coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * ACB.DEPOSIT_RATE / 100)
@@ -1984,7 +1984,7 @@ class ACBUnitTest(unittest.TestCase):
                          reward_6 + constant_reward)
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
-                         remainder[(now - 1) % 3])
+                         burned[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
@@ -2011,7 +2011,7 @@ class ACBUnitTest(unittest.TestCase):
             reward_6 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_6[(now - 2) % 3] /
                            (deposit_total * 100))
-        remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
+        burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 2)
         balance_4 = acb.coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * ACB.DEPOSIT_RATE / 100)
@@ -2047,7 +2047,7 @@ class ACBUnitTest(unittest.TestCase):
                          reward_6 + constant_reward)
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
-                         remainder[(now - 1) % 3])
+                         burned[(now - 1) % 3])
 
         # all levels
         now = (now + 1) % 3
@@ -2067,7 +2067,7 @@ class ACBUnitTest(unittest.TestCase):
             reward_4 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_4[(now - 2) % 3] /
                            (deposit_total * 100))
-        remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
+        burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 1 + deposit_5[(now - 2) % 3] +
                           deposit_6[(now - 2) % 3])
         balance_4 = acb.coin.balance_of(accounts[4])
@@ -2084,7 +2084,7 @@ class ACBUnitTest(unittest.TestCase):
                          reward_4 + constant_reward)
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
-                         remainder[(now - 1) % 3])
+                         burned[(now - 1) % 3])
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
@@ -2102,7 +2102,7 @@ class ACBUnitTest(unittest.TestCase):
             reward_4 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                            reward_total * deposit_4[(now - 2) % 3] /
                            (deposit_total * 100))
-        remainder[now] = (reward_total - reward_4 - reward_5 - reward_6 -
+        burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 1)
         balance_4 = acb.coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * ACB.DEPOSIT_RATE / 100)
@@ -2117,11 +2117,11 @@ class ACBUnitTest(unittest.TestCase):
                          reward_4 + constant_reward)
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
-                         remainder[(now - 1) % 3])
+                         burned[(now - 1) % 3])
 
         self.assertEqual(self.bond.total_supply, 0)
         self.assertEqual(self.bond_operation.bond_budget, 0)
-        self.assertEqual(self.bond_operation.update(
+        self.assertEqual(self.bond_operation.update_bond_budget(
             -self.bond_price * 2, acb.oracle.epoch_id), 0)
         self.assertEqual(self.bond.total_supply, 0)
         self.assertEqual(self.bond_operation.bond_budget, 2)
@@ -2150,7 +2150,7 @@ class ACBUnitTest(unittest.TestCase):
                 reward_4 = int(Oracle.PROPORTIONAL_REWARD_RATE *
                                reward_total * deposit_4[(now - 2) % 3] /
                                (deposit_total * 100))
-            remainder[now] = (reward_total - reward_4 - constant_reward * 1)
+            burned[now] = (reward_total - reward_4 - constant_reward * 1)
             balance_4 = acb.coin.balance_of(accounts[4])
             deposit_4[now] = int(balance_4 * ACB.DEPOSIT_RATE / 100)
             self.assertEqual(acb.vote(
@@ -2193,7 +2193,7 @@ class ACBUnitTest(unittest.TestCase):
                              reward_4 + constant_reward)
             self.assertEqual(acb.coin.total_supply,
                              coin_supply -
-                             remainder[(now - 1) % 3])
+                             burned[(now - 1) % 3])
             self.assertEqual(self.bond.total_supply, 2)
             self.assertEqual(self.bond_operation.bond_budget, bond_budget)
             self.assertEqual(
@@ -2224,7 +2224,7 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(self.bond.total_supply, 0)
         self.assertEqual(acb.coin.total_supply,
                          self.initial_coin_supply + deposit_4[(now - 2) % 3] +
-                         deposit_4[(now - 1) % 3] + remainder[(now - 1) % 3] +
+                         deposit_4[(now - 1) % 3] + burned[(now - 1) % 3] +
                          tax_total)
 
 

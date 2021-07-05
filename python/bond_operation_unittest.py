@@ -44,38 +44,39 @@ class BondOperationUnitTest(unittest.TestCase):
         bond_operation = self.bond_operation
         accounts = self.accounts
 
-        # update
+        # update_bond_budget
         self.assertEqual(self.bond.total_supply, 0)
         self.assertEqual(bond_operation.bond_budget, 0)
-        self.check_update(BondOperation.BOND_REDEMPTION_PRICE - 1, 0)
+        self.check_update_bond_budget(
+            BondOperation.BOND_REDEMPTION_PRICE - 1, 0)
         self.assertEqual(bond_operation.bond_budget, 0)
-        self.check_update(BondOperation.BOND_REDEMPTION_PRICE,
+        self.check_update_bond_budget(BondOperation.BOND_REDEMPTION_PRICE,
                           BondOperation.BOND_REDEMPTION_PRICE)
         self.assertEqual(bond_operation.bond_budget, 0)
-        self.check_update(BondOperation.BOND_REDEMPTION_PRICE + 1,
+        self.check_update_bond_budget(BondOperation.BOND_REDEMPTION_PRICE + 1,
                           BondOperation.BOND_REDEMPTION_PRICE)
         self.assertEqual(bond_operation.bond_budget, 0)
-        self.check_update(
+        self.check_update_bond_budget(
             BondOperation.BOND_REDEMPTION_PRICE * 10,
             BondOperation.BOND_REDEMPTION_PRICE * 10)
         self.assertEqual(bond_operation.bond_budget, 0)
 
-        self.check_update(-(self.bond_price - 1), 0)
+        self.check_update_bond_budget(-(self.bond_price - 1), 0)
         self.assertEqual(self.bond.total_supply, 0)
         self.assertEqual(bond_operation.bond_budget, 0)
-        self.check_update(-self.bond_price, 0)
+        self.check_update_bond_budget(-self.bond_price, 0)
         self.assertEqual(self.bond.total_supply, 0)
         self.assertEqual(bond_operation.bond_budget, 1)
-        self.check_update(0, 0)
+        self.check_update_bond_budget(0, 0)
         self.assertEqual(self.bond.total_supply, 0)
         self.assertEqual(bond_operation.bond_budget, 0)
-        self.check_update(-self.bond_price * 99, 0)
+        self.check_update_bond_budget(-self.bond_price * 99, 0)
         self.assertEqual(self.bond.total_supply, 0)
         self.assertEqual(bond_operation.bond_budget, 99)
-        self.check_update(0, 0)
+        self.check_update_bond_budget(0, 0)
         self.assertEqual(self.bond.total_supply, 0)
         self.assertEqual(bond_operation.bond_budget, 0)
-        self.check_update(-self.bond_price * 100, 0)
+        self.check_update_bond_budget(-self.bond_price * 100, 0)
         self.assertEqual(self.bond.total_supply, 0)
         self.assertEqual(bond_operation.bond_budget, 100)
         
@@ -86,36 +87,36 @@ class BondOperationUnitTest(unittest.TestCase):
         self.assertEqual(self.bond.total_supply, 100)
         self.assertEqual(bond_operation.bond_budget, 0)
 
-        self.check_update(
+        self.check_update_bond_budget(
             BondOperation.BOND_REDEMPTION_PRICE - 1, 0)
-        self.check_update(BondOperation.BOND_REDEMPTION_PRICE, 0)
+        self.check_update_bond_budget(BondOperation.BOND_REDEMPTION_PRICE, 0)
         self.assertEqual(bond_operation.bond_budget, -1)
-        self.check_update(
+        self.check_update_bond_budget(
             BondOperation.BOND_REDEMPTION_PRICE + 1, 0)
         self.assertEqual(bond_operation.bond_budget, -1)
-        self.check_update(
+        self.check_update_bond_budget(
             BondOperation.BOND_REDEMPTION_PRICE * 68, 0)
         self.assertEqual(bond_operation.bond_budget, -68)
-        self.check_update(0, 0)
+        self.check_update_bond_budget(0, 0)
         self.assertEqual(bond_operation.bond_budget, 0)
-        self.check_update(
+        self.check_update_bond_budget(
             BondOperation.BOND_REDEMPTION_PRICE * 30, 0)
         self.assertEqual(bond_operation.bond_budget, -30)
-        self.check_update(
+        self.check_update_bond_budget(
             BondOperation.BOND_REDEMPTION_PRICE - 1, 0)
         self.assertEqual(bond_operation.bond_budget, 0)
-        self.check_update(
+        self.check_update_bond_budget(
             BondOperation.BOND_REDEMPTION_PRICE * 200,
             BondOperation.BOND_REDEMPTION_PRICE * 100)
         self.assertEqual(bond_operation.bond_budget, -100)
-        self.check_update(
+        self.check_update_bond_budget(
             BondOperation.BOND_REDEMPTION_PRICE * 100, 0)
         self.assertEqual(bond_operation.bond_budget, -100)
-        self.check_update(
+        self.check_update_bond_budget(
             BondOperation.BOND_REDEMPTION_PRICE * 100, 0)
         self.assertEqual(bond_operation.bond_budget, -100)
         
-        self.check_update(-self.bond_price * 100, 0)
+        self.check_update_bond_budget(-self.bond_price * 100, 0)
         self.assertEqual(self.bond.total_supply, 100)
         self.assertEqual(bond_operation.bond_budget, 100)
 
@@ -126,16 +127,16 @@ class BondOperationUnitTest(unittest.TestCase):
         self.assertEqual(self.bond.total_supply, 200)
         self.assertEqual(bond_operation.bond_budget, 0)
 
-        self.check_update(
+        self.check_update_bond_budget(
             BondOperation.BOND_REDEMPTION_PRICE * 30 - 1, 0)
         self.assertEqual(bond_operation.bond_budget, -29)
-        self.check_update(
+        self.check_update_bond_budget(
             BondOperation.BOND_REDEMPTION_PRICE * 30, 0)
         self.assertEqual(bond_operation.bond_budget, -30)
-        self.check_update(
+        self.check_update_bond_budget(
             BondOperation.BOND_REDEMPTION_PRICE * 30 + 1, 0)
         self.assertEqual(bond_operation.bond_budget, -30)
-        self.check_update(
+        self.check_update_bond_budget(
             BondOperation.BOND_REDEMPTION_PRICE * 210,
             BondOperation.BOND_REDEMPTION_PRICE * 10)
         self.assertEqual(bond_operation.bond_budget, -200)
@@ -152,7 +153,7 @@ class BondOperationUnitTest(unittest.TestCase):
             BondOperation.BOND_REDEEMABLE_PERIOD >= 3):
 
             # purchase_bonds
-            self.check_update(-self.bond_price * 80, 0)
+            self.check_update_bond_budget(-self.bond_price * 80, 0)
             self.assertEqual(self.bond.total_supply, 0)
             self.assertEqual(bond_operation.bond_budget, 80)
         
@@ -394,7 +395,7 @@ class BondOperationUnitTest(unittest.TestCase):
             self.assertEqual(self.bond.total_supply, 0)
 
             self.assertEqual(bond_operation.bond_budget, 80)
-            self.check_update(-100 * self.bond_price, 0)
+            self.check_update_bond_budget(-100 * self.bond_price, 0)
             self.assertEqual(bond_operation.bond_budget, 100)
 
             balance = self.coin.balance_of(accounts[2])
@@ -454,7 +455,8 @@ class BondOperationUnitTest(unittest.TestCase):
             self.assertEqual(self.bond.total_supply, bond_supply)
             self.assertEqual(bond_operation.bond_budget, 40)
 
-            self.check_update(5 * BondOperation.BOND_REDEMPTION_PRICE, 0)
+            self.check_update_bond_budget(
+                5 * BondOperation.BOND_REDEMPTION_PRICE, 0)
             self.assertEqual(bond_operation.bond_budget, -5)
 
             coin_supply = self.coin.total_supply
@@ -471,7 +473,7 @@ class BondOperationUnitTest(unittest.TestCase):
             self.assertEqual(bond_operation.bond_budget, 0)
 
             self.assertEqual(bond_operation.bond_budget, 0)
-            self.check_update(5 * BondOperation.BOND_REDEMPTION_PRICE, 0)
+            self.check_update_bond_budget(5 * BondOperation.BOND_REDEMPTION_PRICE, 0)
             self.assertEqual(bond_operation.bond_budget, -5)
 
             coin_supply = self.coin.total_supply
@@ -488,7 +490,8 @@ class BondOperationUnitTest(unittest.TestCase):
             self.assertEqual(bond_operation.bond_budget, 0)
 
             self.assertEqual(bond_operation.bond_budget, 0)
-            self.check_update(5 * BondOperation.BOND_REDEMPTION_PRICE, 0)
+            self.check_update_bond_budget(
+                5 * BondOperation.BOND_REDEMPTION_PRICE, 0)
             self.assertEqual(bond_operation.bond_budget, -5)
 
             coin_supply = self.coin.total_supply
@@ -508,7 +511,8 @@ class BondOperationUnitTest(unittest.TestCase):
             t9 = self.epoch_id + BondOperation.BOND_REDEMPTION_PERIOD
 
             self.assertEqual(bond_operation.bond_budget, 0)
-            self.check_update(20 * BondOperation.BOND_REDEMPTION_PRICE, 0)
+            self.check_update_bond_budget(
+                20 * BondOperation.BOND_REDEMPTION_PRICE, 0)
             self.assertEqual(bond_operation.bond_budget, -20)
 
             coin_supply = self.coin.total_supply
@@ -526,13 +530,15 @@ class BondOperationUnitTest(unittest.TestCase):
             self.assertEqual(self.bond.total_supply, bond_supply - 20)
             self.assertEqual(bond_operation.bond_budget, 0)
 
-            self.check_update(15 * BondOperation.BOND_REDEMPTION_PRICE, 0)
+            self.check_update_bond_budget(
+                15 * BondOperation.BOND_REDEMPTION_PRICE, 0)
             self.assertEqual(bond_operation.bond_budget, -15)
-            self.check_update(
+            self.check_update_bond_budget(
                 30 * BondOperation.BOND_REDEMPTION_PRICE,
                 5 * BondOperation.BOND_REDEMPTION_PRICE)
             self.assertEqual(bond_operation.bond_budget, -25)
-            self.check_update(1 * BondOperation.BOND_REDEMPTION_PRICE, 0)
+            self.check_update_bond_budget(
+                1 * BondOperation.BOND_REDEMPTION_PRICE, 0)
             self.assertEqual(bond_operation.bond_budget, -1)
 
             coin_supply = self.coin.total_supply
@@ -551,7 +557,8 @@ class BondOperationUnitTest(unittest.TestCase):
             self.epoch_id += 1
             t10 = self.epoch_id + BondOperation.BOND_REDEMPTION_PERIOD
 
-            self.check_update(2 * BondOperation.BOND_REDEMPTION_PRICE, 0)
+            self.check_update_bond_budget(
+                2 * BondOperation.BOND_REDEMPTION_PRICE, 0)
             self.assertEqual(bond_operation.bond_budget, -2)
 
             coin_supply = self.coin.total_supply
@@ -567,7 +574,8 @@ class BondOperationUnitTest(unittest.TestCase):
             self.assertEqual(self.bond.total_supply, bond_supply - 16)
             self.assertEqual(bond_operation.bond_budget, 14)
 
-            self.check_update(1 * BondOperation.BOND_REDEMPTION_PRICE, 0)
+            self.check_update_bond_budget(
+                1 * BondOperation.BOND_REDEMPTION_PRICE, 0)
             self.assertEqual(bond_operation.bond_budget, -1)
 
             coin_supply = self.coin.total_supply
@@ -607,12 +615,13 @@ class BondOperationUnitTest(unittest.TestCase):
 
             self.assertEqual(self.bond.total_supply, 0)
             self.assertEqual(bond_operation.bond_budget, 7)
-            self.check_update(5 * BondOperation.BOND_REDEMPTION_PRICE,
-                              5 * BondOperation.BOND_REDEMPTION_PRICE)
+            self.check_update_bond_budget(
+                5 * BondOperation.BOND_REDEMPTION_PRICE,
+                5 * BondOperation.BOND_REDEMPTION_PRICE)
             self.assertEqual(bond_operation.bond_budget, 0)
 
         # bond expire
-        self.check_update(-self.bond_price * 80, 0)
+        self.check_update_bond_budget(-self.bond_price * 80, 0)
         self.assertEqual(self.bond.total_supply, 0)
         self.assertEqual(bond_operation.bond_budget, 80)
         
@@ -712,8 +721,9 @@ class BondOperationUnitTest(unittest.TestCase):
         self.assertEqual(self.bond.balance_of(accounts[2], t2), 0)
         self.check_redemption_epochs(self.bond, accounts[2], [])
 
-    def check_update(self, delta, mint):
-        self.assertEqual(self.bond_operation.update(delta, self.epoch_id), mint)
+    def check_update_bond_budget(self, delta, mint):
+        self.assertEqual(
+            self.bond_operation.update_bond_budget(delta, self.epoch_id), mint)
 
     def check_purchase_bonds(self, account, count, redemption_epoch):
         self.assertEqual(self.bond_operation.purchase_bonds(

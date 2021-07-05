@@ -59,47 +59,47 @@ function parameterized_test(accounts,
     let redemptions = [];
     let sub_accounts = accounts.slice(1, 4);
 
-    // update
+    // update_bond_budget
     current = await get_current([], []);
     assert.equal(current.bond_supply, 0);
     assert.equal(current.bond_budget, 0);
-    await check_update(_bond_redemption_price - 1, 0, 0);
+    await check_update_bond_budget(_bond_redemption_price - 1, 0, 0);
     current = await get_current([], []);
     assert.equal(current.bond_budget, 0);
-    await check_update(_bond_redemption_price, 0,
+    await check_update_bond_budget(_bond_redemption_price, 0,
                               _bond_redemption_price);
     current = await get_current([], []);
     assert.equal(current.bond_budget, 0);
-    await check_update(_bond_redemption_price + 1, 0,
+    await check_update_bond_budget(_bond_redemption_price + 1, 0,
                               _bond_redemption_price);
     current = await get_current([], []);
     assert.equal(current.bond_budget, 0);
-    await check_update(_bond_redemption_price * 10, 0,
+    await check_update_bond_budget(_bond_redemption_price * 10, 0,
                               _bond_redemption_price * 10);
     current = await get_current([], []);
     assert.equal(current.bond_budget, 0);
 
-    await check_update(-(_bond_price - 1), 0, 0);
+    await check_update_bond_budget(-(_bond_price - 1), 0, 0);
     current = await get_current([], []);
     assert.equal(current.bond_supply, 0);
     assert.equal(current.bond_budget, 0);
-    await check_update(-_bond_price, 1, 0);
+    await check_update_bond_budget(-_bond_price, 1, 0);
     current = await get_current([], []);
     assert.equal(current.bond_supply, 0, 0);
     assert.equal(current.bond_budget, 1);
-    await check_update(0, 0, 0);
+    await check_update_bond_budget(0, 0, 0);
     current = await get_current([], []);
     assert.equal(current.bond_supply, 0);
     assert.equal(current.bond_budget, 0);
-    await check_update(-_bond_price * 99, 99, 0);
+    await check_update_bond_budget(-_bond_price * 99, 99, 0);
     current = await get_current([], []);
     assert.equal(current.bond_supply, 0);
     assert.equal(current.bond_budget, 99);
-    await check_update(0, 0, 0);
+    await check_update_bond_budget(0, 0, 0);
     current = await get_current([], []);
     assert.equal(current.bond_supply, 0);
     assert.equal(current.bond_budget, 0);
-    await check_update(-_bond_price * 100, 100, 0);
+    await check_update_bond_budget(-_bond_price * 100, 100, 0);
     current = await get_current([], []);
     assert.equal(current.bond_supply, 0);
     assert.equal(current.bond_budget, 100);
@@ -112,39 +112,39 @@ function parameterized_test(accounts,
     assert.equal(current.bond_supply, 100);
     assert.equal(current.bond_budget, 0);
 
-    await check_update(_bond_redemption_price - 1, 0, 0);
+    await check_update_bond_budget(_bond_redemption_price - 1, 0, 0);
     current = await get_current([], []);
-    await check_update(_bond_redemption_price, -1, 0);
-    current = await get_current([], []);
-    assert.equal(current.bond_budget, -1);
-    await check_update(_bond_redemption_price + 1, -1, 0);
+    await check_update_bond_budget(_bond_redemption_price, -1, 0);
     current = await get_current([], []);
     assert.equal(current.bond_budget, -1);
-    await check_update(_bond_redemption_price * 68, -68, 0);
+    await check_update_bond_budget(_bond_redemption_price + 1, -1, 0);
+    current = await get_current([], []);
+    assert.equal(current.bond_budget, -1);
+    await check_update_bond_budget(_bond_redemption_price * 68, -68, 0);
     current = await get_current([], []);
     assert.equal(current.bond_budget, -68);
-    await check_update(0, 0, 0);
+    await check_update_bond_budget(0, 0, 0);
     current = await get_current([], []);
     assert.equal(current.bond_budget, 0);
-    await check_update(_bond_redemption_price * 30, -30, 0);
+    await check_update_bond_budget(_bond_redemption_price * 30, -30, 0);
     current = await get_current([], []);
     assert.equal(current.bond_budget, -30);
-    await check_update(_bond_redemption_price - 1, 0, 0);
+    await check_update_bond_budget(_bond_redemption_price - 1, 0, 0);
     current = await get_current([], []);
     assert.equal(current.bond_budget, 0);
-    await check_update(_bond_redemption_price * 200,
+    await check_update_bond_budget(_bond_redemption_price * 200,
                               -100,
                               _bond_redemption_price * 100);
     current = await get_current([], []);
     assert.equal(current.bond_budget, -100);
-    await check_update(_bond_redemption_price * 100, -100, 0);
+    await check_update_bond_budget(_bond_redemption_price * 100, -100, 0);
     current = await get_current([], []);
     assert.equal(current.bond_budget, -100);
-    await check_update(_bond_redemption_price * 100, -100, 0);
+    await check_update_bond_budget(_bond_redemption_price * 100, -100, 0);
     current = await get_current([], []);
     assert.equal(current.bond_budget, -100);
 
-    await check_update(-_bond_price * 100, 100, 0);
+    await check_update_bond_budget(-_bond_price * 100, 100, 0);
     current = await get_current([], []);
     assert.equal(current.bond_supply, 100);
     assert.equal(current.bond_budget, 100);
@@ -157,16 +157,16 @@ function parameterized_test(accounts,
     assert.equal(current.bond_supply, 200);
     assert.equal(current.bond_budget, 0);
 
-    await check_update(_bond_redemption_price * 30 - 1, -29, 0);
+    await check_update_bond_budget(_bond_redemption_price * 30 - 1, -29, 0);
     current = await get_current([], []);
     assert.equal(current.bond_budget, -29);
-    await check_update(_bond_redemption_price * 30, -30, 0);
+    await check_update_bond_budget(_bond_redemption_price * 30, -30, 0);
     current = await get_current([], []);
     assert.equal(current.bond_budget, -30);
-    await check_update(_bond_redemption_price * 30 + 1, -30, 0);
+    await check_update_bond_budget(_bond_redemption_price * 30 + 1, -30, 0);
     current = await get_current([], []);
     assert.equal(current.bond_budget, -30);
-    await check_update(_bond_redemption_price * 210,
+    await check_update_bond_budget(_bond_redemption_price * 210,
                        -200,
                        _bond_redemption_price * 10);
     current = await get_current([], []);
@@ -184,7 +184,7 @@ function parameterized_test(accounts,
         _bond_redeemable_period >= 3) {
 
       // purchase_bonds
-      await check_update(-_bond_price * 80, 80, 0);
+      await check_update_bond_budget(-_bond_price * 80, 80, 0);
       current = await get_current([], []);
       assert.equal(current.bond_supply, 0);
       assert.equal(current.bond_budget, 80);
@@ -459,7 +459,7 @@ function parameterized_test(accounts,
       assert.equal(current.bond_supply, 0);
 
       assert.equal(current.bond_budget, 80);
-      await check_update(-100 * _bond_price, 100, 0);
+      await check_update_bond_budget(-100 * _bond_price, 100, 0);
       current = await get_current(sub_accounts, redemptions);
       assert.equal(current.bond_budget, 100);
 
@@ -527,7 +527,7 @@ function parameterized_test(accounts,
       assert.equal(current.bond_supply, bond_supply);
       assert.equal(current.bond_budget, 40);
 
-      await check_update(5 * _bond_redemption_price, -5, 0);
+      await check_update_bond_budget(5 * _bond_redemption_price, -5, 0);
       current = await get_current(sub_accounts, redemptions);
       assert.equal(current.bond_budget, -5);
 
@@ -545,7 +545,7 @@ function parameterized_test(accounts,
       assert.equal(current.bond_budget, 0);
 
       assert.equal(current.bond_budget, 0);
-      await check_update(5 * _bond_redemption_price, -5, 0);
+      await check_update_bond_budget(5 * _bond_redemption_price, -5, 0);
       current = await get_current(sub_accounts, redemptions);
       assert.equal(current.bond_budget, -5);
 
@@ -563,7 +563,7 @@ function parameterized_test(accounts,
       assert.equal(current.bond_budget, 0);
 
       assert.equal(current.bond_budget, 0);
-      await check_update(5 * _bond_redemption_price, -5, 0);
+      await check_update_bond_budget(5 * _bond_redemption_price, -5, 0);
       current = await get_current(sub_accounts, redemptions);
       assert.equal(current.bond_budget, -5);
 
@@ -584,7 +584,7 @@ function parameterized_test(accounts,
       let t9 = _epoch_id + _bond_redemption_period;
 
       assert.equal(current.bond_budget, 0);
-      await check_update(20 * _bond_redemption_price, -20, 0);
+      await check_update_bond_budget(20 * _bond_redemption_price, -20, 0);
       current = await get_current(sub_accounts, redemptions);
       assert.equal(current.bond_budget, -20);
 
@@ -603,14 +603,14 @@ function parameterized_test(accounts,
       assert.equal(current.bond_supply, bond_supply - 20);
       assert.equal(current.bond_budget, 0);
 
-      await check_update(15 * _bond_redemption_price, -15, 0);
+      await check_update_bond_budget(15 * _bond_redemption_price, -15, 0);
       current = await get_current(sub_accounts, redemptions);
       assert.equal(current.bond_budget, -15);
-      await check_update(30 * _bond_redemption_price,
+      await check_update_bond_budget(30 * _bond_redemption_price,
                          -25, 5 * _bond_redemption_price);
       current = await get_current(sub_accounts, redemptions);
       assert.equal(current.bond_budget, -25);
-      await check_update(1 * _bond_redemption_price, -1, 0);
+      await check_update_bond_budget(1 * _bond_redemption_price, -1, 0);
       current = await get_current(sub_accounts, redemptions);
       assert.equal(current.bond_budget, -1);
 
@@ -630,7 +630,7 @@ function parameterized_test(accounts,
       _epoch_id += 1;
       let t10 = _epoch_id + _bond_redemption_period;
 
-      await check_update(2 * _bond_redemption_price, -2, 0);
+      await check_update_bond_budget(2 * _bond_redemption_price, -2, 0);
       current = await get_current(sub_accounts, redemptions);
       assert.equal(current.bond_budget, -2);
 
@@ -647,7 +647,7 @@ function parameterized_test(accounts,
       assert.equal(current.bond_supply, bond_supply - 16);
       assert.equal(current.bond_budget, 14);
 
-      await check_update(1 * _bond_redemption_price, -1, 0);
+      await check_update_bond_budget(1 * _bond_redemption_price, -1, 0);
       current = await get_current(sub_accounts, redemptions);
       assert.equal(current.bond_budget, -1);
 
@@ -685,14 +685,14 @@ function parameterized_test(accounts,
 
       assert.equal(current.bond_supply, 0);
       assert.equal(current.bond_budget, 7);
-      await check_update(5 * _bond_redemption_price,
+      await check_update_bond_budget(5 * _bond_redemption_price,
                          0, 5 * _bond_redemption_price);
       current = await get_current(sub_accounts, redemptions);
       assert.equal(current.bond_budget, 0);
     }
 
     // bond expire
-    await check_update(-_bond_price * 80, 80, 0);
+    await check_update_bond_budget(-_bond_price * 80, 80, 0);
     current = await get_current([], []);
     assert.equal(current.bond_supply, 0);
     assert.equal(current.bond_budget, 80);
@@ -834,11 +834,11 @@ function parameterized_test(accounts,
     }, "Ownable");
 
     await should_throw(async () => {
-      await _bond_operation.update(0, _epoch_id);
+      await _bond_operation.updateBondBudget(0, _epoch_id);
     }, "Ownable");
 
     await should_throw(async () => {
-      await _bond_operation.update(0, _epoch_id, {from: accounts[2]});
+      await _bond_operation.updateBondBudget(0, _epoch_id, {from: accounts[2]});
     }, "Ownable");
 
     await should_throw(async () => {
@@ -864,11 +864,11 @@ function parameterized_test(accounts,
     await _bond.transferOwnership(_bond_operation.address, {from: accounts[1]});
     await _bond_operation.deprecate({from: accounts[1]});
 
-    async function check_update(delta, bond_budget, mint) {
-      let receipt = await _bond_operation.update(
+    async function check_update_bond_budget(delta, bond_budget, mint) {
+      let receipt = await _bond_operation.updateBondBudget(
         delta, _epoch_id, {from: accounts[1]});
       let args =
-          receipt.logs.filter(e => e.event == 'UpdateEvent')[0].args;
+          receipt.logs.filter(e => e.event == 'UpdateBondBudgetEvent')[0].args;
       assert.equal(args.delta, delta);
       assert.equal(args.bond_budget, bond_budget);
       assert.equal(args.mint, mint);

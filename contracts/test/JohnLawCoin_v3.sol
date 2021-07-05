@@ -628,6 +628,7 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
   // A struct to pack local variables. This is needed to avoid a stack-too-deep
   // error of Solidity.
   struct VoteResult {
+    uint epoch_id;
     bool epoch_updated;
     bool reveal_result;
     bool commit_result;
@@ -663,11 +664,13 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
       public whenNotPaused returns (bool, bool, uint, uint, uint, bool) {
     
     VoteResult memory result;
-    
+
+    result.epoch_id = oracle_v3_.epoch_id_();
     result.epoch_updated = false;
     if (getTimestamp() >= current_epoch_start_ + EPOCH_DURATION) {
       // Start a new phase.
       result.epoch_updated = true;
+      result.epoch_id += 1;
       current_epoch_start_ = getTimestamp();
       
       // Advance to the next phase. Provide the |tax| coins to the oracle
@@ -704,16 +707,17 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
       }
 
       // Update the bond budget.
-      uint mint = bond_operation_v2_.update(delta, oracle_v3_.epoch_id_());
+      uint mint =
+          bond_operation_v2_.updateBondBudget(delta, result.epoch_id);
 
-      logging_v2_.updatedEpoch(
-          oracle_v3_.epoch_id_(), mint, burned, delta,
+      logging_v2_.updateEpoch(
+          result.epoch_id, mint, burned, delta,
           bond_operation_v2_.bond_budget_v2_(),
           coin_v2_.totalSupply(),
           bond_operation_v2_.bond_v2_().totalSupply(),
-          bond_operation_v2_.validBondSupply(oracle_v3_.epoch_id_()),
+          bond_operation_v2_.validBondSupply(result.epoch_id),
           oracle_level_, current_epoch_start_, tax);
-      emit UpdateEpochEvent(oracle_v3_.epoch_id_(), current_epoch_start_,
+      emit UpdateEpochEvent(result.epoch_id, current_epoch_start_,
                             tax, burned, delta, mint);
     }
 
@@ -742,11 +746,11 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
 
     oracle_v3_.revokeOwnership(coin_v2_);
     
-    logging_v2_.voted(oracle_v3_.epoch_id_(), result.commit_result,
-                      result.reveal_result, result.deposited,
-                      result.reclaimed, result.rewarded);
+    logging_v2_.vote(result.epoch_id, result.commit_result,
+                     result.reveal_result, result.deposited,
+                     result.reclaimed, result.rewarded);
     emit VoteEvent(
-        msg.sender, oracle_v3_.epoch_id_(), hash, oracle_level, salt,
+        msg.sender, result.epoch_id, hash, oracle_level, salt,
         result.commit_result, result.reveal_result, result.deposited,
         result.reclaimed, result.rewarded, result.epoch_updated);
     return (result.commit_result, result.reveal_result, result.deposited,
@@ -773,7 +777,7 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
                                          epoch_id, coin_v2_);
     bond_operation_v2_.revokeOwnership(coin_v2_);
     
-    logging_v2_.purchasedBonds(epoch_id, count);
+    logging_v2_.purchaseBonds(epoch_id, count);
     emit PurchaseBondsEvent(address(msg.sender), epoch_id,
                             count, redemption_epoch);
     return redemption_epoch;
@@ -799,7 +803,7 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
                                        epoch_id, coin_v2_);
     bond_operation_v2_.revokeOwnership(coin_v2_);
     
-    logging_v2_.redeemedBonds(epoch_id, redeemed_bonds, expired_bonds);
+    logging_v2_.redeemBonds(epoch_id, redeemed_bonds, expired_bonds);
     emit RedeemBondsEvent(address(msg.sender), epoch_id,
                           redeemed_bonds, expired_bonds);
     return redeemed_bonds;

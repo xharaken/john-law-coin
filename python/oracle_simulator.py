@@ -204,11 +204,10 @@ class OracleSimulator(unittest.TestCase):
 
         self.assertEqual(deposit_to_reclaim + reward_total,
                          deposit_total + tax)
-        remainder = deposit_total + tax - reclaim_total
+        burned = deposit_total + tax - reclaim_total
         tax = random.randint(0, 200)
         self.coin.mint(self.coin.tax_account, tax)
-        burned = self.oracle.advance(self.coin)
-        self.assertEqual(burned, remainder)
+        self.assertEqual(self.oracle.advance(self.coin), burned)
         self.prev_tax = tax
 
 
