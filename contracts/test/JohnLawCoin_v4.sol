@@ -407,6 +407,22 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
     return redeemed_bonds;
   }
 
+  function redeemBonds2(uint[] memory redemption_epochs)
+      public whenNotPaused returns (uint) {
+    uint epoch_id = oracle_.epoch_id_();
+    
+    coin_.transferOwnership(address(bond_operation_));
+    (uint redeemed_bonds, uint expired_bonds) =
+        bond_operation_.redeemBonds2(address(msg.sender), redemption_epochs,
+                                     epoch_id, coin_);
+    bond_operation_.revokeOwnership(coin_);
+    
+    logging_.redeemBonds(epoch_id, redeemed_bonds, expired_bonds);
+    emit RedeemBondsEvent(address(msg.sender), epoch_id,
+                          redeemed_bonds, expired_bonds);
+    return redeemed_bonds;
+  }
+
   // Calculate a hash to be committed to the oracle. Voters are expected to
   // call this function to create the hash.
   //

@@ -15,7 +15,7 @@ contract BondOperationForTesting_v2 is BondOperation_v2 {
                              uint bond_redemption_price,
                              uint bond_redemption_period,
                              uint bond_redeemable_period)
-      public onlyOwner {
+      public {
     BOND_PRICE = bond_price;
     BOND_REDEMPTION_PRICE = bond_redemption_price;
     BOND_REDEMPTION_PERIOD = bond_redemption_period;

@@ -188,11 +188,11 @@ contract JohnLawBond_v2 is OwnableUpgradeable {
   // owned by the |account| and have the |redemption_epoch|.
   mapping (address => mapping (uint => uint)) private _bonds;
 
-  // A mapping from a user account to the redemption epochs of the bonds
-  // owned by the user.
+  // redemption_epochs[account] is a set of the redemption epochs of the
+  // bonds owned by the |account|.
   mapping (address => EnumerableSet.UintSet) private _redemption_epochs;
 
-  // A mapping from a user account to the number of bonds owned by the account.
+  // bond_count[account] is the number of bonds owned by the |account|.
   mapping (address => uint) private _bond_count;
   
   // bond_supply[redemption_epoch] is the total number of bonds that have
@@ -1213,13 +1213,15 @@ contract BondOperation_v2 is OwnableUpgradeable {
     require((validBondSupply(epoch_id).toInt256()) + bond_budget_v2_ >= 0,
             "pb2");
     require(bond_v2_.balanceOf(sender, redemption_epoch) > 0, "pb3");
-
+    
     // Burn the corresponding coins.
     coin.burn(sender, amount);
+    
+    bond_budget_ = bond_budget_v2_;
     emit PurchaseBondsEvent(sender, epoch_id, count, redemption_epoch);
     return redemption_epoch;
   }
-  
+
   // Redeem bonds.
   //
   // Parameters
@@ -1273,6 +1275,49 @@ contract BondOperation_v2 is OwnableUpgradeable {
       // Burn the redeemed / expired bonds.
       bond_v2_.burn(sender, redemption_epoch, count);
     }
+    
+    bond_budget_ = bond_budget_v2_;
+    require(validBondSupply(epoch_id).toInt256() + bond_budget_v2_ >= 0, "rb1");
+    emit RedeemBondsEvent(sender, epoch_id, redeemed_bonds, expired_bonds);
+    return (redeemed_bonds, expired_bonds);
+  }
+
+  function redeemBonds2(address sender, uint[] memory redemption_epochs,
+                        uint epoch_id, JohnLawCoin_v2 coin)
+      public onlyOwner returns (uint, uint) {
+    uint redeemed_bonds = 0;
+    uint expired_bonds = 0;
+    for (uint i = 0; i < redemption_epochs.length; i++) {
+      uint redemption_epoch = redemption_epochs[i];
+      uint count = bond_v2_.balanceOf(sender, redemption_epoch);
+      if (epoch_id < redemption_epoch) {
+        // If the bonds have not yet hit their redemption epoch, the
+        // BondOperation accepts the redemption as long as |bond_budget_| is
+        // negative.
+        if (bond_budget_v2_ >= 0) {
+          continue;
+        }
+        if (count > (-bond_budget_v2_).toUint256()) {
+          count = (-bond_budget_v2_).toUint256();
+        }
+      }
+      if (epoch_id < redemption_epoch + BOND_REDEEMABLE_PERIOD) {
+        // If the bonds are not expired, mint the corresponding coins to the
+        // user account.
+        uint amount = count * BOND_REDEMPTION_PRICE;
+        coin.mint(sender, amount);
+
+        bond_budget_v2_ += count.toInt256();
+        redeemed_bonds += count;
+      } else {
+        expired_bonds += count;
+      }
+      // Burn the redeemed / expired bonds.
+      bond_v2_.burn(sender, redemption_epoch, count);
+      return (0, 0);
+    }
+    
+    bond_budget_ = bond_budget_v2_;
     require(validBondSupply(epoch_id).toInt256() + bond_budget_v2_ >= 0, "rb1");
     emit RedeemBondsEvent(sender, epoch_id, redeemed_bonds, expired_bonds);
     return (redeemed_bonds, expired_bonds);
@@ -1321,6 +1366,7 @@ contract BondOperation_v2 is OwnableUpgradeable {
       require(bond_budget_v2_ >= 0, "cs2");
     }
 
+    bond_budget_ = bond_budget_v2_;
     require(bond_supply.toInt256() + bond_budget_v2_ >= 0, "cs3");
     emit UpdateBondBudgetEvent(epoch_id, delta, bond_budget_v2_, mint);
     return mint;
@@ -1688,6 +1734,22 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
     coin_v2_.transferOwnership(address(bond_operation_v2_));
     (uint redeemed_bonds, uint expired_bonds) =
         bond_operation_v2_.redeemBonds(address(msg.sender), redemption_epochs,
+                                       epoch_id, coin_v2_);
+    bond_operation_v2_.revokeOwnership(coin_v2_);
+    
+    logging_v2_.redeemBonds(epoch_id, redeemed_bonds, expired_bonds);
+    emit RedeemBondsEvent(address(msg.sender), epoch_id,
+                          redeemed_bonds, expired_bonds);
+    return redeemed_bonds;
+  }
+
+  function redeemBonds2(uint[] memory redemption_epochs)
+      public whenNotPaused returns (uint) {
+    uint epoch_id = oracle_v2_.epoch_id_();
+    
+    coin_v2_.transferOwnership(address(bond_operation_v2_));
+    (uint redeemed_bonds, uint expired_bonds) =
+        bond_operation_v2_.redeemBonds2(address(msg.sender), redemption_epochs,
                                        epoch_id, coin_v2_);
     bond_operation_v2_.revokeOwnership(coin_v2_);
     

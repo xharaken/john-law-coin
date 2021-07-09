@@ -864,8 +864,9 @@ function parameterized_test(accounts,
         _oracle = await upgradeProxy(_oracle.address, OracleForTesting_v2);
         common.print_contract_size(_oracle, "OracleForTesting_v2");
         _bond_operation =
-          await upgradeProxy(_bond.address, BondOperationForTesting_v2);
-        common.print_contract_size(_bond, "BondOperation_v2");
+          await upgradeProxy(_bond_operation.address,
+                             BondOperationForTesting_v2);
+        common.print_contract_size(_bond_operation, "BondOperation_v2");
         _logging = await upgradeProxy(_logging.address, Logging_v2);
         common.print_contract_size(_logging, "Logging_v2");
         _acb = await upgradeProxy(_acb.address, ACBForTesting_v2);
@@ -882,7 +883,7 @@ function parameterized_test(accounts,
                                      _damping_factor,
                                      _level_to_exchange_rate);
 
-        await _acb.upgrade(_coin.address, _oracle.address,
+        await _acb.upgrade(_coin.address, _bond.address, _oracle.address,
                            _bond_operation.address, _logging.address);
       } else if (epoch_offset == repeat * 2) {
         _bond_price = _tmp_bond_price;
@@ -958,7 +959,6 @@ function parameterized_test(accounts,
                                      _damping_factor,
                                      _level_to_exchange_rate);
         
-        await _bond.transferOwnership(_bond_operation.address);
         await _coin.transferOwnership(_acb.address);
         await _bond_operation.transferOwnership(_acb.address);
         await _oracle.transferOwnership(_acb.address);
@@ -986,7 +986,7 @@ function parameterized_test(accounts,
         let old_acb = _acb;
         _acb = await deployProxy(
           ACBForTesting_v5, [_coin.address, old_oracle.address,
-                             _bond_operation.address, _oracle.address,
+                             _oracle.address, _bond_operation.address,
                              _logging.address,
                              await old_acb.oracle_level_(),
                              await old_acb.current_epoch_start_()]);
@@ -1004,7 +1004,6 @@ function parameterized_test(accounts,
                                      _damping_factor,
                                      _level_to_exchange_rate);
         
-        await _bond.transferOwnership(_bond_operation.address);
         await _coin.transferOwnership(_acb.address);
         await _bond_operation.transferOwnership(_acb.address);
         await old_oracle.transferOwnership(_acb.address);
@@ -1053,6 +1052,9 @@ function parameterized_test(accounts,
 
     async function check_redeem_bonds(redemptions, option, redeemed_bonds,
                                       expired_bonds) {
+      console.log(redemptions, option, redeemed_bonds, expired_bonds);
+      // await _acb.redeemBonds2.call(redemptions, option);
+      
       let receipt = await _acb.redeemBonds(redemptions, option);
       let args =
           receipt.logs.filter(e => e.event == 'RedeemBondsEvent')[0].args;
