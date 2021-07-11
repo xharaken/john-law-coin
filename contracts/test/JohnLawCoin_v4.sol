@@ -311,9 +311,9 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
 
       logging_.updateEpoch(
           result.epoch_id, mint, burned, delta,
-          bond_operation_.bond_budget_(),
+          bond_operation_.bond_budget_v2_(),
           coin_.totalSupply(),
-          bond_operation_.bond_().totalSupply(),
+          bond_operation_.bond_v2_().totalSupply(),
           bond_operation_.validBondSupply(result.epoch_id),
           oracle_level_, current_epoch_start_, tax);
       emit UpdateEpochEvent(result.epoch_id, current_epoch_start_,
@@ -399,22 +399,6 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
     (uint redeemed_bonds, uint expired_bonds) =
         bond_operation_.redeemBonds(address(msg.sender), redemption_epochs,
                                     epoch_id, coin_);
-    bond_operation_.revokeOwnership(coin_);
-    
-    logging_.redeemBonds(epoch_id, redeemed_bonds, expired_bonds);
-    emit RedeemBondsEvent(address(msg.sender), epoch_id,
-                          redeemed_bonds, expired_bonds);
-    return redeemed_bonds;
-  }
-
-  function redeemBonds2(uint[] memory redemption_epochs)
-      public whenNotPaused returns (uint) {
-    uint epoch_id = oracle_.epoch_id_();
-    
-    coin_.transferOwnership(address(bond_operation_));
-    (uint redeemed_bonds, uint expired_bonds) =
-        bond_operation_.redeemBonds2(address(msg.sender), redemption_epochs,
-                                     epoch_id, coin_);
     bond_operation_.revokeOwnership(coin_);
     
     logging_.redeemBonds(epoch_id, redeemed_bonds, expired_bonds);

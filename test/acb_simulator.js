@@ -993,6 +993,8 @@ function parameterized_test(accounts,
         common.print_contract_size(_acb, "ACBForTesting_v5");
         await old_acb.deprecate();
 
+        await old_oracle.overrideConstants(_reclaim_threshold,
+                                           _proportional_reward_rate);
         await _oracle.overrideConstants(_level_max, _reclaim_threshold,
                                         _proportional_reward_rate);
         await _bond_operation.overrideConstants(_bond_price,
@@ -1015,9 +1017,9 @@ function parameterized_test(accounts,
     }
 
     async function check_vote(
-        hash, oracle_level, salt, option,
-        commit_result, reveal_result, deposited, reclaimed, rewarded,
-        epoch_updated) {
+      hash, oracle_level, salt, option,
+      commit_result, reveal_result, deposited, reclaimed, rewarded,
+      epoch_updated) {
       let receipt = await _acb.vote(hash, oracle_level, salt, option);
       let args = receipt.logs.filter(e => e.event == 'VoteEvent')[0].args;
       assert.equal(args.sender, option.from);
@@ -1026,9 +1028,9 @@ function parameterized_test(accounts,
       assert.equal(args.salt, salt);
       assert.equal(args.commit_result, commit_result);
       assert.equal(args.reveal_result, reveal_result);
-      assert.equal(args.deposited, deposited);
-      assert.equal(args.reclaimed, reclaimed);
-      assert.equal(args.rewarded, rewarded);
+      assert.equal(args.deposited.toNumber(), deposited);
+      assert.equal(args.reclaimed.toNumber(), reclaimed);
+      assert.equal(args.rewarded.toNumber(), rewarded);
       assert.equal(args.epoch_updated, epoch_updated);
       return receipt;
     }
@@ -1052,9 +1054,6 @@ function parameterized_test(accounts,
 
     async function check_redeem_bonds(redemptions, option, redeemed_bonds,
                                       expired_bonds) {
-      console.log(redemptions, option, redeemed_bonds, expired_bonds);
-      // await _acb.redeemBonds2.call(redemptions, option);
-      
       let receipt = await _acb.redeemBonds(redemptions, option);
       let args =
           receipt.logs.filter(e => e.event == 'RedeemBondsEvent')[0].args;

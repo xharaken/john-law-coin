@@ -865,15 +865,14 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
 
       logging_.updateEpoch(
           result.epoch_id, mint, burned, delta,
-          bond_operation_.bond_budget_(),
+          bond_operation_.bond_budget_v2_(),
           coin_.totalSupply(),
-          bond_operation_.bond_().totalSupply(),
+          bond_operation_.bond_v2_().totalSupply(),
           bond_operation_.validBondSupply(result.epoch_id),
           oracle_level_, current_epoch_start_, tax);
       emit UpdateEpochEvent(result.epoch_id, current_epoch_start_,
                             tax, burned, delta, mint);
     }
-    require(age_ >= 1, "vo5");
 
     // Commit.
     //
@@ -883,17 +882,11 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
     if (hash == NULL_HASH) {
       result.deposited = 0;
     }
-    if (age_ == 0) {
-      coin_.transferOwnership(address(old_oracle_));
-      result.commit_result = old_oracle_.commit(
-          coin_, msg.sender, hash, result.deposited);
-      old_oracle_.revokeOwnership(coin_);
-    } else {
-      coin_.transferOwnership(address(oracle_));
-      result.commit_result = oracle_.commit(
-          coin_, msg.sender, hash, result.deposited);
-      oracle_.revokeOwnership(coin_);
-    }
+    require(age_ >= 1, "vo5");
+    coin_.transferOwnership(address(oracle_));
+    result.commit_result =
+        oracle_.commit(coin_, msg.sender, hash, result.deposited);
+    oracle_.revokeOwnership(coin_);
     if (!result.commit_result) {
       result.deposited = 0;
     }
