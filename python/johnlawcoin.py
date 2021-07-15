@@ -1084,10 +1084,8 @@ class OpenMarketOperation:
 
     # Constructor.
     def __init__(self):
-        # ----------------
-        # Constants
-        # ----------------
-
+        # Constants.
+        
         # The price auction is implemented as a Dutch auction as follows:
         #
         # Let P be the latest price at which the OpenMarketOperation exchanged
@@ -1112,18 +1110,19 @@ class OpenMarketOperation:
         OpenMarketOperation.PRICE_CHANGE_PERCENTAGE = 15 # 15%
         OpenMarketOperation.START_PRICE_MULTIPILER = 3
 
-        # ----------------
-        # Attributes
-        # ----------------
+        # Attributes.
 
         # The latest price at which the OpenMarketOperation exchanged coins
         # with ETH. The price is measured by wei / coin. If the price is 1000,
         # it means 1 coin is exchanged with 1000 wei.
         self.latest_price = 1000
+        
         # The start price is updated at the beginning of each epoch.
         self.start_price = 0
+        
         # The current ETH balance.
         self.eth_balance = 0
+        
         # The current coin budget.
         self.coin_budget = 0
 

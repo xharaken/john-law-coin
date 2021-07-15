@@ -65,7 +65,7 @@ function parameterized_test(accounts,
 
     await should_throw(async () => {
       await _oracle.advance(-1);
-    }, "invalid");
+    }, "bounds");
 
     // no commit -> no reveal -> no reclaim
     assert.equal(await _oracle.getModeLevel(), _level_max);

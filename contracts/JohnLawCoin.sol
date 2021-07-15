@@ -1256,6 +1256,212 @@ contract BondOperation is OwnableUpgradeable {
 }
 
 //------------------------------------------------------------------------------
+// [OpenMarketOperation contract]
+//
+// The OpenMarketOperation contract increases / decreases the total coin supply
+// by purchasing / selling ETH from the open market. The price auction is
+// implemented as a Dutch auction.
+//------------------------------------------------------------------------------
+contract OpenMarketOperation is OwnableUpgradeable {
+  using SafeCast for uint;
+  using SafeCast for int;
+
+  // Constants. The values are defined in initialize(). The values never
+  // change during the contract execution but use 'public' (instead of
+  // 'constant') because tests want to override the values.
+  uint public PRICE_CHANGE_INTERVAL;
+  uint public PRICE_CHANGE_PERCENTAGE;
+  uint public START_PRICE_MULTIPILER;
+
+  // Attributes. See the comment in initialize().
+  uint public latest_price_;
+  uint public start_price_;
+  uint public eth_balance_;
+  int public coin_budget_;
+
+  // Events.
+  event IncreaseCoinSupplyEvent(uint requested_eth_amount, uint elapsed_time,
+                                uint eth_amount, uint coin_amount);
+  event DecreaseCoinSupplyEvent(uint requested_coin_amount, uint elapsed_time,
+                                uint eth_amount, uint coin_amount);
+  event UpdateCoinBudgetEvent(int coin_budget);
+  
+  // Constructor.
+  function initialize()
+      public initializer {
+    __Ownable_init();
+    
+    // Constants.
+
+    // The price auction is implemented as a Dutch auction as follows:
+    //
+    // Let P be the latest price at which the OpenMarketOperation exchanged
+    // coins with ETH. At the beginning of each epoch, the ACB sets the coin
+    // budget (i.e., how many coins should be added to / removed from the
+    // total coin supply).
+    //
+    // When the OpenMarketOperation increases the total coin supply,
+    // the auction starts with the price of P * START_PRICE_MULTIPILER.
+    // Then the price is decreased by PRICE_CHANGE_PERCENTAGE % every
+    // PRICE_CHANGE_INTERVAL seconds. Coins and ETH are exchanged at the
+    // given price (the OpenMarketOperation sells coins and purchases ETH).
+    // The auction stops when all the coins in the coin budget are sold.
+    //
+    // When the OpenMarketOperation decreases the total coin supply,
+    // the auction starts with the price of P / START_PRICE_MULTIPILER.
+    // Then the price is increased by PRICE_CHANGE_PERCENTAGE % every
+    // PRICE_CHANGE_INTERVAL seconds. Coins and ETH are exchanged at the
+    // given price (the OpenMarketOperation sells ETH and purchases coins).
+    // The auction stops when all the coins in the coin budget are purchased.
+    PRICE_CHANGE_INTERVAL = 8 * 60 * 60; // 8 hours
+    PRICE_CHANGE_PERCENTAGE = 15; // 15%
+    START_PRICE_MULTIPILER = 3;
+    
+    // Attributes.
+    
+    // The latest price at which the OpenMarketOperation exchanged coins
+    // with ETH. The price is measured by wei / coin. If the price is 1000,
+    // it means 1 coin is exchanged with 1000 wei.
+    latest_price_ = 1000;
+    
+    // The start price is updated at the beginning of each epoch.
+    start_price_ = 0;
+    
+    // The current ETH balance.
+    eth_balance_ = 0;
+    
+    // The current coin budget.
+    coin_budget_ = 0;
+  }
+  
+  // Increase the total coin supply by purchasing ETH from the user.
+  // This method returns the amount of coins and ETH to be exchanged.
+  // The actual change to the total coin supply and the ETH pool is made by
+  // the ACB.
+  //
+  // Parameters
+  // ----------------
+  // |requested_eth_amount|: The amount of ETH the user is willing to exchange
+  // with coins.
+  // |elapsed_time|: The elapsed seconds from the current epoch start.
+  //
+  // Returns
+  // ----------------
+  // A tuple of two values:
+  // - The amount of ETH to be exchanged.
+  // - The amount of coins to be exchanged.
+  function increaseCoinSupply(uint requested_eth_amount, uint elapsed_time)
+      public onlyOwner returns (uint, uint) {
+    if (coin_budget_ <= 0) {
+      return (0, 0);
+    }
+        
+    // Calculate the current price.
+    uint price = start_price_;
+    for (uint i = 0; i < elapsed_time / PRICE_CHANGE_INTERVAL; i++) {
+      price = price * (100 - PRICE_CHANGE_PERCENTAGE) / 100;
+    }
+    if (price == 0) {
+      return (0, 0);
+    }
+
+    // Calculate the amount of coins and ETH to be exchanged.
+    uint coin_amount = requested_eth_amount / price;
+    if (coin_amount > coin_budget_.toUint256()) {
+      coin_amount = coin_budget_.toUint256();
+    }
+    uint eth_amount = coin_amount * price;
+        
+    if (coin_amount > 0) {
+      latest_price_ = price;
+    }
+    coin_budget_ -= coin_amount.toInt256();
+    eth_balance_ += eth_amount;
+    require(coin_budget_ >= 0, "ic1");
+    emit IncreaseCoinSupplyEvent(requested_eth_amount, elapsed_time,
+                                 eth_amount, coin_amount);
+    return (eth_amount, coin_amount);
+  }
+
+  // Decrease the total coin supply by selling ETH to the user.
+  // This method returns the amount of coins and ETH to be exchanged.
+  // The actual change to the total coin supply and the ETH pool is made by
+  // the ACB.
+  //
+  // Parameters
+  // ----------------
+  // |requested_coin_amount|: The amount of coins the user is willing to
+  // exchange with ETH.
+  // |elapsed_time|: The elapsed seconds from the current epoch start.
+  //
+  // Returns
+  // ----------------
+  // A tuple of two values:
+  // - The amount of ETH to be exchanged.
+  // - The amount of coins to be exchanged.
+  function decreaseCoinSupply(uint requested_coin_amount, uint elapsed_time)
+      public onlyOwner returns (uint, uint) {
+    if (coin_budget_ >= 0) {
+      return (0, 0);
+    }
+        
+    // Calculate the current price.
+    uint price = start_price_;
+    for (uint i = 0; i < elapsed_time / PRICE_CHANGE_INTERVAL; i++) {
+      price = price * (100 + PRICE_CHANGE_PERCENTAGE) / 100;
+    }
+    if (price == 0) {
+      return (0, 0);
+    }
+        
+    // Calculate the amount of coins and ETH to be exchanged.
+    uint coin_amount = requested_coin_amount;
+    if (coin_amount >= (-coin_budget_).toUint256()) {
+      coin_amount = (-coin_budget_).toUint256();
+    }
+    uint eth_amount = coin_amount * price;
+    if (eth_amount >= eth_balance_) {
+      eth_amount = eth_balance_;
+    }
+    coin_amount = eth_amount / price;
+        
+    if (coin_amount > 0) {
+      latest_price_ = price;
+    }
+    coin_budget_ += coin_amount.toInt256();
+    eth_balance_ -= eth_amount;
+    require(coin_budget_ <= 0);
+    emit DecreaseCoinSupplyEvent(requested_coin_amount, elapsed_time,
+                                 eth_amount, coin_amount);
+    return (eth_amount, coin_amount);
+  }
+
+  // Update the coin budget (i.e., how many coins should be added to / removed
+  // from the total coin supply). The ACB calls the method at the beginning of
+  // each epoch.
+  //
+  // Parameters
+  // ----------------
+  // |coin_budget|: The coin budget.
+  //
+  // Returns
+  // ----------------
+  // None.
+  function updateCoinBudget(int coin_budget)
+      public onlyOwner {
+    coin_budget_ = coin_budget;
+    if (coin_budget_ > 0) {
+      start_price_ = latest_price_ * START_PRICE_MULTIPILER;
+    } else if (coin_budget_ == 0) {
+      start_price_ = 0;
+    } else {
+      start_price_ = latest_price_ / START_PRICE_MULTIPILER;
+    }
+    emit UpdateCoinBudgetEvent(coin_budget_);
+  }
+}
+
+//------------------------------------------------------------------------------
 // [ACB contract]
 //
 // The ACB stabilizes the coin price with algorithmically defined monetary

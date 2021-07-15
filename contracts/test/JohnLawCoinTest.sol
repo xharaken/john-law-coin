@@ -9,6 +9,22 @@ pragma solidity ^0.8.0;
 
 import "../JohnLawCoin.sol";
 
+// A contract to test OpenMarketOperation.
+contract OpenMarketOperationForTesting is OpenMarketOperation {
+  function overrideConstants(uint price_change_interval,
+                             uint price_change_percentage,
+                             uint start_price_multiplier)
+      public onlyOwner {
+      PRICE_CHANGE_INTERVAL = price_change_interval;
+      PRICE_CHANGE_PERCENTAGE = price_change_percentage;
+      START_PRICE_MULTIPILER = start_price_multiplier;
+
+      require(0 <= price_change_percentage && price_change_percentage <= 100,
+              "oc1");
+      require(1 <= start_price_multiplier, "oc2");
+  }
+}
+
 // A contract to test BondOperation.
 contract BondOperationForTesting is BondOperation {
   function overrideConstants(uint bond_price,
@@ -22,13 +38,13 @@ contract BondOperationForTesting is BondOperation {
     BOND_REDEEMABLE_PERIOD = bond_redeemable_period;
     
     require(1 <= BOND_PRICE && BOND_PRICE <= BOND_REDEMPTION_PRICE,
-            "oc1");
+            "oc3");
     require(1 <= BOND_REDEMPTION_PRICE && BOND_REDEMPTION_PRICE <= 100000,
-            "oc2");
+            "oc4");
     require(1 <= BOND_REDEMPTION_PERIOD &&
-            BOND_REDEMPTION_PERIOD <= 20, "oc3");
+            BOND_REDEMPTION_PERIOD <= 20, "oc5");
     require(1 <= BOND_REDEEMABLE_PERIOD &&
-            BOND_REDEEMABLE_PERIOD <= 20, "oc4");
+            BOND_REDEEMABLE_PERIOD <= 20, "oc6");
   }
 }
 
@@ -42,10 +58,10 @@ contract OracleForTesting is Oracle {
     RECLAIM_THRESHOLD = reclaim_threshold;
     PROPORTIONAL_REWARD_RATE = proportional_reward_rate;
 
-    require(2 <= LEVEL_MAX && LEVEL_MAX < 100, "oc5");
-    require(0 <= RECLAIM_THRESHOLD && RECLAIM_THRESHOLD < LEVEL_MAX, "oc6");
+    require(2 <= LEVEL_MAX && LEVEL_MAX < 100, "oc7");
+    require(0 <= RECLAIM_THRESHOLD && RECLAIM_THRESHOLD < LEVEL_MAX, "oc8");
     require(0 <= PROPORTIONAL_REWARD_RATE && PROPORTIONAL_REWARD_RATE <= 100,
-            "oc7");
+            "oc9");
 
     for (uint i = 0; i < 3; i++) {
       for (uint level = 0; level < LEVEL_MAX; level++) {
@@ -67,9 +83,9 @@ contract ACBForTesting is ACB {
     DAMPING_FACTOR = damping_factor;
     LEVEL_TO_EXCHANGE_RATE = level_to_exchange_rate;
 
-    require(1 <= EPOCH_DURATION && EPOCH_DURATION <= 30 * 24 * 60 * 60, "oc8");
-    require(0 <= DEPOSIT_RATE && DEPOSIT_RATE <= 100, "oc9");
-    require(1 <= DAMPING_FACTOR && DAMPING_FACTOR <= 100, "oc10");
+    require(1 <= EPOCH_DURATION && EPOCH_DURATION <= 30 * 24 * 60 * 60, "oc10");
+    require(0 <= DEPOSIT_RATE && DEPOSIT_RATE <= 100, "oc11");
+    require(1 <= DAMPING_FACTOR && DAMPING_FACTOR <= 100, "oc12");
   }
 
   function getTimestamp()

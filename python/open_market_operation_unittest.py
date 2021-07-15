@@ -90,6 +90,11 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
                             1, int(updated_coin_budget * start_price / 4),
                             int(updated_coin_budget * start_price / 8),
                             updated_coin_budget * start_price + 1]:
+                        if coin_budget == 0:
+                            self.assertEqual(operation.increase_coin_supply(
+                                requested_eth_amount, elapsed_time),
+                                             (0, 0))
+                            continue
                         price = start_price
                         for i in range(int(
                                 elapsed_time / self.price_change_interval)):
@@ -97,15 +102,19 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
                                 100 - self.price_change_percentage) / 100)
                         eth_amount = 0
                         coin_amount = 0
-                        if price > 0:
-                            coin_amount = int(requested_eth_amount / price)
-                            if coin_amount > coin_budget:
-                                coin_amount = coin_budget
-                            eth_amount = coin_amount * price
-                            if coin_amount > 0:
-                                latest_price = price
-                            coin_budget -= coin_amount
-                            eth_balance += eth_amount
+                        if price == 0:
+                            self.assertEqual(operation.increase_coin_supply(
+                                requested_eth_amount, elapsed_time),
+                                             (0, 0))
+                            continue
+                        coin_amount = int(requested_eth_amount / price)
+                        if coin_amount > coin_budget:
+                            coin_amount = coin_budget
+                        eth_amount = coin_amount * price
+                        if coin_amount > 0:
+                            latest_price = price
+                        coin_budget -= coin_amount
+                        eth_balance += eth_amount
                         self.assertEqual(operation.increase_coin_supply(
                             requested_eth_amount, elapsed_time),
                                          (eth_amount, coin_amount))
@@ -125,6 +134,11 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
                             1, int(-updated_coin_budget / 4),
                             int(-updated_coin_budget / 8),
                             -updated_coin_budget + 1]:
+                        if coin_budget == 0:
+                            self.assertEqual(operation.decrease_coin_supply(
+                                requested_eth_amount, elapsed_time),
+                                             (0, 0))
+                            continue
                         price = start_price
                         for i in range(int(
                                 elapsed_time / self.price_change_interval)):
@@ -132,18 +146,22 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
                                 100 + self.price_change_percentage) / 100)
                         eth_amount = 0
                         coin_amount = 0
-                        if price > 0:
-                            coin_amount = requested_coin_amount
-                            if coin_amount >= -coin_budget:
-                                coin_amount = -coin_budget
-                            eth_amount = int(coin_amount * price)
-                            if eth_amount >= eth_balance:
-                                eth_amount = eth_balance
-                            coin_amount = int(eth_amount / price)
-                            if coin_amount > 0:
-                                latest_price = price
-                            coin_budget += coin_amount
-                            eth_balance -= eth_amount
+                        if price == 0:
+                            self.assertEqual(operation.decrease_coin_supply(
+                                requested_eth_amount, elapsed_time),
+                                             (0, 0))
+                            continue
+                        coin_amount = requested_coin_amount
+                        if coin_amount >= -coin_budget:
+                            coin_amount = -coin_budget
+                        eth_amount = int(coin_amount * price)
+                        if eth_amount >= eth_balance:
+                            eth_amount = eth_balance
+                        coin_amount = int(eth_amount / price)
+                        if coin_amount > 0:
+                            latest_price = price
+                        coin_budget += coin_amount
+                        eth_balance -= eth_amount
                         self.assertEqual(operation.decrease_coin_supply(
                             requested_coin_amount, elapsed_time),
                                          (eth_amount, coin_amount))
