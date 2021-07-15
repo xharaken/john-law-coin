@@ -395,7 +395,7 @@ class Oracle:
 
     # Test only.
     def override_constants_for_testing(
-        self, level_max, reclaim_threshold, proportional_reward_rate):
+            self, level_max, reclaim_threshold, proportional_reward_rate):
 
         Oracle.LEVEL_MAX = level_max
         Oracle.RECLAIM_THRESHOLD = reclaim_threshold
@@ -866,8 +866,8 @@ class Logging:
 #-------------------------------------------------------------------------------
 # [BondOperation contract]
 #
-# The BondOperation contract issues / redeems bonds to decrease / increase the
-# total coin supply. The bond budget is updated by the ACB every epoch.
+# The BondOperation contract increases / decreases the total coin supply by
+# redeeming / issuing bonds. The bond budget is updated by the ACB every epoch.
 #-------------------------------------------------------------------------------
 class BondOperation:
     
@@ -916,8 +916,8 @@ class BondOperation:
 
     # Test only.
     def override_constants_for_testing(
-        self, bond_price, bond_redemption_price, bond_redemption_period,
-        bond_redeemable_period):
+            self, bond_price, bond_redemption_price, bond_redemption_period,
+            bond_redeemable_period):
 
         BondOperation.BOND_PRICE = bond_price
         BondOperation.BOND_REDEMPTION_PRICE = bond_redemption_price
@@ -1071,6 +1071,183 @@ class BondOperation:
                 epoch_id + BondOperation.BOND_REDEMPTION_PERIOD + 1):
             count += self.bond.bond_supply_at(redemption_epoch)
         return count
+
+    
+#-------------------------------------------------------------------------------
+# [OpenMarketOperation contract]
+#
+# The OpenMarketOperation contract increases / decreases the total coin supply
+# by purchasing / selling ETH from the open market. The price auction is
+# implemented as a Dutch auction.
+#-------------------------------------------------------------------------------
+class OpenMarketOperation:
+
+    # Constructor.
+    def __init__(self):
+        # ----------------
+        # Constants
+        # ----------------
+
+        # The price auction is implemented as a Dutch auction as follows:
+        #
+        # Let P be the latest price at which the OpenMarketOperation exchanged
+        # coins with ETH. At the beginning of each epoch, the ACB sets the coin
+        # budget (i.e., how many coins should be added to / removed from the
+        # total coin supply).
+        #
+        # When the OpenMarketOperation increases the total coin supply,
+        # the auction starts with the price of P * START_PRICE_MULTIPILER.
+        # Then the price is decreased by PRICE_CHANGE_PERCENTAGE % every
+        # PRICE_CHANGE_INTERVAL seconds. Coins and ETH are exchanged at the
+        # given price (the OpenMarketOperation sells coins and purchases ETH).
+        # The auction stops when all the coins in the coin budget are sold.
+        #
+        # When the OpenMarketOperation decreases the total coin supply,
+        # the auction starts with the price of P / START_PRICE_MULTIPILER.
+        # Then the price is increased by PRICE_CHANGE_PERCENTAGE % every
+        # PRICE_CHANGE_INTERVAL seconds. Coins and ETH are exchanged at the
+        # given price (the OpenMarketOperation sells ETH and purchases coins).
+        # The auction stops when all the coins in the coin budget are purchased.
+        OpenMarketOperation.PRICE_CHANGE_INTERVAL = 8 * 60 * 60 # 8 hours
+        OpenMarketOperation.PRICE_CHANGE_PERCENTAGE = 15 # 15%
+        OpenMarketOperation.START_PRICE_MULTIPILER = 3
+
+        # ----------------
+        # Attributes
+        # ----------------
+
+        # The latest price at which the OpenMarketOperation exchanged coins
+        # with ETH. The price is measured by wei / coin. If the price is 1000,
+        # it means 1 coin is exchanged with 1000 wei.
+        self.latest_price = 1000
+        # The start price is updated at the beginning of each epoch.
+        self.start_price = 0
+        # The current ETH balance.
+        self.eth_balance = 0
+        # The current coin budget.
+        self.coin_budget = 0
+
+    # Test only.
+    def override_constants_for_testing(
+            self, price_change_interval,
+            price_change_percentage, start_price_multiplier):
+        OpenMarketOperation.PRICE_CHANGE_INTERVAL = price_change_interval
+        OpenMarketOperation.PRICE_CHANGE_PERCENTAGE = price_change_percentage
+        OpenMarketOperation.START_PRICE_MULTIPILER = start_price_multiplier
+
+        assert(0 <= price_change_percentage and price_change_percentage <= 100)
+        assert(1 <= start_price_multiplier)
+
+    # Increase the total coin supply by purchasing ETH from the user.
+    # This method returns the amount of coins and ETH to be exchanged.
+    # The actual change to the total coin supply and the ETH pool is made by
+    # the ACB.
+    #
+    # Parameters
+    # ----------------
+    # |requested_eth_amount|: The amount of ETH the user is willing to exchange
+    # with coins.
+    # |elapsed_time|: The elapsed seconds from the current epoch start.
+    #
+    # Returns
+    # ----------------
+    # A tuple of two values:
+    # - The amount of ETH to be exchanged.
+    # - The amount of coins to be exchanged.
+    def increase_coin_supply(self, requested_eth_amount, elapsed_time):
+        if self.coin_budget <= 0:
+            return (0, 0)
+        
+        # Calculate the current price.
+        price = self.start_price
+        for i in range(int(elapsed_time /
+                           OpenMarketOperation.PRICE_CHANGE_INTERVAL)):
+            price = int(price * (
+                100 - OpenMarketOperation.PRICE_CHANGE_PERCENTAGE) / 100)
+        if price == 0:
+            return (0, 0)
+
+        # Calculate the amount of coins and ETH to be exchanged.
+        coin_amount = int(requested_eth_amount / price)
+        if coin_amount > self.coin_budget:
+            coin_amount = self.coin_budget
+        eth_amount = coin_amount * price
+        
+        if coin_amount > 0:
+            self.latest_price = price
+        self.coin_budget -= coin_amount
+        self.eth_balance += eth_amount
+        assert(self.coin_budget >= 0)
+        return (eth_amount, coin_amount)
+
+    # Decrease the total coin supply by selling ETH to the user.
+    # This method returns the amount of coins and ETH to be exchanged.
+    # The actual change to the total coin supply and the ETH pool is made by
+    # the ACB.
+    #
+    # Parameters
+    # ----------------
+    # |requested_coin_amount|: The amount of coins the user is willing to
+    # exchange with ETH.
+    # |elapsed_time|: The elapsed seconds from the current epoch start.
+    #
+    # Returns
+    # ----------------
+    # A tuple of two values:
+    # - The amount of ETH to be exchanged.
+    # - The amount of coins to be exchanged.
+    def decrease_coin_supply(self, requested_coin_amount, elapsed_time):
+        if self.coin_budget >= 0:
+            return (0, 0)
+        
+        # Calculate the current price.
+        price = self.start_price
+        for i in range(int(elapsed_time /
+                           OpenMarketOperation.PRICE_CHANGE_INTERVAL)):
+            price = int(price * (
+                100 + OpenMarketOperation.PRICE_CHANGE_PERCENTAGE) / 100)
+        if price == 0:
+            return (0, 0)
+        
+        # Calculate the amount of coins and ETH to be exchanged.
+        coin_amount = requested_coin_amount
+        if coin_amount >= -self.coin_budget:
+            coin_amount = -self.coin_budget
+        eth_amount = int(coin_amount * price)
+        if eth_amount >= self.eth_balance:
+            eth_amount = self.eth_balance
+        coin_amount = int(eth_amount / price)
+        
+        if coin_amount > 0:
+            self.latest_price = price
+        self.coin_budget += coin_amount
+        self.eth_balance -= eth_amount
+        assert(self.coin_budget <= 0)
+        return (eth_amount, coin_amount)
+
+    # Update the coin budget (i.e., how many coins should be added to / removed
+    # from the total coin supply). The ACB calls the method at the beginning of
+    # each epoch.
+    #
+    # Parameters
+    # ----------------
+    # |coin_budget|: The coin budget.
+    #
+    # Returns
+    # ----------------
+    # None.
+    def update_coin_budget(self, coin_budget):
+        self.coin_budget = coin_budget
+        if self.coin_budget > 0:
+            self.start_price = (
+                self.latest_price *
+                OpenMarketOperation.START_PRICE_MULTIPILER)
+        elif self.coin_budget == 0:
+            self.start_price = 0
+        else:
+            self.start_price = int(
+                self.latest_price /
+                OpenMarketOperation.START_PRICE_MULTIPILER)
 
     
 #-------------------------------------------------------------------------------

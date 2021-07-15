@@ -831,7 +831,7 @@ function parameterized_test(accounts,
       }
 
       let epoch_offset = (await _oracle.epoch_id_()).toNumber() - 3;
-      let repeat = 3;
+      let repeat = 5;
       if (epoch_offset == repeat * 1) {
         _tmp_bond_price = _bond_price;
         _tmp_bond_redemption_price = _bond_redemption_price;

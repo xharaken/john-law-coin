@@ -1017,8 +1017,8 @@ contract Logging is OwnableUpgradeable {
 //------------------------------------------------------------------------------
 // [BondOperation contract]
 //
-// The BondOperation contract issues / redeems bonds to decrease / increase the
-// total coin supply. The bond budget is updated by the ACB every epoch.
+// The BondOperation contract increases / decreases the total coin supply by
+// redeeming / issuing bonds. The bond budget is updated by the ACB every epoch.
 //------------------------------------------------------------------------------
 contract BondOperation is OwnableUpgradeable {
   using SafeCast for uint;
