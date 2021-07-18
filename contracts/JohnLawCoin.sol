@@ -1378,6 +1378,7 @@ contract OpenMarketOperation is OwnableUpgradeable {
     coin_budget_ -= coin_amount.toInt256();
     eth_balance_ += eth_amount;
     require(coin_budget_ >= 0, "ic1");
+    require(eth_amount <= requested_eth_amount, "ic2");
     emit IncreaseCoinSupplyEvent(requested_eth_amount, elapsed_time,
                                  eth_amount, coin_amount);
     return (eth_amount, coin_amount);
@@ -1431,6 +1432,7 @@ contract OpenMarketOperation is OwnableUpgradeable {
     coin_budget_ += coin_amount.toInt256();
     eth_balance_ -= eth_amount;
     require(coin_budget_ <= 0);
+    require(coin_amount <= requested_coin_amount, "dc1");
     emit DecreaseCoinSupplyEvent(requested_coin_amount, elapsed_time,
                                  eth_amount, coin_amount);
     return (eth_amount, coin_amount);

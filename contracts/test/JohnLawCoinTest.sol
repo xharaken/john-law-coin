@@ -19,9 +19,10 @@ contract OpenMarketOperationForTesting is OpenMarketOperation {
       PRICE_CHANGE_PERCENTAGE = price_change_percentage;
       START_PRICE_MULTIPILER = start_price_multiplier;
 
-      require(0 <= price_change_percentage && price_change_percentage <= 100,
-              "oc1");
-      require(1 <= start_price_multiplier, "oc2");
+      require(1 <= PRICE_CHANGE_INTERVAL, "oc1");
+      require(0 <= PRICE_CHANGE_PERCENTAGE && PRICE_CHANGE_PERCENTAGE <= 100,
+              "oc2");
+      require(1 <= START_PRICE_MULTIPILER, "oc3");
   }
 }
 
@@ -38,13 +39,13 @@ contract BondOperationForTesting is BondOperation {
     BOND_REDEEMABLE_PERIOD = bond_redeemable_period;
     
     require(1 <= BOND_PRICE && BOND_PRICE <= BOND_REDEMPTION_PRICE,
-            "oc3");
-    require(1 <= BOND_REDEMPTION_PRICE && BOND_REDEMPTION_PRICE <= 100000,
             "oc4");
+    require(1 <= BOND_REDEMPTION_PRICE && BOND_REDEMPTION_PRICE <= 100000,
+            "oc5");
     require(1 <= BOND_REDEMPTION_PERIOD &&
-            BOND_REDEMPTION_PERIOD <= 20, "oc5");
+            BOND_REDEMPTION_PERIOD <= 20, "oc6");
     require(1 <= BOND_REDEEMABLE_PERIOD &&
-            BOND_REDEEMABLE_PERIOD <= 20, "oc6");
+            BOND_REDEEMABLE_PERIOD <= 20, "oc7");
   }
 }
 
@@ -58,10 +59,10 @@ contract OracleForTesting is Oracle {
     RECLAIM_THRESHOLD = reclaim_threshold;
     PROPORTIONAL_REWARD_RATE = proportional_reward_rate;
 
-    require(2 <= LEVEL_MAX && LEVEL_MAX < 100, "oc7");
-    require(0 <= RECLAIM_THRESHOLD && RECLAIM_THRESHOLD < LEVEL_MAX, "oc8");
+    require(2 <= LEVEL_MAX && LEVEL_MAX < 100, "oc8");
+    require(0 <= RECLAIM_THRESHOLD && RECLAIM_THRESHOLD < LEVEL_MAX, "oc9");
     require(0 <= PROPORTIONAL_REWARD_RATE && PROPORTIONAL_REWARD_RATE <= 100,
-            "oc9");
+            "oc10");
 
     for (uint i = 0; i < 3; i++) {
       for (uint level = 0; level < LEVEL_MAX; level++) {
@@ -83,9 +84,9 @@ contract ACBForTesting is ACB {
     DAMPING_FACTOR = damping_factor;
     LEVEL_TO_EXCHANGE_RATE = level_to_exchange_rate;
 
-    require(1 <= EPOCH_DURATION && EPOCH_DURATION <= 30 * 24 * 60 * 60, "oc10");
-    require(0 <= DEPOSIT_RATE && DEPOSIT_RATE <= 100, "oc11");
-    require(1 <= DAMPING_FACTOR && DAMPING_FACTOR <= 100, "oc12");
+    require(1 <= EPOCH_DURATION && EPOCH_DURATION <= 30 * 24 * 60 * 60, "oc11");
+    require(0 <= DEPOSIT_RATE && DEPOSIT_RATE <= 100, "oc12");
+    require(1 <= DAMPING_FACTOR && DAMPING_FACTOR <= 100, "oc13");
   }
 
   function getTimestamp()

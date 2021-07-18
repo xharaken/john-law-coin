@@ -21,12 +21,16 @@ class ACBUnitTest(unittest.TestCase):
                  damping_factor,
                  level_to_exchange_rate,
                  reclaim_threshold,
-                 tax):
+                 tax,
+                 price_change_interval,
+                 price_change_percentage,
+                 start_price_multiplier):
         super().__init__()
 
         print('bond_price=%d redemp_price=%d redemp_period=%d '
               'redeem_period=%d epoch_dur=%d reward_rate=%d '
-              'deposit_rate=%d damping=%d reclaim=%d tax=%d' %
+              'deposit_rate=%d damping=%d reclaim=%d tax=%d '
+              'price_interval=%d price_percent=%d price_multiplier=%d' %
               (bond_price,
                bond_redemption_price,
                bond_redemption_period,
@@ -36,7 +40,10 @@ class ACBUnitTest(unittest.TestCase):
                deposit_rate,
                damping_factor,
                reclaim_threshold,
-               tax))
+               tax,
+               price_change_interval,
+               price_change_percentage,
+               start_price_multiplier))
         print('exchange_rate=', end='')
         print(level_to_exchange_rate)
 
@@ -48,13 +55,18 @@ class ACBUnitTest(unittest.TestCase):
         self.oracle = Oracle()
         logging = Logging()
         self.bond_operation = BondOperation(self.bond)
-        self.acb = ACB(coin, self.oracle, self.bond_operation, logging)
+        self.open_market_operation = OpenMarketOperation()
+        self.acb = ACB(coin, self.oracle, self.bond_operation,
+                       self.open_market_operation, logging)
         level_max = len(level_to_exchange_rate)
         self.oracle.override_constants_for_testing(
             level_max, reclaim_threshold, proportional_reward_rate)
         self.bond_operation.override_constants_for_testing(
             bond_price, bond_redemption_price, bond_redemption_period,
             bond_redeemable_period)
+        self.open_market_operation.override_constants_for_testing(
+            price_change_interval, price_change_percentage,
+            start_price_multiplier)
         self.acb.override_constants_for_testing(
             epoch_duration, deposit_rate, damping_factor,
             level_to_exchange_rate)
@@ -216,7 +228,6 @@ class ACBUnitTest(unittest.TestCase):
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
-        mint = self.mint_at_default_level()
 
         balance = acb.coin.balance_of(accounts[4])
         reward = int((100 - Oracle.PROPORTIONAL_REWARD_RATE) *
@@ -246,11 +257,12 @@ class ACBUnitTest(unittest.TestCase):
             self.default_level, 1), (False, False, 0, 0, 0, False))
         self.assertEqual(acb.current_epoch_start, acb.get_timestamp())
         self.assertEqual(acb.coin.balance_of(accounts[4]), balance)
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
-        mint = 0
 
         balance = acb.coin.balance_of(accounts[4])
         coin_supply = acb.coin.total_supply
@@ -272,11 +284,12 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         0)
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
-        mint = self.mint_at_default_level()
 
         balance = acb.coin.balance_of(accounts[4])
         coin_supply = acb.coin.total_supply
@@ -306,11 +319,12 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
-        mint = self.mint_at_default_level()
 
         balance = acb.coin.balance_of(accounts[4])
         coin_supply = acb.coin.total_supply
@@ -339,12 +353,13 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
-        mint = self.mint_at_default_level()
 
         balance = acb.coin.balance_of(accounts[4])
         coin_supply = acb.coin.total_supply
@@ -374,11 +389,12 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
-        mint = self.mint_at_default_level()
 
         balance = acb.coin.balance_of(accounts[4])
         coin_supply = acb.coin.total_supply
@@ -408,11 +424,12 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
-        mint = 0
 
         balance = acb.coin.balance_of(accounts[4])
         coin_supply = acb.coin.total_supply
@@ -435,6 +452,8 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         0)
 
         # 3 commits on the stable level.
         self.reset_balances()
@@ -447,7 +466,6 @@ class ACBUnitTest(unittest.TestCase):
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
-        mint = 0
 
         coin_supply = acb.coin.total_supply
         burned[now] = deposit_4[(now - 2) % 3] + self.tax
@@ -479,11 +497,12 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         0)
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
-        mint = 0
 
         coin_supply = acb.coin.total_supply
         burned[now] = deposit_4[(now - 2) % 3] + self.tax
@@ -515,11 +534,12 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         0)
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
-        mint = 0
 
         coin_supply = acb.coin.total_supply
         burned[now] = (deposit_4[(now - 2) % 3] + deposit_5[(now - 2) % 3] +
@@ -552,11 +572,12 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         0)
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
-        mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
         reward_total = 0 + self.tax
@@ -614,11 +635,12 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
-        mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
         reward_total = 0 + self.tax
@@ -673,16 +695,16 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.balance_of(accounts[6]),
                          balance_6 - deposit_6[now] + deposit_6[(now - 2) % 3] +
                          reward_6 + constant_reward)
-
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         self.mint_at_default_level())
 
         self.reset_balances()
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
-        mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
         reward_total = 0 + self.tax
@@ -743,11 +765,12 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
-        mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
         reward_total = 0 + self.tax
@@ -805,11 +828,12 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
-        mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
         reward_total = 0 + self.tax
@@ -857,11 +881,12 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
-        mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
         reward_total = deposit_6[(now - 2) % 3] + self.tax
@@ -913,11 +938,12 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
-        mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
         reward_total = (deposit_4[(now - 2) % 3] + deposit_5[(now - 2) % 3] +
@@ -963,11 +989,12 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
-        mint = 0
 
         coin_supply = acb.coin.total_supply
         reward_total = (deposit_4[(now - 2) % 3] + deposit_5[(now - 2) % 3] +
@@ -1005,11 +1032,12 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         0)
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
-        mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
         reward_total = 0 + self.tax
@@ -1053,11 +1081,12 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
-        mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
         reward_total = deposit_4[(now - 2) % 3] + self.tax
@@ -1086,11 +1115,12 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
-        mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
         reward_total = deposit_5[(now - 2) % 3] + self.tax
@@ -1111,11 +1141,12 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
-        mint = 0
 
         coin_supply = acb.coin.total_supply
         burned[now] = deposit_6[(now - 2) % 3] + self.tax
@@ -1129,6 +1160,8 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         0)
 
         # 3 commits on the stable level and another level.
 
@@ -1137,7 +1170,6 @@ class ACBUnitTest(unittest.TestCase):
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         self.reset_balances()
-        mint = self.mint_at_default_level()
 
         acb.coin.move(accounts[1], accounts[4], 10000)
         acb.coin.move(accounts[1], accounts[5], 2000)
@@ -1178,11 +1210,12 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
-        mint = 0
 
         coin_supply = acb.coin.total_supply
         reward_total = deposit14 + self.tax
@@ -1219,11 +1252,12 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         0)
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
-        mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
         reclaim_4 = 0
@@ -1281,6 +1315,8 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         self.mint_at_default_level())
 
         # 0, 0, stable
         tmp_deposit_rate = ACB.DEPOSIT_RATE
@@ -1291,7 +1327,6 @@ class ACBUnitTest(unittest.TestCase):
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         self.reset_balances()
-        mint = self.mint_at_default_level()
 
         acb.coin.move(accounts[1], accounts[4], 2900)
         acb.coin.move(accounts[1], accounts[5], 7000)
@@ -1350,13 +1385,14 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         self.mint_at_default_level())
 
         ACB.DEPOSIT_RATE = tmp_deposit_rate
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
-        mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
         reward_total = 0 + self.tax
@@ -1411,11 +1447,12 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
-        mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
         reclaim_4 = reclaim_5 = 0
@@ -1467,13 +1504,14 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         self.mint_at_default_level())
 
         # stable, stable, level_max - 1
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         self.reset_balances()
-        mint = self.mint_at_default_level()
 
         acb.coin.move(accounts[1], accounts[4], 3100)
         acb.coin.move(accounts[1], accounts[5], 7000)
@@ -1535,11 +1573,12 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
-        mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
         reward_total = 0 + self.tax
@@ -1597,11 +1636,12 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
-        mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
         reclaim_6 = 0
@@ -1660,6 +1700,8 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         self.mint_at_default_level())
 
         # stable, level_max - 1, level_max - 1
         tmp_deposit_rate = ACB.DEPOSIT_RATE
@@ -1670,7 +1712,6 @@ class ACBUnitTest(unittest.TestCase):
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         self.reset_balances()
-        mint = self.mint_at_default_level()
 
         acb.coin.move(accounts[1], accounts[4], 10000)
         acb.coin.move(accounts[1], accounts[5], 7000)
@@ -1732,13 +1773,14 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         self.mint_at_default_level())
 
         ACB.DEPOSIT_RATE = tmp_deposit_rate
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
-        mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
         reward_total = 0 + self.tax
@@ -1796,16 +1838,18 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
-        mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
         reclaim_5 = reclaim_6 = 0
         in_threshold = False
-        if Oracle.LEVEL_MAX - 1 - self.default_level <= Oracle.RECLAIM_THRESHOLD:
+        if (Oracle.LEVEL_MAX - 1 - self.default_level <=
+            Oracle.RECLAIM_THRESHOLD):
             in_threshold = True
             reclaim_5 = deposit_5[(now - 2) % 3]
             reclaim_6 = deposit_6[(now - 2) % 3]
@@ -1855,13 +1899,14 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         self.mint_at_default_level())
 
         # stable, stable, level_max - 1; deposit is the same
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         self.reset_balances()
-        mint = self.mint_at_default_level()
 
         acb.coin.move(accounts[1], accounts[4], 10000)
         acb.coin.move(accounts[1], accounts[5], 7000)
@@ -1923,11 +1968,12 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
-        mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
         reward_total = 0 + self.tax
@@ -1985,11 +2031,12 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
-        mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
         reclaim_4 = 0
@@ -2048,13 +2095,14 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         self.mint_at_default_level())
 
         # all levels
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
         self.reset_balances()
-        mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
         reward_total = 0 + self.tax
@@ -2085,11 +2133,12 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
         self.set_tax()
-        mint = self.mint_at_default_level()
 
         coin_supply = acb.coin.total_supply
         reward_total = (deposit_5[(now - 2) % 3] + deposit_6[(now - 2) % 3] +
@@ -2118,6 +2167,8 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(acb.coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
+        self.assertEqual(self.open_market_operation.coin_budget,
+                         self.mint_at_default_level())
 
         self.assertEqual(self.bond.total_supply, 0)
         self.assertEqual(self.bond_operation.bond_budget, 0)
@@ -2163,26 +2214,26 @@ class ACBUnitTest(unittest.TestCase):
                               reward_4 + constant_reward,
                               True))
             
-            mint = 0
+            coin_budget = 0
             bond_budget = 0
             delta = int(self.acb.coin.total_supply *
                         (ACB.LEVEL_TO_EXCHANGE_RATE[level - 2] - 10) / 10)
             delta = int(delta * ACB.DAMPING_FACTOR / 100)
             if delta == 0:
-                mint = 0
+                coin_budget = 0
                 issued_bonds = 0
             elif delta > 0:
                 necessary_bonds = int(
                     delta / BondOperation.BOND_REDEMPTION_PRICE)
                 if necessary_bonds >= valid_bond_supply:
-                    mint = ((necessary_bonds - valid_bond_supply) *
-                            BondOperation.BOND_REDEMPTION_PRICE)
+                    coin_budget = ((necessary_bonds - valid_bond_supply) *
+                                   BondOperation.BOND_REDEMPTION_PRICE)
                     bond_budget = -valid_bond_supply
                 else:
-                    mint = 0
+                    coin_budget = 0
                     bond_budget = -necessary_bonds
             else:
-                mint = 0
+                coin_budget = delta if level == 2 else 0
                 bond_budget = int(-delta / self.bond_price)
             period += 1
 
@@ -2199,6 +2250,8 @@ class ACBUnitTest(unittest.TestCase):
             self.assertEqual(
                 self.bond_operation.valid_bond_supply(acb.oracle.epoch_id),
                 valid_bond_supply)
+            self.assertEqual(self.open_market_operation.coin_budget,
+                             coin_budget)
 
             tax_total = 0
             self.assertEqual(acb.coin.balance_of(acb.coin.tax_account), 0)
@@ -2226,7 +2279,15 @@ class ACBUnitTest(unittest.TestCase):
                          self.initial_coin_supply + deposit_4[(now - 2) % 3] +
                          deposit_4[(now - 1) % 3] + burned[(now - 1) % 3] +
                          tax_total)
+        
 
+    def advance_epoch(self, advance):
+        for i in range(advance):
+            self.acb.set_timestamp(
+                self.acb.get_timestamp() + ACB.EPOCH_DURATION)
+            self.acb.vote(self.accounts[7], Oracle.encrypt(
+                self.accounts[7], Oracle.LEVEL_MAX, 7777),
+                     Oracle.LEVEL_MAX, 7777)
 
     def check_redemption_epochs(self, bond, account, expected):
         count = bond.number_of_redemption_epochs_owned_by(account)
@@ -2272,6 +2333,9 @@ def main():
     reclaim_threshold = 1
     tax = 12345
     level_to_exchange_rate = [1, 11, 20]
+    price_change_interval = int(epoch_duration / 21)
+    price_change_percentage = 20
+    start_price_multiplier = 3
 
     test = ACBUnitTest(
         bond_price,
@@ -2284,7 +2348,10 @@ def main():
         damping_factor,
         level_to_exchange_rate,
         reclaim_threshold,
-        tax)
+        tax,
+        price_change_interval,
+        price_change_percentage,
+        start_price_multiplier)
     test.run()
     test.teardown()
 
@@ -2303,6 +2370,10 @@ def main():
                                     for reclaim_threshold in [0, 1, len(
                                             level_to_exchange_rate) - 1]:
                                         for tax in [0, 12345]:
+                                            price_change_interval = int(
+                                                epoch_duration / 21) + 1
+                                            price_change_percentage = 20
+                                            start_price_multiplier = 3
                                             test = ACBUnitTest(
                                                 bond_price,
                                                 bond_redemption_price,
@@ -2314,7 +2385,10 @@ def main():
                                                 damping_factor,
                                                 level_to_exchange_rate,
                                                 reclaim_threshold,
-                                                tax)
+                                                tax,
+                                                price_change_interval,
+                                                price_change_percentage,
+                                                start_price_multiplier)
                                             test.run()
                                             test.teardown()
 

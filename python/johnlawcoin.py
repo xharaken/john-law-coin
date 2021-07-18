@@ -1134,8 +1134,10 @@ class OpenMarketOperation:
         OpenMarketOperation.PRICE_CHANGE_PERCENTAGE = price_change_percentage
         OpenMarketOperation.START_PRICE_MULTIPILER = start_price_multiplier
 
-        assert(0 <= price_change_percentage and price_change_percentage <= 100)
-        assert(1 <= start_price_multiplier)
+        assert(1 <= OpenMarketOperation.PRICE_CHANGE_INTERVAL)
+        assert(0 <= OpenMarketOperation.PRICE_CHANGE_PERCENTAGE and
+               OpenMarketOperation.PRICE_CHANGE_PERCENTAGE <= 100)
+        assert(1 <= OpenMarketOperation.START_PRICE_MULTIPILER)
 
     # Increase the total coin supply by purchasing ETH from the user.
     # This method returns the amount of coins and ETH to be exchanged.
@@ -1177,6 +1179,7 @@ class OpenMarketOperation:
         self.coin_budget -= coin_amount
         self.eth_balance += eth_amount
         assert(self.coin_budget >= 0)
+        assert(eth_amount <= requested_eth_amount)
         return (eth_amount, coin_amount)
 
     # Decrease the total coin supply by selling ETH to the user.
@@ -1222,6 +1225,7 @@ class OpenMarketOperation:
         self.coin_budget += coin_amount
         self.eth_balance -= eth_amount
         assert(self.coin_budget <= 0)
+        assert(coin_amount <= requested_coin_amount)
         return (eth_amount, coin_amount)
 
     # Update the coin budget (i.e., how many coins should be added to / removed
@@ -1275,8 +1279,10 @@ class ACB:
     # |coin|: The JohnLawCoin contract.
     # |oracle|: The Oracle contract.
     # |bond_operation|: The BondOperation contract.
+    # |open_market_operation|: The OpenMarketOperation contract.
     # |logging|: The Logging contract.
-    def __init__(self, coin, oracle, bond_operation, logging):
+    def __init__(self, coin, oracle, bond_operation,
+                 open_market_operation, logging):
         # ----------------
         # Constants
         # ----------------
@@ -1363,17 +1369,23 @@ class ACB:
         # The timestamp when the current epoch started.
         self.current_epoch_start = self.get_timestamp()
 
-        # The oracle contract.
+        # The Oracle contract.
         self.oracle = oracle
+
+        # The BondOperation contract.
+        self.bond_operation = bond_operation
+
+        # The OpenMarketOperation contract.
+        self.open_market_operation = open_market_operation
 
         # The current oracle level.
         self.oracle_level = Oracle.LEVEL_MAX
 
-        # The bond operation contract.
-        self.bond_operation = bond_operation
-
-        # The logging contract.
+        # The Logging contract.
         self.logging = logging
+
+        # The balance of the ETH pool.
+        self.eth_balance = 0
 
         assert(len(ACB.LEVEL_TO_EXCHANGE_RATE) == Oracle.LEVEL_MAX)
 
@@ -1458,6 +1470,12 @@ class ACB:
             # Update the bond budget.
             epoch_id = self.oracle.epoch_id
             mint = self.bond_operation.update_bond_budget(delta, epoch_id)
+            
+            if self.oracle_level == 0 and delta < 0:
+                assert(mint == 0)
+                self.open_market_operation.update_coin_budget(delta)
+            else:
+                self.open_market_operation.update_coin_budget(mint)
 
             self.logging.update_epoch(
                 epoch_id, mint, burned, delta, self.bond_operation.bond_budget,
@@ -1523,6 +1541,27 @@ class ACB:
         self.logging.redeem_bonds(
             self.oracle.epoch_id, redeemed_bonds, expired_bonds)
         return redeemed_bonds
+
+    def purchase_coins(self, sender, requested_eth_amount):
+        elapsed_time = self.get_timestamp() - self.current_epoch_start_
+        (eth_amount, coin_amount) = (
+            self.open_market_operation.increase_coin_supply(
+                requested_eth_amount, elapsed_time))
+        self.coin.mint(sender, coin_amount)
+        self.eth_balance += eth_amount
+        return (eth_amount, coin_amount)
+
+    def sell_coins(self, sender, requested_coin_amount):
+        if self.coin.balance_of(sender) < requested_coin_amount:
+            return (0, 0)
+        elapsed_time = self.get_timestamp() - self.current_epoch_start_
+        (eth_amount, coin_amount) = (
+            self.open_market_operation.decrease_coin_supply(
+                requested_coin_amount, elapsed_time))
+        self.coin.burn(sender, coin_amount)
+        self.eth_balance -= eth_amount
+        assert(self.eth_balance >= 0)
+        return (eth_amount, coin_amount)
 
     # Return the current timestamp in seconds.
     def get_timestamp(self):
