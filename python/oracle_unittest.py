@@ -16,16 +16,18 @@ class OracleUnitTest(unittest.TestCase):
               'deposit=%d mode_level=%d other_level=%d' %
               (level_max, reclaim_threshold, proportional_reward_rate,
                tax, deposit, mode_level, other_level))
-
-        self.tax = tax
-        assert(tax >= 0)
-        self.deposit = deposit
-        assert(deposit >= 0)
-        self.mode_level = mode_level
-        self.other_level = other_level
-        assert(0 <= mode_level and mode_level < level_max)
-        assert(0 <= other_level and other_level < level_max)
-        assert(mode_level != other_level)
+        self._level_max = level_max
+        self._reclaim_threshold = reclaim_threshold
+        self._proportional_reward_rate = proportional_reward_rate
+        self._tax = tax
+        assert(self._tax >= 0)
+        self._deposit = deposit
+        assert(self._deposit >= 0)
+        self._mode_level = mode_level
+        self._other_level = other_level
+        assert(0 <= self._mode_level and self._mode_level < self._level_max)
+        assert(0 <= self._other_level and self._other_level < self._level_max)
+        assert(self._mode_level != self._other_level)
 
         self.accounts = ['0x0000', '0x1000', '0x2000', '0x3000', '0x4000',
                          '0x5000', '0x6000', '0x7000']
@@ -33,10 +35,11 @@ class OracleUnitTest(unittest.TestCase):
         self.coin = JohnLawCoin(self.accounts[0])
         self.oracle = Oracle()
         self.oracle.override_constants_for_testing(
-            level_max, reclaim_threshold, proportional_reward_rate)
+            self._level_max, self._reclaim_threshold,
+            self._proportional_reward_rate)
 
         for i in [0, 1, 2]:
-            self.assertTrue(len(self.oracle.epochs[i].votes) >= level_max)
+            self.assertTrue(len(self.oracle.epochs[i].votes) >= self._level_max)
         self.assertEqual(self.oracle.epochs[0].phase, Oracle.Phase.COMMIT)
         self.assertEqual(self.oracle.epochs[1].phase, Oracle.Phase.RECLAIM)
         self.assertEqual(self.oracle.epochs[2].phase, Oracle.Phase.REVEAL)
@@ -46,13 +49,13 @@ class OracleUnitTest(unittest.TestCase):
         pass
 
     def run(self):
-        _level_max = Oracle.LEVEL_MAX
-        _reclaim_threshold = Oracle.RECLAIM_THRESHOLD
-        _proportional_reward_rate = Oracle.PROPORTIONAL_REWARD_RATE
-        _tax = self.tax
-        _deposit = self.deposit
-        _mode_level = self.mode_level
-        _other_level = self.other_level
+        _level_max = self._level_max
+        _reclaim_threshold = self._reclaim_threshold
+        _proportional_reward_rate = self._proportional_reward_rate
+        _tax = self._tax
+        _deposit = self._deposit
+        _mode_level = self._mode_level
+        _other_level = self._other_level
         _coin = self.coin
         _oracle = self.oracle
 
@@ -2167,17 +2170,17 @@ class OracleUnitTest(unittest.TestCase):
                             Oracle.encrypt(1, 111, 11))
 
     def _is_in_reclaim_threshold(self, level):
-        return (self.mode_level - Oracle.RECLAIM_THRESHOLD <= level and
-                level <= self.mode_level + Oracle.RECLAIM_THRESHOLD)
+        return (self._mode_level - self._reclaim_threshold <= level and
+                level <= self._mode_level + self._reclaim_threshold)
 
     def _reward(self, reward_total, count):
         proportional_reward = 0
-        if self.deposit > 0:
+        if self._deposit > 0:
             proportional_reward = int(
-                (Oracle.PROPORTIONAL_REWARD_RATE * reward_total) /
+                (self._proportional_reward_rate * reward_total) /
                 (100 * count))
         constant_reward = int(
-            ((100 - Oracle.PROPORTIONAL_REWARD_RATE) * reward_total) /
+            ((100 - self._proportional_reward_rate) * reward_total) /
             (100 * count))
         return proportional_reward + constant_reward
 

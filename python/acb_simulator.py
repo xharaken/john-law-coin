@@ -61,30 +61,44 @@ class ACBSimulator(unittest.TestCase):
                iteration))
         print('exchange_rate=', end='')
         print(level_to_exchange_rate)
-
+        self._bond_price = bond_price
+        self._bond_redemption_price = bond_redemption_price
+        self._bond_redemption_period = bond_redemption_period
+        self._bond_redeemable_period = bond_redeemable_period
+        self._epoch_duration = epoch_duration
+        self._proportional_reward_rate = proportional_reward_rate
+        self._deposit_rate = deposit_rate
+        self._damping_factor = damping_factor
+        self._reclaim_threshold = reclaim_threshold
+        self._voter_count = voter_count
+        self._iteration = iteration
+        self._level_to_exchange_rate = level_to_exchange_rate
+        self._level_max = len(level_to_exchange_rate)
+               
         coin = JohnLawCoin(0)
         self.bond = JohnLawBond()
         self.oracle = Oracle()
         self.logging = Logging()
         self.bond_operation = BondOperation(self.bond)
-        self.acb = ACB(coin, self.oracle, self.bond_operation, self.logging)
-        level_max = len(level_to_exchange_rate)
+        self.open_market_operation = OpenMarketOperation()
+        self.acb = ACB(coin, self.oracle, self.bond_operation,
+                       self.open_market_operation, self.logging)
         self.oracle.override_constants_for_testing(
-            level_max, reclaim_threshold, proportional_reward_rate)
+            self._level_max, self._reclaim_threshold,
+            self._proportional_reward_rate)
         self.bond_operation.override_constants_for_testing(
-            bond_price, bond_redemption_price, bond_redemption_period,
-            bond_redeemable_period)
+            self._bond_price, self._bond_redemption_price,
+            self._bond_redemption_period,
+            self._bond_redeemable_period)
         self.acb.override_constants_for_testing(
-            epoch_duration, deposit_rate, damping_factor,
-            level_to_exchange_rate)
+            self._epoch_duration, self._deposit_rate,
+            self._damping_factor, self._level_to_exchange_rate)
 
         self.tax_rate = JohnLawCoin.TAX_RATE
         self.burned = [0] * 3
-        self.iteration = iteration
 
-        self.voter_count = voter_count
         self.voters = []
-        for i in range(self.voter_count):
+        for i in range(self._voter_count):
             self.voters.append(Voter(i + 1))
 
         class Metrics:
@@ -170,8 +184,8 @@ class ACBSimulator(unittest.TestCase):
         acb = self.acb
         logging = self.logging
 
-        for i in range(self.voter_count):
-            amount = random.randint(0, BondOperation.BOND_PRICE * 100)
+        for i in range(self._voter_count):
+            amount = random.randint(0, self._bond_price * 100)
             if random.randint(0, 9) >= 9:
                 amount = 0
             self.voters[i].balance = amount
@@ -179,7 +193,7 @@ class ACBSimulator(unittest.TestCase):
         initial_coin_supply = acb.coin.total_supply
 
         tax = 0
-        for i in range(self.iteration):
+        for i in range(self._iteration):
             if acb.coin.total_supply >= initial_coin_supply * 100:
                 break
 
@@ -187,7 +201,7 @@ class ACBSimulator(unittest.TestCase):
 
             coin_supply1 = acb.coin.total_supply
 
-            acb.set_timestamp(acb.get_timestamp() + ACB.EPOCH_DURATION)
+            acb.set_timestamp(acb.get_timestamp() + self._epoch_duration)
             commit_observed = self.vote(tax)
             if not commit_observed:
                 continue
@@ -262,13 +276,13 @@ class ACBSimulator(unittest.TestCase):
                                       self.metrics.reward_hit +
                                       self.metrics.reward_miss),
                        self.metrics.purchase_hit,
-                       self.voter_count,
+                       self._voter_count,
                        divide_or_zero(100 * self.metrics.purchase_hit,
-                                      self.voter_count),
+                                      self._voter_count),
                        self.metrics.redeem_hit,
-                       self.voter_count,
+                       self._voter_count,
                        divide_or_zero(100 * self.metrics.redeem_hit,
-                                      self.voter_count),
+                                      self._voter_count),
                        self.metrics.redemption_count,
                        self.metrics.redeem_hit,
                        divide_or_zero(100 * self.metrics.redemption_count,
@@ -319,13 +333,13 @@ class ACBSimulator(unittest.TestCase):
                               (self.metrics.total_reward_hit +
                                self.metrics.total_reward_miss)),
                self.metrics.total_purchase_hit,
-               self.voter_count * self.iteration,
+               self._voter_count * self._iteration,
                divide_or_zero(100 * self.metrics.total_purchase_hit,
-                              self.voter_count * self.iteration),
+                              self._voter_count * self._iteration),
                self.metrics.total_redeem_hit,
-               self.voter_count * self.iteration,
+               self._voter_count * self._iteration,
                divide_or_zero(100 * self.metrics.total_redeem_hit,
-                              self.voter_count * self.iteration),
+                              self._voter_count * self._iteration),
                self.metrics.total_redemption_count,
                self.metrics.total_redeem_hit,
                divide_or_zero(100 * self.metrics.total_redemption_count,
@@ -351,11 +365,11 @@ class ACBSimulator(unittest.TestCase):
     def transfer_coins(self):
         acb = self.acb
 
-        start_index = random.randint(0, self.voter_count - 1)
+        start_index = random.randint(0, self._voter_count - 1)
         tax_total = 0
-        for index in range(min(self.voter_count, 10)):
-            sender = self.voters[(start_index + index) % self.voter_count]
-            receiver = self.voters[(start_index + index + 1) % self.voter_count]
+        for index in range(min(self._voter_count, 10)):
+            sender = self.voters[(start_index + index) % self._voter_count]
+            receiver = self.voters[(start_index + index + 1) % self._voter_count]
             transfer = random.randint(
                 0, min(acb.coin.balance_of(sender.address), 10000))
             tax = int(transfer * self.tax_rate / 100)
@@ -383,14 +397,14 @@ class ACBSimulator(unittest.TestCase):
         acb = self.acb
 
         epoch_id = acb.oracle.epoch_id
-        start_index = random.randint(0, self.voter_count - 1)
-        for index in range(self.voter_count):
+        start_index = random.randint(0, self._voter_count - 1)
+        for index in range(self._voter_count):
             bond_budget = self.bond_operation.bond_budget
             if bond_budget <= 0:
                 continue
 
-            bond_price = BondOperation.BOND_PRICE
-            voter = self.voters[(start_index + index) % self.voter_count]
+            bond_price = self._bond_price
+            voter = self.voters[(start_index + index) % self._voter_count]
             count = min(self.bond_operation.bond_budget,
                         int(0.3 * voter.balance / bond_price))
             if count <= 0:
@@ -405,7 +419,7 @@ class ACBSimulator(unittest.TestCase):
             coin_supply = acb.coin.total_supply
             bond_supply = self.bond.total_supply
             valid_bond_supply = self.bond_operation.valid_bond_supply(epoch_id)
-            redemption = (epoch_id + BondOperation.BOND_REDEMPTION_PERIOD)
+            redemption = (epoch_id + self._bond_redemption_period)
             if redemption in voter.bonds:
                 voter.bonds[redemption] += count
             else:
@@ -433,12 +447,12 @@ class ACBSimulator(unittest.TestCase):
         acb = self.acb
 
         epoch_id = acb.oracle.epoch_id
-        start_index = random.randint(0, self.voter_count - 1)
-        for index in range(self.voter_count):
+        start_index = random.randint(0, self._voter_count - 1)
+        for index in range(self._voter_count):
             if random.randint(0, 9) >= 9:
                 continue
 
-            voter = self.voters[(start_index + index) % self.voter_count]
+            voter = self.voters[(start_index + index) % self._voter_count]
 
             redemptions = list(voter.bonds.keys())
             if len(redemptions) == 0:
@@ -456,7 +470,7 @@ class ACBSimulator(unittest.TestCase):
                     count = min(count, -bond_budget)
                     fast_redeemed_bonds += count
                 if (epoch_id <
-                    redemption + BondOperation.BOND_REDEEMABLE_PERIOD):
+                    redemption + self._bond_redeemable_period):
                     redeemed_bonds += count
                     bond_budget += count
                 else:
@@ -466,7 +480,7 @@ class ACBSimulator(unittest.TestCase):
                 if voter.bonds[redemption] == 0:
                     del voter.bonds[redemption]
             voter.balance += (
-                BondOperation.BOND_REDEMPTION_PRICE * redeemed_bonds)
+                self._bond_redemption_price * redeemed_bonds)
 
             coin_supply = acb.coin.total_supply
             bond_supply = self.bond.total_supply
@@ -492,7 +506,7 @@ class ACBSimulator(unittest.TestCase):
             self.assertEqual(self.bond_operation.valid_bond_supply(epoch_id),
                              valid_bond_supply - redeemed_bonds)
             self.assertEqual(acb.coin.total_supply,
-                             coin_supply + BondOperation.BOND_REDEMPTION_PRICE *
+                             coin_supply + self._bond_redemption_price *
                              redeemed_bonds)
 
             self.metrics.fast_redeemed_bonds += fast_redeemed_bonds
@@ -510,27 +524,27 @@ class ACBSimulator(unittest.TestCase):
         prev = (epoch_id - 1) % 3
         prev_prev = (epoch_id - 2) % 3
 
-        revealed_deposits = [0] * Oracle.LEVEL_MAX
-        revealed_counts = [0] * Oracle.LEVEL_MAX
+        revealed_deposits = [0] * self._level_max
+        revealed_counts = [0] * self._level_max
         for i in range(len(voters)):
             if (voters[i].committed[prev_prev] and
                 voters[i].revealed[prev_prev] and
                 voters[i].oracle_level[prev_prev] ==
                 voters[i].committed_level[prev_prev] and
                 0 <= voters[i].oracle_level[prev_prev] and
-                voters[i].oracle_level[prev_prev] < Oracle.LEVEL_MAX and
+                voters[i].oracle_level[prev_prev] < self._level_max and
                 voters[i].salt[prev_prev] ==
                 voters[i].committed_salt[prev_prev]):
                 level = voters[i].oracle_level[prev_prev]
                 revealed_deposits[level] += voters[i].deposit[prev_prev]
                 revealed_counts[level] += 1
 
-        mode_level = Oracle.LEVEL_MAX
+        mode_level = self._level_max
         max_deposit = 0
         max_count = 0
-        for level in range(Oracle.LEVEL_MAX):
+        for level in range(self._level_max):
             if (revealed_counts[level] > 0 and
-                (mode_level == Oracle.LEVEL_MAX or
+                (mode_level == self._level_max or
                  max_deposit < revealed_deposits[level] or
                  (max_deposit == revealed_deposits[level] and
                   max_count < revealed_counts[level]))):
@@ -548,17 +562,17 @@ class ACBSimulator(unittest.TestCase):
                 voters[i].oracle_level[prev_prev] ==
                 voters[i].committed_level[prev_prev] and
                 0 <= voters[i].oracle_level[prev_prev] and
-                voters[i].oracle_level[prev_prev] < Oracle.LEVEL_MAX and
+                voters[i].oracle_level[prev_prev] < self._level_max and
                 voters[i].salt[prev_prev] ==
                 voters[i].committed_salt[prev_prev] and
                 (abs(voters[i].oracle_level[prev_prev] - mode_level) <=
-                 Oracle.RECLAIM_THRESHOLD)):
+                 self._reclaim_threshold)):
                 deposit_to_be_reclaimed += voters[i].deposit[prev_prev]
         assert(deposit_to_be_reclaimed <= deposit_total)
-        if mode_level == Oracle.LEVEL_MAX:
+        if mode_level == self._level_max:
             assert(deposit_to_be_reclaimed == 0)
 
-        target_level = random.randint(0, Oracle.LEVEL_MAX - 1)
+        target_level = random.randint(0, self._level_max - 1)
         #target_level = int(epoch_id / 6) % 3
         #target_level = epoch_id % 3
 
@@ -584,13 +598,13 @@ class ACBSimulator(unittest.TestCase):
                 voters[i].committed_level[current] = target_level
             elif rand < 7:
                 voters[i].committed_level[current] = (
-                    (target_level - 1) % Oracle.LEVEL_MAX)
+                    (target_level - 1) % self._level_max)
             elif rand < 9:
                 voters[i].committed_level[current] = (
-                    (target_level + 1) % Oracle.LEVEL_MAX)
+                    (target_level + 1) % self._level_max)
             else:
                 voters[i].committed_level[current] = random.randint(
-                    0, Oracle.LEVEL_MAX)
+                    0, self._level_max)
 
             voters[i].committed_salt[current] = random.randint(0, 10)
             hash = Oracle.encrypt(
@@ -598,14 +612,14 @@ class ACBSimulator(unittest.TestCase):
                 voters[i].committed_level[current],
                 voters[i].committed_salt[current])
             voters[i].deposit[current] = int(
-                voters[i].balance * ACB.DEPOSIT_RATE / 100)
+                voters[i].balance * self._deposit_rate / 100)
 
             voters[i].revealed[prev] = True
             if random.randint(0, 99) < 97:
                 voters[i].oracle_level[prev] = voters[i].committed_level[prev]
             else:
                 voters[i].oracle_level[prev] = random.randint(
-                    0, Oracle.LEVEL_MAX)
+                    0, self._level_max)
             if random.randint(0, 99) < 97:
                 voters[i].salt[prev] = voters[i].committed_salt[prev]
             else:
@@ -618,7 +632,7 @@ class ACBSimulator(unittest.TestCase):
                 voters[i].oracle_level[prev] ==
                 voters[i].committed_level[prev] and
                 0 <= voters[i].oracle_level[prev] and
-                voters[i].oracle_level[prev] < Oracle.LEVEL_MAX and
+                voters[i].oracle_level[prev] < self._level_max and
                 voters[i].salt[prev] ==
                 voters[i].committed_salt[prev])
 
@@ -628,11 +642,11 @@ class ACBSimulator(unittest.TestCase):
                 voters[i].oracle_level[prev_prev] ==
                 voters[i].committed_level[prev_prev] and
                 0 <= voters[i].oracle_level[prev_prev] and
-                voters[i].oracle_level[prev_prev] < Oracle.LEVEL_MAX and
+                voters[i].oracle_level[prev_prev] < self._level_max and
                 voters[i].salt[prev_prev] ==
                 voters[i].committed_salt[prev_prev] and
                 (abs(voters[i].oracle_level[prev_prev] - mode_level) <=
-                 Oracle.RECLAIM_THRESHOLD))
+                 self._reclaim_threshold))
 
             coin_supply = acb.coin.total_supply
             bond_supply = self.bond.total_supply
@@ -648,11 +662,11 @@ class ACBSimulator(unittest.TestCase):
                 proportional_reward = 0
                 if revealed_deposits[mode_level] > 0:
                     proportional_reward = int(
-                        Oracle.PROPORTIONAL_REWARD_RATE * reward_total *
+                        self._proportional_reward_rate * reward_total *
                         voters[i].deposit[prev_prev] /
                         (100 * revealed_deposits[mode_level]))
                 constant_reward = int(
-                    (100 - Oracle.PROPORTIONAL_REWARD_RATE) * reward_total /
+                    (100 - self._proportional_reward_rate) * reward_total /
                     (100 * revealed_counts[mode_level]))
                 reward = proportional_reward + constant_reward
 
@@ -691,12 +705,11 @@ class ACBSimulator(unittest.TestCase):
 
             if not commit_observed:
                 delta = 0
-                if mode_level != Oracle.LEVEL_MAX:
-                    delta = int(acb.coin.total_supply *
-                                (ACB.LEVEL_TO_EXCHANGE_RATE[mode_level] -
-                                 1 * ACB.EXCHANGE_RATE_DIVISOR) /
-                                ACB.EXCHANGE_RATE_DIVISOR)
-                    delta = int(delta * ACB.DAMPING_FACTOR / 100)
+                if mode_level != self._level_max:
+                    delta = int(
+                        acb.coin.total_supply *
+                        (self._level_to_exchange_rate[mode_level] - 10) / 10)
+                    delta = int(delta * self._damping_factor / 100)
 
                 new_epoch_id = acb.oracle.epoch_id
                 mint = 0
@@ -704,7 +717,7 @@ class ACBSimulator(unittest.TestCase):
                 issued_bonds = 0
                 if delta >= 0:
                     necessary_bonds = int(
-                        delta / BondOperation.BOND_REDEMPTION_PRICE)
+                        delta / self._bond_redemption_price)
                     valid_bond_supply = self.bond_operation.valid_bond_supply(
                         new_epoch_id)
                     if necessary_bonds <= valid_bond_supply:
@@ -712,12 +725,12 @@ class ACBSimulator(unittest.TestCase):
                     else:
                         redeemable_bonds = valid_bond_supply
                         mint = ((necessary_bonds - redeemable_bonds) *
-                                BondOperation.BOND_REDEMPTION_PRICE)
+                                self._bond_redemption_price)
                 else:
-                    issued_bonds = int(-delta / BondOperation.BOND_PRICE)
+                    issued_bonds = int(-delta / self._bond_price)
 
                 self.assertEqual(self.bond.total_supply, bond_supply)
-                if mode_level == Oracle.LEVEL_MAX:
+                if mode_level == self._level_max:
                     self.assertEqual(self.bond_operation.bond_budget, 0)
                 elif delta >= 0:
                     self.assertEqual(
