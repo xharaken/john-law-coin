@@ -2541,6 +2541,88 @@ function parameterized_test(accounts,
                  deposit_4[mod(now - 1, 3)] + burned[mod(now - 1, 3)] +
                  tax_total);
 
+    // bond operation
+    await reset_balances(accounts);
+    await move_coins(accounts[1], accounts[2], _bond_price * 60);
+    await check_update_bond_budget(-_bond_price * 100, 100, 0);
+    current = await get_current(sub_accounts, []);
+    assert.equal(current.bond_supply, 0);
+    assert.equal(current.bond_budget, 100);
+    let t1 = (await _oracle.epoch_id_()).toNumber() + _bond_redemption_period;
+    await should_throw(async () => {
+      await _acb.purchaseBonds.call(0, {from: accounts[1]});
+    }, "BondOperation");
+    await should_throw(async () => {
+      await _acb.purchaseBonds.call(101, {from: accounts[1]});
+    }, "BondOperation");
+    await should_throw(async () => {
+      await _acb.purchaseBonds.call(61, {from: accounts[2]});
+    }, "BondOperation");
+    await check_purchase_bonds(10, {from: accounts[1]}, t1);
+    current = await get_current(sub_accounts, []);
+    assert.equal(current.bond_supply, 10);
+    assert.equal(current.bond_budget, 90);
+    await check_purchase_bonds(20, {from: accounts[2]}, t1);
+    current = await get_current(sub_accounts, []);
+    assert.equal(current.bond_supply, 30);
+    assert.equal(current.bond_budget, 70);
+        
+    await advance_epoch(1);
+    await check_update_bond_budget(-_bond_price * 70, 70, 0);
+    current = await get_current(sub_accounts, []);
+    assert.equal(current.bond_supply, 30);
+    assert.equal(current.bond_budget, 70);
+    let t2 = (await _oracle.epoch_id_()).toNumber() + _bond_redemption_period;
+    await check_purchase_bonds(30, {from: accounts[1]}, t2);
+    current = await get_current(sub_accounts, []);
+    assert.equal(current.bond_supply, 60);
+    assert.equal(current.bond_budget, 40);
+    await check_purchase_bonds(40, {from: accounts[2]}, t2);
+    current = await get_current(sub_accounts, []);
+    assert.equal(current.bond_supply, 100);
+    assert.equal(current.bond_budget, 0);
+    await should_throw(async () => {
+      await _acb.purchaseBonds.call(1, {from: accounts[1]});
+    }, "BondOperation");
+    await should_throw(async () => {
+      await _acb.purchaseBonds.call(1, {from: accounts[2]});
+    }, "BondOperation");
+    await advance_epoch(_bond_redemption_period - 1);
+        
+    await check_update_bond_budget(_bond_redemption_price * 1, -1, 0);
+    current = await get_current(sub_accounts, []);
+    assert.equal(current.bond_budget, -1);
+    await check_update_bond_budget(_bond_redemption_price * 100, -100, 0);
+    current = await get_current(sub_accounts, []);
+    assert.equal(current.bond_budget, -100);
+    await check_update_bond_budget(_bond_redemption_price * 101, -100,
+                                  _bond_redemption_price);
+    current = await get_current(sub_accounts, []);
+    assert.equal(current.bond_budget, -100);
+    await check_update_bond_budget(_bond_redemption_price * 40, -40, 0);
+    current = await get_current(sub_accounts, []);
+    assert.equal(current.bond_budget, -40);
+        
+    await check_redeem_bonds([t1, t2], {from: accounts[1]}, 40, 0);
+    current = await get_current(sub_accounts, []);
+    assert.equal(current.bond_supply, 60);
+    assert.equal(current.bond_budget, 0);
+    await check_redeem_bonds([t1, t2], {from: accounts[2]}, 20, 0);
+    current = await get_current(sub_accounts, []);
+    assert.equal(current.bond_supply, 40);
+    assert.equal(current.bond_budget, 20);
+        
+    await advance_epoch(1);
+    await check_redeem_bonds([t1, t2], {from: accounts[1]}, 0, 0);
+    current = await get_current(sub_accounts, []);
+    assert.equal(current.bond_supply, 40);
+    assert.equal(current.bond_budget, 0);
+    await check_redeem_bonds([t1, t2], {from: accounts[2]}, 40, 0);
+    current = await get_current(sub_accounts, []);
+    assert.equal(current.bond_supply, 0);
+    assert.equal(current.bond_budget, 40);
+    await check_redeem_bonds([t1, t2], {from: accounts[2]}, 0, 0);
+    
     // Payable functions
     assert.equal(await web3.eth.getBalance(_acb.address), 0);
     await check_send_transaction(
@@ -2709,6 +2791,17 @@ function parameterized_test(accounts,
     await _oracle.transferOwnership(_acb.address, {from: accounts[1]});
 
     await _acb.deprecate({from: accounts[1]});
+
+    async function advance_epoch(advance) {
+      for (let i = 0; i < advance; i++) {
+        await _acb.setTimestamp((
+          await _acb.getTimestamp()).toNumber() + _epoch_duration,
+                                {from: accounts[1]});
+        await _acb.vote(await _acb.encrypt(
+           _level_max, 7777, {from: accounts[7]}),
+                        _level_max, 7777, {from: accounts[7]});
+      }
+    }
 
     function check_redemption_epochs(current, account, expected) {
       let actual = current.redemption_epochs[account];

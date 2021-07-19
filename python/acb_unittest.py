@@ -2297,6 +2297,75 @@ class ACBUnitTest(unittest.TestCase):
                          deposit_4[(now - 1) % 3] + burned[(now - 1) % 3] +
                          tax_total)
         
+        # bond operation
+        self.reset_balances();
+        acb.coin.move(accounts[1], accounts[2], self._bond_price * 60)
+        self.assertEqual(self.bond_operation.update_bond_budget(
+            -self._bond_price * 100, acb.oracle.epoch_id), 0)
+        self.assertEqual(self.bond.total_supply, 0)
+        self.assertEqual(self.bond_operation.bond_budget, 100)
+        t1 = acb.oracle.epoch_id + self._bond_redemption_period
+        with self.assertRaises(Exception):
+            acb.purchase_bonds(accounts[1], 0)
+        with self.assertRaises(Exception):
+            acb.purchase_bonds(accounts[1], 101)
+        with self.assertRaises(Exception):
+            acb.purchase_bonds(accounts[2], 61)
+        self.assertEqual(acb.purchase_bonds(accounts[1], 10), t1)
+        self.assertEqual(self.bond.total_supply, 10)
+        self.assertEqual(self.bond_operation.bond_budget, 90)
+        self.assertEqual(acb.purchase_bonds(accounts[2], 20), t1)
+        self.assertEqual(self.bond.total_supply, 30)
+        self.assertEqual(self.bond_operation.bond_budget, 70)
+        
+        self.advance_epoch(1)
+        self.assertEqual(self.bond_operation.update_bond_budget(
+            -self._bond_price * 70, acb.oracle.epoch_id), 0)
+        self.assertEqual(self.bond.total_supply, 30)
+        self.assertEqual(self.bond_operation.bond_budget, 70)
+        t2 = acb.oracle.epoch_id + self._bond_redemption_period
+        self.assertEqual(acb.purchase_bonds(accounts[1], 30), t2)
+        self.assertEqual(self.bond.total_supply, 60)
+        self.assertEqual(self.bond_operation.bond_budget, 40)
+        self.assertEqual(acb.purchase_bonds(accounts[2], 40), t2)
+        self.assertEqual(self.bond.total_supply, 100)
+        self.assertEqual(self.bond_operation.bond_budget, 0)
+        with self.assertRaises(Exception):
+            acb.purchase_bonds(accounts[1], 1)
+        with self.assertRaises(Exception):
+            acb.purchase_bonds(accounts[2], 1)
+        self.advance_epoch(self._bond_redemption_period - 1)
+        
+        self.assertEqual(self.bond_operation.update_bond_budget(
+            self._bond_redemption_price * 1, acb.oracle.epoch_id), 0)
+        self.assertEqual(self.bond_operation.bond_budget, -1)
+        self.assertEqual(self.bond_operation.update_bond_budget(
+            self._bond_redemption_price * 100, acb.oracle.epoch_id), 0)
+        self.assertEqual(self.bond_operation.bond_budget, -100)
+        self.assertEqual(self.bond_operation.update_bond_budget(
+            self._bond_redemption_price * 101, acb.oracle.epoch_id),
+            self._bond_redemption_price)
+        self.assertEqual(self.bond_operation.bond_budget, -100)
+        self.assertEqual(self.bond_operation.update_bond_budget(
+            self._bond_redemption_price * 40, acb.oracle.epoch_id), 0)
+        self.assertEqual(self.bond_operation.bond_budget, -40)
+        
+        self.assertEqual(acb.redeem_bonds(accounts[1], [t1, t2]), 40)
+        self.assertEqual(self.bond.total_supply, 60)
+        self.assertEqual(self.bond_operation.bond_budget, 0)
+        self.assertEqual(acb.redeem_bonds(accounts[2], [t1, t2]), 20)
+        self.assertEqual(self.bond.total_supply, 40)
+        self.assertEqual(self.bond_operation.bond_budget, 20)
+        
+        self.advance_epoch(1)
+        self.assertEqual(acb.redeem_bonds(accounts[1], [t1, t2]), 0)
+        self.assertEqual(self.bond.total_supply, 40)
+        self.assertEqual(self.bond_operation.bond_budget, 0)
+        self.assertEqual(acb.redeem_bonds(accounts[2], [t1, t2]), 40)
+        self.assertEqual(self.bond.total_supply, 0)
+        self.assertEqual(self.bond_operation.bond_budget, 40)
+        self.assertEqual(acb.redeem_bonds(accounts[2], [t1, t2]), 0)
+
 
     def advance_epoch(self, advance):
         for i in range(advance):
