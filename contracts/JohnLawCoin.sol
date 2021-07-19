@@ -1105,13 +1105,13 @@ contract BondOperation is OwnableUpgradeable {
   function purchaseBonds(address sender, uint count,
                          uint epoch_id, JohnLawCoin coin)
       public onlyOwner returns (uint) {
-    require(count > 0, "PurchaseBonds: You must purchase at least one bond.");
+    require(count > 0, "BondOperation: You must purchase at least one bond.");
     require(bond_budget_ >= count.toInt256(),
-            "PurchaseBonds: The bond budget is not enough.");
+            "BondOperation: The bond budget is not enough.");
 
     uint amount = BOND_PRICE * count;
     require(coin.balanceOf(sender) >= amount,
-            "PurchaseBonds: Your coin balance is not enough.");
+            "BondOperation: Your coin balance is not enough.");
 
     // Set the redemption epoch of the bonds.
     uint redemption_epoch = epoch_id + BOND_REDEMPTION_PERIOD;
@@ -1352,18 +1352,16 @@ contract OpenMarketOperation is OwnableUpgradeable {
   // - The amount of coins to be exchanged.
   function increaseCoinSupply(uint requested_eth_amount, uint elapsed_time)
       public onlyOwner returns (uint, uint) {
-    if (coin_budget_ <= 0) {
-      return (0, 0);
-    }
+    require(coin_budget_ > 0,
+            "OpenMarketOperation: The coin budget must be positive.");
         
     // Calculate the current price.
     uint price = start_price_;
     for (uint i = 0; i < elapsed_time / PRICE_CHANGE_INTERVAL; i++) {
       price = price * (100 - PRICE_CHANGE_PERCENTAGE) / 100;
     }
-    if (price == 0) {
-      return (0, 0);
-    }
+    require(price > 0,
+            "OpenMarketOperation: The ETH / coin price must be positive.");
 
     // Calculate the amount of coins and ETH to be exchanged.
     uint coin_amount = requested_eth_amount / price;
@@ -1402,18 +1400,16 @@ contract OpenMarketOperation is OwnableUpgradeable {
   // - The amount of coins to be exchanged.
   function decreaseCoinSupply(uint requested_coin_amount, uint elapsed_time)
       public onlyOwner returns (uint, uint) {
-    if (coin_budget_ >= 0) {
-      return (0, 0);
-    }
+    require(coin_budget_ < 0,
+            "OpenMarketOperation: The coin budget must be negative.");
         
     // Calculate the current price.
     uint price = start_price_;
     for (uint i = 0; i < elapsed_time / PRICE_CHANGE_INTERVAL; i++) {
       price = price * (100 + PRICE_CHANGE_PERCENTAGE) / 100;
     }
-    if (price == 0) {
-      return (0, 0);
-    }
+    require(price > 0,
+            "OpenMarketOperation: The ETH / coin price must be positive.");
         
     // Calculate the amount of coins and ETH to be exchanged.
     uint coin_amount = requested_coin_amount;

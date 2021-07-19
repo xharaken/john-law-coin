@@ -51,10 +51,18 @@ function parameterized_test(accounts,
     assert.equal(await _operation.coin_budget_(), 0);
     assert.equal(await _operation.eth_balance_(), 0);
 
-    array_equal(await _operation.increaseCoinSupply.call(0, 0), [0, 0]);
-    array_equal(await _operation.increaseCoinSupply.call(10, 10), [0, 0]);
-    array_equal(await _operation.decreaseCoinSupply.call(0, 0), [0, 0]);
-    array_equal(await _operation.decreaseCoinSupply.call(10, 10), [0, 0]);
+    await should_throw(async () => {
+      await _operation.increaseCoinSupply.call(0, 0);
+    }, "OpenMarketOperation");
+    await should_throw(async () => {
+      await _operation.increaseCoinSupply.call(10, 10);
+    }, "OpenMarketOperation");
+    await should_throw(async () => {
+      await _operation.decreaseCoinSupply.call(0, 0);
+    }, "OpenMarketOperation");
+    await should_throw(async () => {
+      await _operation.decreaseCoinSupply.call(10, 10);
+    }, "OpenMarketOperation");
 
     await _operation.updateCoinBudget(0);
     assert.equal(await _operation.start_price_(), 0);
@@ -62,10 +70,18 @@ function parameterized_test(accounts,
     assert.equal(await _operation.coin_budget_(), 0);
     assert.equal(await _operation.eth_balance_(), 0);
         
-    array_equal(await _operation.increaseCoinSupply.call(0, 0), [0, 0]);
-    array_equal(await _operation.increaseCoinSupply.call(10, 10), [0, 0]);
-    array_equal(await _operation.decreaseCoinSupply.call(0, 0), [0, 0]);
-    array_equal(await _operation.decreaseCoinSupply.call(10, 10), [0, 0]);
+    await should_throw(async () => {
+      await _operation.increaseCoinSupply.call(0, 0);
+    }, "OpenMarketOperation");
+    await should_throw(async () => {
+      await _operation.increaseCoinSupply.call(10, 10);
+    }, "OpenMarketOperation");
+    await should_throw(async () => {
+      await _operation.decreaseCoinSupply.call(0, 0);
+    }, "OpenMarketOperation");
+    await should_throw(async () => {
+      await _operation.decreaseCoinSupply.call(10, 10);
+    }, "OpenMarketOperation");
 
     let eth_balance = 0;
     for (let updated_coin_budget of [
@@ -83,12 +99,20 @@ function parameterized_test(accounts,
       assert.equal(await _operation.eth_balance_(), eth_balance);
 
       if (updated_coin_budget >= 0) {
-        array_equal(await _operation.decreaseCoinSupply.call(0, 0), [0, 0]);
-        array_equal(await _operation.decreaseCoinSupply.call(10, 10), [0, 0]);
+        await should_throw(async () => {
+          await _operation.decreaseCoinSupply.call(0, 0);
+        }, "OpenMarketOperation");
+        await should_throw(async () => {
+          await _operation.decreaseCoinSupply.call(10, 10);
+        }, "OpenMarketOperation");
       }
       if (updated_coin_budget <= 0) {
-        array_equal(await _operation.increaseCoinSupply.call(0, 0), [0, 0]);
-        array_equal(await _operation.increaseCoinSupply.call(10, 10), [0, 0]);
+        await should_throw(async () => {
+          await _operation.increaseCoinSupply.call(0, 0);
+        }, "OpenMarketOperation");
+        await should_throw(async () => {
+          await _operation.increaseCoinSupply.call(10, 10);
+        }, "OpenMarketOperation");
       }
 
       let coin_budget = updated_coin_budget;
@@ -105,8 +129,10 @@ function parameterized_test(accounts,
             Math.trunc(updated_coin_budget * start_price / 8),
             updated_coin_budget * start_price + 1]) {
             if (coin_budget == 0) {
-              array_equal(await _operation.increaseCoinSupply.call(
-                requested_eth_amount, elapsed_time), [0, 0]);
+              await should_throw(async () => {
+                await _operation.increaseCoinSupply.call(
+                  requested_eth_amount, elapsed_time);
+              }, "OpenMarketOperation");
               continue;
             }
             let price = start_price;
@@ -118,8 +144,10 @@ function parameterized_test(accounts,
             let eth_amount = 0;
             let coin_amount = 0;
             if (price == 0) {
-              array_equal(await _operation.increaseCoinSupply.call(
-                requested_eth_amount, elapsed_time), [0, 0]);
+              await should_throw(async () => {
+                await _operation.increaseCoinSupply.call(
+                  requested_eth_amount, elapsed_time);
+              }, "OpenMarketOperation");
               continue;
             }
             coin_amount = Math.trunc(requested_eth_amount / price);
@@ -153,8 +181,10 @@ function parameterized_test(accounts,
             Math.trunc(-updated_coin_budget / 8),
             -updated_coin_budget + 1]) {
             if (coin_budget == 0) {
-              array_equal(await _operation.decreaseCoinSupply.call(
-                requested_coin_amount, elapsed_time), [0, 0]);
+              await should_throw(async () => {
+                await _operation.decreaseCoinSupply.call(
+                  requested_coin_amount, elapsed_time);
+              }, "OpenMarketOperation");
               continue;
             }
             let price = start_price;
@@ -166,8 +196,10 @@ function parameterized_test(accounts,
             let eth_amount = 0;
             let coin_amount = 0;
             if (price == 0) {
-              array_equal(await _operation.decreaseCoinSupply.call(
-                requested_coin_amount, elapsed_time), [0, 0]);
+              await should_throw(async () => {
+                await _operation.decreaseCoinSupply.call(
+                  requested_coin_amount, elapsed_time);
+              }, "OpenMarketOperation");
               continue;
             }
             coin_amount = requested_coin_amount;

@@ -202,43 +202,43 @@ function parameterized_test(accounts,
       await should_throw(async () => {
         await _bond_operation.purchaseBonds.call(
           accounts[4], 1, _epoch_id, _coin.address, {from: accounts[1]});
-      }, "PurchaseBonds");
+      }, "BondOperation");
       await should_throw(async () => {
         await _bond_operation.purchaseBonds.call(
           accounts[5], 1, _epoch_id, _coin.address, {from: accounts[1]});
-      }, "PurchaseBonds");
+      }, "BondOperation");
       await should_throw(async () => {
         await _bond_operation.purchaseBonds.call(
           accounts[1], 0, _epoch_id, _coin.address, {from: accounts[1]});
-      }, "PurchaseBonds");
+      }, "BondOperation");
       await should_throw(async () => {
         await _bond_operation.purchaseBonds.call(
           accounts[1], 81, _epoch_id, _coin.address, {from: accounts[1]});
-      }, "PurchaseBonds");
+      }, "BondOperation");
       await should_throw(async () => {
         await _bond_operation.purchaseBonds.call(
           accounts[2], 0, _epoch_id, _coin.address, {from: accounts[1]});
-      }, "PurchaseBonds");
+      }, "BondOperation");
       await should_throw(async () => {
         await _bond_operation.purchaseBonds.call(
           accounts[2], 81, _epoch_id, _coin.address, {from: accounts[1]});
-      }, "PurchaseBonds");
+      }, "BondOperation");
       await should_throw(async () => {
         await _bond_operation.purchaseBonds.call(
           accounts[2], 31, _epoch_id, _coin.address, {from: accounts[1]});
-      }, "PurchaseBonds");
+      }, "BondOperation");
       await should_throw(async () => {
         await _bond_operation.purchaseBonds.call(
           accounts[3], 0, _epoch_id, _coin.address, {from: accounts[1]});
-      }, "PurchaseBonds");
+      }, "BondOperation");
       await should_throw(async () => {
         await _bond_operation.purchaseBonds.call(
           accounts[3], 81, _epoch_id, _coin.address, {from: accounts[1]});
-      }, "PurchaseBonds");
+      }, "BondOperation");
       await should_throw(async () => {
         await _bond_operation.purchaseBonds.call(
           accounts[3], 51, _epoch_id, _coin.address, {from: accounts[1]});
-      }, "PurchaseBonds");
+      }, "BondOperation");
 
       await check_purchase_bonds(accounts[2], 1, t1);
       current = await get_current(sub_accounts, redemptions);
@@ -259,11 +259,11 @@ function parameterized_test(accounts,
       await should_throw(async () => {
         await _bond_operation.purchaseBonds.call(
           accounts[1], 70, _epoch_id, _coin.address, {from: accounts[1]});
-      }, "PurchaseBonds");
+      }, "BondOperation");
       await should_throw(async () => {
         await _bond_operation.purchaseBonds.call(
           accounts[3], 70, _epoch_id, _coin.address, {from: accounts[1]});
-      }, "PurchaseBonds");
+      }, "BondOperation");
 
       _epoch_id += 1;
       let t2 = _epoch_id + _bond_redemption_period;
@@ -288,11 +288,11 @@ function parameterized_test(accounts,
       await should_throw(async () => {
         await _bond_operation.purchaseBonds.call(
           accounts[1], 59, _epoch_id, _coin.address, {from: accounts[1]});
-      }, "PurchaseBonds");
+      }, "BondOperation");
       await should_throw(async () => {
         await _bond_operation.purchaseBonds.call(
           accounts[3], 59, _epoch_id, _coin.address, {from: accounts[1]});
-      }, "PurchaseBonds");
+      }, "BondOperation");
 
       await check_purchase_bonds(accounts[1], 10, t2);
       current = await get_current(sub_accounts, redemptions);
@@ -309,7 +309,7 @@ function parameterized_test(accounts,
       await should_throw(async () => {
         await _bond_operation.purchaseBonds.call(
           accounts[3], 49, _epoch_id, _coin.address, {from: accounts[1]});
-      }, "PurchaseBonds");
+      }, "BondOperation");
       await check_purchase_bonds(accounts[3], 48, t3);
       current = await get_current(sub_accounts, redemptions);
       assert.equal(current.bond_supply, 80);
@@ -325,7 +325,7 @@ function parameterized_test(accounts,
       await should_throw(async () => {
         await _bond_operation.purchaseBonds.call(
           accounts[2], 1, _epoch_id, _coin.address, {from: accounts[1]});
-      }, "PurchaseBonds");
+      }, "BondOperation");
       current = await get_current(sub_accounts, redemptions);
       assert.equal(current.bond_supply, 80);
       assert.equal(current.bond_budget, 0);
@@ -335,7 +335,7 @@ function parameterized_test(accounts,
       await should_throw(async () => {
         await _bond_operation.purchaseBonds.call(
           accounts[3], 1, _epoch_id, _coin.address, {from: accounts[1]});
-      }, "PurchaseBonds");
+      }, "BondOperation");
       current = await get_current(sub_accounts, redemptions);
       assert.equal(current.bond_supply, 80);
       assert.equal(current.bond_budget, 0);

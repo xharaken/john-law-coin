@@ -1156,8 +1156,7 @@ class OpenMarketOperation:
     # - The amount of ETH to be exchanged.
     # - The amount of coins to be exchanged.
     def increase_coin_supply(self, requested_eth_amount, elapsed_time):
-        if self.coin_budget <= 0:
-            return (0, 0)
+        assert(self.coin_budget > 0)
         
         # Calculate the current price.
         price = self.start_price
@@ -1165,8 +1164,7 @@ class OpenMarketOperation:
                            OpenMarketOperation.PRICE_CHANGE_INTERVAL)):
             price = int(price * (
                 100 - OpenMarketOperation.PRICE_CHANGE_PERCENTAGE) / 100)
-        if price == 0:
-            return (0, 0)
+        assert(price > 0)
 
         # Calculate the amount of coins and ETH to be exchanged.
         coin_amount = int(requested_eth_amount / price)
@@ -1199,8 +1197,7 @@ class OpenMarketOperation:
     # - The amount of ETH to be exchanged.
     # - The amount of coins to be exchanged.
     def decrease_coin_supply(self, requested_coin_amount, elapsed_time):
-        if self.coin_budget >= 0:
-            return (0, 0)
+        assert(self.coin_budget < 0)
         
         # Calculate the current price.
         price = self.start_price
@@ -1208,8 +1205,7 @@ class OpenMarketOperation:
                            OpenMarketOperation.PRICE_CHANGE_INTERVAL)):
             price = int(price * (
                 100 + OpenMarketOperation.PRICE_CHANGE_PERCENTAGE) / 100)
-        if price == 0:
-            return (0, 0)
+        assert(price > 0)
         
         # Calculate the amount of coins and ETH to be exchanged.
         coin_amount = requested_coin_amount
@@ -1552,8 +1548,9 @@ class ACB:
         return (eth_amount, coin_amount)
 
     def sell_coins(self, sender, requested_coin_amount):
-        if self.coin.balance_of(sender) < requested_coin_amount:
-            return (0, 0)
+        # The user does not have enough coins.
+        assert(self.coin.balance_of(sender) >= requested_coin_amount)
+        
         elapsed_time = self.get_timestamp() - self.current_epoch_start_
         (eth_amount, coin_amount) = (
             self.open_market_operation.decrease_coin_supply(

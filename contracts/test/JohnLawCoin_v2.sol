@@ -1197,13 +1197,13 @@ contract BondOperation_v2 is OwnableUpgradeable {
   function purchaseBonds_v2(address sender, uint count,
                             uint epoch_id, JohnLawCoin_v2 coin)
       public onlyOwner returns (uint) {
-    require(count > 0, "PurchaseBonds: You must purchase at least one bond.");
+    require(count > 0, "BondOperation: You must purchase at least one bond.");
     require(bond_budget_v2_ >= count.toInt256(),
-            "PurchaseBonds: The bond budget is not enough.");
+            "BondOperation: The bond budget is not enough.");
 
     uint amount = BOND_PRICE * count;
     require(coin.balanceOf(sender) >= amount,
-            "PurchaseBonds: Your coin balance is not enough.");
+            "BondOperation: Your coin balance is not enough.");
 
     // Set the redemption epoch of the bonds.
     uint redemption_epoch = epoch_id + BOND_REDEMPTION_PERIOD;
