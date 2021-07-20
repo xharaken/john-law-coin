@@ -69,9 +69,9 @@ class OracleSimulator(unittest.TestCase):
                 self._coin.mint(voters[i].address, voters[i].deposit)
                 result = self._oracle.commit(
                     self._coin, voters[i].address,
-                    Oracle.encrypt(voters[i].address,
-                                   voters[i].committed_level,
-                                   voters[i].committed_salt),
+                    self._oracle.encrypt(voters[i].address,
+                                         voters[i].committed_level,
+                                         voters[i].committed_salt),
                     voters[i].deposit)
 
                 self.assertEqual(result, True)
@@ -80,9 +80,9 @@ class OracleSimulator(unittest.TestCase):
 
                 self.assertEqual(self._oracle.commit(
                     self._coin, voters[i].address,
-                    Oracle.encrypt(voters[i].address,
-                                   voters[i].committed_level,
-                                   voters[i].committed_salt), 0), False)
+                    self._oracle.encrypt(voters[i].address,
+                                         voters[i].committed_level,
+                                         voters[i].committed_salt), 0), False)
 
         tax = random.randint(0, 200)
         self._coin.mint(self._coin.tax_account, tax)

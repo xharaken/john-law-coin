@@ -604,7 +604,7 @@ class ACBSimulator(unittest.TestCase):
                     0, self._level_max)
 
             _voters[i].committed_salt[current] = random.randint(0, 10)
-            hash = Oracle.encrypt(
+            hash = self._acb.encrypt(
                 _voters[i].address,
                 _voters[i].committed_level[current],
                 _voters[i].committed_salt[current])

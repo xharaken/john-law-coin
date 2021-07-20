@@ -474,7 +474,7 @@ class Oracle:
         epoch.commits[sender].phase = Oracle.Phase.REVEAL
 
         # Check if the committed hash matches the revealed level and salt.
-        reveal_hash = Oracle.encrypt(sender, oracle_level, salt)
+        reveal_hash = self.encrypt(sender, oracle_level, salt)
         hash = epoch.commits[sender].hash
         if hash != reveal_hash:
             return False
@@ -694,7 +694,7 @@ class Oracle:
     # Returns
     # ----------------
     # The calculated hash value.
-    def encrypt(sender, level, salt):
+    def encrypt(self, sender, level, salt):
         string = str(sender) + "_" + str(level) + "_" + str(salt)
         return hashlib.sha256(string.encode()).hexdigest()
 
@@ -1559,6 +1559,22 @@ class ACB:
         self.eth_balance -= eth_amount
         assert(self.eth_balance >= 0)
         return (eth_amount, coin_amount)
+
+    # Calculate a hash to be committed. Voters are expected to use this
+    # function to create a hash used in the commit phase.
+    #
+    # Parameters
+    # ----------------
+    # |sender|: The sender account.
+    # |level|: The oracle level to vote.
+    # |salt|: The voter's salt.
+    #
+    # Returns
+    # ----------------
+    # The calculated hash value.
+    def encrypt(self, sender, level, salt):
+        string = str(sender) + "_" + str(level) + "_" + str(salt)
+        return hashlib.sha256(string.encode()).hexdigest()
 
     # Return the current timestamp in seconds.
     def get_timestamp(self):
