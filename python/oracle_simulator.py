@@ -21,22 +21,23 @@ class OracleSimulator(unittest.TestCase):
         self._voter_count = voter_count
         self._iteration = iteration
 
-        self.coin = JohnLawCoin(0)
-        self.oracle = Oracle()
-        self.oracle.override_constants_for_testing(
-            level_max, reclaim_threshold, proportional_reward_rate)
+        self._coin = JohnLawCoin(0)
+        self._oracle = Oracle()
+        self._oracle.override_constants_for_testing(
+            self._level_max, self._reclaim_threshold,
+            self._proportional_reward_rate)
 
-        self.prev_tax = 0
+        self._prev_tax = 0
 
     def teardown(self):
         pass
 
     def run(self):
-        initial_coin_supply = self.coin.total_supply
+        initial_coin_supply = self._coin.total_supply
         for i in range(self._iteration):
             self.run_cycle()
-            self.assertEqual(self.coin.total_supply,
-                             self.prev_tax + initial_coin_supply)
+            self.assertEqual(self._coin.total_supply,
+                             self._prev_tax + initial_coin_supply)
 
     def run_cycle(self):
 
@@ -50,7 +51,7 @@ class OracleSimulator(unittest.TestCase):
                 self.committed_correctly = False
                 self.revealed = False
                 self.revealed_correctly = False
-                self.oracle_level = 0
+                self._oracle_level = 0
                 self.salt = 0
                 self.reclaimed = False
 
@@ -65,29 +66,29 @@ class OracleSimulator(unittest.TestCase):
                 voters[i].deposit = random.randint(0, 10)
                 voters[i].committed_level = random.randint(0, self._level_max)
                 voters[i].committed_salt = random.randint(0, 10)
-                self.coin.mint(voters[i].address, voters[i].deposit)
-                result = self.oracle.commit(
-                    self.coin, voters[i].address,
+                self._coin.mint(voters[i].address, voters[i].deposit)
+                result = self._oracle.commit(
+                    self._coin, voters[i].address,
                     Oracle.encrypt(voters[i].address,
                                    voters[i].committed_level,
                                    voters[i].committed_salt),
                     voters[i].deposit)
 
                 self.assertEqual(result, True)
-                self.assertEqual(self.coin.balance_of(voters[i].address), 0)
+                self.assertEqual(self._coin.balance_of(voters[i].address), 0)
                 voters[i].committed_correctly = True
 
-                self.assertEqual(self.oracle.commit(
-                    self.coin, voters[i].address,
+                self.assertEqual(self._oracle.commit(
+                    self._coin, voters[i].address,
                     Oracle.encrypt(voters[i].address,
                                    voters[i].committed_level,
                                    voters[i].committed_salt), 0), False)
 
         tax = random.randint(0, 200)
-        self.coin.mint(self.coin.tax_account, tax)
-        burned = self.oracle.advance(self.coin)
-        self.assertEqual(burned, self.prev_tax)
-        self.prev_tax = tax
+        self._coin.mint(self._coin.tax_account, tax)
+        burned = self._oracle.advance(self._coin)
+        self.assertEqual(burned, self._prev_tax)
+        self._prev_tax = tax
 
         for i in range(len(voters)):
             self.assertEqual(voters[i].address, i + 1)
@@ -108,17 +109,17 @@ class OracleSimulator(unittest.TestCase):
                     0 <= voters[i].oracle_level and
                     voters[i].oracle_level < self._level_max and
                     voters[i].salt == voters[i].committed_salt)
-                result = self.oracle.reveal(
+                result = self._oracle.reveal(
                     voters[i].address,
                     voters[i].oracle_level,
                     voters[i].salt)
                 self.assertEqual(result, voters[i].revealed_correctly)
                 self.assertEqual(
-                    self.oracle.reveal(voters[i].address,
+                    self._oracle.reveal(voters[i].address,
                                        voters[i].oracle_level,
                                        voters[i].salt), False)
                 self.assertEqual(
-                    self.oracle.reveal(-voters[i].address,
+                    self._oracle.reveal(-voters[i].address,
                                        voters[i].oracle_level,
                                        voters[i].salt), False)
 
@@ -159,18 +160,18 @@ class OracleSimulator(unittest.TestCase):
         self.assertEqual(deposit_to_reclaim + reward_total,
                          deposit_total + tax)
 
-        self.coin.mint(self.coin.tax_account, tax)
-        burned = self.oracle.advance(self.coin)
-        self.assertEqual(self.oracle.get_mode_level(), mode_level)
-        self.assertEqual(burned, self.prev_tax)
-        self.prev_tax = tax
+        self._coin.mint(self._coin.tax_account, tax)
+        burned = self._oracle.advance(self._coin)
+        self.assertEqual(self._oracle.get_mode_level(), mode_level)
+        self.assertEqual(burned, self._prev_tax)
+        self._prev_tax = tax
 
         reclaim_total = 0
         for i in range(len(voters)):
             self.assertEqual(voters[i].address, i + 1)
             voters[i].reclaimed = (random.randint(0, 99) < 95)
             if voters[i].reclaimed:
-                self.assertEqual(self.coin.balance_of(voters[i].address), 0)
+                self.assertEqual(self._coin.balance_of(voters[i].address), 0)
                 reward = 0
                 reclaimed = 0
                 if (voters[i].revealed_correctly and
@@ -193,25 +194,25 @@ class OracleSimulator(unittest.TestCase):
                       mode_level + self._reclaim_threshold):
                     self.assertNotEqual(mode_level, self._level_max)
                     reclaimed = voters[i].deposit
-                self.assertEqual(self.oracle.reclaim(
-                    self.coin, voters[i].address), (reclaimed, reward))
+                self.assertEqual(self._oracle.reclaim(
+                    self._coin, voters[i].address), (reclaimed, reward))
                 reclaim_total += reclaimed + reward
-                self.assertEqual(self.coin.balance_of(voters[i].address),
+                self.assertEqual(self._coin.balance_of(voters[i].address),
                                  reclaimed + reward)
-                self.coin.burn(voters[i].address, reclaimed + reward)
+                self._coin.burn(voters[i].address, reclaimed + reward)
 
                 self.assertEqual(
-                    self.oracle.reclaim(self.coin, voters[i].address), (0, 0))
-                self.assertEqual(self.oracle.reclaim(
-                    self.coin, -voters[i].address), (0, 0))
+                    self._oracle.reclaim(self._coin, voters[i].address), (0, 0))
+                self.assertEqual(self._oracle.reclaim(
+                    self._coin, -voters[i].address), (0, 0))
 
         self.assertEqual(deposit_to_reclaim + reward_total,
                          deposit_total + tax)
         burned = deposit_total + tax - reclaim_total
         tax = random.randint(0, 200)
-        self.coin.mint(self.coin.tax_account, tax)
-        self.assertEqual(self.oracle.advance(self.coin), burned)
-        self.prev_tax = tax
+        self._coin.mint(self._coin.tax_account, tax)
+        self.assertEqual(self._oracle.advance(self._coin), burned)
+        self._prev_tax = tax
 
 
 def main():

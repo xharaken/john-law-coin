@@ -65,25 +65,25 @@ class ACBUnitTest(unittest.TestCase):
         self.accounts = ['0x0000', '0x1000', '0x2000', '0x3000', '0x4000',
                          '0x5000', '0x6000', '0x7000']
 
-        coin = JohnLawCoin(self.accounts[1])
-        self.bond = JohnLawBond()
-        self.oracle = Oracle()
-        logging = Logging()
-        self.bond_operation = BondOperation(self.bond)
-        self.open_market_operation = OpenMarketOperation()
-        self.acb = ACB(coin, self.oracle, self.bond_operation,
-                       self.open_market_operation, logging)
-        self.oracle.override_constants_for_testing(
+        self._coin = JohnLawCoin(self.accounts[1])
+        self._bond = JohnLawBond()
+        self._oracle = Oracle()
+        self._logging = Logging()
+        self._bond_operation = BondOperation(self._bond)
+        self._open_market_operation = OpenMarketOperation()
+        self._acb = ACB(self._coin, self._oracle, self._bond_operation,
+                       self._open_market_operation, self._logging)
+        self._oracle.override_constants_for_testing(
             self._level_max, self._reclaim_threshold,
             self._proportional_reward_rate)
-        self.bond_operation.override_constants_for_testing(
+        self._bond_operation.override_constants_for_testing(
             self._bond_price, self._bond_redemption_price,
             self._bond_redemption_period,
             self._bond_redeemable_period)
-        self.open_market_operation.override_constants_for_testing(
+        self._open_market_operation.override_constants_for_testing(
             self._price_change_interval, self._price_change_percentage,
             self._start_price_multiplier)
-        self.acb.override_constants_for_testing(
+        self._acb.override_constants_for_testing(
             self._epoch_duration, self._deposit_rate, self._damping_factor,
             self._level_to_exchange_rate)
 
@@ -100,66 +100,66 @@ class ACBUnitTest(unittest.TestCase):
         pass
 
     def run(self):
-        acb = self.acb
+        acb = self._acb
         accounts = self.accounts
 
         # initial coin supply
-        self.assertEqual(acb.coin.balance_of(accounts[1]),
+        self.assertEqual(self._coin.balance_of(accounts[1]),
                          self._initial_coin_supply)
-        self.assertEqual(acb.coin.balance_of(accounts[2]), 0)
-        self.assertEqual(acb.coin.balance_of(accounts[3]), 0)
+        self.assertEqual(self._coin.balance_of(accounts[2]), 0)
+        self.assertEqual(self._coin.balance_of(accounts[3]), 0)
 
         # transfer
         with self.assertRaises(Exception):
-            acb.coin.transfer(accounts[4], accounts[1], 1)
-        acb.coin.transfer(accounts[1], accounts[2], 0)
+            self._coin.transfer(accounts[4], accounts[1], 1)
+        self._coin.transfer(accounts[1], accounts[2], 0)
         with self.assertRaises(Exception):
-            acb.coin.transfer(accounts[2], accounts[1], 1)
+            self._coin.transfer(accounts[2], accounts[1], 1)
         with self.assertRaises(Exception):
-            acb.coin.transfer(accounts[1], accounts[2],
+            self._coin.transfer(accounts[1], accounts[2],
                               self._initial_coin_supply + 1)
-        acb.coin.transfer(accounts[1], accounts[2], 1)
-        acb.coin.transfer(accounts[1], accounts[3], 10)
-        acb.coin.transfer(accounts[3], accounts[2], 5)
-        self.assertEqual(acb.coin.balance_of(accounts[1]),
+        self._coin.transfer(accounts[1], accounts[2], 1)
+        self._coin.transfer(accounts[1], accounts[3], 10)
+        self._coin.transfer(accounts[3], accounts[2], 5)
+        self.assertEqual(self._coin.balance_of(accounts[1]),
                          self._initial_coin_supply - 11)
-        self.assertEqual(acb.coin.balance_of(accounts[2]), 6)
-        self.assertEqual(acb.coin.balance_of(accounts[3]), 5)
-        acb.coin.transfer(accounts[2], accounts[2], 5)
-        self.assertEqual(acb.coin.balance_of(accounts[1]),
+        self.assertEqual(self._coin.balance_of(accounts[2]), 6)
+        self.assertEqual(self._coin.balance_of(accounts[3]), 5)
+        self._coin.transfer(accounts[2], accounts[2], 5)
+        self.assertEqual(self._coin.balance_of(accounts[1]),
                          self._initial_coin_supply - 11)
-        self.assertEqual(acb.coin.balance_of(accounts[2]), 6)
-        self.assertEqual(acb.coin.balance_of(accounts[3]), 5)
-        acb.coin.transfer(accounts[2], accounts[3], 0)
+        self.assertEqual(self._coin.balance_of(accounts[2]), 6)
+        self.assertEqual(self._coin.balance_of(accounts[3]), 5)
+        self._coin.transfer(accounts[2], accounts[3], 0)
         with self.assertRaises(Exception):
-            acb.coin.transfer(accounts[2], accounts[3], 7)
-        acb.coin.transfer(accounts[2], accounts[3], 6)
-        self.assertEqual(acb.coin.balance_of(accounts[1]),
+            self._coin.transfer(accounts[2], accounts[3], 7)
+        self._coin.transfer(accounts[2], accounts[3], 6)
+        self.assertEqual(self._coin.balance_of(accounts[1]),
                          self._initial_coin_supply - 11)
-        self.assertEqual(acb.coin.balance_of(accounts[2]), 0)
-        self.assertEqual(acb.coin.balance_of(accounts[3]), 11)
-        acb.coin.transfer(accounts[3], accounts[1], 11)
-        self.assertEqual(acb.coin.balance_of(accounts[1]),
+        self.assertEqual(self._coin.balance_of(accounts[2]), 0)
+        self.assertEqual(self._coin.balance_of(accounts[3]), 11)
+        self._coin.transfer(accounts[3], accounts[1], 11)
+        self.assertEqual(self._coin.balance_of(accounts[1]),
                          self._initial_coin_supply)
-        self.assertEqual(acb.coin.balance_of(accounts[2]), 0)
-        self.assertEqual(acb.coin.balance_of(accounts[3]), 0)
-        self.assertEqual(acb.coin.total_supply, self._initial_coin_supply)
-        acb.coin.transfer(accounts[1], accounts[2], 1000)
-        self.assertEqual(acb.coin.balance_of(accounts[1]),
+        self.assertEqual(self._coin.balance_of(accounts[2]), 0)
+        self.assertEqual(self._coin.balance_of(accounts[3]), 0)
+        self.assertEqual(self._coin.total_supply, self._initial_coin_supply)
+        self._coin.transfer(accounts[1], accounts[2], 1000)
+        self.assertEqual(self._coin.balance_of(accounts[1]),
                          self._initial_coin_supply - 1000)
-        self.assertEqual(acb.coin.balance_of(accounts[2]), 990)
-        self.assertEqual(acb.coin.balance_of(acb.coin.tax_account), 10)
-        acb.coin.transfer(accounts[2], accounts[1], 990)
-        self.assertEqual(acb.coin.balance_of(accounts[1]),
+        self.assertEqual(self._coin.balance_of(accounts[2]), 990)
+        self.assertEqual(self._coin.balance_of(self._coin.tax_account), 10)
+        self._coin.transfer(accounts[2], accounts[1], 990)
+        self.assertEqual(self._coin.balance_of(accounts[1]),
                          self._initial_coin_supply - 19)
-        self.assertEqual(acb.coin.balance_of(accounts[2]), 0)
-        self.assertEqual(acb.coin.balance_of(acb.coin.tax_account), 19)
-        acb.coin.transfer(acb.coin.tax_account, accounts[1], 19)
-        self.assertEqual(acb.coin.balance_of(accounts[1]),
+        self.assertEqual(self._coin.balance_of(accounts[2]), 0)
+        self.assertEqual(self._coin.balance_of(self._coin.tax_account), 19)
+        self._coin.transfer(self._coin.tax_account, accounts[1], 19)
+        self.assertEqual(self._coin.balance_of(accounts[1]),
                          self._initial_coin_supply)
-        self.assertEqual(acb.coin.balance_of(accounts[2]), 0)
-        self.assertEqual(acb.coin.balance_of(accounts[3]), 0)
-        self.assertEqual(acb.coin.total_supply, self._initial_coin_supply)
+        self.assertEqual(self._coin.balance_of(accounts[2]), 0)
+        self.assertEqual(self._coin.balance_of(accounts[3]), 0)
+        self.assertEqual(self._coin.total_supply, self._initial_coin_supply)
 
         # timestamp
         self.assertEqual(acb.get_timestamp(), 0)
@@ -172,7 +172,7 @@ class ACBUnitTest(unittest.TestCase):
         with self.assertRaises(Exception):
             acb.set_timestamp(0)
 
-        self.acb.set_timestamp(self.acb.get_timestamp() + self._epoch_duration)
+        acb.set_timestamp(acb.get_timestamp() + self._epoch_duration)
         
         burned = [0, 0, 0]
         deposit_4 = [0, 0, 0]
@@ -181,8 +181,8 @@ class ACBUnitTest(unittest.TestCase):
         now = 0
         self.set_tax()
 
-        acb.coin.move(accounts[1], accounts[4], 100)
-        self.assertEqual(acb.coin.balance_of(accounts[4]), 100)
+        self._coin.move(accounts[1], accounts[4], 100)
+        self.assertEqual(self._coin.balance_of(accounts[4]), 100)
 
         self.assertEqual(acb.vote(
             accounts[7], Oracle.encrypt(
@@ -190,7 +190,7 @@ class ACBUnitTest(unittest.TestCase):
             self._default_level, 7777), (True, False, 0, 0, 0, True))
 
         # 1 commit
-        balance = acb.coin.balance_of(accounts[4])
+        balance = self._coin.balance_of(accounts[4])
         deposit_4[now] = int(balance * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
@@ -198,27 +198,27 @@ class ACBUnitTest(unittest.TestCase):
             self._default_level, 1), (True, False, deposit_4[now], 0, 0, False))
         self.assertEqual(acb.current_epoch_start, acb.get_timestamp())
         self.assertEqual(acb.oracle_level, self._level_max)
-        self.assertEqual(acb.coin.balance_of(accounts[4]),
+        self.assertEqual(self._coin.balance_of(accounts[4]),
                          balance - deposit_4[now])
-        balance = acb.coin.balance_of(accounts[4])
+        balance = self._coin.balance_of(accounts[4])
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
                 accounts[4], self._default_level, 1),
             self._default_level, 1), (False, False, 0, 0, 0, False))
         self.assertEqual(acb.current_epoch_start, acb.get_timestamp())
-        self.assertEqual(acb.coin.balance_of(accounts[4]), balance)
+        self.assertEqual(self._coin.balance_of(accounts[4]), balance)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
                 accounts[4], self._default_level, 1),
             self._default_level, 1), (False, False, 0, 0, 0, False))
         self.assertEqual(acb.current_epoch_start, acb.get_timestamp())
-        self.assertEqual(acb.coin.balance_of(accounts[4]), balance)
+        self.assertEqual(self._coin.balance_of(accounts[4]), balance)
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + self._epoch_duration)
         self.set_tax()
 
-        balance = acb.coin.balance_of(accounts[4])
+        balance = self._coin.balance_of(accounts[4])
         deposit_4[now] = int(balance * self._deposit_rate / 100)
         self.assertEqual(acb.current_epoch_start,
                          acb.get_timestamp() - self._epoch_duration)
@@ -228,21 +228,21 @@ class ACBUnitTest(unittest.TestCase):
             self._default_level, 1), (True, True, deposit_4[now], 0, 0, True))
         self.assertEqual(acb.current_epoch_start, acb.get_timestamp())
         self.assertEqual(acb.oracle_level, self._level_max)
-        self.assertEqual(acb.coin.balance_of(accounts[4]),
+        self.assertEqual(self._coin.balance_of(accounts[4]),
                          balance - deposit_4[now])
-        balance = acb.coin.balance_of(accounts[4])
+        balance = self._coin.balance_of(accounts[4])
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
                 accounts[4], self._default_level, 2),
             self._default_level, 1), (False, False, 0, 0, 0, False))
         self.assertEqual(acb.current_epoch_start, acb.get_timestamp())
-        self.assertEqual(acb.coin.balance_of(accounts[4]), balance)
+        self.assertEqual(self._coin.balance_of(accounts[4]), balance)
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + self._epoch_duration)
         self.set_tax()
 
-        balance = acb.coin.balance_of(accounts[4])
+        balance = self._coin.balance_of(accounts[4])
         reward = int((100 - self._proportional_reward_rate) *
                      self._tax / 100)
         if deposit_4[(now - 2) % 3] > 0:
@@ -260,25 +260,25 @@ class ACBUnitTest(unittest.TestCase):
                           deposit_4[(now - 2) % 3], reward, True))
         self.assertEqual(acb.current_epoch_start, acb.get_timestamp())
         self.assertEqual(acb.oracle_level, self._default_level)
-        self.assertEqual(acb.coin.balance_of(accounts[4]),
+        self.assertEqual(self._coin.balance_of(accounts[4]),
                          balance - deposit_4[now] +
                          deposit_4[(now - 2) % 3] + reward)
-        balance = acb.coin.balance_of(accounts[4])
+        balance = self._coin.balance_of(accounts[4])
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
                 accounts[4], self._default_level, 3),
             self._default_level, 1), (False, False, 0, 0, 0, False))
         self.assertEqual(acb.current_epoch_start, acb.get_timestamp())
-        self.assertEqual(acb.coin.balance_of(accounts[4]), balance)
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._coin.balance_of(accounts[4]), balance)
+        self.assertEqual(self._open_market_operation.coin_budget,
                          self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + self._epoch_duration)
         self.set_tax()
 
-        balance = acb.coin.balance_of(accounts[4])
-        coin_supply = acb.coin.total_supply
+        balance = self._coin.balance_of(accounts[4])
+        coin_supply = self._coin.total_supply
         burned[now] = deposit_4[(now - 2) % 3] + self._tax
         deposit_4[now] = int(balance * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
@@ -286,26 +286,26 @@ class ACBUnitTest(unittest.TestCase):
                 accounts[4], self._default_level, 4),
             self._default_level, 3), (True, True, deposit_4[now], 0, 0, True))
         self.assertEqual(acb.oracle_level, self._level_max)
-        self.assertEqual(acb.coin.balance_of(accounts[4]),
+        self.assertEqual(self._coin.balance_of(accounts[4]),
                          balance - deposit_4[now])
-        balance = acb.coin.balance_of(accounts[4])
+        balance = self._coin.balance_of(accounts[4])
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
                 accounts[4], self._default_level, 4),
             self._default_level, 2), (False, False, 0, 0, 0, False))
-        self.assertEqual(acb.coin.balance_of(accounts[4]), balance)
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._coin.balance_of(accounts[4]), balance)
+        self.assertEqual(self._coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._open_market_operation.coin_budget,
                          0)
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + self._epoch_duration)
         self.set_tax()
 
-        balance = acb.coin.balance_of(accounts[4])
-        coin_supply = acb.coin.total_supply
+        balance = self._coin.balance_of(accounts[4])
+        coin_supply = self._coin.total_supply
         reward = int((100 - self._proportional_reward_rate) *
                      self._tax / 100)
         if deposit_4[(now - 2) % 3] > 0:
@@ -320,27 +320,27 @@ class ACBUnitTest(unittest.TestCase):
                          (True, True, deposit_4[now],
                           deposit_4[(now - 2) % 3], reward, True))
         self.assertEqual(acb.oracle_level, self._default_level)
-        self.assertEqual(acb.coin.balance_of(accounts[4]),
+        self.assertEqual(self._coin.balance_of(accounts[4]),
                          balance - deposit_4[now] +
                          deposit_4[(now - 2) % 3] + reward)
-        balance = acb.coin.balance_of(accounts[4])
+        balance = self._coin.balance_of(accounts[4])
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
                 accounts[4], self._default_level, 5),
             self._default_level, 4), (False, False, 0, 0, 0, False))
-        self.assertEqual(acb.coin.balance_of(accounts[4]), balance)
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._coin.balance_of(accounts[4]), balance)
+        self.assertEqual(self._coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._open_market_operation.coin_budget,
                          self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + self._epoch_duration)
         self.set_tax()
 
-        balance = acb.coin.balance_of(accounts[4])
-        coin_supply = acb.coin.total_supply
+        balance = self._coin.balance_of(accounts[4])
+        coin_supply = self._coin.total_supply
         reward = int((100 - self._proportional_reward_rate) *
                      self._tax / 100)
         if deposit_4[(now - 2) % 3] > 0:
@@ -354,19 +354,19 @@ class ACBUnitTest(unittest.TestCase):
             self._default_level, 5), (True, True, deposit_4[now],
                                      deposit_4[(now - 2) % 3], reward, True))
         self.assertEqual(acb.oracle_level, self._default_level)
-        self.assertEqual(acb.coin.balance_of(accounts[4]),
+        self.assertEqual(self._coin.balance_of(accounts[4]),
                          balance - deposit_4[now] +
                          deposit_4[(now - 2) % 3] + reward)
-        balance = acb.coin.balance_of(accounts[4])
+        balance = self._coin.balance_of(accounts[4])
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
                 accounts[4], self._default_level, 6),
             self._default_level, 5), (False, False, 0, 0, 0, False))
-        self.assertEqual(acb.coin.balance_of(accounts[4]), balance)
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._coin.balance_of(accounts[4]), balance)
+        self.assertEqual(self._coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._open_market_operation.coin_budget,
                          self.mint_at_default_level())
 
         now = (now + 1) % 3
@@ -374,8 +374,8 @@ class ACBUnitTest(unittest.TestCase):
         acb.set_timestamp(acb.get_timestamp() + self._epoch_duration)
         self.set_tax()
 
-        balance = acb.coin.balance_of(accounts[4])
-        coin_supply = acb.coin.total_supply
+        balance = self._coin.balance_of(accounts[4])
+        coin_supply = self._coin.total_supply
         reward = int((100 - self._proportional_reward_rate) *
                      self._tax / 100)
         if deposit_4[(now - 2) % 3] > 0:
@@ -390,27 +390,27 @@ class ACBUnitTest(unittest.TestCase):
                          (True, True, deposit_4[now],
                           deposit_4[(now - 2) % 3], reward, True))
         self.assertEqual(acb.oracle_level, self._default_level)
-        self.assertEqual(acb.coin.balance_of(accounts[4]),
+        self.assertEqual(self._coin.balance_of(accounts[4]),
                          balance - deposit_4[now] +
                          deposit_4[(now - 2) % 3] + reward)
-        balance = acb.coin.balance_of(accounts[4])
+        balance = self._coin.balance_of(accounts[4])
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
                 accounts[4], self._default_level, 7),
             self._default_level, 6), (False, False, 0, 0, 0, False))
-        self.assertEqual(acb.coin.balance_of(accounts[4]), balance)
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._coin.balance_of(accounts[4]), balance)
+        self.assertEqual(self._coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._open_market_operation.coin_budget,
                          self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + self._epoch_duration)
         self.set_tax()
 
-        balance = acb.coin.balance_of(accounts[4])
-        coin_supply = acb.coin.total_supply
+        balance = self._coin.balance_of(accounts[4])
+        coin_supply = self._coin.total_supply
         reward = int((100 - self._proportional_reward_rate) *
                      self._tax / 100)
         if deposit_4[(now - 2) % 3] > 0:
@@ -425,27 +425,27 @@ class ACBUnitTest(unittest.TestCase):
                          (True, False, deposit_4[now],
                           deposit_4[(now - 2) % 3], reward, True))
         self.assertEqual(acb.oracle_level, self._default_level)
-        self.assertEqual(acb.coin.balance_of(accounts[4]),
+        self.assertEqual(self._coin.balance_of(accounts[4]),
                          balance - deposit_4[now] +
                          deposit_4[(now - 2) % 3] + reward)
-        balance = acb.coin.balance_of(accounts[4])
+        balance = self._coin.balance_of(accounts[4])
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
                 accounts[4], self._default_level, 8),
             self._default_level, 6), (False, False, 0, 0, 0, False))
-        self.assertEqual(acb.coin.balance_of(accounts[4]), balance)
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._coin.balance_of(accounts[4]), balance)
+        self.assertEqual(self._coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._open_market_operation.coin_budget,
                          self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + self._epoch_duration)
         self.set_tax()
 
-        balance = acb.coin.balance_of(accounts[4])
-        coin_supply = acb.coin.total_supply
+        balance = self._coin.balance_of(accounts[4])
+        coin_supply = self._coin.total_supply
         reward = 0
         burned[now] = deposit_4[(now - 2) % 3] + self._tax - reward
         deposit_4[now] = 0
@@ -454,145 +454,147 @@ class ACBUnitTest(unittest.TestCase):
                          (True, False, deposit_4[now],
                           0, reward, True))
         self.assertEqual(acb.oracle_level, self._level_max)
-        self.assertEqual(acb.coin.balance_of(accounts[4]),
+        self.assertEqual(self._coin.balance_of(accounts[4]),
                          balance - deposit_4[now] + reward)
-        balance = acb.coin.balance_of(accounts[4])
+        balance = self._coin.balance_of(accounts[4])
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
                 accounts[4], self._default_level, 8),
             self._default_level, 6), (False, False, 0, 0, 0, False))
-        self.assertEqual(acb.coin.balance_of(accounts[4]), balance)
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._coin.balance_of(accounts[4]), balance)
+        self.assertEqual(self._coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._open_market_operation.coin_budget,
                          0)
 
         # 3 commits on the stable level.
         self.reset_balances()
 
-        acb.coin.move(accounts[1], accounts[4], 100)
-        acb.coin.move(accounts[1], accounts[5], 100)
-        self.assertEqual(acb.coin.balance_of(accounts[5]), 100)
-        self.assertEqual(acb.coin.balance_of(accounts[6]), 0)
+        self._coin.move(accounts[1], accounts[4], 100)
+        self._coin.move(accounts[1], accounts[5], 100)
+        self.assertEqual(self._coin.balance_of(accounts[5]), 100)
+        self.assertEqual(self._coin.balance_of(accounts[6]), 0)
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + self._epoch_duration)
         self.set_tax()
 
-        coin_supply = acb.coin.total_supply
+        coin_supply = self._coin.total_supply
         burned[now] = deposit_4[(now - 2) % 3] + self._tax
-        balance_4 = acb.coin.balance_of(accounts[4])
+        balance_4 = self._coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
                 accounts[4], self._default_level, -1),
             self._default_level, -1), (True, False, deposit_4[now], 0, 0, True))
         self.assertEqual(acb.oracle_level, self._level_max)
-        self.assertEqual(acb.coin.balance_of(accounts[4]),
+        self.assertEqual(self._coin.balance_of(accounts[4]),
                          balance_4 - deposit_4[now])
-        balance_5 = acb.coin.balance_of(accounts[5])
+        balance_5 = self._coin.balance_of(accounts[5])
         deposit_5[now] = int(balance_5 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[5], Oracle.encrypt(
                 accounts[5], self._default_level, -1),
-            self._default_level, -1), (True, False, deposit_5[now], 0, 0, False))
-        self.assertEqual(acb.coin.balance_of(accounts[5]),
+            self._default_level, -1),
+                         (True, False, deposit_5[now], 0, 0, False))
+        self.assertEqual(self._coin.balance_of(accounts[5]),
                          balance_5 - deposit_5[now])
-        balance_6 = acb.coin.balance_of(accounts[6])
+        balance_6 = self._coin.balance_of(accounts[6])
         deposit_6[now] = int(balance_6 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[6], Oracle.encrypt(
                 accounts[6], self._default_level, -1),
-            self._default_level, -1), (True, False, deposit_6[now], 0, 0, False))
-        self.assertEqual(acb.coin.balance_of(accounts[6]),
+            self._default_level, -1),
+                         (True, False, deposit_6[now], 0, 0, False))
+        self.assertEqual(self._coin.balance_of(accounts[6]),
                          balance_6 - deposit_6[now])
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._open_market_operation.coin_budget,
                          0)
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + self._epoch_duration)
         self.set_tax()
 
-        coin_supply = acb.coin.total_supply
+        coin_supply = self._coin.total_supply
         burned[now] = deposit_4[(now - 2) % 3] + self._tax
-        balance_4 = acb.coin.balance_of(accounts[4])
+        balance_4 = self._coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
                 accounts[4], self._default_level, 1),
             self._default_level, 0), (True, False, deposit_4[now], 0, 0, True))
         self.assertEqual(acb.oracle_level, self._level_max)
-        self.assertEqual(acb.coin.balance_of(accounts[4]),
+        self.assertEqual(self._coin.balance_of(accounts[4]),
                          balance_4 - deposit_4[now])
-        balance_5 = acb.coin.balance_of(accounts[5])
+        balance_5 = self._coin.balance_of(accounts[5])
         deposit_5[now] = int(balance_5 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[5], Oracle.encrypt(
                 accounts[5], self._default_level, 1),
             self._default_level, 0), (True, False, deposit_5[now], 0, 0, False))
-        self.assertEqual(acb.coin.balance_of(accounts[5]),
+        self.assertEqual(self._coin.balance_of(accounts[5]),
                          balance_5 - deposit_5[now])
-        balance_6 = acb.coin.balance_of(accounts[6])
+        balance_6 = self._coin.balance_of(accounts[6])
         deposit_6[now] = int(balance_6 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[6], Oracle.encrypt(
                 accounts[6], self._default_level, 1),
             self._default_level, 0), (True, False, deposit_6[now], 0, 0, False))
-        self.assertEqual(acb.coin.balance_of(accounts[6]),
+        self.assertEqual(self._coin.balance_of(accounts[6]),
                          balance_6 - deposit_6[now])
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._open_market_operation.coin_budget,
                          0)
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + self._epoch_duration)
         self.set_tax()
 
-        coin_supply = acb.coin.total_supply
+        coin_supply = self._coin.total_supply
         burned[now] = (deposit_4[(now - 2) % 3] + deposit_5[(now - 2) % 3] +
                           deposit_6[(now - 2) % 3] + self._tax)
-        balance_4 = acb.coin.balance_of(accounts[4])
+        balance_4 = self._coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
                 accounts[4], self._default_level, 2),
             self._default_level, 1), (True, True, deposit_4[now], 0, 0, True))
         self.assertEqual(acb.oracle_level, self._level_max)
-        self.assertEqual(acb.coin.balance_of(accounts[4]),
+        self.assertEqual(self._coin.balance_of(accounts[4]),
                          balance_4 - deposit_4[now])
-        balance_5 = acb.coin.balance_of(accounts[5])
+        balance_5 = self._coin.balance_of(accounts[5])
         deposit_5[now] = int(balance_5 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[5], Oracle.encrypt(
                 accounts[5], self._default_level, 2),
             self._default_level, 1), (True, True, deposit_5[now], 0, 0, False))
-        self.assertEqual(acb.coin.balance_of(accounts[5]),
+        self.assertEqual(self._coin.balance_of(accounts[5]),
                          balance_5 - deposit_5[now])
-        balance_6 = acb.coin.balance_of(accounts[6])
+        balance_6 = self._coin.balance_of(accounts[6])
         deposit_6[now] = int(balance_6 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[6], Oracle.encrypt(
                 accounts[6], self._default_level, 2),
             self._default_level, 1), (True, True, deposit_6[now], 0, 0, False))
-        self.assertEqual(acb.coin.balance_of(accounts[6]),
+        self.assertEqual(self._coin.balance_of(accounts[6]),
                          balance_6 - deposit_6[now])
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._open_market_operation.coin_budget,
                          0)
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + self._epoch_duration)
         self.set_tax()
 
-        coin_supply = acb.coin.total_supply
+        coin_supply = self._coin.total_supply
         reward_total = 0 + self._tax
         constant_reward = int((100 - self._proportional_reward_rate) *
                               reward_total / (3 * 100))
@@ -611,7 +613,7 @@ class ACBUnitTest(unittest.TestCase):
                            (deposit_total * 100))
         burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 3)
-        balance_4 = acb.coin.balance_of(accounts[4])
+        balance_4 = self._coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
@@ -620,10 +622,10 @@ class ACBUnitTest(unittest.TestCase):
                          (True, True, deposit_4[now], deposit_4[(now - 2) % 3],
                           reward_4 + constant_reward, True))
         self.assertEqual(acb.oracle_level, self._default_level)
-        self.assertEqual(acb.coin.balance_of(accounts[4]),
+        self.assertEqual(self._coin.balance_of(accounts[4]),
                          balance_4 - deposit_4[now] + deposit_4[(now - 2) % 3] +
                          reward_4 + constant_reward)
-        balance_5 = acb.coin.balance_of(accounts[5])
+        balance_5 = self._coin.balance_of(accounts[5])
         deposit_5[now] = int(balance_5 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[5], Oracle.encrypt(
@@ -631,10 +633,10 @@ class ACBUnitTest(unittest.TestCase):
             self._default_level, 2),
                          (True, True, deposit_5[now], deposit_5[(now - 2) % 3],
                           reward_5 + constant_reward, False))
-        self.assertEqual(acb.coin.balance_of(accounts[5]),
+        self.assertEqual(self._coin.balance_of(accounts[5]),
                          balance_5 - deposit_5[now] + deposit_5[(now - 2) % 3] +
                          reward_5 + constant_reward)
-        balance_6 = acb.coin.balance_of(accounts[6])
+        balance_6 = self._coin.balance_of(accounts[6])
         deposit_6[now] = int(balance_6 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[6], Oracle.encrypt(
@@ -642,20 +644,20 @@ class ACBUnitTest(unittest.TestCase):
             self._default_level, 2),
                          (True, True, deposit_6[now], deposit_6[(now - 2) % 3],
                           reward_6 + constant_reward, False))
-        self.assertEqual(acb.coin.balance_of(accounts[6]),
+        self.assertEqual(self._coin.balance_of(accounts[6]),
                          balance_6 - deposit_6[now] + deposit_6[(now - 2) % 3] +
                          reward_6 + constant_reward)
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._open_market_operation.coin_budget,
                          self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + self._epoch_duration)
         self.set_tax()
 
-        coin_supply = acb.coin.total_supply
+        coin_supply = self._coin.total_supply
         reward_total = 0 + self._tax
         constant_reward = int((100 - self._proportional_reward_rate) *
                               reward_total / (3 * 100))
@@ -674,7 +676,7 @@ class ACBUnitTest(unittest.TestCase):
                            (deposit_total * 100))
         burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 3)
-        balance_4 = acb.coin.balance_of(accounts[4])
+        balance_4 = self._coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
@@ -683,10 +685,10 @@ class ACBUnitTest(unittest.TestCase):
                          (True, True, deposit_4[now], deposit_4[(now - 2) % 3],
                           reward_4 + constant_reward, True))
         self.assertEqual(acb.oracle_level, self._default_level)
-        self.assertEqual(acb.coin.balance_of(accounts[4]),
+        self.assertEqual(self._coin.balance_of(accounts[4]),
                          balance_4 - deposit_4[now] + deposit_4[(now - 2) % 3] +
                          reward_4 + constant_reward)
-        balance_5 = acb.coin.balance_of(accounts[5])
+        balance_5 = self._coin.balance_of(accounts[5])
         deposit_5[now] = int(balance_5 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[5], Oracle.encrypt(
@@ -694,10 +696,10 @@ class ACBUnitTest(unittest.TestCase):
             self._default_level, 3),
                          (True, True, deposit_5[now], deposit_5[(now - 2) % 3],
                           reward_5 + constant_reward, False))
-        self.assertEqual(acb.coin.balance_of(accounts[5]),
+        self.assertEqual(self._coin.balance_of(accounts[5]),
                          balance_5 - deposit_5[now] + deposit_5[(now - 2) % 3] +
                          reward_5 + constant_reward)
-        balance_6 = acb.coin.balance_of(accounts[6])
+        balance_6 = self._coin.balance_of(accounts[6])
         deposit_6[now] = int(balance_6 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[6], Oracle.encrypt(
@@ -705,13 +707,13 @@ class ACBUnitTest(unittest.TestCase):
             self._default_level, 3),
                          (True, True, deposit_6[now], deposit_6[(now - 2) % 3],
                           reward_6 + constant_reward, False))
-        self.assertEqual(acb.coin.balance_of(accounts[6]),
+        self.assertEqual(self._coin.balance_of(accounts[6]),
                          balance_6 - deposit_6[now] + deposit_6[(now - 2) % 3] +
                          reward_6 + constant_reward)
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._open_market_operation.coin_budget,
                          self.mint_at_default_level())
 
         self.reset_balances()
@@ -719,7 +721,7 @@ class ACBUnitTest(unittest.TestCase):
         acb.set_timestamp(acb.get_timestamp() + self._epoch_duration)
         self.set_tax()
 
-        coin_supply = acb.coin.total_supply
+        coin_supply = self._coin.total_supply
         reward_total = 0 + self._tax
         constant_reward = int((100 - self._proportional_reward_rate) *
                               reward_total / (3 * 100))
@@ -738,7 +740,7 @@ class ACBUnitTest(unittest.TestCase):
                            (deposit_total * 100))
         burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 3)
-        balance_4 = acb.coin.balance_of(accounts[4])
+        balance_4 = self._coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
@@ -747,10 +749,10 @@ class ACBUnitTest(unittest.TestCase):
                          (True, True, deposit_4[now], deposit_4[(now - 2) % 3],
                           reward_4 + constant_reward, True))
         self.assertEqual(acb.oracle_level, self._default_level)
-        self.assertEqual(acb.coin.balance_of(accounts[4]),
+        self.assertEqual(self._coin.balance_of(accounts[4]),
                          balance_4 - deposit_4[now] + deposit_4[(now - 2) % 3] +
                          reward_4 + constant_reward)
-        balance_5 = acb.coin.balance_of(accounts[5])
+        balance_5 = self._coin.balance_of(accounts[5])
         deposit_5[now] = int(balance_5 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[5], Oracle.encrypt(
@@ -758,10 +760,10 @@ class ACBUnitTest(unittest.TestCase):
             self._default_level, 4),
                          (True, True, deposit_5[now], deposit_5[(now - 2) % 3],
                           reward_5 + constant_reward, False))
-        self.assertEqual(acb.coin.balance_of(accounts[5]),
+        self.assertEqual(self._coin.balance_of(accounts[5]),
                          balance_5 - deposit_5[now] + deposit_5[(now - 2) % 3] +
                          reward_5 + constant_reward)
-        balance_6 = acb.coin.balance_of(accounts[6])
+        balance_6 = self._coin.balance_of(accounts[6])
         deposit_6[now] = int(balance_6 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[6], Oracle.encrypt(
@@ -769,23 +771,23 @@ class ACBUnitTest(unittest.TestCase):
             self._default_level, 4),
                          (True, True, deposit_6[now], deposit_6[(now - 2) % 3],
                           reward_6 + constant_reward, False))
-        self.assertEqual(acb.coin.balance_of(accounts[6]),
+        self.assertEqual(self._coin.balance_of(accounts[6]),
                          balance_6 - deposit_6[now] + deposit_6[(now - 2) % 3] +
                          reward_6 + constant_reward)
         self.assertEqual(deposit_4[now], 0)
         self.assertEqual(deposit_5[now], 0)
         self.assertEqual(deposit_6[now], 0)
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._open_market_operation.coin_budget,
                          self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + self._epoch_duration)
         self.set_tax()
 
-        coin_supply = acb.coin.total_supply
+        coin_supply = self._coin.total_supply
         reward_total = 0 + self._tax
         constant_reward = int((100 - self._proportional_reward_rate) *
                               reward_total / (3 * 100))
@@ -804,7 +806,7 @@ class ACBUnitTest(unittest.TestCase):
                            (deposit_total * 100))
         burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 3)
-        balance_4 = acb.coin.balance_of(accounts[4])
+        balance_4 = self._coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
@@ -813,10 +815,10 @@ class ACBUnitTest(unittest.TestCase):
                          (True, True, deposit_4[now], deposit_4[(now - 2) % 3],
                           reward_4 + constant_reward, True))
         self.assertEqual(acb.oracle_level, self._default_level)
-        self.assertEqual(acb.coin.balance_of(accounts[4]),
+        self.assertEqual(self._coin.balance_of(accounts[4]),
                          balance_4 - deposit_4[now] + deposit_4[(now - 2) % 3] +
                          reward_4 + constant_reward)
-        balance_5 = acb.coin.balance_of(accounts[5])
+        balance_5 = self._coin.balance_of(accounts[5])
         deposit_5[now] = int(balance_5 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[5], Oracle.encrypt(
@@ -824,10 +826,10 @@ class ACBUnitTest(unittest.TestCase):
             self._default_level, 5),
                          (True, True, deposit_5[now], deposit_5[(now - 2) % 3],
                           reward_5 + constant_reward, False))
-        self.assertEqual(acb.coin.balance_of(accounts[5]),
+        self.assertEqual(self._coin.balance_of(accounts[5]),
                          balance_5 - deposit_5[now] + deposit_5[(now - 2) % 3] +
                          reward_5 + constant_reward)
-        balance_6 = acb.coin.balance_of(accounts[6])
+        balance_6 = self._coin.balance_of(accounts[6])
         deposit_6[now] = int(balance_6 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[6], Oracle.encrypt(
@@ -835,20 +837,20 @@ class ACBUnitTest(unittest.TestCase):
             self._default_level, 5),
                          (True, True, deposit_6[now], deposit_6[(now - 2) % 3],
                           reward_6 + constant_reward, False))
-        self.assertEqual(acb.coin.balance_of(accounts[6]),
+        self.assertEqual(self._coin.balance_of(accounts[6]),
                          balance_6 - deposit_6[now] + deposit_6[(now - 2) % 3] +
                          reward_6 + constant_reward)
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._open_market_operation.coin_budget,
                          self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + self._epoch_duration)
         self.set_tax()
 
-        coin_supply = acb.coin.total_supply
+        coin_supply = self._coin.total_supply
         reward_total = 0 + self._tax
         constant_reward = int((100 - self._proportional_reward_rate) *
                               reward_total / (3 * 100))
@@ -857,7 +859,7 @@ class ACBUnitTest(unittest.TestCase):
         reward_6 = 0
         burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 3)
-        balance_4 = acb.coin.balance_of(accounts[4])
+        balance_4 = self._coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
@@ -866,10 +868,10 @@ class ACBUnitTest(unittest.TestCase):
                          (True, True, deposit_4[now], deposit_4[(now - 2) % 3],
                           reward_4 + constant_reward, True))
         self.assertEqual(acb.oracle_level, self._default_level)
-        self.assertEqual(acb.coin.balance_of(accounts[4]),
+        self.assertEqual(self._coin.balance_of(accounts[4]),
                          balance_4 - deposit_4[now] + deposit_4[(now - 2) % 3] +
                          reward_4 + constant_reward)
-        balance_5 = acb.coin.balance_of(accounts[5])
+        balance_5 = self._coin.balance_of(accounts[5])
         deposit_5[now] = int(balance_5 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[5], Oracle.encrypt(
@@ -877,10 +879,10 @@ class ACBUnitTest(unittest.TestCase):
             self._default_level, 6),
                          (True, True, deposit_5[now], deposit_5[(now - 2) % 3],
                           reward_5 + constant_reward, False))
-        self.assertEqual(acb.coin.balance_of(accounts[5]),
+        self.assertEqual(self._coin.balance_of(accounts[5]),
                          balance_5 - deposit_5[now] + deposit_5[(now - 2) % 3] +
                          reward_5 + constant_reward)
-        balance_6 = acb.coin.balance_of(accounts[6])
+        balance_6 = self._coin.balance_of(accounts[6])
         deposit_6[now] = int(balance_6 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[6], Oracle.encrypt(
@@ -888,20 +890,20 @@ class ACBUnitTest(unittest.TestCase):
             self._default_level, 5),
                          (True, False, deposit_6[now], deposit_6[(now - 2) % 3],
                           reward_6 + constant_reward, False))
-        self.assertEqual(acb.coin.balance_of(accounts[6]),
+        self.assertEqual(self._coin.balance_of(accounts[6]),
                          balance_6 - deposit_6[now] + deposit_6[(now - 2) % 3] +
                          reward_6 + constant_reward)
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._open_market_operation.coin_budget,
                          self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + self._epoch_duration)
         self.set_tax()
 
-        coin_supply = acb.coin.total_supply
+        coin_supply = self._coin.total_supply
         reward_total = deposit_6[(now - 2) % 3] + self._tax
         constant_reward = int((100 - self._proportional_reward_rate) *
                               reward_total / (2 * 100))
@@ -916,7 +918,7 @@ class ACBUnitTest(unittest.TestCase):
                            (deposit_total * 100))
         burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 2)
-        balance_4 = acb.coin.balance_of(accounts[4])
+        balance_4 = self._coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
@@ -925,10 +927,10 @@ class ACBUnitTest(unittest.TestCase):
                          (True, False, deposit_4[now], deposit_4[(now - 2) % 3],
                           reward_4 + constant_reward, True))
         self.assertEqual(acb.oracle_level, self._default_level)
-        self.assertEqual(acb.coin.balance_of(accounts[4]),
+        self.assertEqual(self._coin.balance_of(accounts[4]),
                          balance_4 - deposit_4[now] + deposit_4[(now - 2) % 3] +
                          reward_4 + constant_reward)
-        balance_5 = acb.coin.balance_of(accounts[5])
+        balance_5 = self._coin.balance_of(accounts[5])
         deposit_5[now] = int(balance_5 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[5], Oracle.encrypt(
@@ -936,29 +938,29 @@ class ACBUnitTest(unittest.TestCase):
             self._default_level, 6),
                          (True, False, deposit_5[now], deposit_5[(now - 2) % 3],
                           reward_5 + constant_reward, False))
-        self.assertEqual(acb.coin.balance_of(accounts[5]),
+        self.assertEqual(self._coin.balance_of(accounts[5]),
                          balance_5 - deposit_5[now] + deposit_5[(now - 2) % 3] +
                          reward_5 + constant_reward)
-        balance_6 = acb.coin.balance_of(accounts[6])
+        balance_6 = self._coin.balance_of(accounts[6])
         deposit_6[now] = int(balance_6 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[6], Oracle.encrypt(
                 accounts[6], self._default_level, 8),
             self._default_level, 7), (True, True, deposit_6[now], 0, 0, False))
-        self.assertEqual(acb.coin.balance_of(accounts[6]),
+        self.assertEqual(self._coin.balance_of(accounts[6]),
                          balance_6 - deposit_6[now] +
                          reward_6)
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._open_market_operation.coin_budget,
                          self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + self._epoch_duration)
         self.set_tax()
 
-        coin_supply = acb.coin.total_supply
+        coin_supply = self._coin.total_supply
         reward_total = (deposit_4[(now - 2) % 3] + deposit_5[(now - 2) % 3] +
                         self._tax)
         constant_reward = int((100 - self._proportional_reward_rate) *
@@ -971,24 +973,24 @@ class ACBUnitTest(unittest.TestCase):
                            reward_total / 100)
         burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 1)
-        balance_4 = acb.coin.balance_of(accounts[4])
+        balance_4 = self._coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
                 accounts[4], self._default_level, 9),
             self._default_level, 0), (True, False, deposit_4[now], 0, 0, True))
         self.assertEqual(acb.oracle_level, self._default_level)
-        self.assertEqual(acb.coin.balance_of(accounts[4]),
+        self.assertEqual(self._coin.balance_of(accounts[4]),
                          balance_4 - deposit_4[now])
-        balance_5 = acb.coin.balance_of(accounts[5])
+        balance_5 = self._coin.balance_of(accounts[5])
         deposit_5[now] = int(balance_5 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[5], Oracle.encrypt(
                 accounts[5], self._default_level, 9),
             self._default_level, 0), (True, False, deposit_5[now], 0, 0, False))
-        self.assertEqual(acb.coin.balance_of(accounts[5]),
+        self.assertEqual(self._coin.balance_of(accounts[5]),
                          balance_5 - deposit_5[now])
-        balance_6 = acb.coin.balance_of(accounts[6])
+        balance_6 = self._coin.balance_of(accounts[6])
         deposit_6[now] = int(balance_6 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[6], Oracle.encrypt(
@@ -996,20 +998,20 @@ class ACBUnitTest(unittest.TestCase):
             self._default_level, 0),
                          (True, False, deposit_6[now], deposit_6[(now - 2) % 3],
                           reward_6 + constant_reward, False))
-        self.assertEqual(acb.coin.balance_of(accounts[6]),
+        self.assertEqual(self._coin.balance_of(accounts[6]),
                          balance_6 - deposit_6[now] + deposit_6[(now - 2) % 3] +
                          reward_6 + constant_reward)
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._open_market_operation.coin_budget,
                          self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + self._epoch_duration)
         self.set_tax()
 
-        coin_supply = acb.coin.total_supply
+        coin_supply = self._coin.total_supply
         reward_total = (deposit_4[(now - 2) % 3] + deposit_5[(now - 2) % 3] +
                         deposit_6[(now - 2) % 3] + self._tax)
         constant_reward = 0
@@ -1017,42 +1019,42 @@ class ACBUnitTest(unittest.TestCase):
         reward_5 = 0
         reward_6 = 0
         burned[now] = reward_total
-        balance_4 = acb.coin.balance_of(accounts[4])
+        balance_4 = self._coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
                 accounts[4], self._default_level, 10),
             self._default_level, 9), (True, True, deposit_4[now], 0, 0, True))
         self.assertEqual(acb.oracle_level, self._level_max)
-        self.assertEqual(acb.coin.balance_of(accounts[4]),
+        self.assertEqual(self._coin.balance_of(accounts[4]),
                          balance_4 - deposit_4[now])
-        balance_5 = acb.coin.balance_of(accounts[5])
+        balance_5 = self._coin.balance_of(accounts[5])
         deposit_5[now] = int(balance_5 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[5], Oracle.encrypt(
                 accounts[5], self._default_level, 10),
             self._default_level, 9), (True, True, deposit_5[now], 0, 0, False))
-        self.assertEqual(acb.coin.balance_of(accounts[5]),
+        self.assertEqual(self._coin.balance_of(accounts[5]),
                          balance_5 - deposit_5[now])
-        balance_6 = acb.coin.balance_of(accounts[6])
+        balance_6 = self._coin.balance_of(accounts[6])
         deposit_6[now] = int(balance_6 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[6], Oracle.encrypt(
                 accounts[6], self._default_level, 10),
             self._default_level, 9), (True, True, deposit_6[now], 0, 0, False))
-        self.assertEqual(acb.coin.balance_of(accounts[6]),
+        self.assertEqual(self._coin.balance_of(accounts[6]),
                          balance_6 - deposit_6[now])
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._open_market_operation.coin_budget,
                          0)
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + self._epoch_duration)
         self.set_tax()
 
-        coin_supply = acb.coin.total_supply
+        coin_supply = self._coin.total_supply
         reward_total = 0 + self._tax
         constant_reward = int((100 - self._proportional_reward_rate) *
                               reward_total / (3 * 100))
@@ -1068,7 +1070,7 @@ class ACBUnitTest(unittest.TestCase):
                            (deposit_total * 100))
         burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 2 + deposit_4[(now - 2) % 3])
-        balance_5 = acb.coin.balance_of(accounts[5])
+        balance_5 = self._coin.balance_of(accounts[5])
         deposit_5[now] = int(balance_5 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[5], Oracle.encrypt(
@@ -1077,10 +1079,10 @@ class ACBUnitTest(unittest.TestCase):
                          (True, True, deposit_5[now], deposit_5[(now - 2) % 3],
                           reward_5 + constant_reward, True))
         self.assertEqual(acb.oracle_level, self._default_level)
-        self.assertEqual(acb.coin.balance_of(accounts[5]),
+        self.assertEqual(self._coin.balance_of(accounts[5]),
                          balance_5 - deposit_5[now] + deposit_5[(now - 2) % 3] +
                          reward_5 + constant_reward)
-        balance_6 = acb.coin.balance_of(accounts[6])
+        balance_6 = self._coin.balance_of(accounts[6])
         deposit_6[now] = int(balance_6 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[6], Oracle.encrypt(
@@ -1088,20 +1090,20 @@ class ACBUnitTest(unittest.TestCase):
             self._default_level, 10),
                          (True, True, deposit_6[now], deposit_6[(now - 2) % 3],
                           reward_6 + constant_reward, False))
-        self.assertEqual(acb.coin.balance_of(accounts[6]),
+        self.assertEqual(self._coin.balance_of(accounts[6]),
                          balance_6 - deposit_6[now] + deposit_6[(now - 2) % 3] +
                          reward_6 + constant_reward)
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._open_market_operation.coin_budget,
                          self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + self._epoch_duration)
         self.set_tax()
 
-        coin_supply = acb.coin.total_supply
+        coin_supply = self._coin.total_supply
         reward_total = deposit_4[(now - 2) % 3] + self._tax
         constant_reward = int((100 - self._proportional_reward_rate) *
                               reward_total / (2 * 100))
@@ -1113,7 +1115,7 @@ class ACBUnitTest(unittest.TestCase):
                            (deposit_total * 100))
         burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward + deposit_5[(now - 2) % 3])
-        balance_6 = acb.coin.balance_of(accounts[6])
+        balance_6 = self._coin.balance_of(accounts[6])
         deposit_6[now] = int(balance_6 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[6], Oracle.encrypt(
@@ -1122,20 +1124,20 @@ class ACBUnitTest(unittest.TestCase):
                          (True, True, deposit_6[now], deposit_6[(now - 2) % 3],
                           reward_6 + constant_reward, True))
         self.assertEqual(acb.oracle_level, self._default_level)
-        self.assertEqual(acb.coin.balance_of(accounts[6]),
+        self.assertEqual(self._coin.balance_of(accounts[6]),
                          balance_6 - deposit_6[now] + deposit_6[(now - 2) % 3] +
                          reward_6 + constant_reward)
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._open_market_operation.coin_budget,
                          self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + self._epoch_duration)
         self.set_tax()
 
-        coin_supply = acb.coin.total_supply
+        coin_supply = self._coin.total_supply
         reward_total = deposit_5[(now - 2) % 3] + self._tax
         constant_reward = int((100 - self._proportional_reward_rate) *
                               reward_total / (1 * 100))
@@ -1145,35 +1147,35 @@ class ACBUnitTest(unittest.TestCase):
         burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 0 + deposit_6[(now - 2) % 3])
         deposit13 = int(
-            acb.coin.balance_of(accounts[1]) * self._deposit_rate / 100)
+            self._coin.balance_of(accounts[1]) * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[1], Oracle.encrypt(
                 accounts[1], self._default_level, -1),
             self._default_level, -1), (True, False, deposit13, 0, 0, True))
         self.assertEqual(acb.oracle_level, self._default_level)
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._open_market_operation.coin_budget,
                          self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + self._epoch_duration)
         self.set_tax()
 
-        coin_supply = acb.coin.total_supply
+        coin_supply = self._coin.total_supply
         burned[now] = deposit_6[(now - 2) % 3] + self._tax
         deposit14 = int(
-            acb.coin.balance_of(accounts[1]) * self._deposit_rate / 100)
+            self._coin.balance_of(accounts[1]) * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[1], Oracle.encrypt(
                 accounts[1], self._default_level, -1),
             self._default_level, -1), (True, True, deposit14, 0, 0, True))
         self.assertEqual(acb.oracle_level, self._level_max)
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._open_market_operation.coin_budget,
                          0)
 
         # 3 commits on the stable level and another level.
@@ -1184,95 +1186,95 @@ class ACBUnitTest(unittest.TestCase):
         self.set_tax()
         self.reset_balances()
 
-        acb.coin.move(accounts[1], accounts[4], 10000)
-        acb.coin.move(accounts[1], accounts[5], 2000)
-        acb.coin.move(accounts[1], accounts[5], 8100)
+        self._coin.move(accounts[1], accounts[4], 10000)
+        self._coin.move(accounts[1], accounts[5], 2000)
+        self._coin.move(accounts[1], accounts[5], 8100)
 
-        coin_supply = acb.coin.total_supply
+        coin_supply = self._coin.total_supply
         reward_total = deposit13 + self._tax
         constant_reward = 0
         reward_4 = 0
         reward_5 = 0
         reward_6 = 0
         burned[now] = reward_total
-        balance_4 = acb.coin.balance_of(accounts[4])
+        balance_4 = self._coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
                 accounts[4], 0, 1),
             self._default_level, 0), (True, False, deposit_4[now], 0, 0, True))
         self.assertEqual(acb.oracle_level, self._default_level)
-        self.assertEqual(acb.coin.balance_of(accounts[4]),
+        self.assertEqual(self._coin.balance_of(accounts[4]),
                          balance_4 - deposit_4[now])
-        balance_5 = acb.coin.balance_of(accounts[5])
+        balance_5 = self._coin.balance_of(accounts[5])
         deposit_5[now] = int(balance_5 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[5], Oracle.encrypt(
                 accounts[5], self._default_level, 1),
             self._default_level, 0), (True, False, deposit_5[now], 0, 0, False))
-        self.assertEqual(acb.coin.balance_of(accounts[5]),
+        self.assertEqual(self._coin.balance_of(accounts[5]),
                          balance_5 - deposit_5[now])
-        balance_6 = acb.coin.balance_of(accounts[6])
+        balance_6 = self._coin.balance_of(accounts[6])
         deposit_6[now] = int(balance_6 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[6], Oracle.encrypt(
                 accounts[6], self._default_level, 1),
             self._default_level, 0), (True, False, deposit_6[now], 0, 0, False))
-        self.assertEqual(acb.coin.balance_of(accounts[6]),
+        self.assertEqual(self._coin.balance_of(accounts[6]),
                          balance_6 - deposit_6[now])
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._open_market_operation.coin_budget,
                          self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + self._epoch_duration)
         self.set_tax()
 
-        coin_supply = acb.coin.total_supply
+        coin_supply = self._coin.total_supply
         reward_total = deposit14 + self._tax
         constant_reward = 0
         reward_4 = 0
         reward_5 = 0
         reward_6 = 0
         burned[now] = reward_total
-        balance_4 = acb.coin.balance_of(accounts[4])
+        balance_4 = self._coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
                 accounts[4], self._default_level, 2),
             0, 1), (True, True, deposit_4[now], 0, 0, True))
         self.assertEqual(acb.oracle_level, self._level_max)
-        self.assertEqual(acb.coin.balance_of(accounts[4]),
+        self.assertEqual(self._coin.balance_of(accounts[4]),
                          balance_4 - deposit_4[now])
-        balance_5 = acb.coin.balance_of(accounts[5])
+        balance_5 = self._coin.balance_of(accounts[5])
         deposit_5[now] = int(balance_5 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[5], Oracle.encrypt(
                 accounts[5], self._default_level, 2),
             self._default_level, 1), (True, True, deposit_5[now], 0, 0, False))
-        self.assertEqual(acb.coin.balance_of(accounts[5]),
+        self.assertEqual(self._coin.balance_of(accounts[5]),
                          balance_5 - deposit_5[now])
-        balance_6 = acb.coin.balance_of(accounts[6])
+        balance_6 = self._coin.balance_of(accounts[6])
         deposit_6[now] = int(balance_6 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[6], Oracle.encrypt(
                 accounts[6], self._default_level, 2),
             self._default_level, 1), (True, True, deposit_6[now], 0, 0, False))
-        self.assertEqual(acb.coin.balance_of(accounts[6]),
+        self.assertEqual(self._coin.balance_of(accounts[6]),
                          balance_6 - deposit_6[now])
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._open_market_operation.coin_budget,
                          0)
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + self._epoch_duration)
         self.set_tax()
 
-        coin_supply = acb.coin.total_supply
+        coin_supply = self._coin.total_supply
         reclaim_4 = 0
         in_threshold = False
         if self._default_level - 0 <= self._reclaim_threshold:
@@ -1293,7 +1295,7 @@ class ACBUnitTest(unittest.TestCase):
                            (deposit_total * 100))
         burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 2)
-        balance_4 = acb.coin.balance_of(accounts[4])
+        balance_4 = self._coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
@@ -1301,9 +1303,9 @@ class ACBUnitTest(unittest.TestCase):
             self._default_level, 2),
                          (True, True, deposit_4[now], reclaim_4, 0, True))
         self.assertEqual(acb.oracle_level, self._default_level)
-        self.assertEqual(acb.coin.balance_of(accounts[4]),
+        self.assertEqual(self._coin.balance_of(accounts[4]),
                          balance_4 - deposit_4[now] + reclaim_4)
-        balance_5 = acb.coin.balance_of(accounts[5])
+        balance_5 = self._coin.balance_of(accounts[5])
         deposit_5[now] = int(balance_5 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[5], Oracle.encrypt(
@@ -1311,10 +1313,10 @@ class ACBUnitTest(unittest.TestCase):
             self._default_level, 2),
                          (True, True, deposit_5[now], deposit_5[(now - 2) % 3],
                           reward_5 + constant_reward, False))
-        self.assertEqual(acb.coin.balance_of(accounts[5]),
+        self.assertEqual(self._coin.balance_of(accounts[5]),
                          balance_5 - deposit_5[now] + deposit_5[(now - 2) % 3] +
                          reward_5 + constant_reward)
-        balance_6 = acb.coin.balance_of(accounts[6])
+        balance_6 = self._coin.balance_of(accounts[6])
         deposit_6[now] = int(balance_6 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[6], Oracle.encrypt(
@@ -1322,13 +1324,13 @@ class ACBUnitTest(unittest.TestCase):
             self._default_level, 2),
                          (True, True, deposit_6[now], deposit_6[(now - 2) % 3],
                           reward_6 + constant_reward, False))
-        self.assertEqual(acb.coin.balance_of(accounts[6]),
+        self.assertEqual(self._coin.balance_of(accounts[6]),
                          balance_6 - deposit_6[now] + deposit_6[(now - 2) % 3] +
                          reward_6 + constant_reward)
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._open_market_operation.coin_budget,
                          self.mint_at_default_level())
 
         # 0, 0, stable
@@ -1342,11 +1344,11 @@ class ACBUnitTest(unittest.TestCase):
         self.set_tax()
         self.reset_balances()
 
-        acb.coin.move(accounts[1], accounts[4], 2900)
-        acb.coin.move(accounts[1], accounts[5], 7000)
-        acb.coin.move(accounts[1], accounts[6], 10000)
+        self._coin.move(accounts[1], accounts[4], 2900)
+        self._coin.move(accounts[1], accounts[5], 7000)
+        self._coin.move(accounts[1], accounts[6], 10000)
 
-        coin_supply = acb.coin.total_supply
+        coin_supply = self._coin.total_supply
         reward_total = 0 + self._tax
         constant_reward = int((100 - self._proportional_reward_rate) *
                               reward_total / (3 * 100))
@@ -1365,7 +1367,7 @@ class ACBUnitTest(unittest.TestCase):
                            (deposit_total * 100))
         burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 3)
-        balance_4 = acb.coin.balance_of(accounts[4])
+        balance_4 = self._coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
@@ -1373,33 +1375,33 @@ class ACBUnitTest(unittest.TestCase):
                          (True, True, deposit_4[now], deposit_4[(now - 2) % 3],
                           reward_4 + constant_reward, True))
         self.assertEqual(acb.oracle_level, self._default_level)
-        self.assertEqual(acb.coin.balance_of(accounts[4]),
+        self.assertEqual(self._coin.balance_of(accounts[4]),
                          balance_4 - deposit_4[now] + deposit_4[(now - 2) % 3] +
                          reward_4 + constant_reward)
-        balance_5 = acb.coin.balance_of(accounts[5])
+        balance_5 = self._coin.balance_of(accounts[5])
         deposit_5[now] = int(balance_5 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[5], Oracle.encrypt(
                 accounts[5], 0, 4), self._default_level, 3),
                          (True, True, deposit_5[now], deposit_5[(now - 2) % 3],
                           reward_5 + constant_reward, False))
-        self.assertEqual(acb.coin.balance_of(accounts[5]),
+        self.assertEqual(self._coin.balance_of(accounts[5]),
                          balance_5 - deposit_5[now] + deposit_5[(now - 2) % 3] +
                          reward_5 + constant_reward)
-        balance_6 = acb.coin.balance_of(accounts[6])
+        balance_6 = self._coin.balance_of(accounts[6])
         deposit_6[now] = int(balance_6 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[6], Oracle.encrypt(
                 accounts[6], self._default_level, 4), self._default_level, 3),
                          (True, True, deposit_6[now], deposit_6[(now - 2) % 3],
                           reward_6 + constant_reward, False))
-        self.assertEqual(acb.coin.balance_of(accounts[6]),
+        self.assertEqual(self._coin.balance_of(accounts[6]),
                          balance_6 - deposit_6[now] + deposit_6[(now - 2) % 3] +
                          reward_6 + constant_reward)
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._open_market_operation.coin_budget,
                          self.mint_at_default_level())
 
         self._deposit_rate = tmp_deposit_rate
@@ -1409,7 +1411,7 @@ class ACBUnitTest(unittest.TestCase):
         acb.set_timestamp(acb.get_timestamp() + self._epoch_duration)
         self.set_tax()
 
-        coin_supply = acb.coin.total_supply
+        coin_supply = self._coin.total_supply
         reward_total = 0 + self._tax
         constant_reward = int((100 - self._proportional_reward_rate) *
                               reward_total / (3 * 100))
@@ -1428,7 +1430,7 @@ class ACBUnitTest(unittest.TestCase):
                            (deposit_total * 100))
         burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 3)
-        balance_4 = acb.coin.balance_of(accounts[4])
+        balance_4 = self._coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
@@ -1436,40 +1438,40 @@ class ACBUnitTest(unittest.TestCase):
                          (True, True, deposit_4[now], deposit_4[(now - 2) % 3],
                          reward_4 + constant_reward, True))
         self.assertEqual(acb.oracle_level, self._default_level)
-        self.assertEqual(acb.coin.balance_of(accounts[4]),
+        self.assertEqual(self._coin.balance_of(accounts[4]),
                          balance_4 - deposit_4[now] + deposit_4[(now - 2) % 3] +
                          reward_4 + constant_reward)
-        balance_5 = acb.coin.balance_of(accounts[5])
+        balance_5 = self._coin.balance_of(accounts[5])
         deposit_5[now] = int(balance_5 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[5], Oracle.encrypt(
                 accounts[5], self._default_level, 5), 0, 4),
                          (True, True, deposit_5[now], deposit_5[(now - 2) % 3],
                          reward_5 + constant_reward, False))
-        self.assertEqual(acb.coin.balance_of(accounts[5]),
+        self.assertEqual(self._coin.balance_of(accounts[5]),
                          balance_5 - deposit_5[now] + deposit_5[(now - 2) % 3] +
                          reward_5 + constant_reward)
-        balance_6 = acb.coin.balance_of(accounts[6])
+        balance_6 = self._coin.balance_of(accounts[6])
         deposit_6[now] = int(balance_6 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[6], Oracle.encrypt(
                 accounts[6], self._default_level, 5), self._default_level, 4),
                          (True, True, deposit_6[now], deposit_6[(now - 2) % 3],
                           reward_6 + constant_reward, False))
-        self.assertEqual(acb.coin.balance_of(accounts[6]),
+        self.assertEqual(self._coin.balance_of(accounts[6]),
                          balance_6 - deposit_6[now] + deposit_6[(now - 2) % 3] +
                          reward_6 + constant_reward)
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._open_market_operation.coin_budget,
                          self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + self._epoch_duration)
         self.set_tax()
 
-        coin_supply = acb.coin.total_supply
+        coin_supply = self._coin.total_supply
         reclaim_4 = reclaim_5 = 0
         in_threshold = False
         if self._default_level - 0 <= self._reclaim_threshold:
@@ -1489,37 +1491,37 @@ class ACBUnitTest(unittest.TestCase):
                            (deposit_total * 100))
         burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 1)
-        balance_4 = acb.coin.balance_of(accounts[4])
+        balance_4 = self._coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
                 accounts[4], self._default_level, 6), self._default_level, 5),
                          (True, True, deposit_4[now], reclaim_4, 0, True))
         self.assertEqual(acb.oracle_level, self._default_level)
-        self.assertEqual(acb.coin.balance_of(accounts[4]),
+        self.assertEqual(self._coin.balance_of(accounts[4]),
                          balance_4 - deposit_4[now] + reclaim_4)
-        balance_5 = acb.coin.balance_of(accounts[5])
+        balance_5 = self._coin.balance_of(accounts[5])
         deposit_5[now] = int(balance_5 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[5], Oracle.encrypt(
                 accounts[5], self._default_level, 6), self._default_level, 5),
                          (True, True, deposit_5[now], reclaim_5, 0, False))
-        self.assertEqual(acb.coin.balance_of(accounts[5]),
+        self.assertEqual(self._coin.balance_of(accounts[5]),
                          balance_5 - deposit_5[now] + reclaim_5)
-        balance_6 = acb.coin.balance_of(accounts[6])
+        balance_6 = self._coin.balance_of(accounts[6])
         deposit_6[now] = int(balance_6 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[6], Oracle.encrypt(
                 accounts[6], self._default_level, 6), self._default_level, 5),
                          (True, True, deposit_6[now], deposit_6[(now - 2) % 3],
                           reward_6 + constant_reward, False))
-        self.assertEqual(acb.coin.balance_of(accounts[6]),
+        self.assertEqual(self._coin.balance_of(accounts[6]),
                          balance_6 - deposit_6[now] + deposit_6[(now - 2) % 3] +
                          reward_6 + constant_reward)
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._open_market_operation.coin_budget,
                          self.mint_at_default_level())
 
         # stable, stable, level_max - 1
@@ -1528,11 +1530,11 @@ class ACBUnitTest(unittest.TestCase):
         self.set_tax()
         self.reset_balances()
 
-        acb.coin.move(accounts[1], accounts[4], 3100)
-        acb.coin.move(accounts[1], accounts[5], 7000)
-        acb.coin.move(accounts[1], accounts[6], 10000)
+        self._coin.move(accounts[1], accounts[4], 3100)
+        self._coin.move(accounts[1], accounts[5], 7000)
+        self._coin.move(accounts[1], accounts[6], 10000)
 
-        coin_supply = acb.coin.total_supply
+        coin_supply = self._coin.total_supply
         reward_total = 0 + self._tax
         constant_reward = int((100 - self._proportional_reward_rate) *
                               reward_total / (3 * 100))
@@ -1551,7 +1553,7 @@ class ACBUnitTest(unittest.TestCase):
                            (deposit_total * 100))
         burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 3)
-        balance_4 = acb.coin.balance_of(accounts[4])
+        balance_4 = self._coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
@@ -1560,10 +1562,10 @@ class ACBUnitTest(unittest.TestCase):
                          (True, True, deposit_4[now], deposit_4[(now - 2) % 3],
                           reward_4 + constant_reward, True))
         self.assertEqual(acb.oracle_level, self._default_level)
-        self.assertEqual(acb.coin.balance_of(accounts[4]),
+        self.assertEqual(self._coin.balance_of(accounts[4]),
                          balance_4 - deposit_4[now] + deposit_4[(now - 2) % 3] +
                          reward_4 + constant_reward)
-        balance_5 = acb.coin.balance_of(accounts[5])
+        balance_5 = self._coin.balance_of(accounts[5])
         deposit_5[now] = int(balance_5 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[5], Oracle.encrypt(
@@ -1571,10 +1573,10 @@ class ACBUnitTest(unittest.TestCase):
             self._default_level, 6),
                          (True, True, deposit_5[now], deposit_5[(now - 2) % 3],
                           reward_5 + constant_reward, False))
-        self.assertEqual(acb.coin.balance_of(accounts[5]),
+        self.assertEqual(self._coin.balance_of(accounts[5]),
                          balance_5 - deposit_5[now] + deposit_5[(now - 2) % 3] +
                          reward_5 + constant_reward)
-        balance_6 = acb.coin.balance_of(accounts[6])
+        balance_6 = self._coin.balance_of(accounts[6])
         deposit_6[now] = int(balance_6 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[6], Oracle.encrypt(
@@ -1582,20 +1584,20 @@ class ACBUnitTest(unittest.TestCase):
             self._default_level, 6),
                          (True, True, deposit_6[now], deposit_6[(now - 2) % 3],
                           reward_6 + constant_reward, False))
-        self.assertEqual(acb.coin.balance_of(accounts[6]),
+        self.assertEqual(self._coin.balance_of(accounts[6]),
                          balance_6 - deposit_6[now] + deposit_6[(now - 2) % 3] +
                          reward_6 + constant_reward)
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._open_market_operation.coin_budget,
                          self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + self._epoch_duration)
         self.set_tax()
 
-        coin_supply = acb.coin.total_supply
+        coin_supply = self._coin.total_supply
         reward_total = 0 + self._tax
         constant_reward = int((100 - self._proportional_reward_rate) *
                               reward_total / (3 * 100))
@@ -1614,7 +1616,7 @@ class ACBUnitTest(unittest.TestCase):
                            (deposit_total * 100))
         burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 3)
-        balance_4 = acb.coin.balance_of(accounts[4])
+        balance_4 = self._coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
@@ -1623,10 +1625,10 @@ class ACBUnitTest(unittest.TestCase):
                          (True, True, deposit_4[now], deposit_4[(now - 2) % 3],
                           reward_4 + constant_reward, True))
         self.assertEqual(acb.oracle_level, self._default_level)
-        self.assertEqual(acb.coin.balance_of(accounts[4]),
+        self.assertEqual(self._coin.balance_of(accounts[4]),
                          balance_4 - deposit_4[now] + deposit_4[(now - 2) % 3] +
                          reward_4 + constant_reward)
-        balance_5 = acb.coin.balance_of(accounts[5])
+        balance_5 = self._coin.balance_of(accounts[5])
         deposit_5[now] = int(balance_5 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[5], Oracle.encrypt(
@@ -1634,10 +1636,10 @@ class ACBUnitTest(unittest.TestCase):
             self._default_level, 7),
                          (True, True, deposit_5[now], deposit_5[(now - 2) % 3],
                           reward_5 + constant_reward, False))
-        self.assertEqual(acb.coin.balance_of(accounts[5]),
+        self.assertEqual(self._coin.balance_of(accounts[5]),
                          balance_5 - deposit_5[now] + deposit_5[(now - 2) % 3] +
                          reward_5 + constant_reward)
-        balance_6 = acb.coin.balance_of(accounts[6])
+        balance_6 = self._coin.balance_of(accounts[6])
         deposit_6[now] = int(balance_6 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[6], Oracle.encrypt(
@@ -1645,20 +1647,20 @@ class ACBUnitTest(unittest.TestCase):
             self._level_max - 1, 7),
                          (True, True, deposit_6[now], deposit_6[(now - 2) % 3],
                           reward_6 + constant_reward, False))
-        self.assertEqual(acb.coin.balance_of(accounts[6]),
+        self.assertEqual(self._coin.balance_of(accounts[6]),
                          balance_6 - deposit_6[now] + deposit_6[(now - 2) % 3] +
                          reward_6 + constant_reward)
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._open_market_operation.coin_budget,
                          self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + self._epoch_duration)
         self.set_tax()
 
-        coin_supply = acb.coin.total_supply
+        coin_supply = self._coin.total_supply
         reclaim_6 = 0
         in_threshold = False
         if (self._level_max - 1 - self._default_level <=
@@ -1680,7 +1682,7 @@ class ACBUnitTest(unittest.TestCase):
                            (deposit_total * 100))
         burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 2)
-        balance_4 = acb.coin.balance_of(accounts[4])
+        balance_4 = self._coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
@@ -1689,10 +1691,10 @@ class ACBUnitTest(unittest.TestCase):
                          (True, True, deposit_4[now], deposit_4[(now - 2) % 3],
                           reward_4 + constant_reward, True))
         self.assertEqual(acb.oracle_level, self._default_level)
-        self.assertEqual(acb.coin.balance_of(accounts[4]),
+        self.assertEqual(self._coin.balance_of(accounts[4]),
                          balance_4 - deposit_4[now] + deposit_4[(now - 2) % 3] +
                          reward_4 + constant_reward)
-        balance_5 = acb.coin.balance_of(accounts[5])
+        balance_5 = self._coin.balance_of(accounts[5])
         deposit_5[now] = int(balance_5 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[5], Oracle.encrypt(
@@ -1700,22 +1702,22 @@ class ACBUnitTest(unittest.TestCase):
             self._default_level, 8),
                          (True, True, deposit_5[now], deposit_5[(now - 2) % 3],
                           reward_5 + constant_reward, False))
-        self.assertEqual(acb.coin.balance_of(accounts[5]),
+        self.assertEqual(self._coin.balance_of(accounts[5]),
                          balance_5 - deposit_5[now] + deposit_5[(now - 2) % 3] +
                          reward_5 + constant_reward)
-        balance_6 = acb.coin.balance_of(accounts[6])
+        balance_6 = self._coin.balance_of(accounts[6])
         deposit_6[now] = int(balance_6 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[6], Oracle.encrypt(
                 accounts[6], self._default_level, 9),
             self._default_level, 8),
                          (True, True, deposit_6[now], reclaim_6, 0, False))
-        self.assertEqual(acb.coin.balance_of(accounts[6]),
+        self.assertEqual(self._coin.balance_of(accounts[6]),
                          balance_6 - deposit_6[now] + reclaim_6)
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._open_market_operation.coin_budget,
                          self.mint_at_default_level())
 
         # stable, level_max - 1, level_max - 1
@@ -1729,11 +1731,11 @@ class ACBUnitTest(unittest.TestCase):
         self.set_tax()
         self.reset_balances()
 
-        acb.coin.move(accounts[1], accounts[4], 10000)
-        acb.coin.move(accounts[1], accounts[5], 7000)
-        acb.coin.move(accounts[1], accounts[6], 2900)
+        self._coin.move(accounts[1], accounts[4], 10000)
+        self._coin.move(accounts[1], accounts[5], 7000)
+        self._coin.move(accounts[1], accounts[6], 2900)
 
-        coin_supply = acb.coin.total_supply
+        coin_supply = self._coin.total_supply
         reward_total = 0 + self._tax
         constant_reward = int((100 - self._proportional_reward_rate) *
                               reward_total / (3 * 100))
@@ -1752,7 +1754,7 @@ class ACBUnitTest(unittest.TestCase):
                            (deposit_total * 100))
         burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 3)
-        balance_4 = acb.coin.balance_of(accounts[4])
+        balance_4 = self._coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
@@ -1761,10 +1763,10 @@ class ACBUnitTest(unittest.TestCase):
                          (True, True, deposit_4[now], deposit_4[(now - 2) % 3],
                           reward_4 + constant_reward, True))
         self.assertEqual(acb.oracle_level, self._default_level)
-        self.assertEqual(acb.coin.balance_of(accounts[4]),
+        self.assertEqual(self._coin.balance_of(accounts[4]),
                          balance_4 - deposit_4[now] + deposit_4[(now - 2) % 3] +
                          reward_4 + constant_reward)
-        balance_5 = acb.coin.balance_of(accounts[5])
+        balance_5 = self._coin.balance_of(accounts[5])
         deposit_5[now] = int(balance_5 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[5], Oracle.encrypt(
@@ -1772,10 +1774,10 @@ class ACBUnitTest(unittest.TestCase):
             self._default_level, 9),
                          (True, True, deposit_5[now], deposit_5[(now - 2) % 3],
                           reward_5 + constant_reward, False))
-        self.assertEqual(acb.coin.balance_of(accounts[5]),
+        self.assertEqual(self._coin.balance_of(accounts[5]),
                          balance_5 - deposit_5[now] + deposit_5[(now - 2) % 3] +
                          reward_5 + constant_reward)
-        balance_6 = acb.coin.balance_of(accounts[6])
+        balance_6 = self._coin.balance_of(accounts[6])
         deposit_6[now] = int(balance_6 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[6], Oracle.encrypt(
@@ -1783,13 +1785,13 @@ class ACBUnitTest(unittest.TestCase):
             self._default_level, 9),
                          (True, True, deposit_6[now], deposit_6[(now - 2) % 3],
                           reward_6 + constant_reward, False))
-        self.assertEqual(acb.coin.balance_of(accounts[6]),
+        self.assertEqual(self._coin.balance_of(accounts[6]),
                          balance_6 - deposit_6[now] + deposit_6[(now - 2) % 3] +
                          reward_6 + constant_reward)
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._open_market_operation.coin_budget,
                          self.mint_at_default_level())
 
         self._deposit_rate = tmp_deposit_rate
@@ -1799,7 +1801,7 @@ class ACBUnitTest(unittest.TestCase):
         acb.set_timestamp(acb.get_timestamp() + self._epoch_duration)
         self.set_tax()
 
-        coin_supply = acb.coin.total_supply
+        coin_supply = self._coin.total_supply
         reward_total = 0 + self._tax
         constant_reward = int((100 - self._proportional_reward_rate) *
                               reward_total / (3 * 100))
@@ -1818,7 +1820,7 @@ class ACBUnitTest(unittest.TestCase):
                            (deposit_total * 100))
         burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 3)
-        balance_4 = acb.coin.balance_of(accounts[4])
+        balance_4 = self._coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
@@ -1827,10 +1829,10 @@ class ACBUnitTest(unittest.TestCase):
                          (True, True, deposit_4[now], deposit_4[(now - 2) % 3],
                           reward_4 + constant_reward, True))
         self.assertEqual(acb.oracle_level, self._default_level)
-        self.assertEqual(acb.coin.balance_of(accounts[4]),
+        self.assertEqual(self._coin.balance_of(accounts[4]),
                          balance_4 - deposit_4[now] + deposit_4[(now - 2) % 3] +
                          reward_4 + constant_reward)
-        balance_5 = acb.coin.balance_of(accounts[5])
+        balance_5 = self._coin.balance_of(accounts[5])
         deposit_5[now] = int(balance_5 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[5], Oracle.encrypt(
@@ -1838,10 +1840,10 @@ class ACBUnitTest(unittest.TestCase):
             self._level_max - 1, 10),
                          (True, True, deposit_5[now], deposit_5[(now - 2) % 3],
                           reward_5 + constant_reward, False))
-        self.assertEqual(acb.coin.balance_of(accounts[5]),
+        self.assertEqual(self._coin.balance_of(accounts[5]),
                          balance_5 - deposit_5[now] + deposit_5[(now - 2) % 3] +
                          reward_5 + constant_reward)
-        balance_6 = acb.coin.balance_of(accounts[6])
+        balance_6 = self._coin.balance_of(accounts[6])
         deposit_6[now] = int(balance_6 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[6], Oracle.encrypt(
@@ -1849,20 +1851,20 @@ class ACBUnitTest(unittest.TestCase):
             self._level_max - 1, 10),
                          (True, True, deposit_6[now], deposit_6[(now - 2) % 3],
                           reward_6 + constant_reward, False))
-        self.assertEqual(acb.coin.balance_of(accounts[6]),
+        self.assertEqual(self._coin.balance_of(accounts[6]),
                          balance_6 - deposit_6[now] + deposit_6[(now - 2) % 3] +
                          reward_6 + constant_reward)
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._open_market_operation.coin_budget,
                          self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + self._epoch_duration)
         self.set_tax()
 
-        coin_supply = acb.coin.total_supply
+        coin_supply = self._coin.total_supply
         reclaim_5 = reclaim_6 = 0
         in_threshold = False
         if (self._level_max - 1 - self._default_level <=
@@ -1883,7 +1885,7 @@ class ACBUnitTest(unittest.TestCase):
                            (deposit_total * 100))
         burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 1)
-        balance_4 = acb.coin.balance_of(accounts[4])
+        balance_4 = self._coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
@@ -1892,31 +1894,31 @@ class ACBUnitTest(unittest.TestCase):
                          (True, True, deposit_4[now], deposit_4[(now - 2) % 3],
                           reward_4 + constant_reward, True))
         self.assertEqual(acb.oracle_level, self._default_level)
-        self.assertEqual(acb.coin.balance_of(accounts[4]),
+        self.assertEqual(self._coin.balance_of(accounts[4]),
                          balance_4 - deposit_4[now] + deposit_4[(now - 2) % 3] +
                          reward_4 + constant_reward)
-        balance_5 = acb.coin.balance_of(accounts[5])
+        balance_5 = self._coin.balance_of(accounts[5])
         deposit_5[now] = int(balance_5 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[5], Oracle.encrypt(
                 accounts[5], self._default_level, 12),
             self._default_level, 11),
                          (True, True, deposit_5[now], reclaim_5, 0, False))
-        self.assertEqual(acb.coin.balance_of(accounts[5]),
+        self.assertEqual(self._coin.balance_of(accounts[5]),
                          balance_5 - deposit_5[now] + reclaim_5)
-        balance_6 = acb.coin.balance_of(accounts[6])
+        balance_6 = self._coin.balance_of(accounts[6])
         deposit_6[now] = int(balance_6 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[6], Oracle.encrypt(
                 accounts[6], self._default_level, 12),
             self._default_level, 11),
                          (True, True, deposit_6[now], reclaim_6, 0, False))
-        self.assertEqual(acb.coin.balance_of(accounts[6]),
+        self.assertEqual(self._coin.balance_of(accounts[6]),
                          balance_6 - deposit_6[now] + reclaim_6)
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._open_market_operation.coin_budget,
                          self.mint_at_default_level())
 
         # stable, stable, level_max - 1; deposit is the same
@@ -1925,11 +1927,11 @@ class ACBUnitTest(unittest.TestCase):
         self.set_tax()
         self.reset_balances()
 
-        acb.coin.move(accounts[1], accounts[4], 10000)
-        acb.coin.move(accounts[1], accounts[5], 7000)
-        acb.coin.move(accounts[1], accounts[6], 3000)
+        self._coin.move(accounts[1], accounts[4], 10000)
+        self._coin.move(accounts[1], accounts[5], 7000)
+        self._coin.move(accounts[1], accounts[6], 3000)
 
-        coin_supply = acb.coin.total_supply
+        coin_supply = self._coin.total_supply
         reward_total = 0 + self._tax
         constant_reward = int((100 - self._proportional_reward_rate) *
                               reward_total / (3 * 100))
@@ -1948,7 +1950,7 @@ class ACBUnitTest(unittest.TestCase):
                            (deposit_total * 100))
         burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 3)
-        balance_4 = acb.coin.balance_of(accounts[4])
+        balance_4 = self._coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
@@ -1957,10 +1959,10 @@ class ACBUnitTest(unittest.TestCase):
                          (True, True, deposit_4[now], deposit_4[(now - 2) % 3],
                           reward_4 + constant_reward, True))
         self.assertEqual(acb.oracle_level, self._default_level)
-        self.assertEqual(acb.coin.balance_of(accounts[4]),
+        self.assertEqual(self._coin.balance_of(accounts[4]),
                          balance_4 - deposit_4[now] + deposit_4[(now - 2) % 3] +
                          reward_4 + constant_reward)
-        balance_5 = acb.coin.balance_of(accounts[5])
+        balance_5 = self._coin.balance_of(accounts[5])
         deposit_5[now] = int(balance_5 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[5], Oracle.encrypt(
@@ -1968,10 +1970,10 @@ class ACBUnitTest(unittest.TestCase):
             self._default_level, 12),
                          (True, True, deposit_5[now], deposit_5[(now - 2) % 3],
                           reward_5 + constant_reward, False))
-        self.assertEqual(acb.coin.balance_of(accounts[5]),
+        self.assertEqual(self._coin.balance_of(accounts[5]),
                          balance_5 - deposit_5[now] + deposit_5[(now - 2) % 3] +
                          reward_5 + constant_reward)
-        balance_6 = acb.coin.balance_of(accounts[6])
+        balance_6 = self._coin.balance_of(accounts[6])
         deposit_6[now] = int(balance_6 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[6], Oracle.encrypt(
@@ -1979,20 +1981,20 @@ class ACBUnitTest(unittest.TestCase):
             self._default_level, 12),
                          (True, True, deposit_6[now], deposit_6[(now - 2) % 3],
                           reward_6 + constant_reward, False))
-        self.assertEqual(acb.coin.balance_of(accounts[6]),
+        self.assertEqual(self._coin.balance_of(accounts[6]),
                          balance_6 - deposit_6[now] + deposit_6[(now - 2) % 3] +
                          reward_6 + constant_reward)
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._open_market_operation.coin_budget,
                          self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + self._epoch_duration)
         self.set_tax()
 
-        coin_supply = acb.coin.total_supply
+        coin_supply = self._coin.total_supply
         reward_total = 0 + self._tax
         constant_reward = int((100 - self._proportional_reward_rate) *
                               reward_total / (3 * 100))
@@ -2011,7 +2013,7 @@ class ACBUnitTest(unittest.TestCase):
                            (deposit_total * 100))
         burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 3)
-        balance_4 = acb.coin.balance_of(accounts[4])
+        balance_4 = self._coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
@@ -2020,10 +2022,10 @@ class ACBUnitTest(unittest.TestCase):
                          (True, True, deposit_4[now], deposit_4[(now - 2) % 3],
                           reward_4 + constant_reward, True))
         self.assertEqual(acb.oracle_level, self._default_level)
-        self.assertEqual(acb.coin.balance_of(accounts[4]),
+        self.assertEqual(self._coin.balance_of(accounts[4]),
                          balance_4 - deposit_4[now] + deposit_4[(now - 2) % 3] +
                          reward_4 + constant_reward)
-        balance_5 = acb.coin.balance_of(accounts[5])
+        balance_5 = self._coin.balance_of(accounts[5])
         deposit_5[now] = int(balance_5 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[5], Oracle.encrypt(
@@ -2031,10 +2033,10 @@ class ACBUnitTest(unittest.TestCase):
             self._default_level, 13),
                          (True, True, deposit_5[now], deposit_5[(now - 2) % 3],
                           reward_5 + constant_reward, False))
-        self.assertEqual(acb.coin.balance_of(accounts[5]),
+        self.assertEqual(self._coin.balance_of(accounts[5]),
                          balance_5 - deposit_5[now] + deposit_5[(now - 2) % 3] +
                          reward_5 + constant_reward)
-        balance_6 = acb.coin.balance_of(accounts[6])
+        balance_6 = self._coin.balance_of(accounts[6])
         deposit_6[now] = int(balance_6 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[6], Oracle.encrypt(
@@ -2042,20 +2044,20 @@ class ACBUnitTest(unittest.TestCase):
             self._default_level, 13),
                          (True, True, deposit_6[now], deposit_6[(now - 2) % 3],
                           reward_6 + constant_reward, False))
-        self.assertEqual(acb.coin.balance_of(accounts[6]),
+        self.assertEqual(self._coin.balance_of(accounts[6]),
                          balance_6 - deposit_6[now] + deposit_6[(now - 2) % 3] +
                          reward_6 + constant_reward)
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._open_market_operation.coin_budget,
                          self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + self._epoch_duration)
         self.set_tax()
 
-        coin_supply = acb.coin.total_supply
+        coin_supply = self._coin.total_supply
         reclaim_4 = 0
         in_threshold = False
         if (self._level_max - 1 - self._default_level <=
@@ -2077,7 +2079,7 @@ class ACBUnitTest(unittest.TestCase):
                            (deposit_total * 100))
         burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 2)
-        balance_4 = acb.coin.balance_of(accounts[4])
+        balance_4 = self._coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
@@ -2085,9 +2087,9 @@ class ACBUnitTest(unittest.TestCase):
             self._default_level, 14),
                          (True, True, deposit_4[now], reclaim_4, 0, True))
         self.assertEqual(acb.oracle_level, self._default_level)
-        self.assertEqual(acb.coin.balance_of(accounts[4]),
+        self.assertEqual(self._coin.balance_of(accounts[4]),
                          balance_4 - deposit_4[now] + reclaim_4)
-        balance_5 = acb.coin.balance_of(accounts[5])
+        balance_5 = self._coin.balance_of(accounts[5])
         deposit_5[now] = int(balance_5 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[5], Oracle.encrypt(
@@ -2095,10 +2097,10 @@ class ACBUnitTest(unittest.TestCase):
             self._default_level, 14),
                          (True, True, deposit_5[now], deposit_5[(now - 2) % 3],
                           reward_5 + constant_reward, False))
-        self.assertEqual(acb.coin.balance_of(accounts[5]),
+        self.assertEqual(self._coin.balance_of(accounts[5]),
                          balance_5 - deposit_5[now] + deposit_5[(now - 2) % 3] +
                          reward_5 + constant_reward)
-        balance_6 = acb.coin.balance_of(accounts[6])
+        balance_6 = self._coin.balance_of(accounts[6])
         deposit_6[now] = int(balance_6 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[6], Oracle.encrypt(
@@ -2106,13 +2108,13 @@ class ACBUnitTest(unittest.TestCase):
             self._default_level, 14),
                          (True, True, deposit_6[now], deposit_6[(now - 2) % 3],
                           reward_6 + constant_reward, False))
-        self.assertEqual(acb.coin.balance_of(accounts[6]),
+        self.assertEqual(self._coin.balance_of(accounts[6]),
                          balance_6 - deposit_6[now] + deposit_6[(now - 2) % 3] +
                          reward_6 + constant_reward)
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._open_market_operation.coin_budget,
                          self.mint_at_default_level())
 
         # all levels
@@ -2121,7 +2123,7 @@ class ACBUnitTest(unittest.TestCase):
         self.set_tax()
         self.reset_balances()
 
-        coin_supply = acb.coin.total_supply
+        coin_supply = self._coin.total_supply
         reward_total = 0 + self._tax
         constant_reward = int((100 - self._proportional_reward_rate) *
                               reward_total / (3 * 100))
@@ -2135,7 +2137,7 @@ class ACBUnitTest(unittest.TestCase):
         burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 1 + deposit_5[(now - 2) % 3] +
                           deposit_6[(now - 2) % 3])
-        balance_4 = acb.coin.balance_of(accounts[4])
+        balance_4 = self._coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
@@ -2144,20 +2146,20 @@ class ACBUnitTest(unittest.TestCase):
                          (True, True, deposit_4[now], deposit_4[(now - 2) % 3],
                           reward_4 + constant_reward, True))
         self.assertEqual(acb.oracle_level, self._default_level)
-        self.assertEqual(acb.coin.balance_of(accounts[4]),
+        self.assertEqual(self._coin.balance_of(accounts[4]),
                          balance_4 - deposit_4[now] + deposit_4[(now - 2) % 3] +
                          reward_4 + constant_reward)
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._open_market_operation.coin_budget,
                          self.mint_at_default_level())
 
         now = (now + 1) % 3
         acb.set_timestamp(acb.get_timestamp() + self._epoch_duration)
         self.set_tax()
 
-        coin_supply = acb.coin.total_supply
+        coin_supply = self._coin.total_supply
         reward_total = (deposit_5[(now - 2) % 3] + deposit_6[(now - 2) % 3] +
                         self._tax)
         constant_reward = int((100 - self._proportional_reward_rate) *
@@ -2170,7 +2172,7 @@ class ACBUnitTest(unittest.TestCase):
                            (deposit_total * 100))
         burned[now] = (reward_total - reward_4 - reward_5 - reward_6 -
                           constant_reward * 1)
-        balance_4 = acb.coin.balance_of(accounts[4])
+        balance_4 = self._coin.balance_of(accounts[4])
         deposit_4[now] = int(balance_4 * self._deposit_rate / 100)
         self.assertEqual(acb.vote(
             accounts[4], Oracle.encrypt(
@@ -2178,24 +2180,24 @@ class ACBUnitTest(unittest.TestCase):
                          (True, True, deposit_4[now], deposit_4[(now - 2) % 3],
                           reward_4 + constant_reward, True))
         self.assertEqual(acb.oracle_level, self._default_level)
-        self.assertEqual(acb.coin.balance_of(accounts[4]),
+        self.assertEqual(self._coin.balance_of(accounts[4]),
                          balance_4 - deposit_4[now] + deposit_4[(now - 2) % 3] +
                          reward_4 + constant_reward)
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._coin.total_supply,
                          coin_supply -
                          burned[(now - 1) % 3])
-        self.assertEqual(self.open_market_operation.coin_budget,
+        self.assertEqual(self._open_market_operation.coin_budget,
                          self.mint_at_default_level())
 
-        self.assertEqual(self.bond.total_supply, 0)
-        self.assertEqual(self.bond_operation.bond_budget, 0)
-        self.assertEqual(self.bond_operation.update_bond_budget(
-            -self._bond_price * 2, acb.oracle.epoch_id), 0)
-        self.assertEqual(self.bond.total_supply, 0)
-        self.assertEqual(self.bond_operation.bond_budget, 2)
-        t0 = acb.oracle.epoch_id + self._bond_redemption_period
+        self.assertEqual(self._bond.total_supply, 0)
+        self.assertEqual(self._bond_operation.bond_budget, 0)
+        self.assertEqual(self._bond_operation.update_bond_budget(
+            -self._bond_price * 2, self._oracle.epoch_id), 0)
+        self.assertEqual(self._bond.total_supply, 0)
+        self.assertEqual(self._bond_operation.bond_budget, 2)
+        t0 = self._oracle.epoch_id + self._bond_redemption_period
         self.assertEqual(acb.purchase_bonds(accounts[1], 2), t0)
-        self.assertEqual(self.bond.total_supply, 2)
+        self.assertEqual(self._bond.total_supply, 2)
 
         tax_total = 0
         period = 1
@@ -2204,11 +2206,11 @@ class ACBUnitTest(unittest.TestCase):
             now = (now + 1) % 3
             acb.set_timestamp(acb.get_timestamp() + self._epoch_duration)
 
-            self.assertEqual(self.bond.total_supply, 2)
+            self.assertEqual(self._bond.total_supply, 2)
             valid_bond_supply = 2 if (
                 period < self._bond_redemption_period +
                 self._bond_redeemable_period) else 0
-            coin_supply = acb.coin.total_supply
+            coin_supply = self._coin.total_supply
             reward_total = tax_total
             constant_reward = int((100 - self._proportional_reward_rate) *
                                   reward_total / (1 * 100))
@@ -2219,7 +2221,7 @@ class ACBUnitTest(unittest.TestCase):
                                reward_total * deposit_4[(now - 2) % 3] /
                                (deposit_total * 100))
             burned[now] = (reward_total - reward_4 - constant_reward * 1)
-            balance_4 = acb.coin.balance_of(accounts[4])
+            balance_4 = self._coin.balance_of(accounts[4])
             deposit_4[now] = int(balance_4 * self._deposit_rate / 100)
             self.assertEqual(acb.vote(
                 accounts[4], Oracle.encrypt(
@@ -2233,7 +2235,7 @@ class ACBUnitTest(unittest.TestCase):
             
             coin_budget = 0
             bond_budget = 0
-            delta = int(self.acb.coin.total_supply *
+            delta = int(self._coin.total_supply *
                         (self._level_to_exchange_rate[level - 2] - 10) / 10)
             delta = int(delta * self._damping_factor / 100)
             if delta == 0:
@@ -2255,34 +2257,34 @@ class ACBUnitTest(unittest.TestCase):
             period += 1
 
             self.assertEqual(acb.oracle_level, level - 2)
-            self.assertEqual(acb.coin.balance_of(accounts[4]),
+            self.assertEqual(self._coin.balance_of(accounts[4]),
                              balance_4 - deposit_4[now] +
                              deposit_4[(now - 2) % 3] +
                              reward_4 + constant_reward)
-            self.assertEqual(acb.coin.total_supply,
+            self.assertEqual(self._coin.total_supply,
                              coin_supply -
                              burned[(now - 1) % 3])
-            self.assertEqual(self.bond.total_supply, 2)
-            self.assertEqual(self.bond_operation.bond_budget, bond_budget)
+            self.assertEqual(self._bond.total_supply, 2)
+            self.assertEqual(self._bond_operation.bond_budget, bond_budget)
             self.assertEqual(
-                self.bond_operation.valid_bond_supply(acb.oracle.epoch_id),
+                self._bond_operation.valid_bond_supply(self._oracle.epoch_id),
                 valid_bond_supply)
-            self.assertEqual(self.open_market_operation.coin_budget,
+            self.assertEqual(self._open_market_operation.coin_budget,
                              coin_budget)
 
             tax_total = 0
-            self.assertEqual(acb.coin.balance_of(acb.coin.tax_account), 0)
+            self.assertEqual(self._coin.balance_of(self._coin.tax_account), 0)
             for transfer in [0, 1234, 1111]:
                 tax = int(transfer * self._tax_rate / 100)
-                balance_1 = acb.coin.balance_of(accounts[1])
-                balance_2 = acb.coin.balance_of(accounts[2])
-                balance_tax = acb.coin.balance_of(acb.coin.tax_account)
-                acb.coin.transfer(accounts[1], accounts[2], transfer)
-                self.assertEqual(acb.coin.balance_of(accounts[1]),
+                balance_1 = self._coin.balance_of(accounts[1])
+                balance_2 = self._coin.balance_of(accounts[2])
+                balance_tax = self._coin.balance_of(self._coin.tax_account)
+                self._coin.transfer(accounts[1], accounts[2], transfer)
+                self.assertEqual(self._coin.balance_of(accounts[1]),
                                  balance_1 - transfer)
-                self.assertEqual(acb.coin.balance_of(accounts[2]),
+                self.assertEqual(self._coin.balance_of(accounts[2]),
                                  balance_2 + transfer - tax)
-                self.assertEqual(acb.coin.balance_of(acb.coin.tax_account),
+                self.assertEqual(self._coin.balance_of(self._coin.tax_account),
                                  balance_tax + tax)
                 tax_total += tax
 
@@ -2291,20 +2293,20 @@ class ACBUnitTest(unittest.TestCase):
                          valid_bond_supply)
 
         self.reset_balances();
-        self.assertEqual(self.bond.total_supply, 0)
-        self.assertEqual(acb.coin.total_supply,
+        self.assertEqual(self._bond.total_supply, 0)
+        self.assertEqual(self._coin.total_supply,
                          self._initial_coin_supply + deposit_4[(now - 2) % 3] +
                          deposit_4[(now - 1) % 3] + burned[(now - 1) % 3] +
                          tax_total)
         
         # bond operation
         self.reset_balances();
-        acb.coin.move(accounts[1], accounts[2], self._bond_price * 60)
-        self.assertEqual(self.bond_operation.update_bond_budget(
-            -self._bond_price * 100, acb.oracle.epoch_id), 0)
-        self.assertEqual(self.bond.total_supply, 0)
-        self.assertEqual(self.bond_operation.bond_budget, 100)
-        t1 = acb.oracle.epoch_id + self._bond_redemption_period
+        self._coin.move(accounts[1], accounts[2], self._bond_price * 60)
+        self.assertEqual(self._bond_operation.update_bond_budget(
+            -self._bond_price * 100, self._oracle.epoch_id), 0)
+        self.assertEqual(self._bond.total_supply, 0)
+        self.assertEqual(self._bond_operation.bond_budget, 100)
+        t1 = self._oracle.epoch_id + self._bond_redemption_period
         with self.assertRaises(Exception):
             acb.purchase_bonds(accounts[1], 0)
         with self.assertRaises(Exception):
@@ -2312,66 +2314,66 @@ class ACBUnitTest(unittest.TestCase):
         with self.assertRaises(Exception):
             acb.purchase_bonds(accounts[2], 61)
         self.assertEqual(acb.purchase_bonds(accounts[1], 10), t1)
-        self.assertEqual(self.bond.total_supply, 10)
-        self.assertEqual(self.bond_operation.bond_budget, 90)
+        self.assertEqual(self._bond.total_supply, 10)
+        self.assertEqual(self._bond_operation.bond_budget, 90)
         self.assertEqual(acb.purchase_bonds(accounts[2], 20), t1)
-        self.assertEqual(self.bond.total_supply, 30)
-        self.assertEqual(self.bond_operation.bond_budget, 70)
+        self.assertEqual(self._bond.total_supply, 30)
+        self.assertEqual(self._bond_operation.bond_budget, 70)
         
         self.advance_epoch(1)
-        self.assertEqual(self.bond_operation.update_bond_budget(
-            -self._bond_price * 70, acb.oracle.epoch_id), 0)
-        self.assertEqual(self.bond.total_supply, 30)
-        self.assertEqual(self.bond_operation.bond_budget, 70)
-        t2 = acb.oracle.epoch_id + self._bond_redemption_period
+        self.assertEqual(self._bond_operation.update_bond_budget(
+            -self._bond_price * 70, self._oracle.epoch_id), 0)
+        self.assertEqual(self._bond.total_supply, 30)
+        self.assertEqual(self._bond_operation.bond_budget, 70)
+        t2 = self._oracle.epoch_id + self._bond_redemption_period
         self.assertEqual(acb.purchase_bonds(accounts[1], 30), t2)
-        self.assertEqual(self.bond.total_supply, 60)
-        self.assertEqual(self.bond_operation.bond_budget, 40)
+        self.assertEqual(self._bond.total_supply, 60)
+        self.assertEqual(self._bond_operation.bond_budget, 40)
         self.assertEqual(acb.purchase_bonds(accounts[2], 40), t2)
-        self.assertEqual(self.bond.total_supply, 100)
-        self.assertEqual(self.bond_operation.bond_budget, 0)
+        self.assertEqual(self._bond.total_supply, 100)
+        self.assertEqual(self._bond_operation.bond_budget, 0)
         with self.assertRaises(Exception):
             acb.purchase_bonds(accounts[1], 1)
         with self.assertRaises(Exception):
             acb.purchase_bonds(accounts[2], 1)
         self.advance_epoch(self._bond_redemption_period - 1)
         
-        self.assertEqual(self.bond_operation.update_bond_budget(
-            self._bond_redemption_price * 1, acb.oracle.epoch_id), 0)
-        self.assertEqual(self.bond_operation.bond_budget, -1)
-        self.assertEqual(self.bond_operation.update_bond_budget(
-            self._bond_redemption_price * 100, acb.oracle.epoch_id), 0)
-        self.assertEqual(self.bond_operation.bond_budget, -100)
-        self.assertEqual(self.bond_operation.update_bond_budget(
-            self._bond_redemption_price * 101, acb.oracle.epoch_id),
+        self.assertEqual(self._bond_operation.update_bond_budget(
+            self._bond_redemption_price * 1, self._oracle.epoch_id), 0)
+        self.assertEqual(self._bond_operation.bond_budget, -1)
+        self.assertEqual(self._bond_operation.update_bond_budget(
+            self._bond_redemption_price * 100, self._oracle.epoch_id), 0)
+        self.assertEqual(self._bond_operation.bond_budget, -100)
+        self.assertEqual(self._bond_operation.update_bond_budget(
+            self._bond_redemption_price * 101, self._oracle.epoch_id),
             self._bond_redemption_price)
-        self.assertEqual(self.bond_operation.bond_budget, -100)
-        self.assertEqual(self.bond_operation.update_bond_budget(
-            self._bond_redemption_price * 40, acb.oracle.epoch_id), 0)
-        self.assertEqual(self.bond_operation.bond_budget, -40)
+        self.assertEqual(self._bond_operation.bond_budget, -100)
+        self.assertEqual(self._bond_operation.update_bond_budget(
+            self._bond_redemption_price * 40, self._oracle.epoch_id), 0)
+        self.assertEqual(self._bond_operation.bond_budget, -40)
         
         self.assertEqual(acb.redeem_bonds(accounts[1], [t1, t2]), 40)
-        self.assertEqual(self.bond.total_supply, 60)
-        self.assertEqual(self.bond_operation.bond_budget, 0)
+        self.assertEqual(self._bond.total_supply, 60)
+        self.assertEqual(self._bond_operation.bond_budget, 0)
         self.assertEqual(acb.redeem_bonds(accounts[2], [t1, t2]), 20)
-        self.assertEqual(self.bond.total_supply, 40)
-        self.assertEqual(self.bond_operation.bond_budget, 20)
+        self.assertEqual(self._bond.total_supply, 40)
+        self.assertEqual(self._bond_operation.bond_budget, 20)
         
         self.advance_epoch(1)
         self.assertEqual(acb.redeem_bonds(accounts[1], [t1, t2]), 0)
-        self.assertEqual(self.bond.total_supply, 40)
-        self.assertEqual(self.bond_operation.bond_budget, 0)
+        self.assertEqual(self._bond.total_supply, 40)
+        self.assertEqual(self._bond_operation.bond_budget, 0)
         self.assertEqual(acb.redeem_bonds(accounts[2], [t1, t2]), 40)
-        self.assertEqual(self.bond.total_supply, 0)
-        self.assertEqual(self.bond_operation.bond_budget, 40)
+        self.assertEqual(self._bond.total_supply, 0)
+        self.assertEqual(self._bond_operation.bond_budget, 40)
         self.assertEqual(acb.redeem_bonds(accounts[2], [t1, t2]), 0)
 
 
     def advance_epoch(self, advance):
         for i in range(advance):
-            self.acb.set_timestamp(
-                self.acb.get_timestamp() + self._epoch_duration)
-            self.acb.vote(self.accounts[7], Oracle.encrypt(
+            self._acb.set_timestamp(
+                self._acb.get_timestamp() + self._epoch_duration)
+            self._acb.vote(self.accounts[7], Oracle.encrypt(
                 self.accounts[7], self._level_max, 7777),
                      self._level_max, 7777)
 
@@ -2388,23 +2390,24 @@ class ACBUnitTest(unittest.TestCase):
                 in expected)
 
     def set_tax(self):
-        self.assertEqual(self.acb.coin.balance_of(self.acb.coin.tax_account), 0)
-        self.acb.coin.mint(self.acb.coin.tax_account, self._tax)
+        self.assertEqual(self._coin.balance_of(
+            self._coin.tax_account), 0)
+        self._coin.mint(self._coin.tax_account, self._tax)
 
     def mint_at_default_level(self):
-        delta = int(self.acb.coin.total_supply * (11 - 10) / 10)
+        delta = int(self._coin.total_supply * (11 - 10) / 10)
         delta = int(delta * self._damping_factor / 100)
         mint = (int(delta / self._bond_redemption_price) *
                 self._bond_redemption_price)
         assert(delta > 0)
-        self.assertEqual(self.bond.total_supply, 0)
-        self.assertEqual(self.bond_operation.bond_budget, 0)
+        self.assertEqual(self._bond.total_supply, 0)
+        self.assertEqual(self._bond_operation.bond_budget, 0)
         return mint
 
     def reset_balances(self):
         for account in self.accounts:
-            self.acb.coin.burn(account, self.acb.coin.balance_of(account))
-        self.acb.coin.mint(self.accounts[1], self._initial_coin_supply)
+            self._coin.burn(account, self._coin.balance_of(account))
+        self._coin.mint(self.accounts[1], self._initial_coin_supply)
 
 
 def main():
