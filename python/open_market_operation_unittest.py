@@ -99,7 +99,7 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
                         self.price_change_interval * 2 - 1,
                         self.price_change_interval * 22]:
                     for requested_eth_amount in [
-                            1, int(updated_coin_budget * start_price / 4),
+                            0, 1, int(updated_coin_budget * start_price / 4),
                             int(updated_coin_budget * start_price / 8),
                             updated_coin_budget * start_price + 1]:
                         if coin_budget == 0:
@@ -143,7 +143,7 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
                         self.price_change_interval * 2 - 1,
                         self.price_change_interval * 22]:
                     for requested_coin_amount in [
-                            1, int(-updated_coin_budget / 4),
+                            0, 1, int(-updated_coin_budget / 4),
                             int(-updated_coin_budget / 8),
                             -updated_coin_budget + 1]:
                         if coin_budget == 0:

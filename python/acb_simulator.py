@@ -41,13 +41,18 @@ class ACBSimulator(unittest.TestCase):
                  damping_factor,
                  level_to_exchange_rate,
                  reclaim_threshold,
+                 price_change_interval,
+                 price_change_percentage,
+                 start_price_multiplier,
                  voter_count,
                  iteration):
         super().__init__()
 
         print('bond_price=%d redemp_price=%d redemp_period=%d '
               'redeem_period=%d epoch_dur=%d reward_rate=%d '
-              'deposit_rate=%d damping=%d reclaim=%d voter=%d iter=%d' %
+              'deposit_rate=%d damping=%d reclaim=%d '
+              'price_interval=%d price_percent=%d price_multiplier=%d '
+              'voter=%d iter=%d' %
               (bond_price,
                bond_redemption_price,
                bond_redemption_period,
@@ -57,6 +62,9 @@ class ACBSimulator(unittest.TestCase):
                deposit_rate,
                damping_factor,
                reclaim_threshold,
+               price_change_interval,
+               price_change_percentage,
+               start_price_multiplier,
                voter_count,
                iteration))
         print('exchange_rate=', end='')
@@ -70,6 +78,9 @@ class ACBSimulator(unittest.TestCase):
         self._deposit_rate = deposit_rate
         self._damping_factor = damping_factor
         self._reclaim_threshold = reclaim_threshold
+        self._price_change_interval = price_change_interval
+        self._price_change_percentage = price_change_percentage
+        self._start_price_multiplier = start_price_multiplier
         self._voter_count = voter_count
         self._iteration = iteration
         self._level_to_exchange_rate = level_to_exchange_rate
@@ -90,6 +101,9 @@ class ACBSimulator(unittest.TestCase):
             self._bond_price, self._bond_redemption_price,
             self._bond_redemption_period,
             self._bond_redeemable_period)
+        self._open_market_operation.override_constants_for_testing(
+            self._price_change_interval, self._price_change_percentage,
+            self._start_price_multiplier)
         self._acb.override_constants_for_testing(
             self._epoch_duration, self._deposit_rate,
             self._damping_factor, self._level_to_exchange_rate)
@@ -120,6 +134,8 @@ class ACBSimulator(unittest.TestCase):
                 self.redeem_hit = 0
                 self.purchase_hit = 0
                 self.purchase_count = 0
+                self.increased_coin_supply = 0
+                self.decreased_coin_supply = 0
                 self.delta = 0
                 self.mint = 0
                 self.lost = 0
@@ -146,6 +162,8 @@ class ACBSimulator(unittest.TestCase):
                 self.total_redeem_hit = 0
                 self.total_purchase_hit = 0
                 self.total_purchase_count = 0
+                self.total_increased_coin_supply = 0
+                self.total_decreased_coin_supply = 0
                 self.total_mint = 0
                 self.total_lost = 0
                 self.total_tax = 0
@@ -170,6 +188,8 @@ class ACBSimulator(unittest.TestCase):
                 self.total_redeem_hit += self.redeem_hit
                 self.total_purchase_hit += self.purchase_hit
                 self.total_purchase_count += self.purchase_count
+                self.total_increased_coin_supply += self.increased_coin_supply
+                self.total_decreased_coin_supply += self.decreased_coin_supply
                 self.total_mint += self.mint
                 self.total_lost += self.lost
                 self.total_tax += self.tax
@@ -210,6 +230,9 @@ class ACBSimulator(unittest.TestCase):
             valid_bond_supply = self._bond_operation.valid_bond_supply(epoch_id)
             bond_budget = self._bond_operation.bond_budget
             current_epoch_start = self._acb.current_epoch_start
+
+            self.purchase_coins()
+            self.sell_coins()
 
             self.redeem_bonds()
             self.purchase_bonds()
@@ -254,7 +277,7 @@ class ACBSimulator(unittest.TestCase):
                       'reward_hit=%d/%d=%d%% purchase_hit=%d/%d=%d%% '
                       'redeem_hit=%d/%d=%d%% '
                       'redemptions=%d/%d=%d%% fast_redeem=%d/%d=%d%% '
-                      'expired=%d '
+                      'expired=%d increased_supply=% decreased_supply=%d '
                       'delta=%d mint=%d lost=%d coin_supply=%d->%d->%d=%d '
                       'bond_supply=%d->%d valid_bond_supply=%d->%d '
                       'bond_budget=%d->%d tax=%d' %
@@ -291,6 +314,8 @@ class ACBSimulator(unittest.TestCase):
                        divide_or_zero(100 * self.metrics.fast_redeemed_bonds,
                                       self.metrics.redeemed_bonds),
                        self.metrics.expired_bonds,
+                       self.metrics.increased_coin_supply,
+                       self.metrics.decreased_coin_supply,
                        self.metrics.delta,
                        self.metrics.mint,
                        self.metrics.lost,
@@ -313,6 +338,7 @@ class ACBSimulator(unittest.TestCase):
               'reward_hit=%d/%d=%d%% '
               'purchase_hit=%d/%d=%d%% redeem_hit=%d/%d=%d%% '
               'redemptions=%d/%d=%d%% fast_redeem=%d/%d=%d%% expired=%d '
+              'increased_supply-decreased_supply=%d-%d=%d '
               'supply=%d/%d/%d coin_supply=%d%% mint=%d lost=%d '
               'bond_supply=%d valid_bond_supply=%d tax=%d' %
               (self._oracle.epoch_id,
@@ -348,6 +374,10 @@ class ACBSimulator(unittest.TestCase):
                divide_or_zero(100 * self.metrics.total_fast_redeemed_bonds,
                               self.metrics.total_redeemed_bonds),
                self.metrics.total_expired_bonds,
+               self.metrics.total_increased_coin_supply,
+               self.metrics.total_decreased_coin_supply,
+               (self.metrics.total_increased_coin_supply -
+                self.metrics.total_decreased_coin_supply),
                self.metrics.supply_increased,
                self.metrics.supply_nochange,
                self.metrics.supply_decreased,
@@ -391,6 +421,81 @@ class ACBSimulator(unittest.TestCase):
         self.metrics.tax = tax_total
         return tax_total
 
+    def purchase_coins(self):
+        epoch_id = self._oracle.epoch_id
+        start_index = random.randint(0, self._voter_count - 1)
+        for index in range(self._voter_count):
+            coin_budget = self._open_market_operation.coin_budget
+            if coin_budget <= 0:
+                break
+
+            intervals = random.randint(0, 6)
+            original_timestamp = self._acb.get_timestamp()
+            self._acb.set_timestamp(
+                original_timestamp + self._price_change_interval * intervals)
+            price = self._open_market_operation.start_price
+            for i in range(intervals):
+                price = int(price * (
+                    100 - self._price_change_percentage) / 100)
+            if price == 0:
+                price = 1
+            
+            voter = self._voters[(start_index + index) % self._voter_count]
+            requested_coin_amount = int(coin_budget / self._voter_count)
+            
+            coin_supply = self._coin.total_supply
+            voter.balance += requested_coin_amount
+            self.assertEqual(
+                self._acb.purchase_coins(
+                    voter.address, requested_coin_amount * price),
+                (requested_coin_amount * price, requested_coin_amount))
+            self._acb.set_timestamp(original_timestamp)
+
+            self.assertEqual(self._coin.balance_of(voter.address),
+                             voter.balance)
+            self.assertEqual(self._coin.total_supply,
+                             coin_supply + requested_coin_amount)
+
+            self.metrics.increased_coin_supply += requested_coin_amount
+            
+    def sell_coins(self):
+        epoch_id = self._oracle.epoch_id
+        start_index = random.randint(0, self._voter_count - 1)
+        for index in range(self._voter_count):
+            coin_budget = self._open_market_operation.coin_budget
+            if coin_budget >= 0:
+                break
+            
+            intervals = random.randint(0, 6)
+            original_timestamp = self._acb.get_timestamp()
+            self._acb.set_timestamp(
+                original_timestamp + self._price_change_interval * intervals)
+            price = self._open_market_operation.start_price
+            for i in range(intervals):
+                price = int(price * (
+                    100 + self._price_change_percentage) / 100)
+            
+            voter = self._voters[(start_index + index) % self._voter_count]
+            requested_coin_amount = min(
+                int(-coin_budget / self._voter_count), voter.balance)
+            requested_coin_amount = min(
+                requested_coin_amount, int(self._acb.eth_balance / price))
+            
+            coin_supply = self._coin.total_supply
+            voter.balance -= requested_coin_amount
+            self.assertEqual(
+                self._acb.sell_coins(
+                    voter.address, requested_coin_amount),
+                (requested_coin_amount * price, requested_coin_amount))
+            self._acb.set_timestamp(original_timestamp)
+
+            self.assertEqual(self._coin.balance_of(voter.address),
+                             voter.balance)
+            self.assertEqual(self._coin.total_supply,
+                             coin_supply - requested_coin_amount)
+            
+            self.metrics.decreased_coin_supply += requested_coin_amount
+    
     def purchase_bonds(self):
         epoch_id = self._oracle.epoch_id
         start_index = random.randint(0, self._voter_count - 1)
@@ -763,12 +868,15 @@ def main():
         1000,
         12,
         2,
-        7,
+        7 * 24 * 60 * 60,
         90,
         10,
         10,
         [6, 7, 8, 9, 10, 11, 12, 13, 14],
         1,
+        8 * 60 * 60,
+        20,
+        3,
         200,
         iteration)
     test.run()
@@ -788,6 +896,10 @@ def main():
                                         [6, 7, 8, 9, 10, 11, 12, 13, 14]]:
                                     for reclaim_threshold in [0, 1, len(
                                             level_to_exchange_rate) - 1]:
+                                        price_change_interval = int(
+                                            epoch_duration / 21) + 1
+                                        price_change_percentage = 20
+                                        start_price_multiplier = 3
                                         for voter_count in [1, 200]:
                                             test = ACBSimulator(
                                                 bond_price,
@@ -800,6 +912,9 @@ def main():
                                                 damping_factor,
                                                 level_to_exchange_rate,
                                                 reclaim_threshold,
+                                                price_change_interval,
+                                                price_change_percentage,
+                                                start_price_multiplier,
                                                 voter_count,
                                                 iteration)
                                             test.run()

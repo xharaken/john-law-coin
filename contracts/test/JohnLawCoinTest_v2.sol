@@ -70,7 +70,6 @@ contract ACBForTesting_v2 is ACB_v2 {
 
   function setTimestamp(uint timestamp)
       public onlyOwner {
-    require(timestamp > _timestamp_for_testing, "st1");
     _timestamp_for_testing = timestamp;
   }
 

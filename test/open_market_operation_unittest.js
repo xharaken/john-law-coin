@@ -125,7 +125,7 @@ function parameterized_test(accounts,
           _price_change_interval * 2 - 1,
           _price_change_interval * 22]) {
           for (let requested_eth_amount of [
-            1, Math.trunc(updated_coin_budget * start_price / 4),
+            0, 1, Math.trunc(updated_coin_budget * start_price / 4),
             Math.trunc(updated_coin_budget * start_price / 8),
             updated_coin_budget * start_price + 1]) {
             if (coin_budget == 0) {
@@ -177,7 +177,7 @@ function parameterized_test(accounts,
           _price_change_interval * 2 - 1,
           _price_change_interval * 22]) {
           for (let requested_coin_amount of [
-            1, Math.trunc(-updated_coin_budget / 4),
+            0, 1, Math.trunc(-updated_coin_budget / 4),
             Math.trunc(-updated_coin_budget / 8),
             -updated_coin_budget + 1]) {
             if (coin_budget == 0) {

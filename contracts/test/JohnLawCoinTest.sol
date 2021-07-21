@@ -96,7 +96,6 @@ contract ACBForTesting is ACB {
 
   function setTimestamp(uint timestamp)
       public onlyOwner {
-    require(timestamp > _timestamp_for_testing, "st1");
     _timestamp_for_testing = timestamp;
   }
 

@@ -1164,7 +1164,8 @@ class OpenMarketOperation:
                            OpenMarketOperation.PRICE_CHANGE_INTERVAL)):
             price = int(price * (
                 100 - OpenMarketOperation.PRICE_CHANGE_PERCENTAGE) / 100)
-        assert(price > 0)
+        if price == 0:
+            price = 1
 
         # Calculate the amount of coins and ETH to be exchanged.
         coin_amount = int(requested_eth_amount / price)
@@ -1237,16 +1238,21 @@ class OpenMarketOperation:
     # None.
     def update_coin_budget(self, coin_budget):
         self.coin_budget = coin_budget
+        assert(self.latest_price > 0)
         if self.coin_budget > 0:
             self.start_price = (
                 self.latest_price *
                 OpenMarketOperation.START_PRICE_MULTIPILER)
+            assert(self.start_price > 0)
         elif self.coin_budget == 0:
             self.start_price = 0
         else:
             self.start_price = int(
                 self.latest_price /
                 OpenMarketOperation.START_PRICE_MULTIPILER)
+            if self.start_price == 0:
+                self.start_price = 1
+            assert(self.start_price > 0)
 
     
 #-------------------------------------------------------------------------------
@@ -1612,5 +1618,4 @@ class ACB:
 
     # Set the current timestamp in seconds to |timestamp|.
     def set_timestamp(self, timestamp):
-        assert(timestamp > self.timestamp)
         self.timestamp = timestamp
