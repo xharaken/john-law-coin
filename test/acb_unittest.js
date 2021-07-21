@@ -2531,7 +2531,8 @@ function parameterized_test(accounts,
     }
 
     now = mod(now + 1, 3);
-    await check_redeem_bonds([t0], {from: accounts[1]}, valid_bond_supply, 0);
+    await check_redeem_bonds([t0], {from: accounts[1]}, valid_bond_supply,
+                             2 - valid_bond_supply);
     await reset_balances(accounts);
 
     current = await get_current(sub_accounts, []);
@@ -2707,6 +2708,49 @@ function parameterized_test(accounts,
       await _coin.burn(accounts[2], 1);
     }, "Ownable");
 
+    await should_throw(async () => {
+      await _bond_operation.deprecate();
+    }, "Ownable");
+
+    await should_throw(async () => {
+      await _bond_operation.deprecate({from: accounts[1]});
+    }, "Ownable");
+
+    await should_throw(async () => {
+      await _bond_operation.updateBondBudget(0, 0);
+    }, "Ownable");
+
+    await should_throw(async () => {
+      await _bond_operation.updateBondBudget(0, 0, {from: accounts[1]});
+    }, "Ownable");
+
+    await should_throw(async () => {
+      await _bond_operation.purchaseBonds(accounts[1], 0, 0, _coin.address);
+    }, "Ownable");
+
+    await should_throw(async () => {
+      await _bond_operation.purchaseBonds(accounts[1], 0, 0, _coin.address,
+                                          {from: accounts[1]});
+    }, "Ownable");
+
+    await should_throw(async () => {
+      await _bond_operation.redeemBonds(accounts[1], [], 0, _coin.address);
+    }, "Ownable");
+
+    await should_throw(async () => {
+      await _bond_operation.redeemBonds(accounts[1], [], 0, _coin.address,
+                                        {from: accounts[1]});
+    }, "Ownable");
+
+    await should_throw(async () => {
+      await _bond_operation.transferOwnership(_acb.address);
+    }, "Ownable");
+
+    await should_throw(async () => {
+      await _bond_operation.transferOwnership(_acb.address,
+                                              {from: accounts[1]});
+    }, "Ownable");
+
     let bond = await JohnLawBond.at(await _bond_operation.bond_());
     await should_throw(async () => {
       await bond.mint(accounts[1], 1111, 1, {from: accounts[1]});
@@ -2749,6 +2793,31 @@ function parameterized_test(accounts,
       await oracle.revokeOwnership(_coin.address, {from: accounts[1]});
     }, "Ownable");
 
+    await should_throw(async () => {
+      await _logging.transferOwnership(_acb.address);
+    }, "Ownable");
+
+    await should_throw(async () => {
+      await _logging.transferOwnership(_acb.address,
+                                       {from: accounts[1]});
+    }, "Ownable");
+
+    await should_throw(async () => {
+      await _logging.vote(0, false, false, 0, 0, 0);
+    }, "Ownable");
+
+    await should_throw(async () => {
+      await _logging.vote(0, false, false, 0, 0, 0, {from: accounts[1]});
+    }, "Ownable");
+
+    await should_throw(async () => {
+      await _logging.purchaseBonds(0, 0);
+    }, "Ownable");
+
+    await should_throw(async () => {
+      await _logging.purchaseBonds(0, 0, {from: accounts[1]});
+    }, "Ownable");
+
     // Pausable
     await _acb.pause({from: accounts[1]});
     await _acb.pause({from: accounts[1]});
@@ -2760,6 +2829,10 @@ function parameterized_test(accounts,
 
     await should_throw(async () => {
       await _coin.transfer(accounts[2], 1, {from: accounts[1]});
+    }, "Pausable");
+
+    await should_throw(async () => {
+      await _acb.withdrawTips({from: accounts[1]});
     }, "Pausable");
 
     await should_throw(async () => {

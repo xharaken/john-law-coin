@@ -1499,7 +1499,8 @@ function parameterized_test(accounts,
     await _coin.mint(accounts[4], _deposit);
     balance = await balance_of(accounts[4]);
     await check_commit(accounts[4],
-                       await _oracle.encrypt(accounts[4], real_other_level, 4444),
+                       await _oracle.encrypt(
+                         accounts[4], real_other_level, 4444),
                        _deposit);
     assert.equal(await balance_of(accounts[4]), balance - _deposit);
     await _coin.mint(accounts[5], _deposit);
@@ -2058,7 +2059,8 @@ function parameterized_test(accounts,
     // Ownable
     await should_throw(async () => {
       await _oracle.commit(_coin.address, accounts[1],
-                           await _oracle.encrypt(accounts[1], _mode_level, 1111),
+                           await _oracle.encrypt(
+                             accounts[1], _mode_level, 1111),
                            _deposit,
                            {from: accounts[1]});
     }, "Ownable");
@@ -2095,7 +2097,8 @@ function parameterized_test(accounts,
 
     await should_throw(async () => {
       await _oracle.commit(_coin.address, accounts[2],
-                           await _oracle.encrypt(accounts[2], _mode_level, 1111),
+                           await _oracle.encrypt(
+                             accounts[2], _mode_level, 1111),
                            0,
                            {from: accounts[2]});
     }, "Ownable");
@@ -2116,7 +2119,8 @@ function parameterized_test(accounts,
                          {from: accounts[2]});
     await should_throw(async () => {
       await _oracle.commit(_coin.address, accounts[3],
-                           await _oracle.encrypt(accounts[3], _mode_level, 1111),
+                           await _oracle.encrypt(
+                             accounts[3], _mode_level, 1111),
                            0,
                            {from: accounts[3]});
     }, "Ownable");

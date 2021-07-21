@@ -1538,6 +1538,21 @@ class ACB:
             self.oracle.epoch_id, redeemed_bonds, expired_bonds)
         return redeemed_bonds
 
+    # Pays |requested_eth_amount| ETH and purchases coins from the open market
+    # operation.
+    #
+    # Parameters
+    # ----------------
+    # None.
+    #
+    # Returns
+    # ----------------
+    # A tuple of two values:
+    # - The amount of ETH the sender paied. This value can be smaller than
+    # |requested_eth_amount| when the ACB does not have enough coins in the
+    # open market operation pool. The remaining ETH is returned to the
+    # sender's wallet.
+    # - The amount of coins the sender purchased.
     def purchase_coins(self, sender, requested_eth_amount):
         elapsed_time = self.get_timestamp() - self.current_epoch_start_
         (eth_amount, coin_amount) = (
@@ -1547,6 +1562,21 @@ class ACB:
         self.eth_balance += eth_amount
         return (eth_amount, coin_amount)
 
+    # Pays |requested_coin_amount| coins and purchases ETH from the open market
+    # operation.
+    #
+    # Parameters
+    # ----------------
+    # None.
+    #
+    # Returns
+    # ----------------
+    # A tuple of two values:
+    # - The amount of ETH the sender purchased.
+    # - The amount of coins the sender paied. This value can be smaller than
+    # |requested_coin_amount| when the ACB does not have enough ETH in the
+    # open market operation pool. The remaining coins are returned to the
+    # sender's wallet.
     def sell_coins(self, sender, requested_coin_amount):
         # The user does not have enough coins.
         assert(self.coin.balance_of(sender) >= requested_coin_amount)
