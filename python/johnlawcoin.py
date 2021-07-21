@@ -1554,7 +1554,7 @@ class ACB:
     # sender's wallet.
     # - The amount of coins the sender purchased.
     def purchase_coins(self, sender, requested_eth_amount):
-        elapsed_time = self.get_timestamp() - self.current_epoch_start_
+        elapsed_time = self.get_timestamp() - self.current_epoch_start
         (eth_amount, coin_amount) = (
             self.open_market_operation.increase_coin_supply(
                 requested_eth_amount, elapsed_time))
@@ -1581,7 +1581,7 @@ class ACB:
         # The user does not have enough coins.
         assert(self.coin.balance_of(sender) >= requested_coin_amount)
         
-        elapsed_time = self.get_timestamp() - self.current_epoch_start_
+        elapsed_time = self.get_timestamp() - self.current_epoch_start
         (eth_amount, coin_amount) = (
             self.open_market_operation.decrease_coin_supply(
                 requested_coin_amount, elapsed_time))
