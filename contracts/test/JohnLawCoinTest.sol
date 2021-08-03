@@ -15,14 +15,14 @@ contract OpenMarketOperationForTesting is OpenMarketOperation {
                              uint price_change_percentage,
                              uint start_price_multiplier)
       public onlyOwner {
-      PRICE_CHANGE_INTERVAL = price_change_interval;
-      PRICE_CHANGE_PERCENTAGE = price_change_percentage;
-      START_PRICE_MULTIPILER = start_price_multiplier;
+    PRICE_CHANGE_INTERVAL = price_change_interval;
+    PRICE_CHANGE_PERCENTAGE = price_change_percentage;
+    START_PRICE_MULTIPILER = start_price_multiplier;
 
-      require(1 <= PRICE_CHANGE_INTERVAL, "oc1");
-      require(0 <= PRICE_CHANGE_PERCENTAGE && PRICE_CHANGE_PERCENTAGE <= 100,
-              "oc2");
-      require(1 <= START_PRICE_MULTIPILER, "oc3");
+    require(1 <= PRICE_CHANGE_INTERVAL, "oc1");
+    require(0 <= PRICE_CHANGE_PERCENTAGE && PRICE_CHANGE_PERCENTAGE <= 100,
+            "oc2");
+    require(1 <= START_PRICE_MULTIPILER, "oc3");
   }
 }
 
@@ -122,6 +122,11 @@ contract ACBForTesting is ACB {
 
   function updateBondBudget(int delta, uint epoch_id)
       public onlyOwner returns (uint) {
-      return bond_operation_.updateBondBudget(delta, epoch_id);
+    return bond_operation_.updateBondBudget(delta, epoch_id);
+  }
+
+  function updateCoinBudget(int coin_budget)
+      public onlyOwner {
+    open_market_operation_.updateCoinBudget(coin_budget);
   }
 }

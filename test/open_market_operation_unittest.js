@@ -227,6 +227,21 @@ function parameterized_test(accounts,
       }
     }
 
+    assert.equal(await web3.eth.getBalance(_operation.address), 0);
+    await _operation.addEthToPool(accounts[0], {value: 10});
+    assert.equal(await web3.eth.getBalance(_operation.address), 10);
+    await _operation.addEthToPool(accounts[0], {value: 100});
+    assert.equal(await web3.eth.getBalance(_operation.address), 110);
+    await _operation.removeEthFromPool(accounts[0], 20);
+    assert.equal(await web3.eth.getBalance(_operation.address), 90);
+    await should_throw(async () => {
+      await _operation.removeEthFromPool(accounts[0], 91);
+    }, "");
+    await _operation.removeEthFromPool(accounts[0], 90);
+    assert.equal(await web3.eth.getBalance(_operation.address), 0);
+    await _operation.removeEthFromPool(accounts[0], 0);
+    assert.equal(await web3.eth.getBalance(_operation.address), 0);
+
     async function check_increase_coin_supply(
       requested_eth_amount, elapsed_time, eth_amount, coin_amount) {
       let receipt = await _operation.increaseCoinSupply(
@@ -264,6 +279,12 @@ function parameterized_test(accounts,
     }, "Ownable");
     await should_throw(async () => {
       await _operation.updateCoinBudget(1, {from: accounts[1]});
+    }, "Ownable");
+    await should_throw(async () => {
+      await _operation.addEthToPool(accounts[0], {from: accounts[1]});
+    }, "Ownable");
+    await should_throw(async () => {
+      await _operation.removeEthFromPool(accounts[0], 1, {from: accounts[1]});
     }, "Ownable");
   });
 }

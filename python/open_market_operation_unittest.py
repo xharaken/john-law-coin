@@ -182,6 +182,20 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
                         self.assertEqual(operation.coin_budget, coin_budget)
                         self.assertEqual(operation.eth_balance, eth_balance)
 
+        self.assertEqual(operation.actual_eth_balance, 0)
+        operation.add_eth_to_pool(accounts[0], 10)
+        self.assertEqual(operation.actual_eth_balance, 10)
+        operation.add_eth_to_pool(accounts[0], 100)
+        self.assertEqual(operation.actual_eth_balance, 110)
+        operation.remove_eth_from_pool(accounts[0], 20)
+        self.assertEqual(operation.actual_eth_balance, 90)
+        with self.assertRaises(Exception):
+            operation.remove_eth_from_pool(accounts[0], 91)
+        operation.remove_eth_from_pool(accounts[0], 90)
+        self.assertEqual(operation.actual_eth_balance, 0)
+        operation.remove_eth_from_pool(accounts[0], 0)
+        self.assertEqual(operation.actual_eth_balance, 0)
+        
 
 def main():
     test = OpenMarketOperationUnitTest(8 * 60 * 60, 15, 3)

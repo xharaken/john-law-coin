@@ -5,6 +5,7 @@
 // This software is released under the MIT License.
 // http://opensource.org/licenses/mit-license.php
 
+/*
 const { deployProxy, upgradeProxy } = require('@openzeppelin/truffle-upgrades');
 const JohnLawCoin_v2 = artifacts.require("JohnLawCoin_v2");
 const JohnLawBond_v2 = artifacts.require("JohnLawBond_v2");
@@ -15,8 +16,10 @@ const ACB_v3 = artifacts.require("ACB_v3");
 const ACB_v4 = artifacts.require("ACB_v4");
 
 const ACB_ADDRESS = ACB_v3.address; // Update the value before testing.
+*/
 
 module.exports = async function (deployer) {
+  /*
   const old_acb = await ACB_v3.at(ACB_ADDRESS);
   await old_acb.pause();
   
@@ -38,4 +41,5 @@ module.exports = async function (deployer) {
   await acb.unpause();
   
   console.log("ACB_v4 address: ", acb.address);
+*/
 };

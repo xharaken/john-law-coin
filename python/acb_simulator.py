@@ -479,7 +479,8 @@ class ACBSimulator(unittest.TestCase):
             requested_coin_amount = min(
                 int(-coin_budget / self._voter_count), voter.balance)
             requested_coin_amount = min(
-                requested_coin_amount, int(self._acb.eth_balance / price))
+                requested_coin_amount,
+                int(self._open_market_operation.eth_balance / price))
             
             coin_supply = self._coin.total_supply
             voter.balance -= requested_coin_amount

@@ -10,6 +10,8 @@ const JohnLawCoin = artifacts.require("JohnLawCoin");
 const JohnLawBond = artifacts.require("JohnLawBond");
 const OracleForTesting = artifacts.require("OracleForTesting");
 const BondOperationForTesting = artifacts.require("BondOperationForTesting");
+const OpenMarketOperationForTesting =
+      artifacts.require("OpenMarketOperationForTesting");
 const Logging = artifacts.require("Logging");
 const ACBForTesting = artifacts.require("ACBForTesting");
 const JohnLawCoin_v2 = artifacts.require("JohnLawCoin_v2");
@@ -32,7 +34,7 @@ const randint = common.randint;
 
 contract("ACBSimulator", function (accounts) {
   let args = common.custom_arguments();
-  assert.isTrue(args.length == 13);
+  assert.isTrue(args.length == 16);
   parameterized_test(accounts,
                      args[0],
                      args[1],
@@ -46,7 +48,10 @@ contract("ACBSimulator", function (accounts) {
                      args[9],
                      args[10],
                      args[11],
-                     args[12]);
+                     args[12],
+                     args[13],
+                     args[14],
+                     args[15]);
 });
 
 function parameterized_test(accounts,
@@ -60,6 +65,9 @@ function parameterized_test(accounts,
                             _damping_factor,
                             _level_to_exchange_rate,
                             _reclaim_threshold,
+                            _price_change_interval,
+                            _price_change_percentage,
+                            _start_price_multiplier,
                             _voter_count,
                             _iteration,
                             _should_upgrade) {
@@ -74,6 +82,9 @@ function parameterized_test(accounts,
       " damping_factor=" + _damping_factor +
       " level_to_exchange_rate=" + _level_to_exchange_rate +
       " reclaim=" + _reclaim_threshold +
+      " price_interval=" + _price_change_interval +
+      " price_percent=" + _price_change_percentage +
+      " price_multiplier=" + _start_price_multiplier +
       " voter=" + _voter_count +
       " iter=" + _iteration +
       " should_upgrade=" + _should_upgrade;
@@ -94,9 +105,15 @@ function parameterized_test(accounts,
     let _bond_operation =
         await deployProxy(BondOperationForTesting, [_bond.address]);
     common.print_contract_size(_bond, "BondOperationForTesting");
+    let _open_market_operation =
+        await deployProxy(OpenMarketOperationForTesting, []);
+    common.print_contract_size(_open_market_operation,
+                               "OpenMarketOperationForTesting");
     let _acb = await deployProxy(
       ACBForTesting, [_coin.address, _oracle.address,
-                      _bond_operation.address, _logging.address]);
+                      _bond_operation.address,
+                      _open_market_operation.address,
+                      _logging.address]);
     common.print_contract_size(_acb, "ACBForTesting");
 
     await _oracle.overrideConstants(_level_max, _reclaim_threshold,
@@ -105,6 +122,9 @@ function parameterized_test(accounts,
                                             _bond_redemption_price,
                                             _bond_redemption_period,
                                             _bond_redeemable_period);
+    await _open_market_operation.overrideConstants(_price_change_interval,
+                                                   _price_change_percentage,
+                                                   _start_price_multiplier);
     await _acb.overrideConstants(_epoch_duration,
                                  _deposit_rate,
                                  _damping_factor,
@@ -113,6 +133,7 @@ function parameterized_test(accounts,
     await _bond.transferOwnership(_bond_operation.address);
     await _coin.transferOwnership(_acb.address);
     await _bond_operation.transferOwnership(_acb.address);
+    await _open_market_operation.transferOwnership(_acb.address);
     await _oracle.transferOwnership(_acb.address);
     await _logging.transferOwnership(_acb.address);
 
@@ -156,6 +177,8 @@ function parameterized_test(accounts,
         this.redeem_hit = 0;
         this.purchase_hit = 0;
         this.purchase_count = 0;
+        this.increased_coin_supply = 0;
+        this.decreased_coin_supply = 0;
         this.delta = 0;
         this.mint = 0;
         this.lost = 0;
@@ -183,6 +206,8 @@ function parameterized_test(accounts,
         this.total_redeem_hit = 0;
         this.total_purchase_hit = 0;
         this.total_purchase_count = 0;
+        this.total_increased_coin_supply = 0;
+        this.total_decreased_coin_supply = 0;
         this.total_mint = 0;
         this.total_lost = 0;
         this.total_tax = 0;
@@ -209,6 +234,8 @@ function parameterized_test(accounts,
         this.total_redeem_hit += this.redeem_hit;
         this.total_purchase_hit += this.purchase_hit;
         this.total_purchase_count += this.purchase_count;
+        this.total_increased_coin_supply += this.increased_coin_supply;
+        this.total_decreased_coin_supply += this.decreased_coin_supply;
         this.total_mint += this.mint;
         this.total_lost += this.lost;
         this.total_tax += this.tax;
@@ -254,6 +281,9 @@ function parameterized_test(accounts,
       let valid_bond_supply = (
         await _bond_operation.validBondSupply(epoch_id)).toNumber();
       let bond_budget = (await _bond_operation.bond_budget_()).toNumber();
+
+      await purchase_coins();
+      await sell_coins();
 
       await redeem_bonds();
       await purchase_bonds();
@@ -323,6 +353,8 @@ function parameterized_test(accounts,
                     "=" + divide_or_zero(100 * _metrics.fast_redeemed_bonds,
                                          _metrics.redeemed_bonds) +
                     "% expired=" + _metrics.expired_bonds +
+                    " increased_supply=" + _metrics.increased_coin_supply +
+                    " decreased_supply=" + _metrics.decreased_coin_supply +
                     " delta=" + _metrics.delta +
                     " mint=" + _metrics.mint +
                     " lost=" + _metrics.lost +
@@ -379,6 +411,11 @@ function parameterized_test(accounts,
                 "=" + divide_or_zero(100 * _metrics.total_fast_redeemed_bonds,
                                      _metrics.total_redeemed_bonds) +
                 "% expired=" + _metrics.total_expired_bonds +
+                " increased_supply-decreased_supply=" +
+                _metrics.total_increased_coin_supply + "-" +
+                _metrics.total_decreased_coin_supply + "=" +
+                (_metrics.total_increased_coin_supply -
+                 _metrics.total_decreased_coin_supply) +
                 " supply=" + _metrics.supply_increased +
                 "/" + _metrics.supply_nochange +
                 "/" + _metrics.supply_decreased +
@@ -428,6 +465,86 @@ function parameterized_test(accounts,
       }
       _metrics.tax += tax_total;
       return tax_total;
+    }
+
+    async function purchase_coins() {
+      let epoch_id = (await _oracle.epoch_id_()).toNumber();
+      let start_index = randint(0, _voter_count - 1);
+      for (let index = 0; index < _voter_count; index++) {
+        let coin_budget =
+            (await _open_market_operation.coin_budget_()).toNumber();
+        if (coin_budget <= 0) {
+          break;
+        }
+        let intervals = randint(0, 6);
+        let original_timestamp = (await _acb.getTimestamp()).toNumber();
+        await _acb.setTimestamp(original_timestamp +
+                                _price_change_interval * intervals);
+        let price = await _open_market_operation.start_price_();
+        for (let i = 0; i < intervals; i++) {
+          price = Math.trunc(price * (100 - _price_change_percentage) / 100);
+        }
+        if (price == 0) {
+          price = 1;
+        }
+        
+        let voter = _voters[(start_index + index) % _voter_count];
+        let requested_coin_amount = Math.trunc(coin_budget / _voter_count);
+
+        let coin_supply = await get_coin_supply();
+        voter.balance += requested_coin_amount;
+        await check_purchase_coins(
+          {value: requested_coin_amount * price, from: voter.address},
+          requested_coin_amount * price, requested_coin_amount);
+        await _acb.setTimestamp(original_timestamp);
+
+        assert.equal(await _coin.balanceOf(voter.address), voter.balance);
+        assert.equal(await get_coin_supply(),
+                     coin_supply + requested_coin_amount);
+
+        _metrics.increased_coin_supply += requested_coin_amount;
+      }
+    }
+
+    async function sell_coins() {
+      let epoch_id = (await _oracle.epoch_id_()).toNumber();
+      let start_index = randint(0, _voter_count - 1);
+      for (let index = 0; index < _voter_count; index++) {
+        let coin_budget =
+            (await _open_market_operation.coin_budget_()).toNumber();
+        if (coin_budget >= 0) {
+          break;
+        }
+        let intervals = randint(0, 6);
+        let original_timestamp = (await _acb.getTimestamp()).toNumber();
+        await _acb.setTimestamp(original_timestamp +
+                                _price_change_interval * intervals);
+        let price = await _open_market_operation.start_price_();
+        for (let i = 0; i < intervals; i++) {
+          price = Math.trunc(price * (100 + _price_change_percentage) / 100);
+        }
+        
+        let voter = _voters[(start_index + index) % _voter_count];
+        let requested_coin_amount =
+            min(Math.trunc(-coin_budget / _voter_count), voter.balance);
+        let eth_balance = await web3.eth.getBalance(
+          _open_market_operation.address);
+        requested_coin_amount =
+          min(requested_coin_amount, Math.trunc(eth_balance / price));
+
+        let coin_supply = await get_coin_supply();
+        voter.balance -= requested_coin_amount;
+        await check_sell_coins(
+          requested_coin_amount, {from: voter.address},
+          requested_coin_amount * price, requested_coin_amount);
+        await _acb.setTimestamp(original_timestamp);
+
+        assert.equal(await _coin.balanceOf(voter.address), voter.balance);
+        assert.equal(await get_coin_supply(),
+                     coin_supply - requested_coin_amount);
+
+        _metrics.decreased_coin_supply += requested_coin_amount;
+      }
     }
 
     async function purchase_bonds() {
@@ -1041,6 +1158,25 @@ function parameterized_test(accounts,
       assert.equal(args.from, option.from);
       assert.equal(args.to, receiver);
       assert.equal(args.value, amount);
+    }
+
+    async function check_purchase_coins(option, eth_amount, coin_amount) {
+      let receipt = await _acb.purchaseCoins(option);
+      let args =
+          receipt.logs.filter(e => e.event == 'PurchaseCoinsEvent')[0].args;
+      assert.equal(args.sender, option.from);
+      assert.equal(args.eth_amount, eth_amount);
+      assert.equal(args.coin_amount, coin_amount);
+    }
+
+    async function check_sell_coins(
+      requested_coin_amount, option, eth_amount, coin_amount) {
+      let receipt = await _acb.sellCoins(requested_coin_amount, option);
+      let args =
+          receipt.logs.filter(e => e.event == 'SellCoinsEvent')[0].args;
+      assert.equal(args.sender, option.from);
+      assert.equal(args.eth_amount, eth_amount);
+      assert.equal(args.coin_amount, coin_amount);
     }
 
     async function check_purchase_bonds(purchased_bonds, option, redemption) {

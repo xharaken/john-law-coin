@@ -7,7 +7,7 @@
 
 import common
 
-# Need 11 parameters:
+# Need 14 parameters:
 # - bond_price
 # - bond_redemption_price
 # - bond_redemption_period
@@ -19,10 +19,13 @@ import common
 # - level_to_exchange_rate
 # - reclaim_threshold
 # - tax
+# - price_change_interval
+# - price_change_percentage
+# - start_price_multiplier
 
 common.reset_network(8)
 command = ("truffle test test/acb_unittest.js " +
-           "'996 1000 12 2 604800 90 10 10 [1, 11, 20] 1 12345'")
+           "'996 1000 12 2 604800 90 10 10 [1, 11, 20] 1 12345 28800 20 3'")
 common.run_test(command)
 
 for (bond_price, bond_redemption_price) in [(996, 1000)]:
@@ -38,6 +41,10 @@ for (bond_price, bond_redemption_price) in [(996, 1000)]:
                                 for reclaim_threshold in [1, len(
                                         level_to_exchange_rate) - 1]:
                                     tax = 12345
+                                    price_change_interval = int(
+                                        epoch_duration / 21) + 1
+                                    price_change_percentage = 20
+                                    start_price_multiplier = 3
                                     command = (
                                         "truffle test test/acb_unittest.js '" +
                                         str(bond_price) + " " +
@@ -50,6 +57,9 @@ for (bond_price, bond_redemption_price) in [(996, 1000)]:
                                         str(damping_factor) + " " +
                                         str(level_to_exchange_rate) + " " +
                                         str(reclaim_threshold) + " " +
-                                        str(tax) + "'")
+                                        str(tax) + " " +
+                                        str(price_change_interval) + " " +
+                                        str(price_change_percentage) + " " +
+                                        str(start_price_multiplier) + "'")
                                     common.reset_network(8)
                                     common.run_test(command)

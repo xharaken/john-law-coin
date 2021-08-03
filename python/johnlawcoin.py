@@ -1126,6 +1126,9 @@ class OpenMarketOperation:
         # The current coin budget.
         self.coin_budget = 0
 
+        # Python only: The actual ETH balance in the pool.
+        self.actual_eth_balance = 0
+
     # Test only.
     def override_constants_for_testing(
             self, price_change_interval,
@@ -1139,21 +1142,22 @@ class OpenMarketOperation:
                OpenMarketOperation.PRICE_CHANGE_PERCENTAGE <= 100)
         assert(1 <= OpenMarketOperation.START_PRICE_MULTIPILER)
 
-    # Increase the total coin supply by purchasing ETH from the user.
+    # Increase the total coin supply by purchasing ETH from the sender account.
     # This method returns the amount of coins and ETH to be exchanged.
     # The actual change to the total coin supply and the ETH pool is made by
     # the ACB.
     #
     # Parameters
     # ----------------
-    # |requested_eth_amount|: The amount of ETH the user is willing to exchange
-    # with coins.
+    # |requested_eth_amount|: The amount of ETH the sender is willing to pay.
     # |elapsed_time|: The elapsed seconds from the current epoch start.
     #
     # Returns
     # ----------------
     # A tuple of two values:
-    # - The amount of ETH to be exchanged.
+    # - The amount of ETH to be exchanged. This can be smaller than
+    # |requested_eth_amount| when the open market operation does not have
+    # enough coins in the pool.
     # - The amount of coins to be exchanged.
     def increase_coin_supply(self, requested_eth_amount, elapsed_time):
         assert(self.coin_budget > 0)
@@ -1181,22 +1185,23 @@ class OpenMarketOperation:
         assert(eth_amount <= requested_eth_amount)
         return (eth_amount, coin_amount)
 
-    # Decrease the total coin supply by selling ETH to the user.
+    # Decrease the total coin supply by selling ETH to the sender account.
     # This method returns the amount of coins and ETH to be exchanged.
     # The actual change to the total coin supply and the ETH pool is made by
     # the ACB.
     #
     # Parameters
     # ----------------
-    # |requested_coin_amount|: The amount of coins the user is willing to
-    # exchange with ETH.
+    # |requested_coin_amount|: The amount of coins the sender is willing to pay.
     # |elapsed_time|: The elapsed seconds from the current epoch start.
     #
     # Returns
     # ----------------
     # A tuple of two values:
     # - The amount of ETH to be exchanged.
-    # - The amount of coins to be exchanged.
+    # - The amount of coins to be exchanged. This can be smaller than
+    # |requested_coin_amount| when the open market operation does not have
+    # enough ETH in the pool.
     def decrease_coin_supply(self, requested_coin_amount, elapsed_time):
         assert(self.coin_budget < 0)
         
@@ -1254,7 +1259,16 @@ class OpenMarketOperation:
                 self.start_price = 1
             assert(self.start_price > 0)
 
-    
+    # Receive ETH from the |sender| and add it to the pool.
+    def add_eth_to_pool(self, sender, eth_amount):
+        self.actual_eth_balance += eth_amount
+
+    # Remove |eth_amount| ETH from the pool and send it to the |sender|.
+    def remove_eth_from_pool(self, sender, eth_amount):
+        assert(self.actual_eth_balance >= eth_amount)
+        self.actual_eth_balance -= eth_amount
+
+        
 #-------------------------------------------------------------------------------
 # [ACB contract]
 #
@@ -1385,9 +1399,6 @@ class ACB:
 
         # The Logging contract.
         self.logging = logging
-
-        # The balance of the ETH pool.
-        self.eth_balance = 0
 
         assert(len(ACB.LEVEL_TO_EXCHANGE_RATE) == Oracle.LEVEL_MAX)
 
@@ -1544,56 +1555,61 @@ class ACB:
             self.oracle.epoch_id, redeemed_bonds, expired_bonds)
         return redeemed_bonds
 
-    # Pays |requested_eth_amount| ETH and purchases coins from the open market
-    # operation.
+    # Pay ETH and purchase coins from the open market operation.
     #
     # Parameters
     # ----------------
-    # None.
+    # The sender needs to pay |requested_eth_amount| ETH.
     #
     # Returns
     # ----------------
     # A tuple of two values:
     # - The amount of ETH the sender paied. This value can be smaller than
-    # |requested_eth_amount| when the ACB does not have enough coins in the
-    # open market operation pool. The remaining ETH is returned to the
-    # sender's wallet.
+    # |requested_eth_amount| when the open market operation does not have enough
+    # coins in the pool. The remaining ETH is returned to the sender's wallet.
     # - The amount of coins the sender purchased.
     def purchase_coins(self, sender, requested_eth_amount):
         elapsed_time = self.get_timestamp() - self.current_epoch_start
+        
+        # Calculate the amount of ETH and coins to be exchanged.
         (eth_amount, coin_amount) = (
             self.open_market_operation.increase_coin_supply(
                 requested_eth_amount, elapsed_time))
+        
         self.coin.mint(sender, coin_amount)
-        self.eth_balance += eth_amount
+
+        self.open_market_operation.add_eth_to_pool(sender, eth_amount)
+
         return (eth_amount, coin_amount)
 
-    # Pays |requested_coin_amount| coins and purchases ETH from the open market
-    # operation.
+    # Pay coins and purchase ETH from the open market operation.
     #
     # Parameters
     # ----------------
-    # None.
+    # |requested_coin_amount|: The amount of coins the sender is willing to pay.
     #
     # Returns
     # ----------------
     # A tuple of two values:
     # - The amount of ETH the sender purchased.
     # - The amount of coins the sender paied. This value can be smaller than
-    # |requested_coin_amount| when the ACB does not have enough ETH in the
-    # open market operation pool. The remaining coins are returned to the
-    # sender's wallet.
+    # |requested_coin_amount| when the open market operation does not have
+    # enough ETH in the pool.
     def sell_coins(self, sender, requested_coin_amount):
-        # The user does not have enough coins.
+        # The sender does not have enough coins.
         assert(self.coin.balance_of(sender) >= requested_coin_amount)
         
         elapsed_time = self.get_timestamp() - self.current_epoch_start
+        
+        # Calculate the amount of ETH and coins to be exchanged.
         (eth_amount, coin_amount) = (
             self.open_market_operation.decrease_coin_supply(
                 requested_coin_amount, elapsed_time))
+        
         self.coin.burn(sender, coin_amount)
-        self.eth_balance -= eth_amount
-        assert(self.eth_balance >= 0)
+
+        self.open_market_operation.remove_eth_from_pool(sender, eth_amount)
+
         return (eth_amount, coin_amount)
 
     # Calculate a hash to be committed. Voters are expected to use this
