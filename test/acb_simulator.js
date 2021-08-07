@@ -19,6 +19,8 @@ const JohnLawBond_v2 = artifacts.require("JohnLawBond_v2");
 const OracleForTesting_v2 = artifacts.require("OracleForTesting_v2");
 const BondOperationForTesting_v2 =
       artifacts.require("BondOperationForTesting_v2");
+const OpenMarketOperationForTesting_v2 =
+      artifacts.require("OpenMarketOperationForTesting_v2");
 const Logging_v2 = artifacts.require("Logging_v2");
 const ACBForTesting_v2 = artifacts.require("ACBForTesting_v2");
 const OracleForTesting_v3 = artifacts.require("OracleForTesting_v3");
@@ -526,11 +528,11 @@ function parameterized_test(accounts,
         
         let voter = _voters[(start_index + index) % _voter_count];
         let requested_coin_amount =
-            min(Math.trunc(-coin_budget / _voter_count), voter.balance);
+            Math.min(Math.trunc(-coin_budget / _voter_count), voter.balance);
         let eth_balance = await web3.eth.getBalance(
           _open_market_operation.address);
         requested_coin_amount =
-          min(requested_coin_amount, Math.trunc(eth_balance / price));
+          Math.min(requested_coin_amount, Math.trunc(eth_balance / price));
 
         let coin_supply = await get_coin_supply();
         voter.balance -= requested_coin_amount;
@@ -984,6 +986,11 @@ function parameterized_test(accounts,
           await upgradeProxy(_bond_operation.address,
                              BondOperationForTesting_v2);
         common.print_contract_size(_bond_operation, "BondOperation_v2");
+        _open_market_operation =
+          await upgradeProxy(_open_market_operation.address,
+                             OpenMarketOperationForTesting_v2);
+        common.print_contract_size(_open_market_operation,
+                                   "OpenMarketOperation_v2");
         _logging = await upgradeProxy(_logging.address, Logging_v2);
         common.print_contract_size(_logging, "Logging_v2");
         _acb = await upgradeProxy(_acb.address, ACBForTesting_v2);
@@ -995,13 +1002,18 @@ function parameterized_test(accounts,
                                                 _bond_redemption_price,
                                                 _bond_redemption_period,
                                                 _bond_redeemable_period);
+        await _open_market_operation.overrideConstants(_price_change_interval,
+                                                       _price_change_percentage,
+                                                       _start_price_multiplier);
         await _acb.overrideConstants(_epoch_duration,
                                      _deposit_rate,
                                      _damping_factor,
                                      _level_to_exchange_rate);
 
         await _acb.upgrade(_coin.address, _bond.address, _oracle.address,
-                           _bond_operation.address, _logging.address);
+                           _bond_operation.address,
+                           _open_market_operation.address,
+                           _logging.address);
       } else if (epoch_offset == repeat * 2) {
         _bond_price = _tmp_bond_price;
         _bond_redemption_price = _tmp_bond_redemption_price;
@@ -1025,6 +1037,9 @@ function parameterized_test(accounts,
                                                 _bond_redemption_price,
                                                 _bond_redemption_period,
                                                 _bond_redeemable_period);
+        await _open_market_operation.overrideConstants(_price_change_interval,
+                                                       _price_change_percentage,
+                                                       _start_price_multiplier);
         await _acb.overrideConstants(_epoch_duration,
                                      _deposit_rate,
                                      _damping_factor,
@@ -1059,7 +1074,9 @@ function parameterized_test(accounts,
         let old_acb = _acb;
         _acb = await deployProxy(
           ACBForTesting_v4, [_coin.address, _oracle.address,
-                             _bond_operation.address, _logging.address,
+                             _bond_operation.address,
+                             _open_market_operation.address,
+                             _logging.address,
                              await old_acb.oracle_level_(),
                              await old_acb.current_epoch_start_()]);
         common.print_contract_size(_acb, "ACBForTesting_v4");
@@ -1071,6 +1088,9 @@ function parameterized_test(accounts,
                                                 _bond_redemption_price,
                                                 _bond_redemption_period,
                                                 _bond_redeemable_period);
+        await _open_market_operation.overrideConstants(_price_change_interval,
+                                                       _price_change_percentage,
+                                                       _start_price_multiplier);
         await _acb.overrideConstants(_epoch_duration,
                                      _deposit_rate,
                                      _damping_factor,
@@ -1078,6 +1098,7 @@ function parameterized_test(accounts,
         
         await _coin.transferOwnership(_acb.address);
         await _bond_operation.transferOwnership(_acb.address);
+        await _open_market_operation.transferOwnership(_acb.address);
         await _oracle.transferOwnership(_acb.address);
         await _logging.transferOwnership(_acb.address);
         
@@ -1104,6 +1125,7 @@ function parameterized_test(accounts,
         _acb = await deployProxy(
           ACBForTesting_v5, [_coin.address, old_oracle.address,
                              _oracle.address, _bond_operation.address,
+                             _open_market_operation.address,
                              _logging.address,
                              await old_acb.oracle_level_(),
                              await old_acb.current_epoch_start_()]);
@@ -1118,6 +1140,9 @@ function parameterized_test(accounts,
                                                 _bond_redemption_price,
                                                 _bond_redemption_period,
                                                 _bond_redeemable_period);
+        await _open_market_operation.overrideConstants(_price_change_interval,
+                                                       _price_change_percentage,
+                                                       _start_price_multiplier);
         await _acb.overrideConstants(_epoch_duration,
                                      _deposit_rate,
                                      _damping_factor,
@@ -1125,6 +1150,7 @@ function parameterized_test(accounts,
         
         await _coin.transferOwnership(_acb.address);
         await _bond_operation.transferOwnership(_acb.address);
+        await _open_market_operation.transferOwnership(_acb.address);
         await old_oracle.transferOwnership(_acb.address);
         await _oracle.transferOwnership(_acb.address);
         await _logging.transferOwnership(_acb.address);

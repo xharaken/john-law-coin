@@ -2890,6 +2890,32 @@ function parameterized_test(accounts,
                                               {from: accounts[1]});
     }, "Ownable");
 
+    await should_throw(async () => {
+      await _open_market_operation.increaseCoinSupply(0, 0);
+    }, "Ownable");
+
+    await should_throw(async () => {
+      await _open_market_operation.increaseCoinSupply(
+        0, 0, {from: accounts[1]});
+    }, "Ownable");
+
+    await should_throw(async () => {
+      await _open_market_operation.decreaseCoinSupply(0, 0);
+    }, "Ownable");
+
+    await should_throw(async () => {
+      await _open_market_operation.decreaseCoinSupply(
+        0, 0, {from: accounts[1]});
+    }, "Ownable");
+
+    await should_throw(async () => {
+      await _open_market_operation.updateCoinBudget(0);
+    }, "Ownable");
+
+    await should_throw(async () => {
+      await _open_market_operation.updateCoinBudget(0, {from: accounts[1]});
+    }, "Ownable");
+
     let bond = await JohnLawBond.at(await _bond_operation.bond_());
     await should_throw(async () => {
       await bond.mint(accounts[1], 1111, 1, {from: accounts[1]});

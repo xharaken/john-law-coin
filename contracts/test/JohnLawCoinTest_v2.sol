@@ -32,6 +32,23 @@ contract BondOperationForTesting_v2 is BondOperation_v2 {
   }
 }
 
+// A contract to test OpenMarketOperation.
+contract OpenMarketOperationForTesting_v2 is OpenMarketOperation_v2 {
+  function overrideConstants(uint price_change_interval,
+                             uint price_change_percentage,
+                             uint start_price_multiplier)
+      public {
+    PRICE_CHANGE_INTERVAL = price_change_interval;
+    PRICE_CHANGE_PERCENTAGE = price_change_percentage;
+    START_PRICE_MULTIPILER = start_price_multiplier;
+
+    require(1 <= PRICE_CHANGE_INTERVAL, "oc1");
+    require(0 <= PRICE_CHANGE_PERCENTAGE && PRICE_CHANGE_PERCENTAGE <= 100,
+            "oc2");
+    require(1 <= START_PRICE_MULTIPILER, "oc3");
+  }
+}
+
 // A contract to test Oracle.
 contract OracleForTesting_v2 is Oracle_v2 {
   function overrideConstants(uint reclaim_threshold,

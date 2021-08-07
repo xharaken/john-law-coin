@@ -9,23 +9,6 @@ pragma solidity ^0.8.0;
 
 import "../JohnLawCoin.sol";
 
-// A contract to test OpenMarketOperation.
-contract OpenMarketOperationForTesting is OpenMarketOperation {
-  function overrideConstants(uint price_change_interval,
-                             uint price_change_percentage,
-                             uint start_price_multiplier)
-      public onlyOwner {
-    PRICE_CHANGE_INTERVAL = price_change_interval;
-    PRICE_CHANGE_PERCENTAGE = price_change_percentage;
-    START_PRICE_MULTIPILER = start_price_multiplier;
-
-    require(1 <= PRICE_CHANGE_INTERVAL, "oc1");
-    require(0 <= PRICE_CHANGE_PERCENTAGE && PRICE_CHANGE_PERCENTAGE <= 100,
-            "oc2");
-    require(1 <= START_PRICE_MULTIPILER, "oc3");
-  }
-}
-
 // A contract to test BondOperation.
 contract BondOperationForTesting is BondOperation {
   function overrideConstants(uint bond_price,
@@ -46,6 +29,23 @@ contract BondOperationForTesting is BondOperation {
             BOND_REDEMPTION_PERIOD <= 20, "oc6");
     require(1 <= BOND_REDEEMABLE_PERIOD &&
             BOND_REDEEMABLE_PERIOD <= 20, "oc7");
+  }
+}
+
+// A contract to test OpenMarketOperation.
+contract OpenMarketOperationForTesting is OpenMarketOperation {
+  function overrideConstants(uint price_change_interval,
+                             uint price_change_percentage,
+                             uint start_price_multiplier)
+      public onlyOwner {
+    PRICE_CHANGE_INTERVAL = price_change_interval;
+    PRICE_CHANGE_PERCENTAGE = price_change_percentage;
+    START_PRICE_MULTIPILER = start_price_multiplier;
+
+    require(1 <= PRICE_CHANGE_INTERVAL, "oc1");
+    require(0 <= PRICE_CHANGE_PERCENTAGE && PRICE_CHANGE_PERCENTAGE <= 100,
+            "oc2");
+    require(1 <= START_PRICE_MULTIPILER, "oc3");
   }
 }
 

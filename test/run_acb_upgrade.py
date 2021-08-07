@@ -7,7 +7,7 @@
 
 import common
 
-# Need 13 parameters:
+# Need 16 parameters:
 # - bond_price
 # - bond_redemption_price
 # - bond_redemption_period
@@ -18,14 +18,17 @@ import common
 # - damping_factor
 # - level_to_exchange_rate
 # - reclaim_threshold
+# - price_change_interval
+# - price_change_percentage
+# - start_price_multiplier
 # - voter_count
 # - iteration
 # - should_upgrade
 
 common.reset_network(41)
 command = ("truffle test test/acb_simulator.js " +
-           "'996 1000 12 2 7 90 10 10 [6, 7, 8, 9, 10, 11, 12, 13, 14] " +
-           "1 40 30 1'")
+           "'996 1000 12 2 604800 90 10 10 [6, 7, 8, 9, 10, 11, 12, 13, 14] " +
+           "1 28800 20 3 40 30 1'")
 common.run_test(command)
 
 iteration = 30
@@ -42,19 +45,28 @@ for (bond_price, bond_redemption_price) in [(996, 1000)]:
                                     [6, 7, 8, 9, 10, 11, 12, 13, 14]]:
                                 for reclaim_threshold in [1, len(
                                         level_to_exchange_rate) - 1]:
+                                    price_change_interval = (
+                                        int(epoch_duration / 21) + 1)
+                                    price_change_percentage = 20
+                                    start_price_multiplier = 3
                                     for voter_count in [40]:
                                         command = (
-                                            "truffle test test/acb_simulator.js '" +
+                                            "truffle test " +
+                                            "test/acb_simulator.js '" +
                                             str(bond_price) + " " +
                                             str(bond_redemption_price) + " " +
                                             str(bond_redemption_period) + " " +
                                             str(bond_redeemable_period) + " " +
                                             str(epoch_duration) + " " +
-                                            str(proportional_reward_rate) + " " +
+                                            str(proportional_reward_rate) +
+                                            " " +
                                             str(deposit_rate) + " " +
                                             str(damping_factor) + " " +
                                             str(level_to_exchange_rate) + " " +
                                             str(reclaim_threshold) + " " +
+                                            str(price_change_interval) + " " +
+                                            str(price_change_percentage) + " " +
+                                            str(start_price_multiplier) + " " +
                                             str(voter_count) + " " +
                                             str(iteration) + " 1'")
                                         common.reset_network(voter_count + 1)

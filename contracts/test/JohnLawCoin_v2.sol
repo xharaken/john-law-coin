@@ -1377,6 +1377,225 @@ contract BondOperation_v2 is OwnableUpgradeable {
 }
 
 //------------------------------------------------------------------------------
+// [OpenMarketOperation contract]
+//
+// The OpenMarketOperation contract increases / decreases the total coin supply
+// by purchasing / selling ETH from the open market. The price auction is
+// implemented as a Dutch auction.
+//------------------------------------------------------------------------------
+contract OpenMarketOperation_v2 is OwnableUpgradeable {
+  using SafeCast for uint;
+  using SafeCast for int;
+
+  // Constants. The values are defined in initialize(). The values never
+  // change during the contract execution but use 'public' (instead of
+  // 'constant') because tests want to override the values.
+  uint public PRICE_CHANGE_INTERVAL;
+  uint public PRICE_CHANGE_PERCENTAGE;
+  uint public START_PRICE_MULTIPILER;
+
+  // Attributes. See the comment in initialize().
+  uint public latest_price_;
+  uint public start_price_;
+  uint public eth_balance_;
+  int public coin_budget_;
+
+  uint public latest_price_v2_;
+  uint public start_price_v2_;
+  uint public eth_balance_v2_;
+  int public coin_budget_v2_;
+
+  // Events.
+  event IncreaseCoinSupplyEvent(uint requested_eth_amount, uint elapsed_time,
+                                uint eth_amount, uint coin_amount);
+  event DecreaseCoinSupplyEvent(uint requested_coin_amount, uint elapsed_time,
+                                uint eth_amount, uint coin_amount);
+  event UpdateCoinBudgetEvent(int coin_budget);
+  
+  function upgrade()
+      public onlyOwner {
+    latest_price_v2_ = latest_price_;
+    start_price_v2_ = start_price_;
+    eth_balance_v2_ = eth_balance_;
+    coin_budget_v2_ = coin_budget_;
+  }
+
+  // Increase the total coin supply by purchasing ETH from the sender account.
+  // This method returns the amount of coins and ETH to be exchanged.
+  // The actual change to the total coin supply and the ETH pool is made by
+  // the ACB.
+  //
+  // Parameters
+  // ----------------
+  // |requested_eth_amount|: The amount of ETH the sender is willing to pay.
+  // |elapsed_time|: The elapsed seconds from the current epoch start.
+  //
+  // Returns
+  // ----------------
+  // A tuple of two values:
+  // - The amount of ETH to be exchanged. This can be smaller than
+  // |requested_eth_amount| when the open market operation does not have
+  // enough coins in the pool.
+  // - The amount of coins to be exchanged.
+  function increaseCoinSupply(uint requested_eth_amount, uint elapsed_time)
+      public onlyOwner returns (uint, uint) {
+    return increaseCoinSupply_v2(requested_eth_amount, elapsed_time);
+  }
+  
+  function increaseCoinSupply_v2(uint requested_eth_amount, uint elapsed_time)
+      public onlyOwner returns (uint, uint) {
+    require(coin_budget_ > 0,
+            "OpenMarketOperation: The coin budget must be positive.");
+        
+    // Calculate the current price.
+    uint price = start_price_;
+    for (uint i = 0; i < elapsed_time / PRICE_CHANGE_INTERVAL; i++) {
+      price = price * (100 - PRICE_CHANGE_PERCENTAGE) / 100;
+    }
+    require(price > 0,
+            "OpenMarketOperation: The ETH / coin price must be positive.");
+
+    // Calculate the amount of coins and ETH to be exchanged.
+    uint coin_amount = requested_eth_amount / price;
+    if (coin_amount > coin_budget_.toUint256()) {
+      coin_amount = coin_budget_.toUint256();
+    }
+    uint eth_amount = coin_amount * price;
+        
+    if (coin_amount > 0) {
+      latest_price_ = price;
+    }
+    coin_budget_ -= coin_amount.toInt256();
+    eth_balance_ += eth_amount;
+    require(coin_budget_ >= 0, "ic1");
+    require(eth_amount <= requested_eth_amount, "ic2");
+
+    emit IncreaseCoinSupplyEvent(requested_eth_amount, elapsed_time,
+                                 eth_amount, coin_amount);
+    return (eth_amount, coin_amount);
+  }
+
+  // Decrease the total coin supply by selling ETH to the sender account.
+  // This method returns the amount of coins and ETH to be exchanged.
+  // The actual change to the total coin supply and the ETH pool is made by
+  // the ACB.
+  //
+  // Parameters
+  // ----------------
+  // |requested_coin_amount|: The amount of coins the sender is willing to pay.
+  // |elapsed_time|: The elapsed seconds from the current epoch start.
+  //
+  // Returns
+  // ----------------
+  // A tuple of two values:
+  // - The amount of ETH to be exchanged.
+  // - The amount of coins to be exchanged. This can be smaller than
+  // |requested_coin_amount| when the open market operation does not have
+  // enough ETH in the pool.
+  function decreaseCoinSupply(uint requested_coin_amount, uint elapsed_time)
+      public onlyOwner returns (uint, uint) {
+    return decreaseCoinSupply_v2(requested_coin_amount, elapsed_time);
+  }
+  
+  function decreaseCoinSupply_v2(uint requested_coin_amount, uint elapsed_time)
+      public onlyOwner returns (uint, uint) {
+    require(coin_budget_ < 0,
+            "OpenMarketOperation: The coin budget must be negative.");
+        
+    // Calculate the current price.
+    uint price = start_price_;
+    for (uint i = 0; i < elapsed_time / PRICE_CHANGE_INTERVAL; i++) {
+      price = price * (100 + PRICE_CHANGE_PERCENTAGE) / 100;
+    }
+    if (price == 0) {
+      price = 1;
+    }
+        
+    // Calculate the amount of coins and ETH to be exchanged.
+    uint coin_amount = requested_coin_amount;
+    if (coin_amount >= (-coin_budget_).toUint256()) {
+      coin_amount = (-coin_budget_).toUint256();
+    }
+    uint eth_amount = coin_amount * price;
+    if (eth_amount >= eth_balance_) {
+      eth_amount = eth_balance_;
+    }
+    coin_amount = eth_amount / price;
+        
+    if (coin_amount > 0) {
+      latest_price_ = price;
+    }
+    coin_budget_ += coin_amount.toInt256();
+    eth_balance_ -= eth_amount;
+    require(coin_budget_ <= 0);
+    require(coin_amount <= requested_coin_amount, "dc1");
+
+    emit DecreaseCoinSupplyEvent(requested_coin_amount, elapsed_time,
+                                 eth_amount, coin_amount);
+    return (eth_amount, coin_amount);
+  }
+  
+  // Receive ETH from the |sender| and add it to the pool.
+  function addEthToPool(address sender)
+      public onlyOwner payable {
+    addEthToPool_v2(sender);
+  }
+
+  function addEthToPool_v2(address sender)
+      public onlyOwner payable {
+  }
+
+  // Remove |eth_amount| ETH from the pool and send it to the |sender|.
+  function removeEthFromPool(address sender, uint eth_amount)
+      public onlyOwner {
+    return removeEthFromPool_v2(sender, eth_amount);
+  }
+  
+  function removeEthFromPool_v2(address sender, uint eth_amount)
+      public onlyOwner {
+    require(address(this).balance >= eth_amount, "se1");
+    (bool success,) =
+        payable(sender).call{value: eth_amount}("");
+    require(success, "se2");
+  }
+
+  // Update the coin budget (i.e., how many coins should be added to / removed
+  // from the total coin supply). The ACB calls the method at the beginning of
+  // each epoch.
+  //
+  // Parameters
+  // ----------------
+  // |coin_budget|: The coin budget.
+  //
+  // Returns
+  // ----------------
+  // None.
+  function updateCoinBudget(int coin_budget)
+      public onlyOwner {
+    updateCoinBudget_v2(coin_budget);
+  }
+  
+  function updateCoinBudget_v2(int coin_budget)
+      public onlyOwner {
+    coin_budget_ = coin_budget;
+    require(latest_price_ > 0, "uc1");
+    if (coin_budget_ > 0) {
+      start_price_ = latest_price_ * START_PRICE_MULTIPILER;
+      require(start_price_ > 0, "uc2");
+    } else if (coin_budget_ == 0) {
+      start_price_ = 0;
+    } else {
+      start_price_ = latest_price_ / START_PRICE_MULTIPILER;
+      if (start_price_ == 0) {
+        start_price_ = 1;
+      }
+      require(start_price_ > 0, "uc3");
+    }
+    emit UpdateCoinBudgetEvent(coin_budget_);
+  }
+}
+
+//------------------------------------------------------------------------------
 // [ACB contract]
 //
 // The ACB stabilizes the coin price with algorithmically defined monetary
@@ -1421,6 +1640,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
   JohnLawCoin public coin_;
   Oracle public oracle_;
   BondOperation public bond_operation_;
+  OpenMarketOperation public open_market_operation_;
   Logging public logging_;
   uint public oracle_level_;
   uint public current_epoch_start_;
@@ -1428,6 +1648,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
   JohnLawCoin_v2 public coin_v2_;
   Oracle_v2 public oracle_v2_;
   BondOperation_v2 public bond_operation_v2_;
+  OpenMarketOperation_v2 public open_market_operation_v2_;
   Logging_v2 public logging_v2_;
   uint public oracle_level_v2_;
   uint public current_epoch_start_v2_;
@@ -1445,20 +1666,27 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
                            uint purchased_bonds, uint redemption_epoch);
   event RedeemBondsEvent(address indexed sender, uint indexed epoch_id,
                          uint redeemed_bonds, uint expired_bonds);
+  event PurchaseCoinsEvent(address indexed sender, uint requested_eth_amount,
+                           uint eth_amount, uint coin_amount);
+  event SellCoinsEvent(address indexed sender, uint requested_coin_amount,
+                       uint eth_amount, uint coin_amount);
 
   function upgrade(JohnLawCoin_v2 coin, JohnLawBond_v2 bond,
                    Oracle_v2 oracle, BondOperation_v2 bond_operation,
+                   OpenMarketOperation_v2 open_market_operation,
                    Logging_v2 logging)
       public onlyOwner {
     coin_v2_ = coin;
     oracle_v2_ = oracle;
     bond_operation_v2_ = bond_operation;
+    open_market_operation_v2_ = open_market_operation;
     oracle_level_v2_ = oracle_level_;
     current_epoch_start_v2_ = current_epoch_start_;
     logging_v2_ = logging;
 
     coin_v2_.upgrade();
     bond_operation_v2_.upgrade(bond);
+    open_market_operation_v2_.upgrade();
     oracle_v2_.upgrade();
     logging_v2_.upgrade();
   }
@@ -1469,6 +1697,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
     coin_v2_.transferOwnership(msg.sender);
     oracle_v2_.transferOwnership(msg.sender);
     bond_operation_v2_.transferOwnership(msg.sender);
+    open_market_operation_v2_.transferOwnership(msg.sender);
     logging_v2_.transferOwnership(msg.sender);
   }
 
@@ -1598,6 +1827,13 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
       uint mint =
           bond_operation_v2_.updateBondBudget(delta, result.epoch_id);
 
+      if (oracle_level_ == 0 && delta < 0) {
+        require(mint == 0, "vo2");
+        open_market_operation_v2_.updateCoinBudget(delta);
+      } else {
+        open_market_operation_v2_.updateCoinBudget(mint.toInt256());
+      }
+
       logging_v2_.updateEpoch(
           result.epoch_id, mint, burned, delta,
           bond_operation_v2_.bond_budget_v2_(),
@@ -1705,6 +1941,92 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
     emit RedeemBondsEvent(address(msg.sender), epoch_id,
                           redeemed_bonds, expired_bonds);
     return redeemed_bonds;
+  }
+
+  // Pay ETH and purchase coins from the open market operation.
+  //
+  // Parameters
+  // ----------------
+  // The sender needs to pay |requested_eth_amount| ETH.
+  //
+  // Returns
+  // ----------------
+  // A tuple of two values:
+  // - The amount of ETH the sender paied. This value can be smaller than
+  // |requested_eth_amount| when the open market operation does not have enough
+  // coins in the pool. The remaining ETH is returned to the sender's wallet.
+  // - The amount of coins the sender purchased.
+  function purchaseCoins()
+      public whenNotPaused payable returns (uint, uint) {
+    uint requested_eth_amount = msg.value;
+    uint elapsed_time = getTimestamp() - current_epoch_start_v2_;
+    
+    // Calculate the amount of ETH and coins to be exchanged.
+    (uint eth_amount, uint coin_amount) =
+        open_market_operation_v2_.increaseCoinSupply(
+            requested_eth_amount, elapsed_time);
+    
+    coin_v2_.mint(msg.sender, coin_amount);
+    
+    require(address(this).balance >= requested_eth_amount, "pc1");
+    bool success;
+    (success,) =
+        payable(address(open_market_operation_v2_)).call{value: eth_amount}(
+            abi.encodeWithSignature("addEthToPool(address)", msg.sender));
+    require(success, "pc2");
+    
+    // Pay back the remaining ETH to the sender. This may trigger any arbitrary
+    // operations in an external smart contract. This must be called at the very
+    // end of purchaseCoins().
+    (success,) =
+        payable(msg.sender).call{value: requested_eth_amount - eth_amount}("");
+    require(success, "pc3");
+
+    emit PurchaseCoinsEvent(msg.sender, requested_eth_amount,
+                            eth_amount, coin_amount);
+    return (eth_amount, coin_amount);
+  }
+  
+  // Pay coins and purchase ETH from the open market operation.
+  //
+  // Parameters
+  // ----------------
+  // |requested_coin_amount|: The amount of coins the sender is willing to pay.
+  //
+  // Returns
+  // ----------------
+  // A tuple of two values:
+  // - The amount of ETH the sender purchased.
+  // - The amount of coins the sender paied. This value can be smaller than
+  // |requested_coin_amount| when the open market operation does not have
+  // enough ETH in the pool.
+  function sellCoins(uint requested_coin_amount)
+      public whenNotPaused returns (uint, uint) {
+    return sellCoins_v2(requested_coin_amount);
+  }
+  
+  function sellCoins_v2(uint requested_coin_amount)
+      public whenNotPaused returns (uint, uint) {
+    // The sender does not have enough coins.
+    require(coin_v2_.balanceOf(msg.sender) >= requested_coin_amount,
+            "OpenMarketOperation: Your coin balance is not enough.");
+        
+    // Calculate the amount of ETH and coins to be exchanged.
+    uint elapsed_time = getTimestamp() - current_epoch_start_v2_;
+    (uint eth_amount, uint coin_amount) =
+        open_market_operation_v2_.decreaseCoinSupply(
+            requested_coin_amount, elapsed_time);
+
+    coin_v2_.burn(msg.sender, coin_amount);
+    
+    // Send ETH to the sender. This may trigger any arbitrary operations in an
+    // external smart contract. This must be called at the very end of
+    // sellCoins().
+    open_market_operation_v2_.removeEthFromPool(msg.sender, eth_amount);
+    
+    emit SellCoinsEvent(msg.sender, requested_coin_amount,
+                        eth_amount, coin_amount);
+    return (eth_amount, coin_amount);
   }
 
   // Calculate a hash to be committed to the oracle. Voters are expected to
