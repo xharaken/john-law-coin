@@ -1020,7 +1020,7 @@ contract Logging_v2 is OwnableUpgradeable {
   // |total_coin_supply|: The total coin supply.
   // |oracle_level|: ACB.oracle_level_.
   // |current_epoch_start|: ACB.current_epoch_start_.
-  // |tax|: The amount of the tax collected in the phase.
+  // |tax|: The amount of the tax collected in the previous epoch.
   //
   // Returns
   // ----------------
@@ -1893,17 +1893,16 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
   }
 
   // Vote for the exchange rate. The voter can commit a vote to the current
-  // phase, reveal their vote in the previous phase, and reclaim the deposited
-  // coins and get a reward for their vote in the phase before the previous
-  // phase at the same time.
+  // epoch N, reveal their vote in the epoch N-1, and reclaim the deposited
+  // coins and get a reward for their vote in the epoch N-2 at the same time.
   //
   // Parameters
   // ----------------
-  // |hash|: The hash to be committed in the current phase. Specify
+  // |hash|: The hash to be committed in the current epoch N. Specify
   // ACB.NULL_HASH if you do not want to commit and only want to reveal and
   // reclaim previous votes.
-  // |oracle_level|: The oracle level you voted for in the previous phase.
-  // |salt|: The salt you used in the previous phase.
+  // |oracle_level|: The oracle level you voted for in the epoch N-1
+  // |salt|: The salt you used in the epoch N-1.
   //
   // Returns
   // ----------------
@@ -1913,7 +1912,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
   //  - uint: The amount of the deposited coins.
   //  - uint: The amount of the reclaimed coins.
   //  - uint: The amount of the reward.
-  //  - boolean: Whether this vote resulted in a phase update.
+  //  - boolean: Whether this vote updated the epoch.
   function vote(bytes32 hash, uint oracle_level,
                 uint salt)
       public whenNotPaused returns (bool, bool, uint, uint, uint, bool) {
@@ -1928,13 +1927,13 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
     result.epoch_id = oracle_v2_.epoch_id_();
     result.epoch_updated = false;
     if (getTimestamp() >= current_epoch_start_v2_ + EPOCH_DURATION) {
-      // Start a new phase.
+      // Start a new epoch.
       result.epoch_updated = true;
       result.epoch_id += 1;
       current_epoch_start_v2_ = getTimestamp();
       current_epoch_start_ = current_epoch_start_v2_;
       
-      // Advance to the next phase. Provide the |tax| coins to the oracle
+      // Advance to the next epoch. Provide the |tax| coins to the oracle
       // as a reward.
       uint tax = coin_v2_.balanceOf(coin_v2_.tax_account_v2_());
       coin_v2_.transferOwnership(address(oracle_v2_));
@@ -1962,7 +1961,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
                 (int(exchange_rate) - int(EXCHANGE_RATE_DIVISOR)) /
                 int(EXCHANGE_RATE_DIVISOR);
         
-        // To avoid increasing or decreasing too many coins in one phase,
+        // To avoid increasing or decreasing too many coins in one epoch,
         // multiply the damping factor.
         delta = delta * int(DAMPING_FACTOR) / 100;
       }
@@ -2203,7 +2202,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
   function getTimestamp()
       public virtual view returns (uint) {
     // block.timestamp is better than block.number because the granularity of
-    // the phase update is EPOCH_DURATION (1 week).
+    // the epoch update is EPOCH_DURATION (1 week).
     return block.timestamp;
   }
 

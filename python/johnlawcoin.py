@@ -782,7 +782,7 @@ class Logging:
     # |total_coin_supply|: The total coin supply.
     # |oracle_level|: ACB.oracle_level_.
     # |current_epoch_start|: ACB.current_epoch_start_.
-    # |tax|: The amount of the tax collected in the phase.
+    # |tax|: The amount of the tax collected in the previous epoch.
     #
     # Returns
     # ----------------
@@ -1399,7 +1399,7 @@ class ACB:
         # real-world currency exchangers and vote for the oracle level that
         # corresponds to the exchange rate. Strictly speaking, the current
         # exchange rate is defined as the exchange rate at the point when the
-        # current phase started (i.e., current_epoch_start_).
+        # current epoch started (i.e., current_epoch_start_).
         #
         # In the bootstrap phase in which no currency exchanger supports JLC
         # <=> USD conversions, voters are expected to vote for the oracle
@@ -1417,15 +1417,15 @@ class ACB:
         ACB.LEVEL_TO_EXCHANGE_RATE = [6, 7, 8, 9, 10, 11, 12, 13, 14]
         ACB.EXCHANGE_RATE_DIVISOR = 10
 
-        # The duration of the oracle phase. The ACB adjusts the total coin
-        # supply once per phase. Voters can vote once per phase.
+        # The duration of the epoch. The ACB adjusts the total coin supply
+        # once per epoch. Voters can vote once per epoch.
         ACB.EPOCH_DURATION = 7 * 24 * 60 * 60 # 1 week.
 
         # The percentage of the coin balance voters need to deposit.
         ACB.DEPOSIT_RATE = 10 # 10%.
 
         # A damping factor to avoid minting or burning too many coins in one
-        # phase.
+        # epoch.
         ACB.DAMPING_FACTOR = 10 # 10%.
 
         # ----------------
@@ -1495,17 +1495,16 @@ class ACB:
         self.oracle_level = Oracle.LEVEL_MAX
 
     # Vote for the exchange rate. The voter can commit a vote to the current
-    # phase, reveal their vote in the previous phase, and reclaim the deposited
-    # coins and get a reward for their vote in the phase before the previous
-    # phase at the same time.
+    # epoch N, reveal their vote in the epoch N-1, and reclaim the deposited
+    # coins and get a reward for their vote in the epoch N-2 at the same time.
     #
     # Parameters
     # ----------------
-    # |hash|: The hash to be committed in the current phase. Specify
+    # |hash|: The hash to be committed in the current epoch N. Specify
     # ACB.NULL_HASH if you do not want to commit and only want to reveal and
     # reclaim previous votes.
-    # |oracle_level|: The oracle level you voted for in the previous phase.
-    # |salt|: The salt you used in the previous phase.
+    # |oracle_level|: The oracle level you voted for in the epoch N-1.
+    # |salt|: The salt you used in the epoch N-1.
     #
     # Returns
     # ----------------
@@ -1515,16 +1514,16 @@ class ACB:
     #  - uint: The amount of the deposited coins.
     #  - uint: The amount of the reclaimed coins.
     #  - uint: The amount of the reward.
-    #  - boolean: Whether this vote resulted in a phase update.
+    #  - boolean: Whether this vote updated the epoch.
     def vote(self, sender, hash, oracle_level, salt):
         epoch_updated = False
         timestamp = self.get_timestamp()
         if timestamp >= self.current_epoch_start + ACB.EPOCH_DURATION:
-            # Start a new phase.
+            # Start a new epoch.
             epoch_updated = True
             self.current_epoch_start = timestamp
 
-            # Advance to the next phase. Provide the |tax| coins to the oracle
+            # Advance to the next epoch. Provide the |tax| coins to the oracle
             # as a reward.
             tax = self.coin.balance_of(self.coin.tax_account)
             burned = self.oracle.advance(self.coin)
@@ -1550,7 +1549,7 @@ class ACB:
                             (exchange_rate - ACB.EXCHANGE_RATE_DIVISOR) /
                             ACB.EXCHANGE_RATE_DIVISOR)
 
-                # To avoid increasing or decreasing too many coins in one phase,
+                # To avoid increasing or decreasing too many coins in one epoch,
                 # multiply the damping factor.
                 delta = int(delta * ACB.DAMPING_FACTOR / 100)
 
