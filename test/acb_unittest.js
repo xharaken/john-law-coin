@@ -2661,21 +2661,21 @@ function parameterized_test(accounts,
       await check_redeem_bonds([t1, t2], {from: accounts[1]}, 40, 0);
       current = await get_current(sub_accounts, []);
       assert.equal(current.bond_supply, 60);
-      assert.equal(current.bond_budget, 0);
-      await check_redeem_bonds([t1, t2], {from: accounts[2]}, 20, 0);
+      assert.equal(current.bond_budget, -10);
+      await check_redeem_bonds([t1, t2], {from: accounts[2]}, 30, 0);
       current = await get_current(sub_accounts, []);
-      assert.equal(current.bond_supply, 40);
-      assert.equal(current.bond_budget, 20);
+      assert.equal(current.bond_supply, 30);
+      assert.equal(current.bond_budget, 0);
       
       await advance_epoch(1);
       await check_redeem_bonds([t1, t2], {from: accounts[1]}, 0, 0);
       current = await get_current(sub_accounts, []);
-      assert.equal(current.bond_supply, 40);
+      assert.equal(current.bond_supply, 30);
       assert.equal(current.bond_budget, 0);
-      await check_redeem_bonds([t1, t2], {from: accounts[2]}, 40, 0);
+      await check_redeem_bonds([t1, t2], {from: accounts[2]}, 30, 0);
       current = await get_current(sub_accounts, []);
       assert.equal(current.bond_supply, 0);
-      assert.equal(current.bond_budget, 40);
+      assert.equal(current.bond_budget, 0);
       await check_redeem_bonds([t1, t2], {from: accounts[2]}, 0, 0);
     }
 

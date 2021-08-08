@@ -655,11 +655,11 @@ function parameterized_test(accounts,
               continue;
             }
             count = Math.min(count, -bond_budget);
+            bond_budget += count;
             fast_redeemed_bonds += count;
           }
           if (epoch_id < redemption + _bond_redeemable_period) {
             redeemed_bonds += count;
-            bond_budget += count;
           } else {
             expired_bonds += count;
           }

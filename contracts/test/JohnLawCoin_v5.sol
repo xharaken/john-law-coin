@@ -115,8 +115,7 @@ contract BondOperation_v5 is OwnableUpgradeable {
     bond_.mint(sender, redemption_epoch, count);
     bond_budget_ -= count.toInt256();
     require(bond_budget_ >= 0, "pb1");
-    require((validBondSupply(epoch_id).toInt256()) + bond_budget_ >= 0, "pb2");
-    require(bond_.balanceOf(sender, redemption_epoch) > 0, "pb3");
+    require(bond_.balanceOf(sender, redemption_epoch) > 0, "pb2");
 
     // Burn the corresponding coins.
     coin.burn(sender, amount);
@@ -157,14 +156,13 @@ contract BondOperation_v5 is OwnableUpgradeable {
         if (count > (-bond_budget_).toUint256()) {
           count = (-bond_budget_).toUint256();
         }
+        bond_budget_ += count.toInt256();
       }
       if (epoch_id < redemption_epoch + BOND_REDEEMABLE_PERIOD) {
         // If the bonds are not expired, mint the corresponding coins to the
         // user account.
         uint amount = count * BOND_REDEMPTION_PRICE;
         coin.mint(sender, amount);
-
-        bond_budget_ += count.toInt256();
         redeemed_bonds += count;
       } else {
         expired_bonds += count;
@@ -172,7 +170,6 @@ contract BondOperation_v5 is OwnableUpgradeable {
       // Burn the redeemed / expired bonds.
       bond_.burn(sender, redemption_epoch, count);
     }
-    require(validBondSupply(epoch_id).toInt256() + bond_budget_ >= 0, "rb1");
     emit RedeemBondsEvent(sender, epoch_id, redeemed_bonds, expired_bonds);
     return (redeemed_bonds, expired_bonds);
   }

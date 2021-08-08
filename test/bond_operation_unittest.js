@@ -383,7 +383,7 @@ function parameterized_test(accounts,
       check_redemption_epochs(current, accounts[2], [t2]);
       assert.equal(current.balances[accounts[2]],
                    balance + 11 * _bond_redemption_price);
-      assert.equal(current.bond_budget, 11);
+      assert.equal(current.bond_budget, 0);
       assert.equal(current.bond_supply, bond_supply - 11);
       assert.equal(current.coin_supply,
                    coin_supply + 11 * _bond_redemption_price);
@@ -395,7 +395,7 @@ function parameterized_test(accounts,
       check_redemption_epochs(current, accounts[2], []);
       assert.equal(current.balances[accounts[2]],
                    balance + 22 * _bond_redemption_price);
-      assert.equal(current.bond_budget, 22);
+      assert.equal(current.bond_budget, 0);
       assert.equal(current.bond_supply, bond_supply - 22);
       assert.equal(current.coin_supply,
                    coin_supply + 22 * _bond_redemption_price);
@@ -409,7 +409,7 @@ function parameterized_test(accounts,
       check_redemption_epochs(current, accounts[2], []);
       assert.equal(current.balances[accounts[2]],
                    balance + 22 * _bond_redemption_price);
-      assert.equal(current.bond_budget, 22);
+      assert.equal(current.bond_budget, 0);
       assert.equal(current.bond_supply, bond_supply - 22);
       assert.equal(current.coin_supply,
                    coin_supply + 22 * _bond_redemption_price);
@@ -424,7 +424,7 @@ function parameterized_test(accounts,
       assert.equal(current.bonds[accounts[3]][t3], 48);
       check_redemption_epochs(current, accounts[3], [t3]);
       assert.equal(current.balances[accounts[3]], balance);
-      assert.equal(current.bond_budget, 22);
+      assert.equal(current.bond_budget, 0);
       assert.equal(current.bond_supply, bond_supply - 22);
       assert.equal(current.coin_supply,
                    coin_supply + 22 * _bond_redemption_price);
@@ -437,7 +437,7 @@ function parameterized_test(accounts,
       check_redemption_epochs(current, accounts[3], []);
       assert.equal(current.balances[accounts[3]],
                    balance + 48 * _bond_redemption_price);
-      assert.equal(current.bond_budget, 70);
+      assert.equal(current.bond_budget, 0);
       assert.equal(current.bond_supply, bond_supply - 70);
       assert.equal(current.coin_supply,
                    coin_supply + 70 * _bond_redemption_price);
@@ -452,13 +452,13 @@ function parameterized_test(accounts,
       check_redemption_epochs(current, accounts[1], []);
       assert.equal(current.balances[accounts[1]],
                    balance + 10 * _bond_redemption_price);
-      assert.equal(current.bond_budget, 80);
+      assert.equal(current.bond_budget, 0);
       assert.equal(current.bond_supply, bond_supply - 80);
       assert.equal(current.coin_supply, coin_supply +
                    80 * _bond_redemption_price);
       assert.equal(current.bond_supply, 0);
 
-      assert.equal(current.bond_budget, 80);
+      assert.equal(current.bond_budget, 0);
       await check_update_bond_budget(-100 * _bond_price, 100, 0);
       current = await get_current(sub_accounts, redemptions);
       assert.equal(current.bond_budget, 100);
@@ -513,7 +513,7 @@ function parameterized_test(accounts,
       assert.equal(current.coin_supply,
                    coin_supply + 40 * _bond_redemption_price);
       assert.equal(current.bond_supply, bond_supply - 40);
-      assert.equal(current.bond_budget, 40);
+      assert.equal(current.bond_budget, 0);
 
       coin_supply = current.coin_supply;
       bond_supply = current.bond_supply;
@@ -525,7 +525,7 @@ function parameterized_test(accounts,
       check_redemption_epochs(current, accounts[2], [t6, t7, t8]);
       assert.equal(current.coin_supply, coin_supply);
       assert.equal(current.bond_supply, bond_supply);
-      assert.equal(current.bond_budget, 40);
+      assert.equal(current.bond_budget, 0);
 
       await check_update_bond_budget(5 * _bond_redemption_price, -5, 0);
       current = await get_current(sub_accounts, redemptions);
@@ -584,9 +584,9 @@ function parameterized_test(accounts,
       let t9 = _epoch_id + _bond_redemption_period;
 
       assert.equal(current.bond_budget, 0);
-      await check_update_bond_budget(20 * _bond_redemption_price, -20, 0);
+      await check_update_bond_budget(5 * _bond_redemption_price, -5, 0);
       current = await get_current(sub_accounts, redemptions);
-      assert.equal(current.bond_budget, -20);
+      assert.equal(current.bond_budget, -5);
 
       coin_supply = current.coin_supply;
       bond_supply = current.bond_supply;
@@ -645,7 +645,7 @@ function parameterized_test(accounts,
       assert.equal(current.coin_supply,
                    coin_supply + 16 * _bond_redemption_price);
       assert.equal(current.bond_supply, bond_supply - 16);
-      assert.equal(current.bond_budget, 14);
+      assert.equal(current.bond_budget, 0);
 
       await check_update_bond_budget(1 * _bond_redemption_price, -1, 0);
       current = await get_current(sub_accounts, redemptions);
@@ -681,10 +681,10 @@ function parameterized_test(accounts,
       assert.equal(current.coin_supply,
                    coin_supply + 7 * _bond_redemption_price);
       assert.equal(current.bond_supply, bond_supply - 7);
-      assert.equal(current.bond_budget, 7);
+      assert.equal(current.bond_budget, 0);
 
       assert.equal(current.bond_supply, 0);
-      assert.equal(current.bond_budget, 7);
+      assert.equal(current.bond_budget, 0);
       await check_update_bond_budget(5 * _bond_redemption_price,
                          0, 5 * _bond_redemption_price);
       current = await get_current(sub_accounts, redemptions);
