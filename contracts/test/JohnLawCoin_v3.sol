@@ -725,12 +725,14 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
       }
 
       logging_v2_.updateEpoch(
-          result.epoch_id, mint, burned, delta,
-          bond_operation_v2_.bond_budget_v2_(),
-          coin_v2_.totalSupply(),
-          bond_operation_v2_.bond_v2_().totalSupply(),
-          bond_operation_v2_.validBondSupply(result.epoch_id),
+          result.epoch_id, mint, burned, delta, coin_v2_.totalSupply(),
           oracle_level_, current_epoch_start_, tax);
+      logging_v2_.updateBondBudget(
+          result.epoch_id, bond_operation_v2_.bond_budget_v2_(),
+          bond_operation_v2_.bond_v2_().totalSupply(),
+          bond_operation_v2_.validBondSupply(result.epoch_id));
+      logging_v2_.updateCoinBudget(
+          result.epoch_id, open_market_operation_v2_.coin_budget_v2_());
       emit UpdateEpochEvent(result.epoch_id, current_epoch_start_,
                             tax, burned, delta, mint);
     }
@@ -862,6 +864,7 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
         payable(msg.sender).call{value: requested_eth_amount - eth_amount}("");
     require(success, "pc3");
 
+    logging_.purchaseCoins(oracle_.epoch_id_(), eth_amount, coin_amount);
     emit PurchaseCoinsEvent(msg.sender, requested_eth_amount,
                             eth_amount, coin_amount);
     return (eth_amount, coin_amount);
@@ -899,6 +902,7 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
     // sellCoins().
     open_market_operation_v2_.removeEthFromPool(msg.sender, eth_amount);
     
+    logging_.sellCoins(oracle_.epoch_id_(), eth_amount, coin_amount);
     emit SellCoinsEvent(msg.sender, requested_coin_amount,
                         eth_amount, coin_amount);
     return (eth_amount, coin_amount);

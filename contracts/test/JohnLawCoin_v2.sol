@@ -887,15 +887,12 @@ contract Logging_v2 is OwnableUpgradeable {
     uint new_value4;
   }
 
-  // A struct to record metrics about epoch.
+  // A struct to record metrics about Epoch.
   struct EpochLog {
     uint minted_coins;
     uint burned_coins;
     int coin_supply_delta;
-    int bond_budget;
     uint total_coin_supply;
-    uint total_bond_supply;
-    uint valid_bond_supply;
     uint oracle_level;
     uint current_epoch_start;
     uint tax;
@@ -904,8 +901,11 @@ contract Logging_v2 is OwnableUpgradeable {
     uint new_value2;
   }
 
-  // A struct to record metrics about bond operations.
-  struct BondLog {
+  // A struct to record metrics about BondOperation.
+  struct BondOperationLog {
+    int bond_budget;
+    uint total_bond_supply;
+    uint valid_bond_supply;
     uint purchased_bonds;
     uint redeemed_bonds;
     uint expired_bonds;
@@ -914,6 +914,18 @@ contract Logging_v2 is OwnableUpgradeable {
     uint new_value2;
   }
 
+  // A struct to record metrics about OpenMarketOperation.
+  struct OpenMarketOperationLog {
+    int coin_budget;
+    uint increased_eth;
+    uint increased_coin_supply;
+    uint decreased_eth;
+    uint decreased_coin_supply;
+
+    uint new_value1;
+    uint new_value2;
+  }
+  
   struct AnotherLog {
     uint new_value1;
     uint new_value2;
@@ -926,11 +938,14 @@ contract Logging_v2 is OwnableUpgradeable {
   // Logs about voting.
   mapping (uint => VoteLog) public vote_logs_;
   
-  // Logs about epoch.
+  // Logs about Epoch.
   mapping (uint => EpochLog) public epoch_logs_;
 
-  // Logs about bond operations.
-  mapping (uint => BondLog) public bond_logs_;
+  // Logs about BondOperation.
+  mapping (uint => BondOperationLog) public bond_operation_logs_;
+
+  // Logs about OpenMarketOperation.
+  mapping (uint => OpenMarketOperationLog) public open_market_operation_logs_;
 
   mapping (uint => AnotherLog) public another_logs_;
  
@@ -956,34 +971,45 @@ contract Logging_v2 is OwnableUpgradeable {
 
   // Public getter: Return the EpochLog of |epoch_id|.
   function getEpochLog(uint epoch_id)
-      public view returns (
-          uint, uint, int, int, uint, uint, uint, uint, uint, uint) {
+      public view returns (uint, uint, int, uint, uint, uint, uint) {
     return getEpochLog_v2(epoch_id);
   }
 
   function getEpochLog_v2(uint epoch_id)
-      public view returns (
-          uint, uint, int, int, uint, uint, uint, uint, uint, uint) {
+      public view returns (uint, uint, int, uint, uint, uint, uint) {
     EpochLog memory log = epoch_logs_[epoch_id];
     return (log.minted_coins, log.burned_coins, log.coin_supply_delta,
-            log.bond_budget, log.total_coin_supply, log.total_bond_supply,
-            log.valid_bond_supply, log.oracle_level, log.current_epoch_start,
+            log.total_coin_supply, log.oracle_level, log.current_epoch_start,
             log.tax);
   }
   
-  // Public getter: Return the BondLog of |epoch_id|.
-  function getBondLog(uint epoch_id)
-      public view returns (uint, uint, uint) {
-    return getBondLog_v2(epoch_id);
+  // Public getter: Return the BondOperationLog of |epoch_id|.
+  function getBondOperationLog(uint epoch_id)
+      public view returns (int, uint, uint, uint, uint, uint) {
+    return getBondOperationLog_v2(epoch_id);
   }
 
-  function getBondLog_v2(uint epoch_id)
-      public view returns (uint, uint, uint) {
-    BondLog memory log = bond_logs_[epoch_id];
-    return (log.purchased_bonds, log.redeemed_bonds, log.expired_bonds);
+  function getBondOperationLog_v2(uint epoch_id)
+      public view returns (int, uint, uint, uint, uint, uint) {
+    BondOperationLog memory log = bond_operation_logs_[epoch_id];
+    return (log.bond_budget, log.total_bond_supply, log.valid_bond_supply,
+            log.purchased_bonds, log.redeemed_bonds, log.expired_bonds);
   }
   
-  // Called when the oracle phase is updated.
+  // Public getter: Return the OpenMarketOperationLog of |epoch_id|.
+  function getOpenMarketOperationLog(uint epoch_id)
+      public view returns (int, uint, uint, uint, uint) {
+    return getOpenMarketOperationLog_v2(epoch_id);
+  }
+  
+  function getOpenMarketOperationLog_v2(uint epoch_id)
+      public view returns (int, uint, uint, uint, uint) {
+    OpenMarketOperationLog memory log = open_market_operation_logs_[epoch_id];
+    return (log.coin_budget, log.increased_eth, log.increased_coin_supply,
+            log.decreased_eth, log.decreased_coin_supply);
+  }
+
+  // Called when the epoch is updated.
   //
   // Parameters
   // ----------------
@@ -991,9 +1017,7 @@ contract Logging_v2 is OwnableUpgradeable {
   // |minted|: The amount of the minted coins.
   // |burned|: The amount of the burned coins.
   // |delta|: The delta of the total coin supply.
-  // |bond_budget|: ACB.bond_budget_.
   // |total_coin_supply|: The total coin supply.
-  // |total_bond_supply|: The total bond supply.
   // |oracle_level|: ACB.oracle_level_.
   // |current_epoch_start|: ACB.current_epoch_start_.
   // |tax|: The amount of the tax collected in the phase.
@@ -1002,28 +1026,21 @@ contract Logging_v2 is OwnableUpgradeable {
   // ----------------
   // None.
   function updateEpoch(uint epoch_id, uint minted, uint burned, int delta,
-                       int bond_budget, uint total_coin_supply,
-                       uint total_bond_supply, uint valid_bond_supply,
-                       uint oracle_level, uint current_epoch_start, uint tax)
+                       uint total_coin_supply, uint oracle_level,
+                       uint current_epoch_start, uint tax)
       public onlyOwner {
-    updateEpoch_v2(epoch_id, minted, burned, delta, bond_budget,
-                   total_coin_supply, total_bond_supply, valid_bond_supply,
+    updateEpoch_v2(epoch_id, minted, burned, delta, total_coin_supply,
                    oracle_level, current_epoch_start, tax);
   }
 
   function updateEpoch_v2(uint epoch_id, uint minted, uint burned, int delta,
-                          int bond_budget, uint total_coin_supply,
-                          uint total_bond_supply, uint valid_bond_supply,
-                          uint oracle_level, uint current_epoch_start,
-                          uint tax)
+                       uint total_coin_supply, uint oracle_level,
+                       uint current_epoch_start, uint tax)
       public onlyOwner {
     epoch_logs_[epoch_id].minted_coins = minted;
     epoch_logs_[epoch_id].burned_coins = burned;
     epoch_logs_[epoch_id].coin_supply_delta = delta;
-    epoch_logs_[epoch_id].bond_budget = bond_budget;
     epoch_logs_[epoch_id].total_coin_supply = total_coin_supply;
-    epoch_logs_[epoch_id].total_bond_supply = total_bond_supply;
-    epoch_logs_[epoch_id].valid_bond_supply = valid_bond_supply;
     epoch_logs_[epoch_id].oracle_level = oracle_level;
     epoch_logs_[epoch_id].current_epoch_start = current_epoch_start;
     epoch_logs_[epoch_id].tax = tax;
@@ -1032,6 +1049,72 @@ contract Logging_v2 is OwnableUpgradeable {
 
     another_logs_[epoch_id].new_value1 += minted;
     another_logs_[epoch_id].new_value2 += burned;
+  }
+
+  // Called when BondOperation's bond budget is updated at the beginning of
+  // the epoch.
+  //
+  // Parameters
+  // ----------------
+  // |epoch_id|: The epoch ID.
+  // |bond_budget|: The bond budget.
+  // |total_bond_supply|: The total bond supply.
+  // |valid_bond_supply|: The valid bond supply.
+  //
+  // Returns
+  // ----------------
+  // None.
+  function updateBondBudget(uint epoch_id, int bond_budget,
+                            uint total_bond_supply, uint valid_bond_supply)
+      public onlyOwner {
+    updateBondBudget_v2(epoch_id, bond_budget,
+                        total_bond_supply, valid_bond_supply);
+  }
+  
+  function updateBondBudget_v2(uint epoch_id, int bond_budget,
+                               uint total_bond_supply, uint valid_bond_supply)
+      public onlyOwner {
+    bond_operation_logs_[epoch_id].bond_budget = bond_budget;
+    bond_operation_logs_[epoch_id].total_bond_supply = total_bond_supply;
+    bond_operation_logs_[epoch_id].valid_bond_supply = valid_bond_supply;
+    bond_operation_logs_[epoch_id].purchased_bonds = 0;
+    bond_operation_logs_[epoch_id].redeemed_bonds = 0;
+    bond_operation_logs_[epoch_id].expired_bonds = 0;
+    bond_operation_logs_[epoch_id].new_value1 = epoch_id;
+    bond_operation_logs_[epoch_id].new_value2 = epoch_id;
+
+    another_logs_[epoch_id].new_value1 += epoch_id;
+    another_logs_[epoch_id].new_value2 += epoch_id;
+  }
+
+  // Called when OpenMarketOperation's coin budget is updated at the beginning
+  // of the epoch.
+  //
+  // Parameters
+  // ----------------
+  // |epoch_id|: The epoch ID.
+  // |coin_budget|: The coin budget.
+  //
+  // Returns
+  // ----------------
+  // None.
+  function updateCoinBudget(uint epoch_id, int coin_budget)
+      public onlyOwner {
+    updateCoinBudget_v2(epoch_id, coin_budget);
+  }
+  
+  function updateCoinBudget_v2(uint epoch_id, int coin_budget)
+      public onlyOwner {
+    open_market_operation_logs_[epoch_id].coin_budget = coin_budget;
+    open_market_operation_logs_[epoch_id].increased_eth = 0;
+    open_market_operation_logs_[epoch_id].increased_coin_supply = 0;
+    open_market_operation_logs_[epoch_id].decreased_eth = 0;
+    open_market_operation_logs_[epoch_id].decreased_coin_supply = 0;
+    open_market_operation_logs_[epoch_id].new_value1 = epoch_id;
+    open_market_operation_logs_[epoch_id].new_value2 = epoch_id;
+    
+    another_logs_[epoch_id].new_value1 += epoch_id;
+    another_logs_[epoch_id].new_value2 += epoch_id;
   }
 
   // Called when ACB.vote is called.
@@ -1101,8 +1184,8 @@ contract Logging_v2 is OwnableUpgradeable {
 
   function purchaseBonds_v2(uint epoch_id, uint purchased_bonds)
       public onlyOwner {
-    bond_logs_[epoch_id].purchased_bonds += purchased_bonds;
-    bond_logs_[epoch_id].new_value1 += purchased_bonds;
+    bond_operation_logs_[epoch_id].purchased_bonds += purchased_bonds;
+    bond_operation_logs_[epoch_id].new_value1 += purchased_bonds;
   }
 
   // Called when ACB.redeemBonds is called.
@@ -1121,12 +1204,61 @@ contract Logging_v2 is OwnableUpgradeable {
     redeemBonds_v2(epoch_id, redeemed_bonds, expired_bonds);
   }
   
-  function redeemBonds_v2(uint epoch_id, uint redeemed_bonds, uint expired_bonds)
+  function redeemBonds_v2(uint epoch_id, uint redeemed_bonds,
+                          uint expired_bonds)
       public onlyOwner {
-    bond_logs_[epoch_id].redeemed_bonds += redeemed_bonds;
-    bond_logs_[epoch_id].expired_bonds += expired_bonds;
-    bond_logs_[epoch_id].new_value1 += redeemed_bonds;
-    bond_logs_[epoch_id].new_value2 += expired_bonds;
+    bond_operation_logs_[epoch_id].redeemed_bonds += redeemed_bonds;
+    bond_operation_logs_[epoch_id].expired_bonds += expired_bonds;
+    bond_operation_logs_[epoch_id].new_value1 += redeemed_bonds;
+    bond_operation_logs_[epoch_id].new_value2 += expired_bonds;
+  }
+
+  // Called when ACB.purchaseCoins is called.
+  //
+  // Parameters
+  // ----------------
+  // |epoch_id|: The epoch ID.
+  // |eth_amount|: The amount of ETH exchanged.
+  // |coin_amount|: The amount of coins exchanged.
+  //
+  // Returns
+  // ----------------
+  // None.
+  function purchaseCoins(uint epoch_id, uint eth_amount, uint coin_amount)
+      public onlyOwner {
+    purchaseCoins_v2(epoch_id, eth_amount, coin_amount);
+  }
+  
+  function purchaseCoins_v2(uint epoch_id, uint eth_amount, uint coin_amount)
+      public onlyOwner {
+    open_market_operation_logs_[epoch_id].increased_eth += eth_amount;
+    open_market_operation_logs_[epoch_id].increased_coin_supply += coin_amount;
+    open_market_operation_logs_[epoch_id].new_value1 += eth_amount;
+    open_market_operation_logs_[epoch_id].new_value2 += coin_amount;
+  }
+
+  // Called when ACB.sellCoins is called.
+  //
+  // Parameters
+  // ----------------
+  // |epoch_id|: The epoch ID.
+  // |eth_amount|: The amount of ETH exchanged.
+  // |coin_amount|: The amount of coins exchanged.
+  //
+  // Returns
+  // ----------------
+  // None.
+  function sellCoins(uint epoch_id, uint eth_amount, uint coin_amount)
+      public onlyOwner {
+    sellCoins_v2(epoch_id, eth_amount, coin_amount);
+  }
+  
+  function sellCoins_v2(uint epoch_id, uint eth_amount, uint coin_amount)
+      public onlyOwner {
+    open_market_operation_logs_[epoch_id].decreased_eth += eth_amount;
+    open_market_operation_logs_[epoch_id].decreased_coin_supply += coin_amount;
+    open_market_operation_logs_[epoch_id].new_value1 += eth_amount;
+    open_market_operation_logs_[epoch_id].new_value2 += coin_amount;
   }
 }
 
@@ -1444,11 +1576,11 @@ contract OpenMarketOperation_v2 is OwnableUpgradeable {
   
   function increaseCoinSupply_v2(uint requested_eth_amount, uint elapsed_time)
       public onlyOwner returns (uint, uint) {
-    require(coin_budget_ > 0,
+    require(coin_budget_v2_ > 0,
             "OpenMarketOperation: The coin budget must be positive.");
         
     // Calculate the current price.
-    uint price = start_price_;
+    uint price = start_price_v2_;
     for (uint i = 0; i < elapsed_time / PRICE_CHANGE_INTERVAL; i++) {
       price = price * (100 - PRICE_CHANGE_PERCENTAGE) / 100;
     }
@@ -1457,21 +1589,25 @@ contract OpenMarketOperation_v2 is OwnableUpgradeable {
 
     // Calculate the amount of coins and ETH to be exchanged.
     uint coin_amount = requested_eth_amount / price;
-    if (coin_amount > coin_budget_.toUint256()) {
-      coin_amount = coin_budget_.toUint256();
+    if (coin_amount > coin_budget_v2_.toUint256()) {
+      coin_amount = coin_budget_v2_.toUint256();
     }
     uint eth_amount = coin_amount * price;
         
     if (coin_amount > 0) {
-      latest_price_ = price;
+      latest_price_v2_ = price;
     }
-    coin_budget_ -= coin_amount.toInt256();
-    eth_balance_ += eth_amount;
-    require(coin_budget_ >= 0, "ic1");
+    coin_budget_v2_ -= coin_amount.toInt256();
+    eth_balance_v2_ += eth_amount;
+    require(coin_budget_v2_ >= 0, "ic1");
     require(eth_amount <= requested_eth_amount, "ic2");
 
     emit IncreaseCoinSupplyEvent(requested_eth_amount, elapsed_time,
                                  eth_amount, coin_amount);
+    latest_price_ = latest_price_v2_;
+    start_price_ = start_price_v2_;
+    eth_balance_ = eth_balance_v2_;
+    coin_budget_ = coin_budget_v2_;
     return (eth_amount, coin_amount);
   }
 
@@ -1499,11 +1635,11 @@ contract OpenMarketOperation_v2 is OwnableUpgradeable {
   
   function decreaseCoinSupply_v2(uint requested_coin_amount, uint elapsed_time)
       public onlyOwner returns (uint, uint) {
-    require(coin_budget_ < 0,
+    require(coin_budget_v2_ < 0,
             "OpenMarketOperation: The coin budget must be negative.");
         
     // Calculate the current price.
-    uint price = start_price_;
+    uint price = start_price_v2_;
     for (uint i = 0; i < elapsed_time / PRICE_CHANGE_INTERVAL; i++) {
       price = price * (100 + PRICE_CHANGE_PERCENTAGE) / 100;
     }
@@ -1513,25 +1649,29 @@ contract OpenMarketOperation_v2 is OwnableUpgradeable {
         
     // Calculate the amount of coins and ETH to be exchanged.
     uint coin_amount = requested_coin_amount;
-    if (coin_amount >= (-coin_budget_).toUint256()) {
-      coin_amount = (-coin_budget_).toUint256();
+    if (coin_amount >= (-coin_budget_v2_).toUint256()) {
+      coin_amount = (-coin_budget_v2_).toUint256();
     }
     uint eth_amount = coin_amount * price;
-    if (eth_amount >= eth_balance_) {
-      eth_amount = eth_balance_;
+    if (eth_amount >= eth_balance_v2_) {
+      eth_amount = eth_balance_v2_;
     }
     coin_amount = eth_amount / price;
         
     if (coin_amount > 0) {
-      latest_price_ = price;
+      latest_price_v2_ = price;
     }
-    coin_budget_ += coin_amount.toInt256();
-    eth_balance_ -= eth_amount;
-    require(coin_budget_ <= 0);
+    coin_budget_v2_ += coin_amount.toInt256();
+    eth_balance_v2_ -= eth_amount;
+    require(coin_budget_v2_ <= 0);
     require(coin_amount <= requested_coin_amount, "dc1");
 
     emit DecreaseCoinSupplyEvent(requested_coin_amount, elapsed_time,
                                  eth_amount, coin_amount);
+    latest_price_ = latest_price_v2_;
+    start_price_ = start_price_v2_;
+    eth_balance_ = eth_balance_v2_;
+    coin_budget_ = coin_budget_v2_;
     return (eth_amount, coin_amount);
   }
   
@@ -1577,21 +1717,25 @@ contract OpenMarketOperation_v2 is OwnableUpgradeable {
   
   function updateCoinBudget_v2(int coin_budget)
       public onlyOwner {
-    coin_budget_ = coin_budget;
-    require(latest_price_ > 0, "uc1");
-    if (coin_budget_ > 0) {
-      start_price_ = latest_price_ * START_PRICE_MULTIPILER;
-      require(start_price_ > 0, "uc2");
-    } else if (coin_budget_ == 0) {
-      start_price_ = 0;
+    coin_budget_v2_ = coin_budget;
+    require(latest_price_v2_ > 0, "uc1");
+    if (coin_budget_v2_ > 0) {
+      start_price_v2_ = latest_price_v2_ * START_PRICE_MULTIPILER;
+      require(start_price_v2_ > 0, "uc2");
+    } else if (coin_budget_v2_ == 0) {
+      start_price_v2_ = 0;
     } else {
-      start_price_ = latest_price_ / START_PRICE_MULTIPILER;
-      if (start_price_ == 0) {
-        start_price_ = 1;
+      start_price_v2_ = latest_price_v2_ / START_PRICE_MULTIPILER;
+      if (start_price_v2_ == 0) {
+        start_price_v2_ = 1;
       }
-      require(start_price_ > 0, "uc3");
+      require(start_price_v2_ > 0, "uc3");
     }
-    emit UpdateCoinBudgetEvent(coin_budget_);
+    emit UpdateCoinBudgetEvent(coin_budget_v2_);
+    latest_price_ = latest_price_v2_;
+    start_price_ = start_price_v2_;
+    eth_balance_ = eth_balance_v2_;
+    coin_budget_ = coin_budget_v2_;
   }
 }
 
@@ -1835,12 +1979,14 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
       }
 
       logging_v2_.updateEpoch(
-          result.epoch_id, mint, burned, delta,
-          bond_operation_v2_.bond_budget_v2_(),
-          coin_v2_.totalSupply(),
-          bond_operation_v2_.bond_v2_().totalSupply(),
-          bond_operation_v2_.validBondSupply(result.epoch_id),
+          result.epoch_id, mint, burned, delta, coin_v2_.totalSupply(),
           oracle_level_, current_epoch_start_v2_, tax);
+      logging_v2_.updateBondBudget(
+          result.epoch_id, bond_operation_v2_.bond_budget_v2_(),
+          bond_operation_v2_.bond_v2_().totalSupply(),
+          bond_operation_v2_.validBondSupply(result.epoch_id));
+      logging_v2_.updateCoinBudget(
+          result.epoch_id, open_market_operation_v2_.coin_budget_v2_());
       emit UpdateEpochEvent(result.epoch_id, current_epoch_start_v2_,
                             tax, burned, delta, mint);
     }
@@ -1982,6 +2128,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
         payable(msg.sender).call{value: requested_eth_amount - eth_amount}("");
     require(success, "pc3");
 
+    logging_.purchaseCoins(oracle_.epoch_id_(), eth_amount, coin_amount);
     emit PurchaseCoinsEvent(msg.sender, requested_eth_amount,
                             eth_amount, coin_amount);
     return (eth_amount, coin_amount);
@@ -2024,6 +2171,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
     // sellCoins().
     open_market_operation_v2_.removeEthFromPool(msg.sender, eth_amount);
     
+    logging_.sellCoins(oracle_.epoch_id_(), eth_amount, coin_amount);
     emit SellCoinsEvent(msg.sender, requested_coin_amount,
                         eth_amount, coin_amount);
     return (eth_amount, coin_amount);

@@ -179,6 +179,8 @@ function parameterized_test(accounts,
         this.redeem_hit = 0;
         this.purchase_hit = 0;
         this.purchase_count = 0;
+        this.increased_eth = 0;
+        this.decreased_eth = 0;
         this.increased_coin_supply = 0;
         this.decreased_coin_supply = 0;
         this.delta = 0;
@@ -283,6 +285,8 @@ function parameterized_test(accounts,
       let valid_bond_supply = (
         await _bond_operation.validBondSupply(epoch_id)).toNumber();
       let bond_budget = (await _bond_operation.bond_budget_()).toNumber();
+      let coin_budget = (
+        await _open_market_operation.coin_budget_()).toNumber();
 
       await purchase_coins();
       await sell_coins();
@@ -294,18 +298,11 @@ function parameterized_test(accounts,
       assert.equal(epoch_log.minted_coins, _metrics.mint);
       assert.equal(epoch_log.burned_coins, _metrics.lost);
       assert.equal(epoch_log.coin_supply_delta.toNumber(), _metrics.delta);
-      assert.equal(epoch_log.bond_budget, bond_budget);
       assert.equal(epoch_log.total_coin_supply, coin_supply2);
-      assert.equal(epoch_log.total_bond_supply, bond_supply);
-      assert.equal(epoch_log.valid_bond_supply, valid_bond_supply);
       assert.equal(epoch_log.oracle_level, _metrics.oracle_level);
       assert.equal(epoch_log.current_epoch_start,
                    (await _acb.getTimestamp()).toNumber());
       assert.equal(epoch_log.tax, tax);
-      let bond_log = await get_bond_logs(epoch_id);
-      assert.equal(bond_log.purchased_bonds, _metrics.purchase_count);
-      assert.equal(bond_log.redeemed_bonds, _metrics.redeemed_bonds);
-      assert.equal(bond_log.expired_bonds, _metrics.expired_bonds);
       let vote_log = await get_vote_logs(epoch_id);
       assert.equal(vote_log.commit_succeeded,
                    _metrics.reveal_hit + _metrics.reveal_miss);
@@ -317,6 +314,24 @@ function parameterized_test(accounts,
       assert.equal(vote_log.reward_succeeded, _metrics.reward_hit);
       assert.equal(vote_log.reclaimed, _metrics.reclaimed);
       assert.equal(vote_log.rewarded, _metrics.rewarded);
+      let bond_operation_log = await get_bond_operation_logs(epoch_id);
+      assert.equal(bond_operation_log.bond_budget, bond_budget);
+      assert.equal(bond_operation_log.total_bond_supply, bond_supply);
+      assert.equal(bond_operation_log.valid_bond_supply, valid_bond_supply);
+      assert.equal(bond_operation_log.purchased_bonds, _metrics.purchase_count);
+      assert.equal(bond_operation_log.redeemed_bonds, _metrics.redeemed_bonds);
+      assert.equal(bond_operation_log.expired_bonds, _metrics.expired_bonds);
+      let open_market_operation_log =
+          await get_open_market_operation_logs(epoch_id);
+      assert.equal(open_market_operation_log.coin_budget, coin_budget);
+      assert.equal(open_market_operation_log.increased_eth,
+                   _metrics.increased_eth);
+      assert.equal(open_market_operation_log.increased_coin_supply,
+                   _metrics.increased_coin_supply);
+      assert.equal(open_market_operation_log.decreased_eth,
+                   _metrics.decreased_eth);
+      assert.equal(open_market_operation_log.decreased_coin_supply,
+                   _metrics.decreased_coin_supply);
 
       tax = await transfer_coins();
 
@@ -504,6 +519,7 @@ function parameterized_test(accounts,
         assert.equal(await get_coin_supply(),
                      coin_supply + requested_coin_amount);
 
+        _metrics.increased_eth += requested_coin_amount * price;
         _metrics.increased_coin_supply += requested_coin_amount;
       }
     }
@@ -545,6 +561,7 @@ function parameterized_test(accounts,
         assert.equal(await get_coin_supply(),
                      coin_supply - requested_coin_amount);
 
+        _metrics.decreased_eth += requested_coin_amount * price;
         _metrics.decreased_coin_supply += requested_coin_amount;
       }
     }
@@ -950,7 +967,7 @@ function parameterized_test(accounts,
       }
 
       let epoch_offset = (await _oracle.epoch_id_()).toNumber() - 3;
-      let repeat = 5;
+      let repeat = 3;
       if (epoch_offset == repeat * 1) {
         _tmp_bond_price = _bond_price;
         _tmp_bond_redemption_price = _bond_redemption_price;
@@ -962,6 +979,9 @@ function parameterized_test(accounts,
         _tmp_damping_factor = _damping_factor;
         _tmp_level_to_exchange_rate = _level_to_exchange_rate.slice();
         _tmp_reclaim_threshold = _reclaim_threshold;
+        _tmp_price_change_interval = _price_change_interval;
+        _tmp_price_change_percentage = _price_change_percentage;
+        _tmp_start_price_multiplier = _start_price_multiplier;
 
         _bond_price += 100;
         _bond_redemption_price += 100;
@@ -975,6 +995,9 @@ function parameterized_test(accounts,
           _level_to_exchange_rate[level] += 1;
         }
         _reclaim_threshold = 0;
+        _price_change_interval = Math.trunc(_epoch_duration / 8) + 1;
+        _price_change_percentage = 1;
+        _start_price_multiplier = 2;
 
         _coin = await upgradeProxy(_coin.address, JohnLawCoin_v2);
         common.print_contract_size(_coin, "JohnLawCoin_v2");
@@ -1025,6 +1048,9 @@ function parameterized_test(accounts,
         _damping_factor = _tmp_damping_factor;
         _level_to_exchange_rate = _tmp_level_to_exchange_rate.slice();
         _reclaim_threshold = _tmp_reclaim_threshold;
+        _price_change_interval = _tmp_price_change_interval;
+        _price_change_percentage = _tmp_price_change_percentage;
+        _start_price_multiplier = _tmp_start_price_multiplier;
 
         _oracle = await upgradeProxy(_oracle.address, OracleForTesting_v3);
         common.print_contract_size(_oracle, "OracleForTesting_v3");
@@ -1057,6 +1083,9 @@ function parameterized_test(accounts,
         _tmp_damping_factor = _damping_factor;
         _tmp_level_to_exchange_rate = _level_to_exchange_rate.slice();
         _tmp_reclaim_threshold = _reclaim_threshold;
+        _tmp_price_change_interval = _price_change_interval;
+        _tmp_price_change_percentage = _price_change_percentage;
+        _tmp_start_price_multiplier = _start_price_multiplier;
 
         _bond_price += 100;
         _bond_redemption_price += 100;
@@ -1070,6 +1099,9 @@ function parameterized_test(accounts,
           _level_to_exchange_rate[level] += 1;
         }
         _reclaim_threshold = 0;
+        _price_change_interval = Math.trunc(_epoch_duration / 8) + 1;
+        _price_change_percentage = 1;
+        _start_price_multiplier = 2;
 
         let old_acb = _acb;
         _acb = await deployProxy(
@@ -1114,6 +1146,9 @@ function parameterized_test(accounts,
         _damping_factor = _tmp_damping_factor;
         _level_to_exchange_rate = _tmp_level_to_exchange_rate.slice();
         _reclaim_threshold = _tmp_reclaim_threshold;
+        _price_change_interval = _tmp_price_change_interval;
+        _price_change_percentage = _tmp_price_change_percentage;
+        _start_price_multiplier = _tmp_start_price_multiplier;
 
         let old_oracle = _oracle;
         _oracle = await deployProxy(
@@ -1261,23 +1296,34 @@ function parameterized_test(accounts,
       epoch_log.minted_coins = ret[0];
       epoch_log.burned_coins = ret[1];
       epoch_log.coin_supply_delta = ret[2];
-      epoch_log.bond_budget = ret[3];
-      epoch_log.total_coin_supply = ret[4];
-      epoch_log.total_bond_supply = ret[5];
-      epoch_log.valid_bond_supply = ret[6];
-      epoch_log.oracle_level = ret[7];
-      epoch_log.current_epoch_start = ret[8];
-      epoch_log.tax = ret[9];
+      epoch_log.total_coin_supply = ret[3];
+      epoch_log.oracle_level = ret[4];
+      epoch_log.current_epoch_start = ret[5];
+      epoch_log.tax = ret[6];
       return epoch_log;
     }
 
-    async function get_bond_logs(epoch_id) {
-      const ret = await _logging.getBondLog(epoch_id);
-      let bond_log = {};
-      bond_log.purchased_bonds = ret[0];
-      bond_log.redeemed_bonds = ret[1];
-      bond_log.expired_bonds = ret[2];
-      return bond_log;
+    async function get_bond_operation_logs(epoch_id) {
+      const ret = await _logging.getBondOperationLog(epoch_id);
+      let bond_operation_log = {};
+      bond_operation_log.bond_budget = ret[0];
+      bond_operation_log.total_bond_supply = ret[1];
+      bond_operation_log.valid_bond_supply = ret[2];
+      bond_operation_log.purchased_bonds = ret[3];
+      bond_operation_log.redeemed_bonds = ret[4];
+      bond_operation_log.expired_bonds = ret[5];
+      return bond_operation_log;
+    }
+    
+    async function get_open_market_operation_logs(epoch_id) {
+      const ret = await _logging.getOpenMarketOperationLog(epoch_id);
+      let open_market_operation_log = {};
+      open_market_operation_log.coin_budget = ret[0];
+      open_market_operation_log.increased_eth = ret[1];
+      open_market_operation_log.increased_coin_supply = ret[2];
+      open_market_operation_log.decreased_eth = ret[3];
+      open_market_operation_log.decreased_coin_supply = ret[4];
+      return open_market_operation_log;
     }
   });
 }

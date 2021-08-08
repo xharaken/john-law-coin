@@ -718,39 +718,60 @@ class Logging:
           self.reclaimed = 0
           self.rewarded = 0
 
-    # A struct to record metrics about epoch.
+    # A struct to record metrics about Epoch.
     class EpochLog:
       def __init__(self):
           self.minted_coins = 0
           self.burned_coins = 0
           self.coin_supply_delta = 0
-          self.bond_budget = 0
           self.total_coin_supply = 0
-          self.total_bond_supply = 0
-          self.valid_bond_supply = 0
           self.oracle_level = 0
           self.current_epoch_start = 0
           self.tax = 0
 
-    # A struct to record metrics about bond operations.
-    class BondLog:
+    # A struct to record metrics about BondOperation.
+    class BondOperationLog:
       def __init__(self):
+          self.bond_budget = 0
+          self.total_bond_supply = 0
+          self.valid_bond_supply = 0
           self.purchased_bonds = 0
           self.redeemed_bonds = 0
           self.expired_bonds = 0
 
+    # A struct to record metrics about OpenMarketOperation.
+    class OpenMarketOperationLog:
+      def __init__(self):
+          self.coin_budget = 0
+          self.increased_eth = 0
+          self.increased_coin_supply = 0
+          self.decreased_eth = 0
+          self.decreased_coin_supply = 0
+    
     # Constructor.
     def __init__(self):
         # Logs about voting.
         self.vote_logs = {}
 
-        # Logs about epoch.
+        # Logs about Epoch.
         self.epoch_logs = {}
 
-        # Logs about bond operations.
-        self.bond_logs = {}
+        # Logs about BondOperation.
+        self.bond_operation_logs = {}
 
-    # Called when the oracle phase is updated.
+        # Logs about OpenMarketOperation.
+        self.open_market_operation_logs = {}
+
+    # Python only.
+    def ensure_logs(self, epoch_id):
+        if epoch_id not in self.epoch_logs:
+            self.epoch_logs[epoch_id] = Logging.EpochLog()
+            self.vote_logs[epoch_id] = Logging.VoteLog()
+            self.bond_operation_logs[epoch_id] = Logging.BondOperationLog()
+            self.open_market_operation_logs[
+                epoch_id] = Logging.OpenMarketOperationLog()
+        
+    # Called when the epoch is updated.
     #
     # Parameters
     # ----------------
@@ -758,10 +779,7 @@ class Logging:
     # |minted|: The amount of the minted coins.
     # |burned|: The amount of the burned coins.
     # |delta|: The delta of the total coin supply.
-    # |bond_budget|: ACB.bond_budget_.
     # |total_coin_supply|: The total coin supply.
-    # |total_bond_supply|: The total bond supply.
-    # |valid_bond_supply|: The valid bond supply.
     # |oracle_level|: ACB.oracle_level_.
     # |current_epoch_start|: ACB.current_epoch_start_.
     # |tax|: The amount of the tax collected in the phase.
@@ -769,24 +787,58 @@ class Logging:
     # Returns
     # ----------------
     # None.
-    def update_epoch(self, epoch_id, minted, burned, delta, bond_budget,
-                     total_coin_supply, total_bond_supply, valid_bond_supply,
+    def update_epoch(self, epoch_id, minted, burned, delta, total_coin_supply,
                      oracle_level, current_epoch_start, tax):
-        if epoch_id not in self.epoch_logs:
-            self.epoch_logs[epoch_id] = Logging.EpochLog()
-            self.vote_logs[epoch_id] = Logging.VoteLog()
-            self.bond_logs[epoch_id] = Logging.BondLog()
-
+        self.ensure_logs(epoch_id)
         self.epoch_logs[epoch_id].minted_coins = minted
         self.epoch_logs[epoch_id].burned_coins = burned
         self.epoch_logs[epoch_id].coin_supply_delta = delta
-        self.epoch_logs[epoch_id].bond_budget = bond_budget
         self.epoch_logs[epoch_id].total_coin_supply = total_coin_supply
-        self.epoch_logs[epoch_id].total_bond_supply = total_bond_supply
-        self.epoch_logs[epoch_id].valid_bond_supply = valid_bond_supply
         self.epoch_logs[epoch_id].oracle_level = oracle_level
         self.epoch_logs[epoch_id].current_epoch_start = current_epoch_start
         self.epoch_logs[epoch_id].tax = tax
+
+    # Called when BondOperation's bond budget is updated at the beginning of
+    # the epoch.
+    #
+    # Parameters
+    # ----------------
+    # |epoch_id|: The epoch ID.
+    # |bond_budget|: The bond budget.
+    # |total_bond_supply|: The total bond supply.
+    # |valid_bond_supply|: The valid bond supply.
+    #
+    # Returns
+    # ----------------
+    # None.
+    def update_bond_budget(self, epoch_id, bond_budget, total_bond_supply,
+                           valid_bond_supply):
+        self.ensure_logs(epoch_id)
+        self.bond_operation_logs[epoch_id].bond_budget = bond_budget
+        self.bond_operation_logs[epoch_id].total_bond_supply = total_bond_supply
+        self.bond_operation_logs[epoch_id].valid_bond_supply = valid_bond_supply
+        self.bond_operation_logs[epoch_id].purchased_bonds = 0
+        self.bond_operation_logs[epoch_id].redeemed_bonds = 0
+        self.bond_operation_logs[epoch_id].expired_bonds = 0
+
+    # Called when OpenMarketOperation's coin budget is updated at the beginning
+    # of the epoch.
+    #
+    # Parameters
+    # ----------------
+    # |epoch_id|: The epoch ID.
+    # |coin_budget|: The coin budget.
+    #
+    # Returns
+    # ----------------
+    # None.
+    def update_coin_budget(self, epoch_id, coin_budget):
+        self.ensure_logs(epoch_id)
+        self.open_market_operation_logs[epoch_id].coin_budget = coin_budget
+        self.open_market_operation_logs[epoch_id].increased_eth = 0
+        self.open_market_operation_logs[epoch_id].increased_coin_supply = 0
+        self.open_market_operation_logs[epoch_id].decreased_eth = 0
+        self.open_market_operation_logs[epoch_id].decreased_coin_supply = 0
 
     # Called when ACB.vote is called.
     #
@@ -804,11 +856,7 @@ class Logging:
     # None.
     def vote(self, epoch_id, commit_result, reveal_result, deposited,
              reclaimed, rewarded):
-        if epoch_id not in self.vote_logs:
-            self.epoch_logs[epoch_id] = Logging.EpochLog()
-            self.vote_logs[epoch_id] = Logging.VoteLog()
-            self.bond_logs[epoch_id] = Logging.BondLog()
-            
+        self.ensure_logs(epoch_id)
         if commit_result:
             self.vote_logs[epoch_id].commit_succeeded += 1
         else:
@@ -825,7 +873,7 @@ class Logging:
         self.vote_logs[epoch_id].reclaimed += reclaimed
         self.vote_logs[epoch_id].rewarded += rewarded
 
-    # Called when ACB.purchase_bonds is called.
+    # Called when ACB.purchaseBonds is called.
     #
     # Parameters
     # ----------------
@@ -836,14 +884,10 @@ class Logging:
     # ----------------
     # None.
     def purchase_bonds(self, epoch_id, purchased_bonds):
-        if epoch_id not in self.bond_logs:
-            self.epoch_logs[epoch_id] = Logging.EpochLog()
-            self.vote_logs[epoch_id] = Logging.VoteLog()
-            self.bond_logs[epoch_id] = Logging.BondLog()
-            
-        self.bond_logs[epoch_id].purchased_bonds += purchased_bonds
+        self.ensure_logs(epoch_id)
+        self.bond_operation_logs[epoch_id].purchased_bonds += purchased_bonds
 
-    # Called when ACB.redeem_bonds is called.
+    # Called when ACB.redeemBonds is called.
     #
     # Parameters
     # ----------------
@@ -855,13 +899,43 @@ class Logging:
     # ----------------
     # None.
     def redeem_bonds(self, epoch_id, redeemed_bonds, expired_bonds):
-        if epoch_id not in self.bond_logs:
-            self.epoch_logs[epoch_id] = Logging.EpochLog()
-            self.vote_logs[epoch_id] = Logging.VoteLog()
-            self.bond_logs[epoch_id] = Logging.BondLog()
-            
-        self.bond_logs[epoch_id].redeemed_bonds += redeemed_bonds
-        self.bond_logs[epoch_id].expired_bonds += expired_bonds
+        self.ensure_logs(epoch_id)
+        self.bond_operation_logs[epoch_id].redeemed_bonds += redeemed_bonds
+        self.bond_operation_logs[epoch_id].expired_bonds += expired_bonds
+
+    # Called when ACB.purchaseCoins is called.
+    #
+    # Parameters
+    # ----------------
+    # |epoch_id|: The epoch ID.
+    # |eth_amount|: The amount of ETH exchanged.
+    # |coin_amount|: The amount of coins exchanged.
+    #
+    # Returns
+    # ----------------
+    # None.
+    def purchase_coins(self, epoch_id, eth_amount, coin_amount):
+        self.ensure_logs(epoch_id)
+        self.open_market_operation_logs[epoch_id].increased_eth += eth_amount
+        self.open_market_operation_logs[
+            epoch_id].increased_coin_supply += coin_amount
+
+    # Called when ACB.sell_coins is called.
+    #
+    # Parameters
+    # ----------------
+    # |epoch_id|: The epoch ID.
+    # |eth_amount|: The amount of ETH exchanged.
+    # |coin_amount|: The amount of coins exchanged.
+    #
+    # Returns
+    # ----------------
+    # None.
+    def sell_coins(self, epoch_id, eth_amount, coin_amount):
+        self.ensure_logs(epoch_id)
+        self.open_market_operation_logs[epoch_id].decreased_eth += eth_amount
+        self.open_market_operation_logs[
+            epoch_id].decreased_coin_supply += coin_amount
 
 #-------------------------------------------------------------------------------
 # [BondOperation contract]
@@ -1259,12 +1333,12 @@ class OpenMarketOperation:
                 self.start_price = 1
             assert(self.start_price > 0)
 
-    # Receive ETH from the |sender| and add it to the pool.
-    def add_eth_to_pool(self, sender, eth_amount):
+    # Receive ETH from the |sender| and increase ETH in the pool.
+    def increase_eth_in_pool(self, sender, eth_amount):
         self.actual_eth_balance += eth_amount
 
-    # Remove |eth_amount| ETH from the pool and send it to the |sender|.
-    def remove_eth_from_pool(self, sender, eth_amount):
+    # Decrease |eth_amount| ETH in the pool and send it to the |sender|.
+    def decrease_eth_in_pool(self, sender, eth_amount):
         assert(self.actual_eth_balance >= eth_amount)
         self.actual_eth_balance -= eth_amount
 
@@ -1491,10 +1565,14 @@ class ACB:
                 self.open_market_operation.update_coin_budget(mint)
 
             self.logging.update_epoch(
-                epoch_id, mint, burned, delta, self.bond_operation.bond_budget,
-                self.coin.total_supply, self.bond_operation.bond.total_supply,
-                self.bond_operation.valid_bond_supply(epoch_id),
+                epoch_id, mint, burned, delta, self.coin.total_supply,
                 self.oracle_level, self.current_epoch_start, tax)
+            self.logging.update_bond_budget(
+                epoch_id, self.bond_operation.bond_budget,
+                self.bond_operation.bond.total_supply,
+                self.bond_operation.valid_bond_supply(epoch_id))
+            self.logging.update_coin_budget(
+                epoch_id, mint, self.open_market_operation.coin_budget)
 
         # Commit.
         #
@@ -1578,8 +1656,10 @@ class ACB:
         
         self.coin.mint(sender, coin_amount)
 
-        self.open_market_operation.add_eth_to_pool(sender, eth_amount)
+        self.open_market_operation.increase_eth_to_pool(sender, eth_amount)
 
+        self.logging.purchase_coins(
+            self.oracle.epoch_id, eth_amount, coin_amount)
         return (eth_amount, coin_amount)
 
     # Pay coins and purchase ETH from the open market operation.
@@ -1608,8 +1688,10 @@ class ACB:
         
         self.coin.burn(sender, coin_amount)
 
-        self.open_market_operation.remove_eth_from_pool(sender, eth_amount)
+        self.open_market_operation.decrease_eth_from_pool(sender, eth_amount)
 
+        self.logging.sell_coins(
+            self.oracle.epoch_id, eth_amount, coin_amount)
         return (eth_amount, coin_amount)
 
     # Calculate a hash to be committed. Voters are expected to use this
