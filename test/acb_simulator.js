@@ -26,6 +26,10 @@ const ACBForTesting_v2 = artifacts.require("ACBForTesting_v2");
 const OracleForTesting_v3 = artifacts.require("OracleForTesting_v3");
 const ACBForTesting_v3 = artifacts.require("ACBForTesting_v3");
 const ACBForTesting_v4 = artifacts.require("ACBForTesting_v4");
+const BondOperationForTesting_v5 =
+      artifacts.require("BondOperationForTesting_v5");
+const OpenMarketOperationForTesting_v5 =
+      artifacts.require("OpenMarketOperationForTesting_v5");
 const OracleForTesting_v5 = artifacts.require("OracleForTesting_v5");
 const ACBForTesting_v5 = artifacts.require("ACBForTesting_v5");
 
@@ -967,7 +971,7 @@ function parameterized_test(accounts,
       }
 
       let epoch_offset = (await _oracle.epoch_id_()).toNumber() - 3;
-      let repeat = 3;
+      let repeat = 1;
       if (epoch_offset == repeat * 1) {
         _tmp_bond_price = _bond_price;
         _tmp_bond_redemption_price = _bond_redemption_price;
@@ -1150,6 +1154,23 @@ function parameterized_test(accounts,
         _price_change_percentage = _tmp_price_change_percentage;
         _start_price_multiplier = _tmp_start_price_multiplier;
 
+        let old_bond_operation = _bond_operation;
+        _bond_operation = await deployProxy(
+          BondOperationForTesting_v5,
+          [_bond.address,
+           (await old_bond_operation.bond_budget_()).toNumber()]);
+        common.print_contract_size(_bond_operation, "BondOperation_v5");
+
+        let old_open_market_operation = _open_market_operation;
+        _open_market_operation = await deployProxy(
+          OpenMarketOperationForTesting_v5,
+          [(await old_open_market_operation.latest_price_()).toNumber(),
+           (await old_open_market_operation.start_price_()).toNumber(),
+           (await old_open_market_operation.eth_balance_()).toNumber(),
+           (await old_open_market_operation.coin_budget_()).toNumber()]);
+        common.print_contract_size(_open_market_operation,
+                                   "OpenMarketOperation_v5");
+        
         let old_oracle = _oracle;
         _oracle = await deployProxy(
             OracleForTesting_v5,
@@ -1165,7 +1186,6 @@ function parameterized_test(accounts,
                              await old_acb.oracle_level_(),
                              await old_acb.current_epoch_start_()]);
         common.print_contract_size(_acb, "ACBForTesting_v5");
-        await old_acb.deprecate();
 
         await old_oracle.overrideConstants(_reclaim_threshold,
                                            _proportional_reward_rate);
@@ -1183,6 +1203,9 @@ function parameterized_test(accounts,
                                      _damping_factor,
                                      _level_to_exchange_rate);
         
+        await old_acb.deprecate();
+        await old_bond_operation.deprecate();
+        await _bond.transferOwnership(_bond_operation.address);
         await _coin.transferOwnership(_acb.address);
         await _bond_operation.transferOwnership(_acb.address);
         await _open_market_operation.transferOwnership(_acb.address);

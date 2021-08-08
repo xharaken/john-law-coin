@@ -50,16 +50,6 @@ contract ACBForTesting_v3 is ACB_v3 {
     _timestamp_for_testing = timestamp;
   }
 
-  function setOracleLevel(uint oracle_level)
-      public onlyOwner {
-    oracle_level_ = oracle_level;
-  }
-
-  function setDepositRate(uint deposit_rate)
-      public onlyOwner {
-    DEPOSIT_RATE = deposit_rate;
-  }
-
   function setCoin(address account, uint amount)
       public onlyOwner {
     coin_.burn(account, coin_.balanceOf(account));
@@ -69,10 +59,5 @@ contract ACBForTesting_v3 is ACB_v3 {
   function moveCoin(address sender, address receiver, uint amount)
       public onlyOwner {
     coin_.move(sender, receiver, amount);
-  }
-
-  function updateBondBudget(int delta, uint epoch_id)
-      public onlyOwner returns (uint) {
-      return bond_operation_.updateBondBudget(delta, epoch_id);
   }
 }

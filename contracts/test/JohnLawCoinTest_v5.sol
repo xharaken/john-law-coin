@@ -9,6 +9,46 @@ pragma solidity ^0.8.0;
 
 import "./JohnLawCoin_v5.sol";
 
+// A contract to test BondOperation.
+contract BondOperationForTesting_v5 is BondOperation_v5 {
+  function overrideConstants(uint bond_price,
+                             uint bond_redemption_price,
+                             uint bond_redemption_period,
+                             uint bond_redeemable_period)
+      public onlyOwner {
+    BOND_PRICE = bond_price;
+    BOND_REDEMPTION_PRICE = bond_redemption_price;
+    BOND_REDEMPTION_PERIOD = bond_redemption_period;
+    BOND_REDEEMABLE_PERIOD = bond_redeemable_period;
+    
+    require(1 <= BOND_PRICE && BOND_PRICE <= BOND_REDEMPTION_PRICE,
+            "oc4");
+    require(1 <= BOND_REDEMPTION_PRICE && BOND_REDEMPTION_PRICE <= 100000,
+            "oc5");
+    require(1 <= BOND_REDEMPTION_PERIOD &&
+            BOND_REDEMPTION_PERIOD <= 20, "oc6");
+    require(1 <= BOND_REDEEMABLE_PERIOD &&
+            BOND_REDEEMABLE_PERIOD <= 20, "oc7");
+  }
+}
+
+// A contract to test OpenMarketOperation.
+contract OpenMarketOperationForTesting_v5 is OpenMarketOperation_v5 {
+  function overrideConstants(uint price_change_interval,
+                             uint price_change_percentage,
+                             uint start_price_multiplier)
+      public onlyOwner {
+    PRICE_CHANGE_INTERVAL = price_change_interval;
+    PRICE_CHANGE_PERCENTAGE = price_change_percentage;
+    START_PRICE_MULTIPILER = start_price_multiplier;
+
+    require(1 <= PRICE_CHANGE_INTERVAL, "oc1");
+    require(0 <= PRICE_CHANGE_PERCENTAGE && PRICE_CHANGE_PERCENTAGE <= 100,
+            "oc2");
+    require(1 <= START_PRICE_MULTIPILER, "oc3");
+  }
+}
+
 // A contract to test Oracle.
 contract OracleForTesting_v5 is Oracle_v5 {
   function overrideConstants(uint level_max,
@@ -59,16 +99,6 @@ contract ACBForTesting_v5 is ACB_v5 {
     _timestamp_for_testing = timestamp;
   }
 
-  function setOracleLevel(uint oracle_level)
-      public onlyOwner {
-    oracle_level_ = oracle_level;
-  }
-
-  function setDepositRate(uint deposit_rate)
-      public onlyOwner {
-    DEPOSIT_RATE = deposit_rate;
-  }
-
   function setCoin(address account, uint amount)
       public onlyOwner {
     coin_.burn(account, coin_.balanceOf(account));
@@ -78,10 +108,5 @@ contract ACBForTesting_v5 is ACB_v5 {
   function moveCoin(address sender, address receiver, uint amount)
       public onlyOwner {
     coin_.move(sender, receiver, amount);
-  }
-
-  function updateBondBudget(int delta, uint epoch_id)
-      public onlyOwner returns (uint) {
-      return bond_operation_.updateBondBudget(delta, epoch_id);
   }
 }

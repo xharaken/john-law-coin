@@ -456,7 +456,7 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
     bool success;
     (success,) =
         payable(address(open_market_operation_)).call{value: eth_amount}(
-            abi.encodeWithSignature("addEthToPool(address)", msg.sender));
+            abi.encodeWithSignature("increaseEthInPool(address)", msg.sender));
     require(success, "pc2");
     
     // Pay back the remaining ETH to the sender. This may trigger any arbitrary
@@ -502,7 +502,7 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
     // Send ETH to the sender. This may trigger any arbitrary operations in an
     // external smart contract. This must be called at the very end of
     // sellCoins().
-    open_market_operation_.removeEthFromPool(msg.sender, eth_amount);
+    open_market_operation_.decreaseEthInPool(msg.sender, eth_amount);
     
     logging_.sellCoins(oracle_.epoch_id_(), eth_amount, coin_amount);
     emit SellCoinsEvent(msg.sender, requested_coin_amount,

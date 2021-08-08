@@ -1675,23 +1675,23 @@ contract OpenMarketOperation_v2 is OwnableUpgradeable {
     return (eth_amount, coin_amount);
   }
   
-  // Receive ETH from the |sender| and add it to the pool.
-  function addEthToPool(address sender)
+  // Receive ETH from the |sender| and increase ETH in the pool.
+  function increaseEthInPool(address sender)
       public onlyOwner payable {
-    addEthToPool_v2(sender);
+    increaseEthInPool_v2(sender);
   }
 
-  function addEthToPool_v2(address sender)
+  function increaseEthInPool_v2(address sender)
       public onlyOwner payable {
   }
 
-  // Remove |eth_amount| ETH from the pool and send it to the |sender|.
-  function removeEthFromPool(address sender, uint eth_amount)
+  // Decrease |eth_amount| ETH in the pool and send it to the |sender|.
+  function decreaseEthInPool(address sender, uint eth_amount)
       public onlyOwner {
-    return removeEthFromPool_v2(sender, eth_amount);
+    return decreaseEthInPool_v2(sender, eth_amount);
   }
   
-  function removeEthFromPool_v2(address sender, uint eth_amount)
+  function decreaseEthInPool_v2(address sender, uint eth_amount)
       public onlyOwner {
     require(address(this).balance >= eth_amount, "se1");
     (bool success,) =
@@ -2118,7 +2118,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
     bool success;
     (success,) =
         payable(address(open_market_operation_v2_)).call{value: eth_amount}(
-            abi.encodeWithSignature("addEthToPool(address)", msg.sender));
+            abi.encodeWithSignature("increaseEthInPool(address)", msg.sender));
     require(success, "pc2");
     
     // Pay back the remaining ETH to the sender. This may trigger any arbitrary
@@ -2169,7 +2169,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
     // Send ETH to the sender. This may trigger any arbitrary operations in an
     // external smart contract. This must be called at the very end of
     // sellCoins().
-    open_market_operation_v2_.removeEthFromPool(msg.sender, eth_amount);
+    open_market_operation_v2_.decreaseEthInPool(msg.sender, eth_amount);
     
     logging_.sellCoins(oracle_.epoch_id_(), eth_amount, coin_amount);
     emit SellCoinsEvent(msg.sender, requested_coin_amount,
