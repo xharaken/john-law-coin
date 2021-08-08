@@ -2348,18 +2348,18 @@ class ACBUnitTest(unittest.TestCase):
         
         self.assertEqual(acb.redeem_bonds(accounts[1], [t1, t2]), 40)
         self.assertEqual(self._bond.total_supply, 60)
+        self.assertEqual(self._bond_operation.bond_budget, -10)
+        self.assertEqual(acb.redeem_bonds(accounts[2], [t1, t2]), 30)
+        self.assertEqual(self._bond.total_supply, 30)
         self.assertEqual(self._bond_operation.bond_budget, 0)
-        self.assertEqual(acb.redeem_bonds(accounts[2], [t1, t2]), 20)
-        self.assertEqual(self._bond.total_supply, 40)
-        self.assertEqual(self._bond_operation.bond_budget, 20)
         
         self.advance_epoch(1)
         self.assertEqual(acb.redeem_bonds(accounts[1], [t1, t2]), 0)
-        self.assertEqual(self._bond.total_supply, 40)
+        self.assertEqual(self._bond.total_supply, 30)
         self.assertEqual(self._bond_operation.bond_budget, 0)
-        self.assertEqual(acb.redeem_bonds(accounts[2], [t1, t2]), 40)
+        self.assertEqual(acb.redeem_bonds(accounts[2], [t1, t2]), 30)
         self.assertEqual(self._bond.total_supply, 0)
-        self.assertEqual(self._bond_operation.bond_budget, 40)
+        self.assertEqual(self._bond_operation.bond_budget, 0)
         self.assertEqual(acb.redeem_bonds(accounts[2], [t1, t2]), 0)
 
         # open market operation

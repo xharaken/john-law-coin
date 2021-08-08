@@ -1037,7 +1037,6 @@ class BondOperation:
         self.bond.mint(sender, redemption_epoch, count)
         self.bond_budget -= count
         assert(self.bond_budget >= 0)
-        assert(self.valid_bond_supply(epoch_id) + self.bond_budget >= 0)
         assert(self.bond.balance_of(sender, redemption_epoch) > 0)
 
         # Burn the corresponding coins.
@@ -1072,6 +1071,7 @@ class BondOperation:
                     continue
                 if count > -self.bond_budget:
                     count = -self.bond_budget
+                self.bond_budget += count
 
             if (epoch_id <
                 redemption_epoch + BondOperation.BOND_REDEEMABLE_PERIOD):
@@ -1079,8 +1079,6 @@ class BondOperation:
                 # to the user account.
                 amount = count * BondOperation.BOND_REDEMPTION_PRICE
                 coin.mint(sender, amount)
-
-                self.bond_budget += count
                 redeemed_bonds += count
             else:
                 expired_bonds += count
@@ -1088,7 +1086,6 @@ class BondOperation:
             # Burn the redeemed / expired bonds.
             self.bond.burn(sender, redemption_epoch, count)
 
-        assert(self.valid_bond_supply(epoch_id) + self.bond_budget >= 0)
         return (redeemed_bonds, expired_bonds)
 
     # Update the bond budget to increase or decrease the total coin supply.
@@ -1352,11 +1349,11 @@ class OpenMarketOperation:
 #
 # 1. The ACB obtains the exchange rate from the oracle.
 # 2. If the exchange rate is 1.0, the ACB does nothing.
-# 3. If the exchange rate is larger than 1.0, the ACB increases the total coin
+# 3. If the exchange rate is higher than 1.0, the ACB increases the total coin
 #    supply by redeeming issued bonds (regardless of their redemption dates).
 #    If that is not enough to supply sufficient coins, the ACB mints new coins
 #    and provides the coins to the oracle as a reward.
-# 4. If the exchange rate is smaller than 1.0, the ACB decreases the total coin
+# 4. If the exchange rate is lower than 1.0, the ACB decreases the total coin
 #    supply by issuing new bonds.
 #-------------------------------------------------------------------------------
 class ACB:
@@ -1571,7 +1568,7 @@ class ACB:
                 self.bond_operation.bond.total_supply,
                 self.bond_operation.valid_bond_supply(epoch_id))
             self.logging.update_coin_budget(
-                epoch_id, mint, self.open_market_operation.coin_budget)
+                epoch_id, self.open_market_operation.coin_budget)
 
         # Commit.
         #
@@ -1655,7 +1652,7 @@ class ACB:
         
         self.coin.mint(sender, coin_amount)
 
-        self.open_market_operation.increase_eth_to_pool(sender, eth_amount)
+        self.open_market_operation.increase_eth_in_pool(sender, eth_amount)
 
         self.logging.purchase_coins(
             self.oracle.epoch_id, eth_amount, coin_amount)
@@ -1687,7 +1684,7 @@ class ACB:
         
         self.coin.burn(sender, coin_amount)
 
-        self.open_market_operation.decrease_eth_from_pool(sender, eth_amount)
+        self.open_market_operation.decrease_eth_in_pool(sender, eth_amount)
 
         self.logging.sell_coins(
             self.oracle.epoch_id, eth_amount, coin_amount)

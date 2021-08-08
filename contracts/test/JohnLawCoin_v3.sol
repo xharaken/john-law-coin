@@ -508,11 +508,11 @@ contract Oracle_v3 is OwnableUpgradeable {
 //
 // 1. The ACB obtains the exchange rate from the oracle.
 // 2. If the exchange rate is 1.0, the ACB does nothing.
-// 3. If the exchange rate is larger than 1.0, the ACB increases the total coin
+// 3. If the exchange rate is higher than 1.0, the ACB increases the total coin
 //    supply by redeeming issued bonds (regardless of their redemption dates).
 //    If that is not enough to supply sufficient coins, the ACB mints new coins
 //    and provides the coins to the oracle as a reward.
-// 4. If the exchange rate is smaller than 1.0, the ACB decreases the total coin
+// 4. If the exchange rate is lower than 1.0, the ACB decreases the total coin
 //    supply by issuing new bonds.
 //
 // Permission: All methods are public. No one (including the genesis account)

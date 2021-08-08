@@ -136,6 +136,8 @@ class ACBSimulator(unittest.TestCase):
                 self.purchase_count = 0
                 self.increased_coin_supply = 0
                 self.decreased_coin_supply = 0
+                self.increased_eth = 0
+                self.decreased_eth = 0
                 self.delta = 0
                 self.mint = 0
                 self.lost = 0
@@ -164,6 +166,8 @@ class ACBSimulator(unittest.TestCase):
                 self.total_purchase_count = 0
                 self.total_increased_coin_supply = 0
                 self.total_decreased_coin_supply = 0
+                self.total_increased_eth = 0
+                self.total_decreased_eth = 0
                 self.total_mint = 0
                 self.total_lost = 0
                 self.total_tax = 0
@@ -190,6 +194,8 @@ class ACBSimulator(unittest.TestCase):
                 self.total_purchase_count += self.purchase_count
                 self.total_increased_coin_supply += self.increased_coin_supply
                 self.total_decreased_coin_supply += self.decreased_coin_supply
+                self.total_increased_eth += self.increased_eth
+                self.total_decreased_eth += self.decreased_eth
                 self.total_mint += self.mint
                 self.total_lost += self.lost
                 self.total_tax += self.tax
@@ -229,7 +235,7 @@ class ACBSimulator(unittest.TestCase):
             bond_supply = self._bond.total_supply
             valid_bond_supply = self._bond_operation.valid_bond_supply(epoch_id)
             bond_budget = self._bond_operation.bond_budget
-            current_epoch_start = self._acb.current_epoch_start
+            coin_budget = self._open_market_operation.coin_budget
 
             self.purchase_coins()
             self.sell_coins()
@@ -241,21 +247,11 @@ class ACBSimulator(unittest.TestCase):
             self.assertEqual(epoch_log.minted_coins, self.metrics.mint)
             self.assertEqual(epoch_log.burned_coins, self.metrics.lost)
             self.assertEqual(epoch_log.coin_supply_delta, self.metrics.delta)
-            self.assertEqual(epoch_log.bond_budget, bond_budget)
             self.assertEqual(epoch_log.total_coin_supply, coin_supply2)
-            self.assertEqual(epoch_log.total_bond_supply, bond_supply)
-            self.assertEqual(epoch_log.valid_bond_supply, valid_bond_supply)
             self.assertEqual(epoch_log.oracle_level, self.metrics.oracle_level)
             self.assertEqual(epoch_log.current_epoch_start,
                              self._acb.get_timestamp())
             self.assertEqual(epoch_log.tax, tax)
-            bond_log = self._logging.bond_logs[epoch_id]
-            self.assertEqual(bond_log.purchased_bonds,
-                             self.metrics.purchase_count)
-            self.assertEqual(bond_log.redeemed_bonds,
-                             self.metrics.redeemed_bonds)
-            self.assertEqual(bond_log.expired_bonds,
-                             self.metrics.expired_bonds)
             vote_log = self._logging.vote_logs[epoch_id]
             self.assertEqual(vote_log.commit_succeeded,
                              self.metrics.reveal_hit + self.metrics.reveal_miss)
@@ -269,7 +265,29 @@ class ACBSimulator(unittest.TestCase):
                              self.metrics.reward_hit)
             self.assertEqual(vote_log.reclaimed, self.metrics.reclaimed)
             self.assertEqual(vote_log.rewarded, self.metrics.rewarded)
-
+            bond_operation_log = self._logging.bond_operation_logs[epoch_id]
+            self.assertEqual(bond_operation_log.bond_budget, bond_budget)
+            self.assertEqual(bond_operation_log.total_bond_supply, bond_supply)
+            self.assertEqual(bond_operation_log.valid_bond_supply,
+                             valid_bond_supply)
+            self.assertEqual(bond_operation_log.purchased_bonds,
+                             self.metrics.purchase_count)
+            self.assertEqual(bond_operation_log.redeemed_bonds,
+                             self.metrics.redeemed_bonds)
+            self.assertEqual(bond_operation_log.expired_bonds,
+                             self.metrics.expired_bonds)
+            open_market_operation_log = (
+                self._logging.open_market_operation_logs[epoch_id])
+            self.assertEqual(open_market_operation_log.coin_budget, coin_budget)
+            self.assertEqual(open_market_operation_log.increased_eth,
+                             self.metrics.increased_eth)
+            self.assertEqual(open_market_operation_log.increased_coin_supply,
+                             self.metrics.increased_coin_supply)
+            self.assertEqual(open_market_operation_log.decreased_eth,
+                             self.metrics.decreased_eth)
+            self.assertEqual(open_market_operation_log.decreased_coin_supply,
+                             self.metrics.decreased_coin_supply)
+            
             tax = self.transfer_coins()
 
             if False:
@@ -277,7 +295,8 @@ class ACBSimulator(unittest.TestCase):
                       'reward_hit=%d/%d=%d%% purchase_hit=%d/%d=%d%% '
                       'redeem_hit=%d/%d=%d%% '
                       'redemptions=%d/%d=%d%% fast_redeem=%d/%d=%d%% '
-                      'expired=%d increased_supply=% decreased_supply=%d '
+                      'expired=%d increased_supply=%d decreased_supply=%d '
+                      'increased_eth=%d decreased_eth=%d '
                       'delta=%d mint=%d lost=%d coin_supply=%d->%d->%d=%d '
                       'bond_supply=%d->%d valid_bond_supply=%d->%d '
                       'bond_budget=%d->%d tax=%d' %
@@ -316,6 +335,8 @@ class ACBSimulator(unittest.TestCase):
                        self.metrics.expired_bonds,
                        self.metrics.increased_coin_supply,
                        self.metrics.decreased_coin_supply,
+                       self.metrics.increased_eth,
+                       self.metrics.decreased_eth,
                        self.metrics.delta,
                        self.metrics.mint,
                        self.metrics.lost,
@@ -339,6 +360,7 @@ class ACBSimulator(unittest.TestCase):
               'purchase_hit=%d/%d=%d%% redeem_hit=%d/%d=%d%% '
               'redemptions=%d/%d=%d%% fast_redeem=%d/%d=%d%% expired=%d '
               'increased_supply-decreased_supply=%d-%d=%d '
+              'increased_eth-decreased_eth=%d-%d=%d '
               'supply=%d/%d/%d coin_supply=%d%% mint=%d lost=%d '
               'bond_supply=%d valid_bond_supply=%d tax=%d' %
               (self._oracle.epoch_id,
@@ -378,6 +400,10 @@ class ACBSimulator(unittest.TestCase):
                self.metrics.total_decreased_coin_supply,
                (self.metrics.total_increased_coin_supply -
                 self.metrics.total_decreased_coin_supply),
+               self.metrics.total_increased_eth,
+               self.metrics.total_decreased_eth,
+               (self.metrics.total_increased_eth -
+                self.metrics.total_decreased_eth),
                self.metrics.supply_increased,
                self.metrics.supply_nochange,
                self.metrics.supply_decreased,
@@ -457,6 +483,7 @@ class ACBSimulator(unittest.TestCase):
                              coin_supply + requested_coin_amount)
 
             self.metrics.increased_coin_supply += requested_coin_amount
+            self.metrics.increased_eth += requested_coin_amount * price
             
     def sell_coins(self):
         epoch_id = self._oracle.epoch_id
@@ -496,6 +523,7 @@ class ACBSimulator(unittest.TestCase):
                              coin_supply - requested_coin_amount)
             
             self.metrics.decreased_coin_supply += requested_coin_amount
+            self.metrics.decreased_eth += requested_coin_amount * price
     
     def purchase_bonds(self):
         epoch_id = self._oracle.epoch_id
@@ -569,11 +597,11 @@ class ACBSimulator(unittest.TestCase):
                     if bond_budget >= 0:
                         continue
                     count = min(count, -bond_budget)
+                    bond_budget += count
                     fast_redeemed_bonds += count
                 if (epoch_id <
                     redemption + self._bond_redeemable_period):
                     redeemed_bonds += count
-                    bond_budget += count
                 else:
                     expired_bonds += count
                 voter.bonds[redemption] -= count

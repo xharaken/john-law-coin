@@ -183,10 +183,10 @@ function parameterized_test(accounts,
         this.redeem_hit = 0;
         this.purchase_hit = 0;
         this.purchase_count = 0;
-        this.increased_eth = 0;
-        this.decreased_eth = 0;
         this.increased_coin_supply = 0;
         this.decreased_coin_supply = 0;
+        this.increased_eth = 0;
+        this.decreased_eth = 0;
         this.delta = 0;
         this.mint = 0;
         this.lost = 0;
@@ -216,6 +216,8 @@ function parameterized_test(accounts,
         this.total_purchase_count = 0;
         this.total_increased_coin_supply = 0;
         this.total_decreased_coin_supply = 0;
+        this.total_increased_eth = 0;
+        this.total_decreased_eth = 0;
         this.total_mint = 0;
         this.total_lost = 0;
         this.total_tax = 0;
@@ -244,6 +246,8 @@ function parameterized_test(accounts,
         this.total_purchase_count += this.purchase_count;
         this.total_increased_coin_supply += this.increased_coin_supply;
         this.total_decreased_coin_supply += this.decreased_coin_supply;
+        this.total_increased_eth += this.increased_eth;
+        this.total_decreased_eth += this.decreased_eth;
         this.total_mint += this.mint;
         this.total_lost += this.lost;
         this.total_tax += this.tax;
@@ -376,6 +380,8 @@ function parameterized_test(accounts,
                     "% expired=" + _metrics.expired_bonds +
                     " increased_supply=" + _metrics.increased_coin_supply +
                     " decreased_supply=" + _metrics.decreased_coin_supply +
+                    " increased_eth=" + _metrics.increased_eth +
+                    " decreased_eth=" + _metrics.decreased_eth +
                     " delta=" + _metrics.delta +
                     " mint=" + _metrics.mint +
                     " lost=" + _metrics.lost +
@@ -437,6 +443,10 @@ function parameterized_test(accounts,
                 _metrics.total_decreased_coin_supply + "=" +
                 (_metrics.total_increased_coin_supply -
                  _metrics.total_decreased_coin_supply) +
+                _metrics.total_increased_eth + "-" +
+                _metrics.total_decreased_eth + "=" +
+                (_metrics.total_increased_eth -
+                 _metrics.total_decreased_eth) +
                 " supply=" + _metrics.supply_increased +
                 "/" + _metrics.supply_nochange +
                 "/" + _metrics.supply_decreased +
