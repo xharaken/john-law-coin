@@ -295,6 +295,10 @@ function parameterized_test(accounts,
       let bond_budget = (await _bond_operation.bond_budget_()).toNumber();
       let coin_budget = (
         await _open_market_operation.coin_budget_()).toNumber();
+      let eth_balance = (
+        await _open_market_operation.eth_balance_()).toNumber();
+      let latest_price = (
+        await _open_market_operation.latest_price_()).toNumber();
 
       await purchase_coins();
       await sell_coins();
@@ -332,14 +336,13 @@ function parameterized_test(accounts,
       let open_market_operation_log =
           await get_open_market_operation_logs(epoch_id);
       assert.equal(open_market_operation_log.coin_budget, coin_budget);
-      assert.equal(open_market_operation_log.increased_eth,
-                   _metrics.increased_eth);
-      assert.equal(open_market_operation_log.increased_coin_supply,
-                   _metrics.increased_coin_supply);
-      assert.equal(open_market_operation_log.decreased_eth,
-                   _metrics.decreased_eth);
-      assert.equal(open_market_operation_log.decreased_coin_supply,
+      assert.equal(open_market_operation_log.exchanged_coins,
+                   _metrics.increased_coin_supply -
                    _metrics.decreased_coin_supply);
+      assert.equal(open_market_operation_log.exchanged_eth,
+                   _metrics.increased_eth - _metrics.decreased_eth);
+      assert.equal(open_market_operation_log.eth_balance, eth_balance);
+      assert.equal(open_market_operation_log.latest_price, latest_price);
 
       tax = await transfer_coins();
 
@@ -396,6 +399,9 @@ function parameterized_test(accounts,
                     .toNumber() +
                     " bond_budget=" + bond_budget +
                     "->" + (await _bond_operation.bond_budget_()).toNumber() +
+                    " coin_budget=" + coin_budget +
+                    "->" + (
+                      await _open_market_operation.coin_budget_()).toNumber() +
                     " tax=" + tax
                    );
       }
@@ -1352,10 +1358,10 @@ function parameterized_test(accounts,
       const ret = await _logging.getOpenMarketOperationLog(epoch_id);
       let open_market_operation_log = {};
       open_market_operation_log.coin_budget = ret[0];
-      open_market_operation_log.increased_eth = ret[1];
-      open_market_operation_log.increased_coin_supply = ret[2];
-      open_market_operation_log.decreased_eth = ret[3];
-      open_market_operation_log.decreased_coin_supply = ret[4];
+      open_market_operation_log.exchanged_coins = ret[1];
+      open_market_operation_log.exchanged_eth = ret[2];
+      open_market_operation_log.eth_balance = ret[3];
+      open_market_operation_log.latest_price = ret[4];
       return open_market_operation_log;
     }
   });

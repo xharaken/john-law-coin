@@ -112,6 +112,11 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
                                 elapsed_time / self.price_change_interval)):
                             price = int(price * (
                                 100 - self.price_change_percentage) / 100)
+                        if price == 0:
+                            price = 1
+                        self.assertEqual(
+                            operation.get_current_price(elapsed_time), price)
+                            
                         eth_amount = 0
                         coin_amount = 0
                         if price == 0:
@@ -151,11 +156,15 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
                                 operation.decrease_coin_supply(
                                     requested_eth_amount, elapsed_time)
                             continue
+                        
                         price = start_price
                         for i in range(int(
                                 elapsed_time / self.price_change_interval)):
                             price = int(price * (
                                 100 + self.price_change_percentage) / 100)
+                        self.assertEqual(
+                            operation.get_current_price(elapsed_time), price)
+                            
                         eth_amount = 0
                         coin_amount = 0
                         if price == 0:

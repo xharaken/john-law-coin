@@ -2396,7 +2396,7 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(self._open_market_operation.eth_balance,
                          eth_balance + 40 * price)
         self.assertEqual(
-            acb.purchase_coins(accounts[1], 70 * price), (60 * price, 60))
+            acb.purchase_coins(accounts[1], 200 * price), (60 * price, 60))
         self.assertEqual(self._coin.balance_of(accounts[1]), balance + 100)
         self.assertEqual(self._open_market_operation.eth_balance,
                          eth_balance + 100 * price)
@@ -2429,7 +2429,7 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(self._open_market_operation.eth_balance,
                          eth_balance - 40 * price)
         self.assertEqual(
-            acb.sell_coins(accounts[1], 70), (60 * price, 60))
+            acb.sell_coins(accounts[1], 200), (60 * price, 60))
         self.assertEqual(self._coin.balance_of(accounts[1]), balance - 100)
         self.assertEqual(self._open_market_operation.eth_balance,
                          eth_balance - 100 * price)

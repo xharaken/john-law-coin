@@ -37,14 +37,14 @@ class LoggingUnitTest(unittest.TestCase):
             self.assertEqual(bond_operation_log.redeemed_bonds, 0)
             self.assertEqual(bond_operation_log.expired_bonds, 0)
             
-            logging.update_coin_budget(epoch_id, 1)
+            logging.update_coin_budget(epoch_id, 1, 2, 3)
             open_market_operation_log = logging.open_market_operation_logs[
                 epoch_id]
             self.assertEqual(open_market_operation_log.coin_budget, 1)
-            self.assertEqual(open_market_operation_log.increased_eth, 0)
-            self.assertEqual(open_market_operation_log.increased_coin_supply, 0)
-            self.assertEqual(open_market_operation_log.decreased_eth, 0)
-            self.assertEqual(open_market_operation_log.decreased_coin_supply, 0)
+            self.assertEqual(open_market_operation_log.exchanged_coins, 0)
+            self.assertEqual(open_market_operation_log.exchanged_eth, 0)
+            self.assertEqual(open_market_operation_log.eth_balance, 2)
+            self.assertEqual(open_market_operation_log.latest_price, 3)
 
             logging.purchase_bonds(epoch_id, 1)
             logging.purchase_bonds(epoch_id, 2)
@@ -70,14 +70,14 @@ class LoggingUnitTest(unittest.TestCase):
             open_market_operation_log = logging.open_market_operation_logs[
                 epoch_id]
             self.assertEqual(open_market_operation_log.coin_budget, 1)
-            self.assertEqual(open_market_operation_log.increased_eth,
-                             6)
-            self.assertEqual(open_market_operation_log.increased_coin_supply,
-                             60)
-            self.assertEqual(open_market_operation_log.decreased_eth,
-                             600)
-            self.assertEqual(open_market_operation_log.decreased_coin_supply,
-                             6000)
+            self.assertEqual(open_market_operation_log.exchanged_coins,
+                             -5940)
+            self.assertEqual(open_market_operation_log.exchanged_eth,
+                             -594)
+            self.assertEqual(open_market_operation_log.eth_balance,
+                             2)
+            self.assertEqual(open_market_operation_log.latest_price,
+                             3)
             
             logging.vote(epoch_id, False, False, 0, 0, 0)
             vote_log = logging.vote_logs[epoch_id]

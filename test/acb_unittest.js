@@ -2690,20 +2690,7 @@ function parameterized_test(accounts,
         await _acb.sellCoins.call(0, {from: accounts[1]});
       }, "OpenMarketOperation");
       
-      let price, balance, eth_balance;
-      await _acb.updateCoinBudget(100, {from: accounts[1]});
-      price = (await _open_market_operation.start_price_()).toNumber();
-      await should_throw(async () => {
-        await _acb.sellCoins.call(0, {from: accounts[1]});
-      }, "OpenMarketOperation");
-      balance = (await _coin.balanceOf(accounts[1])).toNumber();
-      eth_balance =
-        Math.trunc(await web3.eth.getBalance(_open_market_operation.address));
-      await check_purchase_coins(
-        {value: 100 * price, from: accounts[1]}, 100 * price, 100);
-      assert.equal(await _coin.balanceOf(accounts[1]), balance + 100);
-      assert.equal(await web3.eth.getBalance(_open_market_operation.address),
-                   eth_balance + 100 * price);
+      let price, balance, contract_eth_balance;
       
       await _acb.updateCoinBudget(100, {from: accounts[1]});
       price = (await _open_market_operation.start_price_()).toNumber();
@@ -2711,18 +2698,32 @@ function parameterized_test(accounts,
         await _acb.sellCoins.call(0, {from: accounts[1]});
       }, "OpenMarketOperation");
       balance = (await _coin.balanceOf(accounts[1])).toNumber();
-      eth_balance =
+      contract_eth_balance =
+        Math.trunc(await web3.eth.getBalance(_open_market_operation.address));
+      await check_purchase_coins(
+        {value: 100 * price, from: accounts[1]}, 100 * price, 100);
+      assert.equal(await _coin.balanceOf(accounts[1]), balance + 100);
+      assert.equal(await web3.eth.getBalance(_open_market_operation.address),
+                   contract_eth_balance + 100 * price);
+
+      await _acb.updateCoinBudget(100, {from: accounts[1]});
+      price = (await _open_market_operation.start_price_()).toNumber();
+      await should_throw(async () => {
+        await _acb.sellCoins.call(0, {from: accounts[1]});
+      }, "OpenMarketOperation");
+      balance = (await _coin.balanceOf(accounts[1])).toNumber();
+      contract_eth_balance =
         Math.trunc(await web3.eth.getBalance(_open_market_operation.address));
       await check_purchase_coins(
         {value: 40 * price, from: accounts[1]}, 40 * price, 40);
       assert.equal(await _coin.balanceOf(accounts[1]), balance + 40);
       assert.equal(await web3.eth.getBalance(_open_market_operation.address),
-                   eth_balance + 40 * price);
+                   contract_eth_balance + 40 * price);
       await check_purchase_coins(
         {value: 70 * price, from: accounts[1]}, 60 * price, 60);
       assert.equal(await _coin.balanceOf(accounts[1]), balance + 100);
       assert.equal(await web3.eth.getBalance(_open_market_operation.address),
-                   eth_balance + 100 * price);
+                   contract_eth_balance + 100 * price);
       await should_throw(async () => {
         await _acb.purchaseCoins.call({value: 10, from: accounts[1]});
       }, "OpenMarketOperation");
@@ -2733,12 +2734,12 @@ function parameterized_test(accounts,
         await _acb.purchaseCoins.call({value: 0, from: accounts[1]});
       }, "OpenMarketOperation");
       balance = (await _coin.balanceOf(accounts[1])).toNumber();
-      eth_balance =
+      contract_eth_balance =
         Math.trunc(await web3.eth.getBalance(_open_market_operation.address));
       await check_sell_coins(100, {from: accounts[1]}, 100 * price, 100);
       assert.equal(await _coin.balanceOf(accounts[1]), balance - 100);
       assert.equal(await web3.eth.getBalance(_open_market_operation.address),
-                   eth_balance - 100 * price);
+                   contract_eth_balance - 100 * price);
       
       await _acb.updateCoinBudget(-100, {from: accounts[1]});
       price = (await _open_market_operation.start_price_()).toNumber();
@@ -2746,16 +2747,16 @@ function parameterized_test(accounts,
         await _acb.purchaseCoins.call({value: 0, from: accounts[1]});
       }, "OpenMarketOperation");
       balance = (await _coin.balanceOf(accounts[1])).toNumber();
-      eth_balance =
+      contract_eth_balance =
         Math.trunc(await web3.eth.getBalance(_open_market_operation.address));
       await check_sell_coins(40, {from: accounts[1]}, 40 * price, 40);
       assert.equal(await _coin.balanceOf(accounts[1]), balance - 40);
       assert.equal(await web3.eth.getBalance(_open_market_operation.address),
-                   eth_balance - 40 * price);
+                   contract_eth_balance - 40 * price);
       await check_sell_coins(70, {from: accounts[1]}, 60 * price, 60);
       assert.equal(await _coin.balanceOf(accounts[1]), balance - 100);
       assert.equal(await web3.eth.getBalance(_open_market_operation.address),
-                   eth_balance - 100 * price);
+                   contract_eth_balance - 100 * price);
       await should_throw(async () => {
         await _acb.sellCoins.call(10, {from: accounts[1]});
       }, "OpenMarketOperation");
@@ -2864,21 +2865,23 @@ function parameterized_test(accounts,
     }, "Ownable");
 
     await should_throw(async () => {
-      await _bond_operation.purchaseBonds(accounts[1], 0, 0, _coin.address);
+      await _bond_operation.increaseBondSupply(
+        accounts[1], 0, 0, _coin.address);
     }, "Ownable");
 
     await should_throw(async () => {
-      await _bond_operation.purchaseBonds(accounts[1], 0, 0, _coin.address,
-                                          {from: accounts[1]});
+      await _bond_operation.increaseBondSupply(
+        accounts[1], 0, 0, _coin.address, {from: accounts[1]});
     }, "Ownable");
 
     await should_throw(async () => {
-      await _bond_operation.redeemBonds(accounts[1], [], 0, _coin.address);
+      await _bond_operation.decreaseBondSupply(
+        accounts[1], [], 0, _coin.address);
     }, "Ownable");
 
     await should_throw(async () => {
-      await _bond_operation.redeemBonds(accounts[1], [], 0, _coin.address,
-                                        {from: accounts[1]});
+      await _bond_operation.decreaseBondSupply(
+        accounts[1], [], 0, _coin.address, {from: accounts[1]});
     }, "Ownable");
 
     await should_throw(async () => {

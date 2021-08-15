@@ -32,10 +32,10 @@ contract BondOperation_v5 is OwnableUpgradeable {
   int public bond_budget_;
 
   // Events.
-  event PurchaseBondsEvent(address indexed sender, uint indexed epoch_id,
-                           uint purchased_bonds, uint redemption_epoch);
-  event RedeemBondsEvent(address indexed sender, uint indexed epoch_id,
-                         uint redeemed_bonds, uint expired_bonds);
+  event IncreaseBondSupplyEvent(address indexed sender, uint indexed epoch_id,
+                                uint issued_bonds, uint redemption_epoch);
+  event DecreaseBondSupplyEvent(address indexed sender, uint indexed epoch_id,
+                                uint redeemed_bonds, uint expired_bonds);
   event UpdateBondBudgetEvent(uint indexed epoch_id, int delta,
                               int bond_budget, uint mint);
 
@@ -85,20 +85,20 @@ contract BondOperation_v5 is OwnableUpgradeable {
     bond_.transferOwnership(msg.sender);
   }
 
-  // Purchase bonds.
+  // Increase the total bond supply.
   //
   // Parameters
   // ----------------
   // |sender|: The sender account.
-  // |count|: The number of bonds to purchase.
+  // |count|: The number of bonds to issue.
   // |epoch_id|: The current epoch ID.
   // |coin|: The JohnLawCoin contract.
   //
   // Returns
   // ----------------
-  // The redemption epoch of the purchased bonds if it succeeds. 0 otherwise.
-  function purchaseBonds(address sender, uint count,
-                         uint epoch_id, JohnLawCoin_v2 coin)
+  // The redemption epoch of the issued bonds if it succeeds. 0 otherwise.
+  function increaseBondSupply(address sender, uint count,
+                              uint epoch_id, JohnLawCoin_v2 coin)
       public onlyOwner returns (uint) {
     require(count > 0, "BondOperation: You must purchase at least one bond.");
     require(bond_budget_ >= count.toInt256(),
@@ -119,11 +119,11 @@ contract BondOperation_v5 is OwnableUpgradeable {
 
     // Burn the corresponding coins.
     coin.burn(sender, amount);
-    emit PurchaseBondsEvent(sender, epoch_id, count, redemption_epoch);
+    emit IncreaseBondSupplyEvent(sender, epoch_id, count, redemption_epoch);
     return redemption_epoch;
   }
   
-  // Redeem bonds.
+  // Decrease the total bond supply.
   //
   // Parameters
   // ----------------
@@ -138,8 +138,8 @@ contract BondOperation_v5 is OwnableUpgradeable {
   // A tuple of two values:
   // - The number of redeemed bonds.
   // - The number of expired bonds.
-  function redeemBonds(address sender, uint[] memory redemption_epochs,
-                       uint epoch_id, JohnLawCoin_v2 coin)
+  function decreaseBondSupply(address sender, uint[] memory redemption_epochs,
+                              uint epoch_id, JohnLawCoin_v2 coin)
       public onlyOwner returns (uint, uint) {
     uint redeemed_bonds = 0;
     uint expired_bonds = 0;
@@ -170,7 +170,8 @@ contract BondOperation_v5 is OwnableUpgradeable {
       // Burn the redeemed / expired bonds.
       bond_.burn(sender, redemption_epoch, count);
     }
-    emit RedeemBondsEvent(sender, epoch_id, redeemed_bonds, expired_bonds);
+    emit DecreaseBondSupplyEvent(sender, epoch_id,
+                                 redeemed_bonds, expired_bonds);
     return (redeemed_bonds, expired_bonds);
   }
 
@@ -289,9 +290,10 @@ contract OpenMarketOperation_v5 is OwnableUpgradeable {
     // The price auction is implemented as a Dutch auction as follows:
     //
     // Let P be the latest price at which the OpenMarketOperation exchanged
-    // coins with ETH. At the beginning of each epoch, the ACB sets the coin
-    // budget (i.e., how many coins should be added to / removed from the
-    // total coin supply).
+    // coins with ETH. The price is measured by JLC / ETH wei. If the price is
+    // P, it means 1 JLC is exchanged with 1000 ETH wei. At the beginning of
+    // each epoch, the ACB sets the coin budget (i.e., how many coins should
+    // be added to / removed from the total coin supply).
     //
     // When the OpenMarketOperation increases the total coin supply,
     // the auction starts with the price of P * START_PRICE_MULTIPILER.
@@ -306,15 +308,17 @@ contract OpenMarketOperation_v5 is OwnableUpgradeable {
     // PRICE_CHANGE_INTERVAL seconds. Coins and ETH are exchanged at the
     // given price (the OpenMarketOperation sells ETH and purchases coins).
     // The auction stops when all the coins in the coin budget are purchased.
-    PRICE_CHANGE_INTERVAL = 8 * 60 * 60; // 8 hours
+    //
+    // TODO: Change PRICE_CHANGE_INTERVAL to 8 * 60 * 60 before launching to the
+    // mainnet. It's set to 60 seconds for the Ropsten Testnet.
+    PRICE_CHANGE_INTERVAL = 60; // 8 hours
     PRICE_CHANGE_PERCENTAGE = 15; // 15%
     START_PRICE_MULTIPILER = 3;
     
     // Attributes.
     
     // The latest price at which the OpenMarketOperation exchanged coins
-    // with ETH. The price is measured by wei / coin. If the price is 1000,
-    // it means 1 coin is exchanged with 1000 wei.
+    // with ETH.
     latest_price_ = latest_price;
     
     // The start price is updated at the beginning of each epoch.
@@ -349,15 +353,8 @@ contract OpenMarketOperation_v5 is OwnableUpgradeable {
     require(coin_budget_ > 0,
             "OpenMarketOperation: The coin budget must be positive.");
         
-    // Calculate the current price.
-    uint price = start_price_;
-    for (uint i = 0; i < elapsed_time / PRICE_CHANGE_INTERVAL; i++) {
-      price = price * (100 - PRICE_CHANGE_PERCENTAGE) / 100;
-    }
-    require(price > 0,
-            "OpenMarketOperation: The ETH / coin price must be positive.");
-
     // Calculate the amount of coins and ETH to be exchanged.
+    uint price = getCurrentPrice(elapsed_time);
     uint coin_amount = requested_eth_amount / price;
     if (coin_amount > coin_budget_.toUint256()) {
       coin_amount = coin_budget_.toUint256();
@@ -399,16 +396,8 @@ contract OpenMarketOperation_v5 is OwnableUpgradeable {
     require(coin_budget_ < 0,
             "OpenMarketOperation: The coin budget must be negative.");
         
-    // Calculate the current price.
-    uint price = start_price_;
-    for (uint i = 0; i < elapsed_time / PRICE_CHANGE_INTERVAL; i++) {
-      price = price * (100 + PRICE_CHANGE_PERCENTAGE) / 100;
-    }
-    if (price == 0) {
-      price = 1;
-    }
-        
     // Calculate the amount of coins and ETH to be exchanged.
+    uint price = getCurrentPrice(elapsed_time);
     uint coin_amount = requested_coin_amount;
     if (coin_amount >= (-coin_budget_).toUint256()) {
       coin_amount = (-coin_budget_).toUint256();
@@ -424,12 +413,45 @@ contract OpenMarketOperation_v5 is OwnableUpgradeable {
     }
     coin_budget_ += coin_amount.toInt256();
     eth_balance_ -= eth_amount;
-    require(coin_budget_ <= 0);
-    require(coin_amount <= requested_coin_amount, "dc1");
+    require(coin_budget_ <= 0, "dc1");
+    require(coin_amount <= requested_coin_amount, "dc2");
 
     emit DecreaseCoinSupplyEvent(requested_coin_amount, elapsed_time,
                                  eth_amount, coin_amount);
     return (eth_amount, coin_amount);
+  }
+  
+  // Return the current price in the Dutch auction.
+  //
+  // Parameters
+  // ----------------
+  // |elapsed_time|: The elapsed seconds from the current epoch start.
+  //
+  // Returns
+  // ----------------
+  // The current price.
+  function getCurrentPrice(uint elapsed_time)
+      public view returns (uint) {
+    if (coin_budget_ > 0) {
+      uint price = start_price_;
+      for (uint i = 0;
+           i < elapsed_time / PRICE_CHANGE_INTERVAL && i < 100; i++) {
+        price = price * (100 - PRICE_CHANGE_PERCENTAGE) / 100;
+      }
+      if (price == 0) {
+        price = 1;
+      }
+      return price;
+    } else if (coin_budget_ < 0) {
+      uint price = start_price_;
+      for (uint i = 0;
+           i < elapsed_time / PRICE_CHANGE_INTERVAL && i < 100; i++) {
+        price = price * (100 + PRICE_CHANGE_PERCENTAGE) / 100;
+      }
+      require(price > 0, "gc1");
+      return price;
+    }
+    return 0;
   }
   
   // Receive ETH from the |sender| and increase ETH in the pool.
@@ -1354,7 +1376,9 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
           bond_operation_.bond_().totalSupply(),
           bond_operation_.validBondSupply(result.epoch_id));
       logging_.updateCoinBudget(
-          result.epoch_id, open_market_operation_.coin_budget_());
+          result.epoch_id, open_market_operation_.coin_budget_(),
+          address(open_market_operation_).balance,
+          open_market_operation_.latest_price_());
       emit UpdateEpochEvent(result.epoch_id, current_epoch_start_,
                             tax, burned, delta, mint);
     }
@@ -1427,8 +1451,8 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
     
     coin_.transferOwnership(address(bond_operation_));
     uint redemption_epoch =
-        bond_operation_.purchaseBonds(address(msg.sender), count,
-                                      epoch_id, coin_);
+        bond_operation_.increaseBondSupply(address(msg.sender), count,
+                                           epoch_id, coin_);
     bond_operation_.revokeOwnership(coin_);
     
     logging_.purchaseBonds(epoch_id, count);
@@ -1453,8 +1477,8 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
     
     coin_.transferOwnership(address(bond_operation_));
     (uint redeemed_bonds, uint expired_bonds) =
-        bond_operation_.redeemBonds(address(msg.sender), redemption_epochs,
-                                    epoch_id, coin_);
+        bond_operation_.decreaseBondSupply(
+            address(msg.sender), redemption_epochs, epoch_id, coin_);
     bond_operation_.revokeOwnership(coin_);
     
     logging_.redeemBonds(epoch_id, redeemed_bonds, expired_bonds);

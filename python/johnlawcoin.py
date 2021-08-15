@@ -743,10 +743,10 @@ class Logging:
     class OpenMarketOperationLog:
       def __init__(self):
           self.coin_budget = 0
-          self.increased_eth = 0
-          self.increased_coin_supply = 0
-          self.decreased_eth = 0
-          self.decreased_coin_supply = 0
+          self.exchanged_coins = 0
+          self.exchanged_eth = 0
+          self.eth_balance = 0
+          self.latest_price = 0
     
     # Constructor.
     def __init__(self):
@@ -832,13 +832,14 @@ class Logging:
     # Returns
     # ----------------
     # None.
-    def update_coin_budget(self, epoch_id, coin_budget):
+    def update_coin_budget(self, epoch_id, coin_budget,
+                           eth_balance, latest_price):
         self.ensure_logs(epoch_id)
         self.open_market_operation_logs[epoch_id].coin_budget = coin_budget
-        self.open_market_operation_logs[epoch_id].increased_eth = 0
-        self.open_market_operation_logs[epoch_id].increased_coin_supply = 0
-        self.open_market_operation_logs[epoch_id].decreased_eth = 0
-        self.open_market_operation_logs[epoch_id].decreased_coin_supply = 0
+        self.open_market_operation_logs[epoch_id].exchanged_coins = 0
+        self.open_market_operation_logs[epoch_id].exchanged_eth = 0
+        self.open_market_operation_logs[epoch_id].eth_balance = eth_balance
+        self.open_market_operation_logs[epoch_id].latest_price = latest_price
 
     # Called when ACB.vote is called.
     #
@@ -916,9 +917,9 @@ class Logging:
     # None.
     def purchase_coins(self, epoch_id, eth_amount, coin_amount):
         self.ensure_logs(epoch_id)
-        self.open_market_operation_logs[epoch_id].increased_eth += eth_amount
+        self.open_market_operation_logs[epoch_id].exchanged_eth += eth_amount
         self.open_market_operation_logs[
-            epoch_id].increased_coin_supply += coin_amount
+            epoch_id].exchanged_coins += coin_amount
 
     # Called when ACB.sell_coins is called.
     #
@@ -933,9 +934,9 @@ class Logging:
     # None.
     def sell_coins(self, epoch_id, eth_amount, coin_amount):
         self.ensure_logs(epoch_id)
-        self.open_market_operation_logs[epoch_id].decreased_eth += eth_amount
+        self.open_market_operation_logs[epoch_id].exchanged_eth -= eth_amount
         self.open_market_operation_logs[
-            epoch_id].decreased_coin_supply += coin_amount
+            epoch_id].exchanged_coins -= coin_amount
 
 #-------------------------------------------------------------------------------
 # [BondOperation contract]
@@ -1007,20 +1008,20 @@ class BondOperation:
         assert(1 <= BondOperation.BOND_REDEEMABLE_PERIOD and
                BondOperation.BOND_REDEEMABLE_PERIOD <= 20)
         
-    # Purchase bonds.
+    # Increase the total bond supply.
     #
     # Parameters
     # ----------------
     # |sender|: The sender account.
-    # |count|: The number of bonds to purchase.
+    # |count|: The number of bonds to issue.
     # |epoch_id|: The current epoch ID.
     # |coin|: The JohnLawCoin contract.
     #
     # Returns
     # ----------------
-    # The redemption epoch of the purchased bonds if it succeeds.
+    # The redemption epoch of the issued bonds if it succeeds.
     # 0 otherwise.
-    def purchase_bonds(self, sender, count, epoch_id, coin):
+    def increase_bond_supply(self, sender, count, epoch_id, coin):
         # The user must purchase at least one bond.
         assert(count > 0)
         # The BondOperation does not have enough bonds to issue.
@@ -1043,7 +1044,7 @@ class BondOperation:
         coin.burn(sender, amount)
         return redemption_epoch
 
-    # Redeem bonds.
+    # Decrease the total bond supply.
     #
     # Parameters
     # ----------------
@@ -1058,7 +1059,7 @@ class BondOperation:
     # A tuple of two values:
     # - The number of redeemed bonds.
     # - The number of expired bonds.
-    def redeem_bonds(self, sender, redemption_epochs, epoch_id, coin):
+    def decrease_bond_supply(self, sender, redemption_epochs, epoch_id, coin):
         redeemed_bonds = 0
         expired_bonds = 0
         for redemption_epoch in redemption_epochs:
@@ -1160,9 +1161,10 @@ class OpenMarketOperation:
         # The price auction is implemented as a Dutch auction as follows:
         #
         # Let P be the latest price at which the OpenMarketOperation exchanged
-        # coins with ETH. At the beginning of each epoch, the ACB sets the coin
-        # budget (i.e., how many coins should be added to / removed from the
-        # total coin supply).
+        # coins with ETH. The price is measured by JLC / ETH wei. If the price
+        # is P, it means 1 JLC is exchanged with 1000 ETH wei. At the beginning
+        # of each epoch, the ACB sets the coin budget (i.e., how many coins
+        # should be added to / removed from the total coin supply).
         #
         # When the OpenMarketOperation increases the total coin supply,
         # the auction starts with the price of P * START_PRICE_MULTIPILER.
@@ -1184,8 +1186,7 @@ class OpenMarketOperation:
         # Attributes.
 
         # The latest price at which the OpenMarketOperation exchanged coins
-        # with ETH. The price is measured by wei / coin. If the price is 1000,
-        # it means 1 coin is exchanged with 1000 wei.
+        # with ETH.
         self.latest_price = 1000
         
         # The start price is updated at the beginning of each epoch.
@@ -1233,16 +1234,8 @@ class OpenMarketOperation:
     def increase_coin_supply(self, requested_eth_amount, elapsed_time):
         assert(self.coin_budget > 0)
         
-        # Calculate the current price.
-        price = self.start_price
-        for i in range(int(elapsed_time /
-                           OpenMarketOperation.PRICE_CHANGE_INTERVAL)):
-            price = int(price * (
-                100 - OpenMarketOperation.PRICE_CHANGE_PERCENTAGE) / 100)
-        if price == 0:
-            price = 1
-
         # Calculate the amount of coins and ETH to be exchanged.
+        price = self.get_current_price(elapsed_time)
         coin_amount = int(requested_eth_amount / price)
         if coin_amount > self.coin_budget:
             coin_amount = self.coin_budget
@@ -1276,15 +1269,8 @@ class OpenMarketOperation:
     def decrease_coin_supply(self, requested_coin_amount, elapsed_time):
         assert(self.coin_budget < 0)
         
-        # Calculate the current price.
-        price = self.start_price
-        for i in range(int(elapsed_time /
-                           OpenMarketOperation.PRICE_CHANGE_INTERVAL)):
-            price = int(price * (
-                100 + OpenMarketOperation.PRICE_CHANGE_PERCENTAGE) / 100)
-        assert(price > 0)
-        
         # Calculate the amount of coins and ETH to be exchanged.
+        price = self.get_current_price(elapsed_time)
         coin_amount = requested_coin_amount
         if coin_amount >= -self.coin_budget:
             coin_amount = -self.coin_budget
@@ -1301,6 +1287,37 @@ class OpenMarketOperation:
         assert(coin_amount <= requested_coin_amount)
         return (eth_amount, coin_amount)
 
+    # Return the current price in the Dutch auction.
+    #
+    # Parameters
+    # ----------------
+    # |elapsed_time|: The elapsed seconds from the current epoch start.
+    #
+    # Returns
+    # ----------------
+    # The current price.
+    def get_current_price(self, elapsed_time):
+        if self.coin_budget > 0:
+            price = self.start_price
+            for i in range(min(
+                    int(elapsed_time /
+                        OpenMarketOperation.PRICE_CHANGE_INTERVAL), 100)):
+                price = int(price * (
+                    100 - OpenMarketOperation.PRICE_CHANGE_PERCENTAGE) / 100)
+            if price == 0:
+                price = 1
+            return price
+        if self.coin_budget < 0:
+            price = self.start_price
+            for i in range(min(
+                    int(elapsed_time /
+                        OpenMarketOperation.PRICE_CHANGE_INTERVAL), 100)):
+                price = int(price * (
+                    100 + OpenMarketOperation.PRICE_CHANGE_PERCENTAGE) / 100)
+            assert(price > 0)
+            return price
+        return 0
+    
     # Update the coin budget (i.e., how many coins should be added to / removed
     # from the total coin supply). The ACB calls the method at the beginning of
     # each epoch.
@@ -1568,7 +1585,9 @@ class ACB:
                 self.bond_operation.bond.total_supply,
                 self.bond_operation.valid_bond_supply(epoch_id))
             self.logging.update_coin_budget(
-                epoch_id, self.open_market_operation.coin_budget)
+                epoch_id, self.open_market_operation.coin_budget,
+                self.open_market_operation.eth_balance,
+                self.open_market_operation.latest_price)
 
         # Commit.
         #
@@ -1606,7 +1625,7 @@ class ACB:
     # The redemption epoch of the purchased bonds if it succeeds.
     # 0 otherwise.
     def purchase_bonds(self, sender, count):
-        redemption_epoch = self.bond_operation.purchase_bonds(
+        redemption_epoch = self.bond_operation.increase_bond_supply(
             sender, count, self.oracle.epoch_id, self.coin)
         self.logging.purchase_bonds(self.oracle.epoch_id, count)
         return redemption_epoch
@@ -1623,8 +1642,9 @@ class ACB:
     # ----------------
     # The number of successfully redeemed bonds.
     def redeem_bonds(self, sender, redemption_epochs):
-        (redeemed_bonds, expired_bonds) = self.bond_operation.redeem_bonds(
-            sender, redemption_epochs, self.oracle.epoch_id, self.coin)
+        (redeemed_bonds, expired_bonds) = (
+            self.bond_operation.decrease_bond_supply(
+                sender, redemption_epochs, self.oracle.epoch_id, self.coin))
         self.logging.redeem_bonds(
             self.oracle.epoch_id, redeemed_bonds, expired_bonds)
         return redeemed_bonds

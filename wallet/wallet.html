@@ -11,7 +11,7 @@ http://opensource.org/licenses/mit-license.php
   <title>JohnLawCoin wallet</title>
   <link rel="stylesheet" type="text/css" href="wallet.css">
   <link rel="icon" type="image/x-icon" href="/john-law-coin/docs/favicon.png">
-  <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
   <script src="abi.js"></script>
   <script src="/john-law-coin/wallet/web3.min.js"></script>
   <script src="wallet.js"></script>
@@ -47,6 +47,17 @@ http://opensource.org/licenses/mit-license.php
   </span></span></h2>
   <div id="acb_info"></div>
 
+  <h2>Open Market Operation info
+    <span class="tooltip">?<span class="tooltip-text">
+        <span class="bold">Current state</span>: Purchasing ETH and selling coins / Purchasing coins and selling ETH / Closed.<br>
+        <span class="bold">Coin budget</span>: If the budget is positive, it indicates the amount of coins the Open Market Operation can sell (by purchasing ETH). If the budget is negative, it indicates the amount of coins the Open Market Operation can purchase (by selling ETH).<br>
+        <span class="bold">ETH balance</span>: The pooled ETH balance.<br>
+        <span class="bold">Price chart</span>: The price auction is implemented as a Dutch auction. When the Open Market Operation is selling coins, the price is lowered until the coin budget becomes zero. When the Open Market Operation is purchasing coins, the price is raised until the coin budget becomes zero.<br>
+        <span class="bold">Current price</span>: The current price.<br>
+        <span class="bold">Latest exchanged price</span>: The latest price at which the Open Market Operation exchanged JLC with ETH.<br>
+  </span></span></h2>
+  <div id="open_market_operation_info"></div>
+
   <h2>Send coins
     <span class="tooltip">?<span class="tooltip-text">
         You can send coins to your friend's account address.<br><br>
@@ -75,6 +86,22 @@ http://opensource.org/licenses/mit-license.php
       <option value="">Do not vote</option>
   </select></p>
   <p><input type="button" value="Vote" id="vote_button"></input><span class="disabled" id="vote_button_disabled"></span></p>
+  
+  <h2>Purchase coins
+    <span class="tooltip">?<span class="tooltip-text">
+        You can sell ETH and purchase coins as long as the Open Market Operation's coin budget is positive. See the Open Market Operation info for the current price.<br><br>
+        <span class="italic">[This operation consumes some ETH as transaction fee.]</span>
+  </span></span></h2>
+  <p>Amount of coins: <input type="number" min="1" id="purchase_coins_amount"></input></p>
+  <p><input type="button" value="Purchase" id="purchase_coins_button"></input><span class="disabled" id="purchase_coins_button_disabled"></span></p>
+  
+  <h2>Sell coins
+    <span class="tooltip">?<span class="tooltip-text">
+        You can sell coins and purchase ETH as long as the Open Market Operation's coin budget is negative. See the Open Market Operation info for the current JLC / ETH price.<br><br>
+        <span class="italic">[This operation consumes some ETH as transaction fee.]</span>
+  </span></span></h2>
+  <p>Amount of coins: <input type="number" min="1" id="sell_coins_amount"></input></p>
+  <p><input type="button" value="Sell" id="sell_coins_button"></input><span class="disabled" id="sell_coins_button_disabled"></span></p>
   
   <h2>Purchase bonds
     <span class="tooltip">?<span class="tooltip-text">
@@ -122,14 +149,16 @@ http://opensource.org/licenses/mit-license.php
         This shows the historical stats of key system parameters.
   </span></span></h2>
   <p><div id="chart_oracle_level"></div></p>
-  <p><div id="chart_coin_total_supply"></div></p>
-  <p><div id="chart_bond_total_supply"></div></p>
-  <p><div id="chart_coin_supply_delta"></div></p>
-  <p><div id="chart_minted_burned_tax"></div></p>
-  <p><div id="chart_bond_budget"></div></p>
-  <p><div id="chart_purchased_redeemed_expired"></div></p>
+  <p><div id="chart_total_coin_supply"></div></p>
+  <p><div id="chart_eth_balance"></div></p>
+  <p><div id="chart_total_valid_bond_supply"></div></p>
+  <p><div id="chart_exchanged_coins_with_budget"></div></p>
+  <p><div id="chart_exchanged_eth"></div></p>
+  <p><div id="chart_latest_price"></div></p>
+  <p><div id="chart_purchased_redeemed_expired_with_budget"></div></p>
   <p><div id="chart_vote"></div></p>
   <p><div id="chart_deposited_reclaimed_rewarded"></div></p>
+  <p><div id="chart_delta_minted_burned_tax"></div></p>
 
   </div>
 

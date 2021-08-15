@@ -3,11 +3,13 @@
 // This software is released under the MIT License.
 // http://opensource.org/licenses/mit-license.php
 
-var _acb_contract = null;
-var _oracle_contract = null;
-var _logging_contract = null;
 var _coin_contract = null;
 var _bond_contract = null;
+var _logging_contract = null;
+var _oracle_contract = null;
+var _bond_operation_contract = null;
+var _open_market_operation_contract = null;
+var _acb_contract = null;
 var _web3 = null;
 var _chain_id = null;
 var _selected_address = null;
@@ -19,11 +21,14 @@ window.onload = async () => {
     $("message_box").innerHTML = "";
     showLoading($("account_info"), "Loading.");
     showLoading($("acb_info"), "Loading.");
+    showLoading($("open_market_operation_info"), "Loading.");
     showLoading($("bond_list"), "Loading.");
     showLoading($("oracle_status"), "Loading.");
     showLoading($("logging_status"), "Loading.");
     
     $("vote_button").disabled = true;
+    $("purchase_coins_button").disabled = true;
+    $("sell_coins_button").disabled = true;
     $("purchase_bonds_button").disabled = true;
     $("redeem_bonds_button").disabled = true;
     
@@ -86,18 +91,31 @@ window.onload = async () => {
 
     _acb_contract = await new _web3.eth.Contract(ACB_ABI, getACBAddress());
     console.log("ACB contract: ", _acb_contract);
-    const oracle = await _acb_contract.methods.oracle_().call();
-    _oracle_contract = await new _web3.eth.Contract(ORACLE_ABI, oracle);
-    console.log("Oracle contract: ", _oracle_contract);
-    const logging = await _acb_contract.methods.logging_().call();
-    _logging_contract = await new _web3.eth.Contract(LOGGING_ABI, logging);
-    console.log("Logging contract: ", _logging_contract);
+    const bond_operation =
+          await _acb_contract.methods.bond_operation_().call();
+    _bond_operation_contract =
+      await new _web3.eth.Contract(BOND_OPERATION_ABI, bond_operation);
+    console.log("BondOperation contract: ", _bond_operation_contract);
     const coin = await _acb_contract.methods.coin_().call();
     _coin_contract = await new _web3.eth.Contract(JOHNLAWCOIN_ABI, coin);
     console.log("JohnLawCoin contract: ", _coin_contract);
-    const bond = await _acb_contract.methods.bond_().call();
+    const bond = await _bond_operation_contract.methods.bond_().call();
     _bond_contract = await new _web3.eth.Contract(JOHNLAWBOND_ABI, bond);
     console.log("JohnLawBond contract: ", _bond_contract);
+    const logging = await _acb_contract.methods.logging_().call();
+    _logging_contract = await new _web3.eth.Contract(LOGGING_ABI, logging);
+    console.log("Logging contract: ", _logging_contract);
+    const oracle = await _acb_contract.methods.oracle_().call();
+    _oracle_contract = await new _web3.eth.Contract(ORACLE_ABI, oracle);
+    console.log("Oracle contract: ", _oracle_contract);
+    const open_market_operation =
+          await _acb_contract.methods.open_market_operation_().call();
+    _open_market_operation_contract =
+      await new _web3.eth.Contract(OPEN_MARKET_OPERATION_ABI,
+                                   open_market_operation);
+    console.log("OpenMarketOperation contract: ",
+                _open_market_operation_contract);
+    
     console.log("selectedAddress: ", _selected_address);
   } catch (error) {
     console.log(error);
@@ -110,10 +128,11 @@ window.onload = async () => {
     return;
   }
   
-  $("send_coins_button").addEventListener("click", sendCoins);
+  $("vote_button").addEventListener("click", vote);
+  $("purchase_coins_button").addEventListener("click", purchaseCoins);
+  $("sell_coins_button").addEventListener("click", sellCoins);
   $("purchase_bonds_button").addEventListener("click", purchaseBonds);
   $("redeem_bonds_button").addEventListener("click", redeemBonds);
-  $("vote_button").addEventListener("click", vote);
   $("donate_button_001").addEventListener("click", donate001);
   $("donate_button_01").addEventListener("click", donate01);
   $("donate_button_1").addEventListener("click", donate1);
@@ -155,7 +174,8 @@ async function sendCoins() {
     }
     const ret = receipt.events.TransferEvent.returnValues;
     const message = "Sent " + ret.amount + " coins to " + ret.receiver + ". " +
-          "Paid " + ret.tax + " coins as a tax.";
+          "Paid " + ret.tax + " coins as a tax. The tax is used as a reward " +
+          "for voters.";
     await showTransactionSuccessMessage(message, receipt);
   } catch (error) {
     const transactionHash = extractTransactionHash(error);
@@ -178,6 +198,127 @@ async function sendCoins() {
   }
 }
 
+async function purchaseCoins() {
+  try {
+    const coin_amount = $("purchase_coins_amount").value;
+    
+    if (coin_amount <= 0) {
+      throw("You need to purchase at least one coin.");
+    }
+    const coin_budget = parseInt(
+      await _open_market_operation_contract.methods.coin_budget_().call());
+    if (coin_budget <= 0) {
+      throw("You cannot purchase coins when the coin budget is negative.");
+    }
+    if (coin_amount > coin_budget) {
+      throw("The current coin budget is " + coin_budget +
+            ". You cannot purchase coins exceeding this budget.");
+    }
+    const current_epoch_start =
+          parseInt(await _acb_contract.methods.current_epoch_start_().call());
+    const current_price =
+          await _open_market_operation_contract.methods.getCurrentPrice(
+            Math.trunc(Date.now() / 1000) - current_epoch_start).call();
+    const eth_amount = coin_amount * current_price;
+    
+    const promise = _acb_contract.methods.purchaseCoins().send(
+      {from: _selected_address, value: eth_amount});
+    showProcessingMessage();
+    const receipt = await promise;
+    console.log("receipt: ", receipt);
+    if (!receipt.events.PurchaseCoinsEvent) {
+      throw(receipt);
+    }
+    const ret = receipt.events.PurchaseCoinsEvent.returnValues;
+    const message = "Sold " + _web3.utils.fromWei(ret.eth_amount) +
+          " ETH (" + ret.eth_amount + " wei) and purchased " +
+          ret.coin_amount + " coins.";
+    await showTransactionSuccessMessage(message, receipt);
+  } catch (error) {
+    const transactionHash = extractTransactionHash(error);
+    if (transactionHash) {
+      await showErrorMessage(
+        "Couldn't purchase coins.",
+        "The transaction (<a href='" +
+          getEtherScanURL() + "tx/" + transactionHash +
+          "' target='_blank' rel='noopener noreferrer'>EtherScan</a>) " +
+          "couldn't fulfill your order. This may happen due to timing " +
+          "issues when the status changed between when you ordered and " +
+          "when the transaction was processed " +
+          "(e.g., the coin budget was enough when you ordered " +
+          "but was not enough when the transaction was processed.) " +
+          "Please try again.");
+    } else {
+      await showErrorMessage("Couldn't purchase coins.", error);
+    }
+    return;
+  }
+}
+
+async function sellCoins() {
+  try {
+    const coin_amount = $("sell_coins_amount").value;
+    
+    if (coin_amount <= 0) {
+      throw("You need to sell at least one coin.");
+    }
+    const coin_budget = parseInt(
+      await _open_market_operation_contract.methods.coin_budget_().call());
+    if (coin_budget >= 0) {
+      throw("You cannot sell coins when the coin budget is positive.");
+    }
+    if (coin_amount > -coin_budget) {
+      throw("The current coin budget is " + coin_budget +
+            ". You cannot sell coins exceeding this budget.");
+    }
+    const current_epoch_start =
+          parseInt(await _acb_contract.methods.current_epoch_start_().call());
+    const current_price =
+          await _open_market_operation_contract.methods.getCurrentPrice(
+            Math.trunc(Date.now() / 1000) - current_epoch_start).call();
+    const eth_amount = coin_amount * current_price;
+    const eth_balance = parseInt(
+      await _open_market_operation_contract.methods.eth_balance_().call());
+    if (eth_amount > eth_balance) {
+      throw("The Open Market Operation does not have enough ETH to purchase " +
+            "the coins you specified. Check the current price and specify " +
+            "a lower value.");
+    }
+    
+    const promise = _acb_contract.methods.sellCoins(coin_amount).send(
+      {from: _selected_address});
+    showProcessingMessage();
+    const receipt = await promise;
+    console.log("receipt: ", receipt);
+    if (!receipt.events.SellCoinsEvent) {
+      throw(receipt);
+    }
+    const ret = receipt.events.SellCoinsEvent.returnValues;
+    const message = "Sold " + ret.coin_amount +
+          " coins and purchased " + _web3.utils.fromWei(ret.eth_amount) +
+          " ETH (" + ret.eth_amount + " wei).";
+    await showTransactionSuccessMessage(message, receipt);
+  } catch (error) {
+    const transactionHash = extractTransactionHash(error);
+    if (transactionHash) {
+      await showErrorMessage(
+        "Couldn't sell coins.",
+        "The transaction (<a href='" +
+          getEtherScanURL() + "tx/" + transactionHash +
+          "' target='_blank' rel='noopener noreferrer'>EtherScan</a>) " +
+          "couldn't fulfill your order. This may happen due to timing " +
+          "issues when the status changed between when you ordered and " +
+          "when the transaction was processed " +
+          "(e.g., the coin budget was enough when you ordered " +
+          "but was not enough when the transaction was processed.) " +
+          "Please try again.");
+    } else {
+      await showErrorMessage("Couldn't sell coins.", error);
+    }
+    return;
+  }
+}
+
 async function purchaseBonds() {
   try {
     const amount = $("purchase_bonds_amount").value;
@@ -185,21 +326,17 @@ async function purchaseBonds() {
     if (amount <= 0) {
       throw("You need to purchase at least one bond.");
     }
-    const bond_budget =
-          parseInt(await _acb_contract.methods.bond_budget_().call());
+    const bond_budget = parseInt(
+      await _bond_operation_contract.methods.bond_budget_().call());
     if (amount > bond_budget) {
-      throw("The ACB's current bond budget is " + bond_budget +
-            ". You cannot purchase bonds larger than this budget.");
+      throw("The current bond budget is " + bond_budget +
+            ". You cannot purchase bonds exceeding this budget.");
     }
     const coin_balance =
           parseInt(await _coin_contract.methods.balanceOf(
             _selected_address).call());
-    let bond_price = BOND_PRICES[LEVEL_MAX - 1];
-    const oracle_level =
-          parseInt(await _acb_contract.methods.oracle_level_().call());
-    if (0 <= oracle_level && oracle_level < LEVEL_MAX) {
-      bond_price = BOND_PRICES[oracle_level];
-    }
+    const bond_price =
+          parseInt(await _bond_operation_contract.methods.BOND_PRICE().call());
     if (coin_balance < amount * bond_price) {
       throw("You don't have enough coin balance to purchase the bonds.");
     }
@@ -213,7 +350,7 @@ async function purchaseBonds() {
       throw(receipt);
     }
     const ret = receipt.events.PurchaseBondsEvent.returnValues;
-    const message = "Purchased " + ret.count +
+    const message = "Purchased " + ret.purchased_bonds +
           " bonds. The bonds can be redeemed at epoch " +
           parseInt(ret.redemption_epoch) + ".";
     await showTransactionSuccessMessage(message, receipt);
@@ -228,7 +365,7 @@ async function purchaseBonds() {
           "couldn't fulfill your order. This may happen due to timing " +
           "issues when the status changed between when you ordered and " +
           "when the transaction was processed " +
-          "(e.g., the ACB bond budget was enough when you ordered " +
+          "(e.g., the bond budget was enough when you ordered " +
           "but was not enough when the transaction was processed.) " +
           "Please try again.");
     } else {
@@ -242,8 +379,8 @@ async function redeemBonds() {
   try {
     const epoch_id = parseInt(
       await _oracle_contract.methods.epoch_id_().call());
-    const bond_budget =
-      -(parseInt(await _acb_contract.methods.bond_budget_().call()));
+    const bond_budget = -(parseInt(
+      await _bond_operation_contract.methods.bond_budget_().call()));
     const redemption_count =
           parseInt(await _bond_contract.methods.
                    numberOfRedemptionEpochsOwnedBy(
@@ -284,7 +421,7 @@ async function redeemBonds() {
       throw(receipt);
     }
     const ret = receipt.events.RedeemBondsEvent.returnValues;
-    let message = "Redeemed " + ret.count + " bonds.";
+    let message = "Redeemed " + ret.redeemed_bonds + " bonds.";
     await showTransactionSuccessMessage(message, receipt);
   } catch (error) {
     const transactionHash = extractTransactionHash(error);
@@ -297,7 +434,7 @@ async function redeemBonds() {
           "couldn't fulfill your order. This may happen due to timing " +
           "issues when the status changed between when you ordered and " +
           "when the transaction was processed " +
-          "(e.g., the ACB bond budget was enough when you ordered " +
+          "(e.g., the bond budget was enough when you ordered " +
           "but was not enough when the transaction was processed.) " +
           "Please try again.");
     } else {
@@ -382,23 +519,22 @@ async function vote() {
     const ret = receipt.events.VoteEvent.returnValues;
     const updated_epoch_id = parseInt(
       await _oracle_contract.methods.epoch_id_().call());
-    const message =
-          (ret.commit_result ? "Commit for epoch " + updated_epoch_id +
-           " succeeded. You voted for the oracle level " + current_level +
+    const message = "Commit for epoch " + updated_epoch_id + ": " +
+          (ret.commit_result ? 
+           "Succeeded. You voted for the oracle level " + current_level +
            ". You deposited " + ret.deposited + " coins. " +
            "The coins will be reclaimed at epoch " + (updated_epoch_id + 2) +
            " as long as you vote at epoch " + (updated_epoch_id + 1) +
            " and epoch " + (updated_epoch_id + 2) + ".":
-           "Commit for epoch " + updated_epoch_id + " failed. "+
-           "You can vote only once per epoch.") + "<br><br>" +
-          (ret.reveal_result ? "Reveal for epoch " + (updated_epoch_id - 1) +
-           " succeeded." :
-           "Reveal for epoch " + (updated_epoch_id - 1) +
-           " failed because your vote in epoch " + (updated_epoch_id - 1) +
-           " was not found.") +
-          "<br><br>" + "You reclaimed " + ret.reclaimed +
-          " coins you deposited at epoch " + (updated_epoch_id - 2) +
-          ". You got " + ret.rewarded + " coins as a reward.";
+           "Failed. You can vote only once per epoch.") + "<br><br>" +
+          "Reveal for epoch " + (updated_epoch_id - 1) + ": " +
+          (ret.reveal_result ? 
+           "Succeeded." :
+           "Failed. Your vote in epoch " + (updated_epoch_id - 1) +
+           " was not found.") + "<br><br>" +
+          "Reclaim for epoch " + (updated_epoch_id - 2) + ": " +
+          "Reclaimed " + ret.reclaimed + " coins. Got " +
+          ret.rewarded + " coins as a reward.";
     await showTransactionSuccessMessage(message, receipt);
   } catch (error) {
     const transactionHash = extractTransactionHash(error);
@@ -451,6 +587,8 @@ async function donate(eth) {
 
 async function reloadInfo() {
   try {
+    $("advanced_information").style.display = "none";
+    
     let html = "";
     
     html += "<table><tr><td>Account address</td><td class='right'>" +
@@ -483,8 +621,8 @@ async function reloadInfo() {
       (await _coin_contract.methods.totalSupply().call()) + "</td></tr>";
     html += "<tr><td>Total bond supply</td><td class='right'>" +
       (await _bond_contract.methods.totalSupply().call()) + "</td></tr>";
-    const bond_budget =
-          parseInt(await _acb_contract.methods.bond_budget_().call());
+    const bond_budget = parseInt(
+      await _bond_operation_contract.methods.bond_budget_().call());
     html += "<tr><td>Bond budget</td><td class='right'>" +
       bond_budget + "</td></tr>";
     html += "<tr><td>Oracle level</td><td class='right'>" +
@@ -505,18 +643,73 @@ async function reloadInfo() {
     html += "<tr><td>Current time</td><td class='right'>" +
       getDateString(Date.now()) + "</td></tr>";
     showMessage($("acb_info"), html);
+
+    const coin_budget = parseInt(
+      await _open_market_operation_contract.methods.coin_budget_().call());
+    const current_state =
+          coin_budget > 0 ? "Purchasing ETH and selling coins" :
+          (coin_budget < 0 ? "Purchasing coins and selling ETH" : "Closed");
+    html = "<table><tr><td>Current state</td><td class='right'>" +
+      current_state + "</a></td></tr>";
+    html += "<tr><td>Coin budget</td><td class='right'>" +
+      coin_budget + "</td></tr>";
+    const eth_balance = await _web3.eth.getBalance(
+      _open_market_operation_contract._address);
+    html += "<tr><td>ETH balance</td><td class='right'>" +
+      _web3.utils.fromWei(eth_balance) + " ETH<br>" +
+      "(" + eth_balance + " wei)</td></tr>";
+    console.log(_open_market_operation_contract);
+    const current_price =
+          await _open_market_operation_contract.methods.getCurrentPrice(
+            Math.trunc((Date.now() - current_epoch_start_ms) / 1000)).call();
+    console.log(_open_market_operation_contract);
+    html += "<tr><td>Current price</td><td class='right'>" +
+      "1 JLC = " + _web3.utils.fromWei(current_price) + " ETH<br>" +
+      "(1 JLC = " + current_price + " wei)</td></tr>";
+    const latest_price =
+          await _open_market_operation_contract.methods.latest_price_().call();
+    html += "<tr><td>Latest exchanged price</td><td class='right'>" +
+      "1 JLC = " + _web3.utils.fromWei(latest_price) + " ETH<br>" +
+      "(1 JLC = " + latest_price + " wei)</td></tr>";
+    html += "<tr><td colspan=2 class='left' id='price_chart' " +
+      "style='height: 200px; width: 600px'>" +
+      "</td></tr>";
+    html += "</table>";
+    showMessage($("open_market_operation_info"), html);
+    await showPriceChart();
     
+    if (coin_budget > 0) {
+      $("purchase_coins_button").disabled = false;
+      $("purchase_coins_button_disabled").innerText = "";
+    } else {
+      $("purchase_coins_button").disabled = true;
+      $("purchase_coins_button_disabled").innerText =
+        " [You can purchase coins only when the coin budget " +
+        "is positive. The current coin budget is " +
+        coin_budget + ".]";
+    }
+    if (coin_budget < 0) {
+      $("sell_coins_button").disabled = false;
+      $("sell_coins_button_disabled").innerText = "";
+    } else {
+      $("sell_coins_button").disabled = true;
+      $("sell_coins_button_disabled").innerText =
+        " [You can sell coins only when the coin budget " +
+        "is negative. The current coin budget is " +
+        coin_budget + ".]";
+    }
+
     if (bond_budget > 0) {
       $("purchase_bonds_button").disabled = false;
       $("purchase_bonds_button_disabled").innerText = "";
     } else {
       $("purchase_bonds_button").disabled = true;
       $("purchase_bonds_button_disabled").innerText =
-        " [You can purchase bonds only when the ACB's bond budget " +
-        "is positive. The current ACB's bond budget is " +
+        " [You can purchase bonds only when the bond budget " +
+        "is positive. The current bond budget is " +
         bond_budget + ".]";
     }
-    
+
     const next_epoch_id =
           next_epoch_start_ms < Date.now() ?
           epoch_id + 1 : epoch_id;
@@ -531,6 +724,13 @@ async function reloadInfo() {
         " [You can vote only once per epoch. Please wait until the next " +
         "epoch starts. The next epoch will start around " +
         getDateString(next_epoch_start_ms) + ".]";
+      setTimeout(async () => {
+        const next_commit = await getCommit(epoch_id + 1);
+        if (!next_commit.voted) {
+          $("vote_button").disabled = false;
+          $("vote_button_disabled").innerText = "";
+        }
+      }, next_epoch_start_ms - Date.now() + 2000);
     }
     
     let has_redeemable = false;
@@ -560,7 +760,7 @@ async function reloadInfo() {
         bond_list_html += "<tr><td>" + redemption_epoch +
           "</td><td class='right'>" + balance + "</td><td>" +
           (redemption_epoch < epoch_id ? "Yes" :
-           "As long as the ACB's bond budget is negative") + "</td></tr>";
+           "As long as the bond budget is negative") + "</td></tr>";
         if (redemption_epoch < epoch_id) {
           has_redeemable = true;
         }
@@ -634,8 +834,11 @@ async function showLoggingStatus() {
           await _logging_contract.methods.getVoteLog(epoch_id).call();
     const epoch_log =
           await _logging_contract.methods.getEpochLog(epoch_id).call();
-    const bond_log =
-          await _logging_contract.methods.getBondLog(epoch_id).call();
+    const bond_operation_log =
+          await _logging_contract.methods.getBondOperationLog(epoch_id).call();
+    const open_market_operation_log =
+          await _logging_contract.methods.getOpenMarketOperationLog(
+            epoch_id).call();
     html += epoch_id == current_epoch_id ? "Current" : "<br>Previous";
     html += "<br><table>";
     html += "<tr><td>commit_succeeded</td><td class='right'>" +
@@ -662,58 +865,68 @@ async function showLoggingStatus() {
       epoch_log[1] + "</td></tr>";
     html += "<tr><td>coin_supply_delta</td><td class='right'>" +
       epoch_log[2] + "</td></tr>";
-    html += "<tr><td>bond_budget</td><td class='right'>" +
+    html += "<tr><td>total_coin_supply</td><td class='right'>" +
       epoch_log[3] + "</td></tr>";
-    html += "<tr><td>coin_total_supply</td><td class='right'>" +
-      epoch_log[4] + "</td></tr>";
-    html += "<tr><td>bond_total_supply</td><td class='right'>" +
-      epoch_log[5] + "</td></tr>";
-    html += "<tr><td>valid_bond_supply</td><td class='right'>" +
-      epoch_log[6] + "</td></tr>";
     html += "<tr><td>oracle_level</td><td class='right'>" +
-      epoch_log[7] + "</td></tr>";
+      epoch_log[4] + "</td></tr>";
     html += "<tr><td>current_epoch_start</td><td class='right'>" +
-      epoch_log[8] + "</td></tr>";
-    html += "<tr><td>burned_tax</td><td class='right'>" +
-      epoch_log[9] + "</td></tr>";
+      epoch_log[5] + "</td></tr>";
+    html += "<tr><td>tax</td><td class='right'>" +
+      epoch_log[6] + "</td></tr>";
+    html += "<tr><td>bond_budget</td><td class='right'>" +
+      bond_operation_log[0] + "</td></tr>";
+    html += "<tr><td>total_bond_supply</td><td class='right'>" +
+      bond_operation_log[1] + "</td></tr>";
+    html += "<tr><td>valid_bond_supply</td><td class='right'>" +
+      bond_operation_log[2] + "</td></tr>";
     html += "<tr><td>purchased_bonds</td><td class='right'>" +
-      bond_log[0] + "</td></tr>";
+      bond_operation_log[3] + "</td></tr>";
     html += "<tr><td>redeemed_bonds</td><td class='right'>" +
-      bond_log[1] + "</td></tr>";
+      bond_operation_log[4] + "</td></tr>";
     html += "<tr><td>expired_bonds</td><td class='right'>" +
-      bond_log[2] + "</td></tr>";
+      bond_operation_log[5] + "</td></tr>";
+    html += "<tr><td>coin_budget</td><td class='right'>" +
+      open_market_operation_log[0] + "</td></tr>";
+    html += "<tr><td>exchanged_coins</td><td class='right'>" +
+      open_market_operation_log[1] + "</td></tr>";
+    html += "<tr><td>exchanged_eth</td><td class='right'>" +
+      open_market_operation_log[2] + "</td></tr>";
+    html += "<tr><td>eth_balance</td><td class='right'>" +
+      open_market_operation_log[3] + "</td></tr>";
+    html += "<tr><td>latest_price</td><td class='right'>" +
+      open_market_operation_log[4] + "</td></tr>";
     html += "</table>"
   }
   showMessage($("logging_status"), html);
 }
 
 async function showHistoryChart() {
-  google.load("visualization", "1", {packages:["corechart"]});
-  google.setOnLoadCallback(drawChart);
-}
-
-async function drawChart() {
   let logs = {};
   logs["vote"] = [];
   logs["deposited_reclaimed_rewarded"] = [];
-  logs["minted_burned_tax"] = [];
-  logs["coin_supply_delta"] = [];
-  logs["bond_budget"] = [];
-  logs["purchased_redeemed_expired"] = [];
-  logs["coin_total_supply"] = [];
-  logs["bond_total_supply"] = [];
+  logs["delta_minted_burned_tax"] = [];
+  logs["total_coin_supply"] = [];
   logs["oracle_level"] = [];
+  logs["total_valid_bond_supply"] = [];
+  logs["purchased_redeemed_expired_with_budget"] = [];
+  logs["exchanged_coins_with_budget"] = [];
+  logs["exchanged_eth"] = [];
+  logs["eth_balance"] = [];
+  logs["latest_price"] = [];
   
   const current_epoch_id =
         parseInt(await _oracle_contract.methods.epoch_id_().call());
-  for (let epoch_id = 1; epoch_id <= current_epoch_id; epoch_id++) {
+  for (let epoch_id = 4; epoch_id <= current_epoch_id; epoch_id++) {
     const vote_log =
           await _logging_contract.methods.getVoteLog(epoch_id).call();
     const epoch_log =
           await _logging_contract.methods.getEpochLog(epoch_id).call();
-    const bond_log =
-          await _logging_contract.methods.getBondLog(epoch_id).call();
-    const date = new Date(parseInt(epoch_log[8]) * 1000);
+    const bond_operation_log =
+          await _logging_contract.methods.getBondOperationLog(epoch_id).call();
+    const open_market_operation_log =
+          await _logging_contract.methods.getOpenMarketOperationLog(
+            epoch_id).call();
+    const date = new Date(parseInt(epoch_log[5]) * 1000);
     logs["vote"].push([date,
                        parseInt(vote_log[0]),
                        parseInt(vote_log[1]),
@@ -725,132 +938,261 @@ async function drawChart() {
                                                parseInt(vote_log[6]),
                                                parseInt(vote_log[7]),
                                                parseInt(vote_log[8])]);
-    logs["minted_burned_tax"].push([date,
-                                    parseInt(epoch_log[0]),
-                                    parseInt(epoch_log[1]),
-                                    parseInt(epoch_log[9])]);
-    logs["coin_supply_delta"].push([date, parseInt(epoch_log[2])]);
-    logs["bond_budget"].push([date, parseInt(epoch_log[3])]);
-    logs["purchased_redeemed_expired"].push([date,
-                                             parseInt(bond_log[0]),
-                                             parseInt(bond_log[1]),
-                                             parseInt(bond_log[2])]);
-    logs["coin_total_supply"].push([date, parseInt(epoch_log[4])]);
-    logs["bond_total_supply"].push([date,
-                                    parseInt(epoch_log[5]),
-                                    parseInt(epoch_log[6]]);
-    logs["oracle_level"].push([date, parseInt(epoch_log[7])]);
+    logs["delta_minted_burned_tax"].push([date,
+                                          parseInt(epoch_log[2]),
+                                          parseInt(epoch_log[0]),
+                                          parseInt(epoch_log[1]),
+                                          parseInt(epoch_log[6])]);
+    logs["total_coin_supply"].push([date, parseInt(epoch_log[3])]);
+    logs["oracle_level"].push([date, parseInt(epoch_log[4])]);
+    logs["total_valid_bond_supply"].push([date,
+                                          parseInt(bond_operation_log[1]),
+                                          parseInt(bond_operation_log[2])]);
+    logs["purchased_redeemed_expired_with_budget"].push(
+      [date,
+       parseInt(bond_operation_log[0]),
+       parseInt(bond_operation_log[3]),
+       parseInt(bond_operation_log[4]),
+       parseInt(bond_operation_log[5])]);
+    logs["exchanged_coins_with_budget"].push([
+      date,
+      parseInt(open_market_operation_log[0]),
+      parseInt(open_market_operation_log[1])]);
+    logs["exchanged_eth"].push([date,
+                                parseInt(open_market_operation_log[2])]);
+    logs["eth_balance"].push([date,
+                              parseInt(open_market_operation_log[3])]);
+    logs["latest_price"].push([date,
+                               parseInt(open_market_operation_log[4])]);
   }
   
-  {
-    const table = new google.visualization.DataTable();
-    table.addColumn("datetime", "");
-    table.addColumn("number", "commit_succeeded");
-    table.addColumn("number", "commit_failed");
-    table.addColumn("number", "reveal_succeeded");
-    table.addColumn("number", "reveal_failed");
-    table.addColumn("number", "reclaim_succeeded");
-    table.addColumn("number", "reward_succeeded");
-    table.addRows(logs["vote"]);
-    const options = {title: "Oracle: vote statistics",
-                     legend: {position: "bottom"}};
-    const chart = new google.visualization.LineChart(
-      $("chart_vote"));
-    chart.draw(table, options);
+  google.charts.load("current", {packages:["corechart"]});
+  google.charts.setOnLoadCallback(drawHistoryChart);
+  
+  function drawHistoryChart() {
+    {
+      const table = new google.visualization.DataTable();
+      table.addColumn("datetime", "");
+      table.addColumn("number", "commit_succeeded");
+      table.addColumn("number", "commit_failed");
+      table.addColumn("number", "reveal_succeeded");
+      table.addColumn("number", "reveal_failed");
+      table.addColumn("number", "reclaim_succeeded");
+      table.addColumn("number", "reward_succeeded");
+      table.addRows(logs["vote"]);
+      const options = {
+        title: "Oracle: vote statistics",
+        legend: {position: "bottom"}};
+      const chart = new google.visualization.LineChart(
+        $("chart_vote"));
+      chart.draw(table, options);
+    }
+    {
+      const table = new google.visualization.DataTable();
+      table.addColumn("datetime", "");
+      table.addColumn("number", "deposited");
+      table.addColumn("number", "reclaimed");
+      table.addColumn("number", "rewarded");
+      table.addRows(logs["deposited_reclaimed_rewarded"]);
+      const options = {
+        title: "Oracle: deposited / reclaimed / rewarded coins",
+        legend: {position: "bottom"}};
+      const chart = new google.visualization.LineChart(
+        $("chart_deposited_reclaimed_rewarded"));
+      chart.draw(table, options);
+    }
+    {
+      const table = new google.visualization.DataTable();
+      table.addColumn("datetime", "");
+      table.addColumn("number", "coin_supply_delta");
+      table.addColumn("number", "minted_coins");
+      table.addColumn("number", "burned_coins");
+      table.addColumn("number", "tax");
+      table.addRows(logs["delta_minted_burned_tax"]);
+      const options = {
+      title: "ACB: internal statistics",
+        legend: {position: "bottom"}};
+      const chart = new google.visualization.LineChart(
+        $("chart_delta_minted_burned_tax"));
+      chart.draw(table, options);
+    }
+    {
+      const table = new google.visualization.DataTable();
+      table.addColumn("datetime", "");
+      table.addColumn("number", "total_coin_supply");
+      table.addRows(logs["total_coin_supply"]);
+      const options = {
+        title: "ACB: total coin supply",
+        legend: {position: "bottom"}};
+      const chart = new google.visualization.LineChart(
+        $("chart_total_coin_supply"));
+      chart.draw(table, options);
+    }
+    {
+      const table = new google.visualization.DataTable();
+      table.addColumn("datetime", "");
+      table.addColumn("number", "oracle_level");
+      table.addRows(logs["oracle_level"]);
+      const options = {
+        title: "ACB: oracle level",
+        legend: {position: "bottom"}};
+      const chart = new google.visualization.LineChart(
+        $("chart_oracle_level"));
+      chart.draw(table, options);
+    }
+    {
+      const table = new google.visualization.DataTable();
+      table.addColumn("datetime", "");
+      table.addColumn("number", "total_bond_supply");
+      table.addColumn("number", "valid_bond_supply");
+      table.addRows(logs["total_valid_bond_supply"]);
+      const options = {
+        title: "BondOperation: total bond supply / valid bond supply",
+        legend: {position: "bottom"}};
+      const chart = new google.visualization.LineChart(
+        $("chart_total_valid_bond_supply"));
+      chart.draw(table, options);
+    }
+    {
+      const table = new google.visualization.DataTable();
+      table.addColumn("datetime", "");
+      table.addColumn("number", "bond_budget");
+      table.addColumn("number", "purchased_bonds");
+      table.addColumn("number", "redeemed_bonds");
+      table.addColumn("number", "expired_bonds");
+      table.addRows(logs["purchased_redeemed_expired_with_budget"]);
+      const options = {
+        title: "BondOperation: bond budget / purchased / redeemed / expired",
+        legend: {position: "bottom"}};
+      const chart = new google.visualization.LineChart(
+        $("chart_purchased_redeemed_expired_with_budget"));
+      chart.draw(table, options);
+    }
+    {
+      const table = new google.visualization.DataTable();
+      table.addColumn("datetime", "");
+      table.addColumn("number", "coin_budget");
+      table.addColumn("number", "exchanged_coins");
+      table.addRows(logs["exchanged_coins_with_budget"]);
+      const options = {
+        title: "OpenMarketOperation: exchanged coins",
+        legend: {position: "bottom"}};
+      const chart = new google.visualization.LineChart(
+        $("chart_exchanged_coins_with_budget"));
+      chart.draw(table, options);
+    }
+    {
+      const table = new google.visualization.DataTable();
+      table.addColumn("datetime", "");
+      table.addColumn("number", "exchanged_eth");
+      table.addRows(logs["exchanged_eth"]);
+      const options = {
+        title: "OpenMarketOperation: exchanged ETH",
+        legend: {position: "bottom"}};
+      const chart = new google.visualization.LineChart(
+        $("chart_exchanged_eth"));
+      chart.draw(table, options);
+    }
+    {
+      const table = new google.visualization.DataTable();
+      table.addColumn("datetime", "");
+      table.addColumn("number", "eth_balance");
+      table.addRows(logs["eth_balance"]);
+      const options = {
+        title: "OpenMarketOperation: ETH balance",
+        legend: {position: "bottom"}};
+      const chart = new google.visualization.LineChart(
+        $("chart_eth_balance"));
+      chart.draw(table, options);
+    }
+    {
+      const table = new google.visualization.DataTable();
+      table.addColumn("datetime", "");
+      table.addColumn("number", "latest_price");
+      table.addRows(logs["latest_price"]);
+      const options = {
+        title: "OpenMarketOperation: JLC / ETH exchanged price",
+        legend: {position: "bottom"}};
+      const chart = new google.visualization.LineChart(
+        $("chart_latest_price"));
+      chart.draw(table, options);
+    }
   }
-  {
-    const table = new google.visualization.DataTable();
-    table.addColumn("datetime", "");
-    table.addColumn("number", "deposited");
-    table.addColumn("number", "reclaimed");
-    table.addColumn("number", "rewarded");
-    table.addRows(logs["deposited_reclaimed_rewarded"]);
-    const options = {title: "Oracle: deposited / reclaimed / rewarded coins",
-                     legend: {position: "bottom"}};
-    const chart = new google.visualization.LineChart(
-      $("chart_deposited_reclaimed_rewarded"));
-    chart.draw(table, options);
+}
+
+async function showPriceChart() {
+  const coin_budget = parseInt(
+    await _open_market_operation_contract.methods.coin_budget_().call());
+  if (coin_budget == 0) {
+    $("price_chart").remove();
+    return;
   }
-  {
-    const table = new google.visualization.DataTable();
-    table.addColumn("datetime", "");
-    table.addColumn("number", "minted_coins");
-    table.addColumn("number", "burned_coins");
-    table.addColumn("number", "burned_tax");
-    table.addRows(logs["minted_burned_tax"]);
-    const options = {title: "ACB: minted coins / burned coins / burned tax",
-                     legend: {position: "bottom"}};
-    const chart = new google.visualization.LineChart(
-      $("chart_minted_burned_tax"));
-    chart.draw(table, options);
+  
+  let prices = [];
+
+  const price_change_interval = parseInt(
+    await _open_market_operation_contract.methods.
+      PRICE_CHANGE_INTERVAL().call());
+  const price_change_percentage = parseInt(
+    await _open_market_operation_contract.methods.
+      PRICE_CHANGE_PERCENTAGE().call());
+  const start_price = parseInt(
+    await _open_market_operation_contract.methods.start_price_().call());
+  const epoch_duration =
+        parseInt(await _acb_contract.methods.EPOCH_DURATION().call());
+  const current_epoch_start =
+        parseInt(await _acb_contract.methods.current_epoch_start_().call());
+  
+  let price = start_price;
+  for (let interval = 0; ; interval++) {
+    const begin = new Date((current_epoch_start +
+                            interval * price_change_interval) * 1000);
+    const end = new Date((current_epoch_start +
+                          (interval + 1) * price_change_interval) * 1000);
+    const now = new Date();
+    
+    prices.push([begin, price, NaN]);
+    prices.push([end, price, NaN]);
+    if (coin_budget > 0) {
+      price = Math.trunc(price * (100 - price_change_percentage) / 100);
+    } else if (coin_budget < 0) {
+      price = Math.trunc(price * (100 + price_change_percentage) / 100);
+    }
+
+    if (now < end &&
+        new Date((current_epoch_start + epoch_duration) * 1000) < end) {
+      break;
+    }
   }
-  {
+
+  let max_price = Math.max(start_price, price);
+  let min_price = Math.min(start_price, price);
+  max_price = Math.trunc(max_price * 1.1);
+  min_price = Math.trunc(min_price * 0.9);
+  prices.push([new Date(), NaN, min_price]);
+  prices.push([new Date(), NaN, max_price]);
+
+  google.charts.load("current", {packages: ["corechart"]});
+  google.charts.setOnLoadCallback(drawPriceChart);
+
+  function drawPriceChart() {
     const table = new google.visualization.DataTable();
     table.addColumn("datetime", "");
-    table.addColumn("number", "coin_supply_delta");
-    table.addRows(logs["coin_supply_delta"]);
-    const options = {title: "ACB: coin_supply_delta",
-                     legend: {position: "bottom"}};
-    const chart = new google.visualization.LineChart(
-      $("chart_coin_supply_delta"));
-    chart.draw(table, options);
-  }
-  {
-    const table = new google.visualization.DataTable();
-    table.addColumn("datetime", "");
-    table.addColumn("number", "bond_budget");
-    table.addRows(logs["bond_budget"]);
-    const options = {title: "ACB: bond_budget",
-                     legend: {position: "bottom"}};
-    const chart = new google.visualization.LineChart(
-      $("chart_bond_budget"));
-    chart.draw(table, options);
-  }
-  {
-    const table = new google.visualization.DataTable();
-    table.addColumn("datetime", "");
-    table.addColumn("number", "purchased_bonds");
-    table.addColumn("number", "redeemed_bonds");
-    table.addColumn("number", "expired_bonds");
-    table.addRows(logs["purchased_redeemed_expired"]);
-    const options = {title: "ACB: purchased / redeemed / expired bonds",
-                     legend: {position: "bottom"}};
-    const chart = new google.visualization.LineChart(
-      $("chart_purchased_redeemed_expired"));
-    chart.draw(table, options);
-  }
-  {
-    const table = new google.visualization.DataTable();
-    table.addColumn("datetime", "");
-    table.addColumn("number", "coin_total_supply");
-    table.addRows(logs["coin_total_supply"]);
-    const options = {title: "ACB: coin_total_supply",
-                     legend: {position: "bottom"}};
-    const chart = new google.visualization.LineChart(
-      $("chart_coin_total_supply"));
-    chart.draw(table, options);
-  }
-  {
-    const table = new google.visualization.DataTable();
-    table.addColumn("datetime", "");
-    table.addColumn("number", "bond_total_supply");
-    table.addColumn("number", "valid_bond_supply");
-    table.addRows(logs["bond_total_supply"]);
-    const options = {title: "ACB: bond_total_supply / valid_bond_supply",
-                     legend: {position: "bottom"}};
-    const chart = new google.visualization.LineChart(
-      $("chart_bond_total_supply"));
-    chart.draw(table, options);
-  }
-  {
-    const table = new google.visualization.DataTable();
-    table.addColumn("datetime", "");
-    table.addColumn("number", "oracle_level");
-    table.addRows(logs["oracle_level"]);
-    const options = {title: "oracle_level",
-                     legend: {position: "bottom"}};
-    const chart = new google.visualization.LineChart(
-      $("chart_oracle_level"));
+    table.addColumn("number", "price");
+    table.addColumn("number", "current time");
+    table.addRows(prices);
+    const options = {
+      title: "Price chart (JLC / ETH wei)",
+      legend: {position: "bottom"},
+      vAxis: {
+        gridlines: {count: 16},
+        viewWindow: {
+          min: min_price,
+          max: max_price
+        }
+      }
+    };
+    const chart = new google.visualization.LineChart($("price_chart"));
     chart.draw(table, options);
   }
 }
@@ -865,7 +1207,7 @@ function showLoading(div, message) {
   div.loadingTimer = setInterval(() => {
     dots.textContent += ".";
     count++;
-    if (count % 4 == 0) {
+    if (count % 6 == 0) {
       dots.textContent = "";
     }
   }, 1000);
@@ -889,7 +1231,7 @@ function showProcessingMessage() {
 async function showTransactionSuccessMessage(message, receipt) {
   let div = $("message_box");
   const html =
-        "<span class='bold'>Transaction succeeded</span>:<br>" + message +
+        "<span class='bold'>Transaction succeeded.</span><br>" + message +
         "<br><br>" +
         "It will take some time to commit the transaction. " +
         "Check <a href='" + getEtherScanURL() + "tx/" +
@@ -922,12 +1264,12 @@ async function showErrorMessage(message, object) {
 // Helper functions.
 
 async function getCommit(epoch_id) {
-  let target__oracle_contract = _oracle_contract;
+  let target_oracle_contract = _oracle_contract;
   if (epoch_id < EPOCH_ID_THAT_UPGRADED_ORACLE) {
-    target__oracle_contract =
+    target_oracle_contract =
       await new _web3.eth.Contract(ORACLE_ABI, OLD_ORACLE_ADDRESS);
   }
-  const ret = await target__oracle_contract.methods.getCommit(
+  const ret = await target_oracle_contract.methods.getCommit(
     epoch_id % 3, _selected_address).call();
   return {voted: ret[4] == epoch_id,
           hash: ret[4] == epoch_id ? ret[0] : ""};
@@ -987,13 +1329,9 @@ function getDateString(timestamp) {
 function getOracleLevelString(level) {
   if (0 <= level && level < LEVEL_MAX) {
     return "Oracle level = " + level +
-      "<br>1 coin = " + EXCHANGE_RATES[level] + " USD" +
-      "<br>Bond issue price = " + BOND_PRICES[level] + " coins" +
-      "<br>Tax rate = " + TAX_RATES[level] + "%";
+      ", 1 coin = " + EXCHANGE_RATES[level] + " USD";
   } else if (level == LEVEL_MAX) {
-    return "Oracle level = undefined (no vote was found)" +
-      "<br>Bond issue price = " + BOND_PRICES[LEVEL_MAX - 1] + " coins" +
-      "<br>Tax rate = 0%";
+    return "Oracle level = undefined (no vote was found)";
   }
   throw("Undefined oracle level.");
 }

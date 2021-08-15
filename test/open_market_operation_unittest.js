@@ -135,12 +135,18 @@ function parameterized_test(accounts,
               }, "OpenMarketOperation");
               continue;
             }
+
             let price = start_price;
             for (let i = 0;
                  i < Math.trunc(elapsed_time / _price_change_interval); i++) {
               price = Math.trunc(
                 price * (100 - _price_change_percentage) / 100);
             }
+            if (price == 0) {
+              price = 1;
+            }
+            assert.equal(await _operation.getCurrentPrice(elapsed_time), price);
+            
             let eth_amount = 0;
             let coin_amount = 0;
             if (price == 0) {
@@ -187,12 +193,15 @@ function parameterized_test(accounts,
               }, "OpenMarketOperation");
               continue;
             }
+            
             let price = start_price;
             for (let i = 0;
                  i < Math.trunc(elapsed_time / _price_change_interval); i++) {
               price = Math.trunc(
                 price * (100 + _price_change_percentage) / 100);
             }
+            assert.equal(await _operation.getCurrentPrice(elapsed_time), price);
+            
             let eth_amount = 0;
             let coin_amount = 0;
             if (price == 0) {

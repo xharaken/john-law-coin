@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // http://opensource.org/licenses/mit-license.php
 
-const ACB_ADDRESS_ON_LOCAL = "0x88cD57330A1652748ABe1B67740b961a714dfD08";
+const ACB_ADDRESS_ON_LOCAL = "0x45E37042b824DbF5815e90976a444Bd8F3aB0440";
 const ACB_ADDRESS_ON_ROPSTEN = "0x2f0A7D39DedBb873364Ae9E8aB2794e446432c7a";
 const ACB_ADDRESS_ON_MAINNET = "";
 
@@ -15,9 +15,7 @@ const EPOCH_ID_THAT_UPGRADED_ORACLE = 0;
 const OLD_ORACLE_ADDRESS = "";
 
 const EXCHANGE_RATES = [0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4];
-const BOND_PRICES = [970, 978, 986, 992, 997, 997, 997, 997, 997];
-const TAX_RATES = [30, 20, 12, 5, 0, 0, 0, 0, 0];
-const LEVEL_MAX = 9;
+const LEVEL_MAX = EXCHANGE_RATES.length;
 
 const JOHNLAWCOIN_ABI = [
     {
@@ -182,6 +180,20 @@ const JOHNLAWCOIN_ABI = [
           "internalType": "string",
           "name": "",
           "type": "string"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [],
+      "name": "TAX_RATE",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
         }
       ],
       "stateMutability": "view",
@@ -384,20 +396,6 @@ const JOHNLAWCOIN_ABI = [
     },
     {
       "inputs": [],
-      "name": "tax_rate_",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function",
-      "constant": true
-    },
-    {
-      "inputs": [],
       "name": "totalSupply",
       "outputs": [
         {
@@ -547,14 +545,8 @@ const JOHNLAWCOIN_ABI = [
       "constant": true
     },
     {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "tax_rate",
-          "type": "uint256"
-        }
-      ],
-      "name": "setTaxRate",
+      "inputs": [],
+      "name": "resetTaxAccount",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -598,7 +590,7 @@ const JOHNLAWBOND_ABI = [
         {
           "indexed": false,
           "internalType": "uint256",
-          "name": "redemption_timestamp",
+          "name": "redemption_epoch",
           "type": "uint256"
         },
         {
@@ -623,7 +615,7 @@ const JOHNLAWBOND_ABI = [
         {
           "indexed": false,
           "internalType": "uint256",
-          "name": "redemption_timestamp",
+          "name": "redemption_epoch",
           "type": "uint256"
         },
         {
@@ -705,7 +697,7 @@ const JOHNLAWBOND_ABI = [
         },
         {
           "internalType": "uint256",
-          "name": "redemption_timestamp",
+          "name": "redemption_epoch",
           "type": "uint256"
         },
         {
@@ -728,7 +720,7 @@ const JOHNLAWBOND_ABI = [
         },
         {
           "internalType": "uint256",
-          "name": "redemption_timestamp",
+          "name": "redemption_epoch",
           "type": "uint256"
         },
         {
@@ -770,7 +762,7 @@ const JOHNLAWBOND_ABI = [
           "type": "address"
         }
       ],
-      "name": "numberOfRedemptionTimestampsOwnedBy",
+      "name": "numberOfRedemptionEpochsOwnedBy",
       "outputs": [
         {
           "internalType": "uint256",
@@ -795,7 +787,7 @@ const JOHNLAWBOND_ABI = [
           "type": "uint256"
         }
       ],
-      "name": "getRedemptionTimestampOwnedBy",
+      "name": "getRedemptionEpochOwnedBy",
       "outputs": [
         {
           "internalType": "uint256",
@@ -816,7 +808,7 @@ const JOHNLAWBOND_ABI = [
         },
         {
           "internalType": "uint256",
-          "name": "redemption_timestamp",
+          "name": "redemption_epoch",
           "type": "uint256"
         }
       ],
@@ -845,8 +837,28 @@ const JOHNLAWBOND_ABI = [
       "stateMutability": "view",
       "type": "function",
       "constant": true
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "redemption_epoch",
+          "type": "uint256"
+        }
+      ],
+      "name": "bondSupplyAt",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
     }
-];
+  ];
 
 const ORACLE_ABI = [
     {
@@ -861,7 +873,7 @@ const ORACLE_ABI = [
         {
           "indexed": false,
           "internalType": "uint256",
-          "name": "minted",
+          "name": "tax",
           "type": "uint256"
         },
         {
@@ -871,7 +883,7 @@ const ORACLE_ABI = [
           "type": "uint256"
         }
       ],
-      "name": "AdvanceEpochEvent",
+      "name": "AdvancePhaseEvent",
       "type": "event"
     },
     {
@@ -884,9 +896,15 @@ const ORACLE_ABI = [
           "type": "address"
         },
         {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "epoch_id",
+          "type": "uint256"
+        },
+        {
           "indexed": false,
           "internalType": "bytes32",
-          "name": "committed_hash",
+          "name": "hash",
           "type": "bytes32"
         },
         {
@@ -928,6 +946,12 @@ const ORACLE_ABI = [
           "type": "address"
         },
         {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "epoch_id",
+          "type": "uint256"
+        },
+        {
           "indexed": false,
           "internalType": "uint256",
           "name": "reclaimed",
@@ -953,15 +977,21 @@ const ORACLE_ABI = [
           "type": "address"
         },
         {
-          "indexed": false,
+          "indexed": true,
           "internalType": "uint256",
-          "name": "revealed_level",
+          "name": "epoch_id",
           "type": "uint256"
         },
         {
           "indexed": false,
           "internalType": "uint256",
-          "name": "revealed_salt",
+          "name": "oracle_level",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "salt",
           "type": "uint256"
         }
       ],
@@ -1011,6 +1041,20 @@ const ORACLE_ABI = [
       "constant": true
     },
     {
+      "inputs": [],
+      "name": "epoch_id_",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
       "inputs": [
         {
           "internalType": "uint256",
@@ -1036,8 +1080,8 @@ const ORACLE_ABI = [
           "type": "uint256"
         },
         {
-          "internalType": "enum Oracle.Epoch",
-          "name": "epoch",
+          "internalType": "enum Oracle.Phase",
+          "name": "phase",
           "type": "uint8"
         }
       ],
@@ -1053,20 +1097,6 @@ const ORACLE_ABI = [
           "internalType": "address",
           "name": "",
           "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function",
-      "constant": true
-    },
-    {
-      "inputs": [],
-      "name": "epoch_id_",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
         }
       ],
       "stateMutability": "view",
@@ -1114,7 +1144,7 @@ const ORACLE_ABI = [
         },
         {
           "internalType": "bytes32",
-          "name": "committed_hash",
+          "name": "hash",
           "type": "bytes32"
         },
         {
@@ -1143,12 +1173,12 @@ const ORACLE_ABI = [
         },
         {
           "internalType": "uint256",
-          "name": "revealed_level",
+          "name": "oracle_level",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "revealed_salt",
+          "name": "salt",
           "type": "uint256"
         }
       ],
@@ -1198,11 +1228,6 @@ const ORACLE_ABI = [
           "internalType": "contract JohnLawCoin",
           "name": "coin",
           "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "mint",
-          "type": "uint256"
         }
       ],
       "name": "advance",
@@ -1328,7 +1353,7 @@ const ORACLE_ABI = [
           "type": "uint256"
         },
         {
-          "internalType": "enum Oracle.Epoch",
+          "internalType": "enum Oracle.Phase",
           "name": "",
           "type": "uint8"
         },
@@ -1368,7 +1393,7 @@ const ORACLE_ABI = [
           "type": "uint256"
         },
         {
-          "internalType": "enum Oracle.Epoch",
+          "internalType": "enum Oracle.Phase",
           "name": "",
           "type": "uint8"
         }
@@ -1395,7 +1420,7 @@ const ORACLE_ABI = [
           "type": "uint256"
         }
       ],
-      "name": "hash",
+      "name": "encrypt",
       "outputs": [
         {
           "internalType": "bytes32",
@@ -1407,7 +1432,7 @@ const ORACLE_ABI = [
       "type": "function",
       "constant": true
     }
-];
+  ];
 
 const LOGGING_ABI = [
     {
@@ -1437,7 +1462,52 @@ const LOGGING_ABI = [
           "type": "uint256"
         }
       ],
-      "name": "acb_logs_",
+      "name": "bond_operation_logs_",
+      "outputs": [
+        {
+          "internalType": "int256",
+          "name": "bond_budget",
+          "type": "int256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "total_bond_supply",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "valid_bond_supply",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "purchased_bonds",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "redeemed_bonds",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "expired_bonds",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "epoch_logs_",
       "outputs": [
         {
           "internalType": "uint256",
@@ -1455,18 +1525,8 @@ const LOGGING_ABI = [
           "type": "int256"
         },
         {
-          "internalType": "int256",
-          "name": "bond_budget",
-          "type": "int256"
-        },
-        {
           "internalType": "uint256",
           "name": "total_coin_supply",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "total_bond_supply",
           "type": "uint256"
         },
         {
@@ -1481,17 +1541,7 @@ const LOGGING_ABI = [
         },
         {
           "internalType": "uint256",
-          "name": "burned_tax",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "purchased_bonds",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "redeemed_bonds",
+          "name": "tax",
           "type": "uint256"
         }
       ],
@@ -1500,12 +1550,38 @@ const LOGGING_ABI = [
       "constant": true
     },
     {
-      "inputs": [],
-      "name": "log_index_",
-      "outputs": [
+      "inputs": [
         {
           "internalType": "uint256",
           "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "open_market_operation_logs_",
+      "outputs": [
+        {
+          "internalType": "int256",
+          "name": "coin_budget",
+          "type": "int256"
+        },
+        {
+          "internalType": "int256",
+          "name": "exchanged_coins",
+          "type": "int256"
+        },
+        {
+          "internalType": "int256",
+          "name": "exchanged_eth",
+          "type": "int256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "eth_balance",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "latest_price",
           "type": "uint256"
         }
       ],
@@ -1618,7 +1694,7 @@ const LOGGING_ABI = [
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "log_index",
+          "name": "epoch_id",
           "type": "uint256"
         }
       ],
@@ -1678,11 +1754,11 @@ const LOGGING_ABI = [
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "log_index",
+          "name": "epoch_id",
           "type": "uint256"
         }
       ],
-      "name": "getACBLog",
+      "name": "getEpochLog",
       "outputs": [
         {
           "internalType": "uint256",
@@ -1700,19 +1776,44 @@ const LOGGING_ABI = [
           "type": "int256"
         },
         {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "epoch_id",
+          "type": "uint256"
+        }
+      ],
+      "name": "getBondOperationLog",
+      "outputs": [
+        {
           "internalType": "int256",
           "name": "",
           "type": "int256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
         },
         {
           "internalType": "uint256",
@@ -1748,6 +1849,51 @@ const LOGGING_ABI = [
       "inputs": [
         {
           "internalType": "uint256",
+          "name": "epoch_id",
+          "type": "uint256"
+        }
+      ],
+      "name": "getOpenMarketOperationLog",
+      "outputs": [
+        {
+          "internalType": "int256",
+          "name": "",
+          "type": "int256"
+        },
+        {
+          "internalType": "int256",
+          "name": "",
+          "type": "int256"
+        },
+        {
+          "internalType": "int256",
+          "name": "",
+          "type": "int256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "epoch_id",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
           "name": "minted",
           "type": "uint256"
         },
@@ -1762,18 +1908,8 @@ const LOGGING_ABI = [
           "type": "int256"
         },
         {
-          "internalType": "int256",
-          "name": "bond_budget",
-          "type": "int256"
-        },
-        {
           "internalType": "uint256",
           "name": "total_coin_supply",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "total_bond_supply",
           "type": "uint256"
         },
         {
@@ -1788,17 +1924,78 @@ const LOGGING_ABI = [
         },
         {
           "internalType": "uint256",
-          "name": "burned_tax",
+          "name": "tax",
           "type": "uint256"
         }
       ],
-      "name": "epochUpdated",
+      "name": "updateEpoch",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
     },
     {
       "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "epoch_id",
+          "type": "uint256"
+        },
+        {
+          "internalType": "int256",
+          "name": "bond_budget",
+          "type": "int256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "total_bond_supply",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "valid_bond_supply",
+          "type": "uint256"
+        }
+      ],
+      "name": "updateBondBudget",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "epoch_id",
+          "type": "uint256"
+        },
+        {
+          "internalType": "int256",
+          "name": "coin_budget",
+          "type": "int256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "eth_balance",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "latest_price",
+          "type": "uint256"
+        }
+      ],
+      "name": "updateCoinBudget",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "epoch_id",
+          "type": "uint256"
+        },
         {
           "internalType": "bool",
           "name": "commit_result",
@@ -1825,7 +2022,7 @@ const LOGGING_ABI = [
           "type": "uint256"
         }
       ],
-      "name": "voted",
+      "name": "vote",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -1834,11 +2031,16 @@ const LOGGING_ABI = [
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "count",
+          "name": "epoch_id",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "purchased_bonds",
           "type": "uint256"
         }
       ],
-      "name": "purchasedBonds",
+      "name": "purchaseBonds",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -1847,21 +2049,164 @@ const LOGGING_ABI = [
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "count",
+          "name": "epoch_id",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "redeemed_bonds",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "expired_bonds",
           "type": "uint256"
         }
       ],
-      "name": "redeemedBonds",
+      "name": "redeemBonds",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "epoch_id",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "eth_amount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "coin_amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "purchaseCoins",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "epoch_id",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "eth_amount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "coin_amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "sellCoins",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
     }
-];
+  ];
 
-const ACB_ABI = [
+const BOND_OPERATION_ABI = [
     {
       "anonymous": false,
       "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "previousOwner",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "OwnershipTransferred",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "sender",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "epoch_id",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "purchased_bonds",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "redemption_epoch",
+          "type": "uint256"
+        }
+      ],
+      "name": "PurchaseBondsEvent",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "sender",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "epoch_id",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "redeemed_bonds",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "expired_bonds",
+          "type": "uint256"
+        }
+      ],
+      "name": "RedeemBondsEvent",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "epoch_id",
+          "type": "uint256"
+        },
         {
           "indexed": false,
           "internalType": "int256",
@@ -1881,9 +2226,639 @@ const ACB_ABI = [
           "type": "uint256"
         }
       ],
-      "name": "ControlSupplyEvent",
+      "name": "UpdateBondBudgetEvent",
       "type": "event"
     },
+    {
+      "inputs": [],
+      "name": "BOND_PRICE",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [],
+      "name": "BOND_REDEEMABLE_PERIOD",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [],
+      "name": "BOND_REDEMPTION_PERIOD",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [],
+      "name": "BOND_REDEMPTION_PRICE",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [],
+      "name": "bond_",
+      "outputs": [
+        {
+          "internalType": "contract JohnLawBond",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [],
+      "name": "bond_budget_",
+      "outputs": [
+        {
+          "internalType": "int256",
+          "name": "",
+          "type": "int256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [],
+      "name": "owner",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [],
+      "name": "renounceOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "transferOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "contract JohnLawBond",
+          "name": "bond",
+          "type": "address"
+        }
+      ],
+      "name": "initialize",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "deprecate",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "sender",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "count",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "epoch_id",
+          "type": "uint256"
+        },
+        {
+          "internalType": "contract JohnLawCoin",
+          "name": "coin",
+          "type": "address"
+        }
+      ],
+      "name": "purchaseBonds",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "sender",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "redemption_epochs",
+          "type": "uint256[]"
+        },
+        {
+          "internalType": "uint256",
+          "name": "epoch_id",
+          "type": "uint256"
+        },
+        {
+          "internalType": "contract JohnLawCoin",
+          "name": "coin",
+          "type": "address"
+        }
+      ],
+      "name": "redeemBonds",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "int256",
+          "name": "delta",
+          "type": "int256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "epoch_id",
+          "type": "uint256"
+        }
+      ],
+      "name": "updateBondBudget",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "epoch_id",
+          "type": "uint256"
+        }
+      ],
+      "name": "validBondSupply",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "contract JohnLawCoin",
+          "name": "coin",
+          "type": "address"
+        }
+      ],
+      "name": "revokeOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ];
+
+const OPEN_MARKET_OPERATION_ABI = [
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "requested_coin_amount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "elapsed_time",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "eth_amount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "coin_amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "DecreaseCoinSupplyEvent",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "requested_eth_amount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "elapsed_time",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "eth_amount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "coin_amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "IncreaseCoinSupplyEvent",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "previousOwner",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "OwnershipTransferred",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "int256",
+          "name": "coin_budget",
+          "type": "int256"
+        }
+      ],
+      "name": "UpdateCoinBudgetEvent",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "PRICE_CHANGE_INTERVAL",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [],
+      "name": "PRICE_CHANGE_PERCENTAGE",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [],
+      "name": "START_PRICE_MULTIPILER",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [],
+      "name": "coin_budget_",
+      "outputs": [
+        {
+          "internalType": "int256",
+          "name": "",
+          "type": "int256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [],
+      "name": "eth_balance_",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [],
+      "name": "latest_price_",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [],
+      "name": "owner",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [],
+      "name": "renounceOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "start_price_",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "transferOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "initialize",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "requested_eth_amount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "elapsed_time",
+          "type": "uint256"
+        }
+      ],
+      "name": "increaseCoinSupply",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "requested_coin_amount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "elapsed_time",
+          "type": "uint256"
+        }
+      ],
+      "name": "decreaseCoinSupply",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "elapsed_time",
+          "type": "uint256"
+        }
+      ],
+      "name": "getCurrentPrice",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "sender",
+          "type": "address"
+        }
+      ],
+      "name": "increaseEthInPool",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function",
+      "payable": true
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "sender",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "eth_amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "decreaseEthInPool",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "int256",
+          "name": "coin_budget",
+          "type": "int256"
+        }
+      ],
+      "name": "updateCoinBudget",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ];
+
+const ACB_ABI = [
     {
       "anonymous": false,
       "inputs": [
@@ -1945,15 +2920,21 @@ const ACB_ABI = [
           "type": "address"
         },
         {
-          "indexed": false,
+          "indexed": true,
           "internalType": "uint256",
-          "name": "count",
+          "name": "epoch_id",
           "type": "uint256"
         },
         {
           "indexed": false,
           "internalType": "uint256",
-          "name": "redemption_timestamp",
+          "name": "purchased_bonds",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "redemption_epoch",
           "type": "uint256"
         }
       ],
@@ -1972,11 +2953,85 @@ const ACB_ABI = [
         {
           "indexed": false,
           "internalType": "uint256",
-          "name": "count",
+          "name": "requested_eth_amount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "eth_amount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "coin_amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "PurchaseCoinsEvent",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "sender",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "epoch_id",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "redeemed_bonds",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "expired_bonds",
           "type": "uint256"
         }
       ],
       "name": "RedeemBondsEvent",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "sender",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "requested_coin_amount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "eth_amount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "coin_amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "SellCoinsEvent",
       "type": "event"
     },
     {
@@ -1996,27 +3051,76 @@ const ACB_ABI = [
       "anonymous": false,
       "inputs": [
         {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "epoch_id",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "current_epoch_start",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "tax",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "burned",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "int256",
+          "name": "delta",
+          "type": "int256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "mint",
+          "type": "uint256"
+        }
+      ],
+      "name": "UpdateEpochEvent",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
           "indexed": true,
           "internalType": "address",
           "name": "sender",
           "type": "address"
         },
         {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "epoch_id",
+          "type": "uint256"
+        },
+        {
           "indexed": false,
           "internalType": "bytes32",
-          "name": "committed_hash",
+          "name": "hash",
           "type": "bytes32"
         },
         {
           "indexed": false,
           "internalType": "uint256",
-          "name": "revealed_level",
+          "name": "oracle_level",
           "type": "uint256"
         },
         {
           "indexed": false,
           "internalType": "uint256",
-          "name": "revealed_salt",
+          "name": "salt",
           "type": "uint256"
         },
         {
@@ -2066,34 +3170,6 @@ const ACB_ABI = [
     },
     {
       "inputs": [],
-      "name": "BOND_REDEMPTION_PERIOD",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function",
-      "constant": true
-    },
-    {
-      "inputs": [],
-      "name": "BOND_REDEMPTION_PRICE",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function",
-      "constant": true
-    },
-    {
-      "inputs": [],
       "name": "DAMPING_FACTOR",
       "outputs": [
         {
@@ -2109,6 +3185,20 @@ const ACB_ABI = [
     {
       "inputs": [],
       "name": "DEPOSIT_RATE",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [],
+      "name": "EPOCH_DURATION",
       "outputs": [
         {
           "internalType": "uint256",
@@ -2142,47 +3232,7 @@ const ACB_ABI = [
           "type": "uint256"
         }
       ],
-      "name": "LEVEL_TO_BOND_PRICE",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function",
-      "constant": true
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
       "name": "LEVEL_TO_EXCHANGE_RATE",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function",
-      "constant": true
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "LEVEL_TO_TAX_RATE",
       "outputs": [
         {
           "internalType": "uint256",
@@ -2210,20 +3260,6 @@ const ACB_ABI = [
     },
     {
       "inputs": [],
-      "name": "EPOCH_DURATION",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function",
-      "constant": true
-    },
-    {
-      "inputs": [],
       "name": "_timestamp_for_testing",
       "outputs": [
         {
@@ -2238,26 +3274,12 @@ const ACB_ABI = [
     },
     {
       "inputs": [],
-      "name": "bond_",
+      "name": "bond_operation_",
       "outputs": [
         {
-          "internalType": "contract JohnLawBond",
+          "internalType": "contract BondOperation",
           "name": "",
           "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function",
-      "constant": true
-    },
-    {
-      "inputs": [],
-      "name": "bond_budget_",
-      "outputs": [
-        {
-          "internalType": "int256",
-          "name": "",
-          "type": "int256"
         }
       ],
       "stateMutability": "view",
@@ -2298,6 +3320,20 @@ const ACB_ABI = [
       "outputs": [
         {
           "internalType": "contract Logging",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [],
+      "name": "open_market_operation_",
+      "outputs": [
+        {
+          "internalType": "contract OpenMarketOperation",
           "name": "",
           "type": "address"
         }
@@ -2395,13 +3431,18 @@ const ACB_ABI = [
           "type": "address"
         },
         {
-          "internalType": "contract JohnLawBond",
-          "name": "bond",
+          "internalType": "contract Oracle",
+          "name": "oracle",
           "type": "address"
         },
         {
-          "internalType": "contract Oracle",
-          "name": "oracle",
+          "internalType": "contract BondOperation",
+          "name": "bond_operation",
+          "type": "address"
+        },
+        {
+          "internalType": "contract OpenMarketOperation",
+          "name": "open_market_operation",
           "type": "address"
         },
         {
@@ -2447,17 +3488,17 @@ const ACB_ABI = [
       "inputs": [
         {
           "internalType": "bytes32",
-          "name": "committed_hash",
+          "name": "hash",
           "type": "bytes32"
         },
         {
           "internalType": "uint256",
-          "name": "revealed_level",
+          "name": "oracle_level",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "revealed_salt",
+          "name": "salt",
           "type": "uint256"
         }
       ],
@@ -2520,12 +3561,55 @@ const ACB_ABI = [
       "inputs": [
         {
           "internalType": "uint256[]",
-          "name": "redemption_timestamps",
+          "name": "redemption_epochs",
           "type": "uint256[]"
         }
       ],
       "name": "redeemBonds",
       "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "purchaseCoins",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "payable",
+      "type": "function",
+      "payable": true
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "requested_coin_amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "sellCoins",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        },
         {
           "internalType": "uint256",
           "name": "",
@@ -2548,7 +3632,7 @@ const ACB_ABI = [
           "type": "uint256"
         }
       ],
-      "name": "hash",
+      "name": "encrypt",
       "outputs": [
         {
           "internalType": "bytes32",
@@ -2574,4 +3658,4 @@ const ACB_ABI = [
       "type": "function",
       "constant": true
     }
-];
+  ];

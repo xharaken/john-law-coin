@@ -236,6 +236,8 @@ class ACBSimulator(unittest.TestCase):
             valid_bond_supply = self._bond_operation.valid_bond_supply(epoch_id)
             bond_budget = self._bond_operation.bond_budget
             coin_budget = self._open_market_operation.coin_budget
+            eth_balance = self._open_market_operation.eth_balance
+            latest_price = self._open_market_operation.latest_price
 
             self.purchase_coins()
             self.sell_coins()
@@ -279,14 +281,15 @@ class ACBSimulator(unittest.TestCase):
             open_market_operation_log = (
                 self._logging.open_market_operation_logs[epoch_id])
             self.assertEqual(open_market_operation_log.coin_budget, coin_budget)
-            self.assertEqual(open_market_operation_log.increased_eth,
-                             self.metrics.increased_eth)
-            self.assertEqual(open_market_operation_log.increased_coin_supply,
-                             self.metrics.increased_coin_supply)
-            self.assertEqual(open_market_operation_log.decreased_eth,
-                             self.metrics.decreased_eth)
-            self.assertEqual(open_market_operation_log.decreased_coin_supply,
+            self.assertEqual(open_market_operation_log.exchanged_coins,
+                             self.metrics.increased_coin_supply -
                              self.metrics.decreased_coin_supply)
+            self.assertEqual(open_market_operation_log.exchanged_eth,
+                             self.metrics.increased_eth -
+                             self.metrics.decreased_eth)
+            self.assertEqual(open_market_operation_log.eth_balance, eth_balance)
+            self.assertEqual(open_market_operation_log.latest_price,
+                             latest_price)
             
             tax = self.transfer_coins()
 
@@ -299,7 +302,7 @@ class ACBSimulator(unittest.TestCase):
                       'increased_eth=%d decreased_eth=%d '
                       'delta=%d mint=%d lost=%d coin_supply=%d->%d->%d=%d '
                       'bond_supply=%d->%d valid_bond_supply=%d->%d '
-                      'bond_budget=%d->%d tax=%d' %
+                      'bond_budget=%d->%d coin_budget=%d->%d tax=%d' %
                       (self._oracle.epoch_id,
                        self.metrics.reveal_hit,
                        self.metrics.reveal_hit + self.metrics.reveal_miss,
@@ -350,6 +353,8 @@ class ACBSimulator(unittest.TestCase):
                        self._bond_operation.valid_bond_supply(epoch_id),
                        bond_budget,
                        self._bond_operation.bond_budget,
+                       coin_budget,
+                       self._open_market_operation.coin_budget,
                        self.metrics.tax
                        ))
             self.metrics.update_total()

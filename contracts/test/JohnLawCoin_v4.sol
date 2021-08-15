@@ -333,7 +333,9 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
           bond_operation_.bond_v2_().totalSupply(),
           bond_operation_.validBondSupply(result.epoch_id));
       logging_.updateCoinBudget(
-          result.epoch_id, open_market_operation_.coin_budget_v2_());
+          result.epoch_id, open_market_operation_.coin_budget_v2_(),
+          address(open_market_operation_).balance,
+          open_market_operation_.latest_price_());
       emit UpdateEpochEvent(result.epoch_id, current_epoch_start_,
                             tax, burned, delta, mint);
     }
@@ -389,8 +391,8 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
     
     coin_.transferOwnership(address(bond_operation_));
     uint redemption_epoch =
-        bond_operation_.purchaseBonds(address(msg.sender), count,
-                                      epoch_id, coin_);
+        bond_operation_.increaseBondSupply(address(msg.sender), count,
+                                           epoch_id, coin_);
     bond_operation_.revokeOwnership(coin_);
     
     logging_.purchaseBonds(epoch_id, count);
@@ -415,8 +417,8 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
     
     coin_.transferOwnership(address(bond_operation_));
     (uint redeemed_bonds, uint expired_bonds) =
-        bond_operation_.redeemBonds(address(msg.sender), redemption_epochs,
-                                    epoch_id, coin_);
+        bond_operation_.decreaseBondSupply(
+            address(msg.sender), redemption_epochs, epoch_id, coin_);
     bond_operation_.revokeOwnership(coin_);
     
     logging_.redeemBonds(epoch_id, redeemed_bonds, expired_bonds);

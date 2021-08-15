@@ -35,14 +35,14 @@ contract("LoggingUnittest", function (accounts) {
       assert.equal(bond_operation_log.redeemed_bonds, 0);
       assert.equal(bond_operation_log.expired_bonds, 0);
 
-      await _logging.updateCoinBudget(epoch_id, 1);
+      await _logging.updateCoinBudget(epoch_id, 1, 2, 3);
       let open_market_operation_log =
           await get_open_market_operation_logs(epoch_id);
       assert.equal(open_market_operation_log.coin_budget, 1);
-      assert.equal(open_market_operation_log.increased_eth, 0);
-      assert.equal(open_market_operation_log.increased_coin_supply, 0);
-      assert.equal(open_market_operation_log.decreased_eth, 0);
-      assert.equal(open_market_operation_log.decreased_coin_supply, 0);
+      assert.equal(open_market_operation_log.exchanged_coins, 0);
+      assert.equal(open_market_operation_log.exchanged_eth, 0);
+      assert.equal(open_market_operation_log.eth_balance, 2);
+      assert.equal(open_market_operation_log.latest_price, 3);
       
       await _logging.purchaseBonds(epoch_id, 1);
       await _logging.purchaseBonds(epoch_id, 2);
@@ -68,10 +68,10 @@ contract("LoggingUnittest", function (accounts) {
       open_market_operation_log =
         await get_open_market_operation_logs(epoch_id);
       assert.equal(open_market_operation_log.coin_budget, 1);
-      assert.equal(open_market_operation_log.increased_eth, 6);
-      assert.equal(open_market_operation_log.increased_coin_supply, 60);
-      assert.equal(open_market_operation_log.decreased_eth, 600);
-      assert.equal(open_market_operation_log.decreased_coin_supply, 6000);
+      assert.equal(open_market_operation_log.exchanged_coin_supply, -5940);
+      assert.equal(open_market_operation_log.exchanged_eth, -594);
+      assert.equal(open_market_operation_log.eth_balance, 2);
+      assert.equal(open_market_operation_log.latest_price, 3);
             
       await _logging.vote(epoch_id, false, false, 0, 0, 0);
       let vote_log = await get_vote_logs(epoch_id);
@@ -158,7 +158,7 @@ contract("LoggingUnittest", function (accounts) {
       await _logging.updateBondBudget(0, 1, 2, 3, {from: accounts[1]});
     }, "Ownable");
     await should_throw(async () => {
-      await _logging.updateCoinBudget(0, 1, {from: accounts[1]});
+      await _logging.updateCoinBudget(0, 1, 2, 3, {from: accounts[1]});
     }, "Ownable");
     await should_throw(async () => {
       await _logging.vote(0, false, false, 0, 0, 0,
@@ -216,10 +216,10 @@ contract("LoggingUnittest", function (accounts) {
     const ret = await _logging.getOpenMarketOperationLog(epoch_id);
     let open_market_operation_log = {};
     open_market_operation_log.coin_budget = ret[0];
-    open_market_operation_log.increased_eth = ret[1];
-    open_market_operation_log.increased_coin_supply = ret[2];
-    open_market_operation_log.decreased_eth = ret[3];
-    open_market_operation_log.decreased_coin_supply = ret[4];
+    open_market_operation_log.exchanged_coins = ret[1];
+    open_market_operation_log.exchanged_eth = ret[2];
+    open_market_operation_log.eth_balance = ret[3];
+    open_market_operation_log.latest_price = ret[4];
     return open_market_operation_log;
   }
 });
