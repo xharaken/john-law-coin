@@ -71,8 +71,11 @@ window.onload = async () => {
         "<span class='warning'>Note: You are connected to " +
         "the Ropsten Testnet. The duration of one epoch is " +
         "set to 1 min (instead of 1 week) for testing purposes. " +
-        "Please test whatever you want to experiment with and give us " +
-        "feedback!</span>";
+        "Please test whatever you want and give us feedback!</span>";
+    } else if (_chain_id == 1337 || __chain_id == 1338) {
+      $("network").innerHTML =
+        "<span class='warning'>You are connected to " +
+        "the local network.</span>";
     } else {
       $("network").innerHTML =
         "<span class='warning'>You are connected to " +
@@ -186,8 +189,8 @@ async function sendCoins() {
           getEtherScanURL() + "tx/" + transactionHash +
           "' target='_blank' rel='noopener noreferrer'>EtherScan</a>) " +
           "couldn't fulfill your order. This may happen due to timing " +
-          "issues when the status changed between when you ordered and " +
-          "when the transaction was processed " +
+          "issues when the blockchain state changed between when you ordered " +
+          "and when the transaction was processed " +
           "(e.g., your coin balance was enough when you ordered " +
           "but was not enough when the transaction was processed.) " +
           "Please try again.");
@@ -232,7 +235,7 @@ async function purchaseCoins() {
     const ret = receipt.events.PurchaseCoinsEvent.returnValues;
     const message = "Sold " + _web3.utils.fromWei(ret.eth_amount) +
           " ETH (" + ret.eth_amount + " wei) and purchased " +
-          ret.coin_amount + " coins.";
+          ret.coin_amount + " JLC.";
     await showTransactionSuccessMessage(message, receipt);
   } catch (error) {
     const transactionHash = extractTransactionHash(error);
@@ -243,8 +246,8 @@ async function purchaseCoins() {
           getEtherScanURL() + "tx/" + transactionHash +
           "' target='_blank' rel='noopener noreferrer'>EtherScan</a>) " +
           "couldn't fulfill your order. This may happen due to timing " +
-          "issues when the status changed between when you ordered and " +
-          "when the transaction was processed " +
+          "issues when the blockchain state changed between when you ordered " +
+          "and when the transaction was processed " +
           "(e.g., the coin budget was enough when you ordered " +
           "but was not enough when the transaction was processed.) " +
           "Please try again.");
@@ -281,8 +284,8 @@ async function sellCoins() {
       await _open_market_operation_contract.methods.eth_balance_().call());
     if (eth_amount > eth_balance) {
       throw("The Open Market Operation does not have enough ETH to purchase " +
-            "the coins you specified. Check the current price and specify " +
-            "a lower value.");
+            "the coins you specified. Check the current JLC / ETH price and " +
+            "specify a lower value.");
     }
     
     const promise = _acb_contract.methods.sellCoins(coin_amount).send(
@@ -295,7 +298,7 @@ async function sellCoins() {
     }
     const ret = receipt.events.SellCoinsEvent.returnValues;
     const message = "Sold " + ret.coin_amount +
-          " coins and purchased " + _web3.utils.fromWei(ret.eth_amount) +
+          " JLC and purchased " + _web3.utils.fromWei(ret.eth_amount) +
           " ETH (" + ret.eth_amount + " wei).";
     await showTransactionSuccessMessage(message, receipt);
   } catch (error) {
@@ -307,8 +310,8 @@ async function sellCoins() {
           getEtherScanURL() + "tx/" + transactionHash +
           "' target='_blank' rel='noopener noreferrer'>EtherScan</a>) " +
           "couldn't fulfill your order. This may happen due to timing " +
-          "issues when the status changed between when you ordered and " +
-          "when the transaction was processed " +
+          "issues when the blockchain state changed between when you ordered " +
+          "and when the transaction was processed " +
           "(e.g., the coin budget was enough when you ordered " +
           "but was not enough when the transaction was processed.) " +
           "Please try again.");
@@ -340,6 +343,8 @@ async function purchaseBonds() {
     if (coin_balance < amount * bond_price) {
       throw("You don't have enough coin balance to purchase the bonds.");
     }
+    const bond_redeemable_period = parseInt(
+      await _bond_operation_contract.methods.BOND_REDEEMABLE_PERIOD().call());
     
     const promise = _acb_contract.methods.purchaseBonds(amount).send(
       {from: _selected_address});
@@ -351,8 +356,10 @@ async function purchaseBonds() {
     }
     const ret = receipt.events.PurchaseBondsEvent.returnValues;
     const message = "Purchased " + ret.purchased_bonds +
-          " bonds. The bonds can be redeemed at epoch " +
-          parseInt(ret.redemption_epoch) + ".";
+          " bonds. The bonds can be redeemed from epoch " +
+          ret.redemption_epoch +
+          " to epoch " +
+          (parseInt(ret.redemption_epoch) + bond_redeemable_period) + ".";
     await showTransactionSuccessMessage(message, receipt);
   } catch (error) {
     const transactionHash = extractTransactionHash(error);
@@ -363,8 +370,8 @@ async function purchaseBonds() {
           getEtherScanURL() + "tx/" + transactionHash +
           "' target='_blank' rel='noopener noreferrer'>EtherScan</a>) " +
           "couldn't fulfill your order. This may happen due to timing " +
-          "issues when the status changed between when you ordered and " +
-          "when the transaction was processed " +
+          "issues when the blockchain state changed between when you ordered " +
+          "and when the transaction was processed " +
           "(e.g., the bond budget was enough when you ordered " +
           "but was not enough when the transaction was processed.) " +
           "Please try again.");
@@ -432,8 +439,8 @@ async function redeemBonds() {
           getEtherScanURL() + "tx/" + transactionHash +
           "' target='_blank' rel='noopener noreferrer'>EtherScan</a>) " +
           "couldn't fulfill your order. This may happen due to timing " +
-          "issues when the status changed between when you ordered and " +
-          "when the transaction was processed " +
+          "issues when the blockchain state changed between when you ordered " +
+          "and when the transaction was processed " +
           "(e.g., the bond budget was enough when you ordered " +
           "but was not enough when the transaction was processed.) " +
           "Please try again.");
@@ -462,7 +469,7 @@ async function vote() {
     const previous_commit = await getCommit(current_epoch_id - 1);
     
     if (current_commit.voted) {
-      throw("You have already voted in this epoch. " +
+      throw("You have already voted in the current epoch. " +
             "You can vote only once per epoch.");
     }
     
@@ -493,7 +500,7 @@ async function vote() {
             "your previous vote. Please check that you are using " +
             "the same Ethereum account for the current vote and " +
             "the previous vote. This may also happen when your browser's " +
-            "local storage is broken.\n\n" +
+            "local storage is broken or cleared.\n\n" +
             "Do you want to forcibly proceed? Then you will lose " +
             "the coins you deposited in the previous vote.\n");
         if (!ret) {
@@ -545,7 +552,7 @@ async function vote() {
           getEtherScanURL() + "tx/" + transactionHash +
           "' target='_blank' rel='noopener noreferrer'>EtherScan</a>) " +
           "failed due to out of gas. Voting may require more gas than " +
-          "what Metamask estimates. You can adjust the gas limit when " +
+          "what Metamask estimates. You can increase the gas limit when " +
           "you confirm the transaction. Please increase the gas limit " +
           "and try again.");
     } else {
@@ -608,7 +615,7 @@ async function reloadInfo() {
     const epoch_id =
           parseInt(await _oracle_contract.methods.epoch_id_().call());
     const current_commit = await getCommit(epoch_id);
-    html += "<tr><td>Voted</td><td class='right'>" +
+    html += "<tr><td>Voted in the current epoch</td><td class='right'>" +
       (current_commit.voted ? "Done" : "Not yet") +
       "</td></tr></table>";
     showMessage($("account_info"), html);
@@ -625,10 +632,14 @@ async function reloadInfo() {
       await _bond_operation_contract.methods.bond_budget_().call());
     html += "<tr><td>Bond budget</td><td class='right'>" +
       bond_budget + "</td></tr>";
-    html += "<tr><td>Oracle level</td><td class='right'>" +
-      getOracleLevelString(
-        parseInt(await _acb_contract.methods.oracle_level_().call()))
-      + "</td></tr>";
+
+    const oracle_level =
+          parseInt(await _acb_contract.methods.oracle_level_().call());
+    html += "<tr><td>Current exchange rate</td><td class='right'>" +
+      ((0 <= oracle_level && oracle_level < LEVEL_MAX) ?
+       "1 JLC = " + EXCHANGE_RATES[oracle_level] +
+       " USD (Oracle level = " + oracle_level + ")" :
+       "Undefined (no vote was found)") + "</td></tr>";
     html += "<tr><td>Current epoch ID</td><td class='right'>" +
       parseInt(await _oracle_contract.methods.epoch_id_().call())
       + "</td></tr>";
@@ -647,8 +658,8 @@ async function reloadInfo() {
     const coin_budget = parseInt(
       await _open_market_operation_contract.methods.coin_budget_().call());
     const current_state =
-          coin_budget > 0 ? "Purchasing ETH and selling coins" :
-          (coin_budget < 0 ? "Purchasing coins and selling ETH" : "Closed");
+          coin_budget > 0 ? "You can sell ETH and purchase JLC" :
+          (coin_budget < 0 ? "You can sell JLC and purchase ETH" : "Closed");
     html = "<table><tr><td>Current state</td><td class='right'>" +
       current_state + "</a></td></tr>";
     html += "<tr><td>Coin budget</td><td class='right'>" +
@@ -753,14 +764,18 @@ async function reloadInfo() {
       redemption_epochs =
         redemption_epochs.sort((a, b) => { return a - b; });
       
+      const bond_redeemable_period = parseInt(
+        await _bond_operation_contract.methods.BOND_REDEEMABLE_PERIOD().call());
       for (let redemption_epoch of redemption_epochs) {
         const balance =
               parseInt(await _bond_contract.methods.balanceOf(
                 _selected_address, redemption_epoch).call());
         bond_list_html += "<tr><td>" + redemption_epoch +
           "</td><td class='right'>" + balance + "</td><td>" +
-          (redemption_epoch < epoch_id ? "Yes" :
-           "As long as the bond budget is negative") + "</td></tr>";
+          (redemption_epoch <= epoch_id ?
+           (epoch_id < redemption_epoch + bond_redeemable_period ?
+            "Yes." : "No. The bonds are expired.") :
+           "Yes when the bond budget is negative.") + "</td></tr>";
         if (redemption_epoch < epoch_id) {
           has_redeemable = true;
         }
@@ -1153,10 +1168,12 @@ async function showPriceChart() {
     
     prices.push([begin, price, NaN]);
     prices.push([end, price, NaN]);
-    if (coin_budget > 0) {
-      price = Math.trunc(price * (100 - price_change_percentage) / 100);
-    } else if (coin_budget < 0) {
-      price = Math.trunc(price * (100 + price_change_percentage) / 100);
+    if (interval < 30) {
+      if (coin_budget > 0) {
+        price = Math.trunc(price * (100 - price_change_percentage) / 100);
+      } else if (coin_budget < 0) {
+        price = Math.trunc(price * (100 + price_change_percentage) / 100);
+      }
     }
 
     if (now < end &&
@@ -1324,16 +1341,6 @@ function getACBAddress() {
 
 function getDateString(timestamp) {
   return (new Date(timestamp)).toLocaleString();
-}
-
-function getOracleLevelString(level) {
-  if (0 <= level && level < LEVEL_MAX) {
-    return "Oracle level = " + level +
-      ", 1 coin = " + EXCHANGE_RATES[level] + " USD";
-  } else if (level == LEVEL_MAX) {
-    return "Oracle level = undefined (no vote was found)";
-  }
-  throw("Undefined oracle level.");
 }
 
 function getPhaseString(phase) {

@@ -68,7 +68,7 @@ contract("LoggingUnittest", function (accounts) {
       open_market_operation_log =
         await get_open_market_operation_logs(epoch_id);
       assert.equal(open_market_operation_log.coin_budget, 1);
-      assert.equal(open_market_operation_log.exchanged_coin_supply, -5940);
+      assert.equal(open_market_operation_log.exchanged_coins, -5940);
       assert.equal(open_market_operation_log.exchanged_eth, -594);
       assert.equal(open_market_operation_log.eth_balance, 2);
       assert.equal(open_market_operation_log.latest_price, 3);

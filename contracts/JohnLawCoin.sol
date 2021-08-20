@@ -1538,7 +1538,7 @@ contract OpenMarketOperation is OwnableUpgradeable {
     if (coin_budget_ > 0) {
       uint price = start_price_;
       for (uint i = 0;
-           i < elapsed_time / PRICE_CHANGE_INTERVAL && i < 100; i++) {
+           i < elapsed_time / PRICE_CHANGE_INTERVAL && i < 30; i++) {
         price = price * (100 - PRICE_CHANGE_PERCENTAGE) / 100;
       }
       if (price == 0) {
@@ -1548,7 +1548,7 @@ contract OpenMarketOperation is OwnableUpgradeable {
     } else if (coin_budget_ < 0) {
       uint price = start_price_;
       for (uint i = 0;
-           i < elapsed_time / PRICE_CHANGE_INTERVAL && i < 100; i++) {
+           i < elapsed_time / PRICE_CHANGE_INTERVAL && i < 30; i++) {
         price = price * (100 + PRICE_CHANGE_PERCENTAGE) / 100;
       }
       require(price > 0, "gc1");

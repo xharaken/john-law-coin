@@ -40,11 +40,13 @@ john-law-coin/
 ```
 $ ./test/run_coin_bond_unittest.py  # Run unittests for the JohnLawCoin contract and the JohnLawBond contract.
 $ ./test/run_logging_unittest.py  # Run unittests for the Logging contract.
+$ ./test/run_bond_operation_unittest.py  # Run unittests for the BondOperation contract.
+$ ./test/run_open_market_operation_unittest.py  # Run unittests for the OpenMarketOperation contract.
 $ ./test/run_oracle_unittest.py  # Run unittests for the Oracle contract.
 $ ./test/run_acb_unittest.py  # Run unittests for the ACB contract.
 $ ./test/run_oracle_simulator.py  # Run a simulator for the Oracle contract.
 $ ./test/run_acb_simulator.py  # Run a simulator for the ACB contract.
-$ ./test/run_acb_upgrade.py  # Run upgrade tests for the Oracle contract and the ACB contract.
+$ ./test/run_acb_upgrade.py  # Run tests to upgrade contracts.
 ```
 
 ## Deploying smart contracts on a private network
