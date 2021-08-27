@@ -28,10 +28,10 @@ import common
 common.reset_network(41)
 command = ("truffle test test/acb_simulator.js " +
            "'996 1000 12 2 604800 90 10 10 [6, 7, 8, 9, 10, 11, 12, 13, 14] " +
-           "1 28800 20 3 40 100 0'")
+           "1 28800 20 3 40 40 0'")
 common.run_test(command)
 
-iteration = 100
+iteration = 40
 for (bond_price, bond_redemption_price) in [(996, 1000)]:
     for bond_redemption_period in [1, 12]:
         for bond_redeemable_period in [1, 12]:
