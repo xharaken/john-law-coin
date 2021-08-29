@@ -92,8 +92,10 @@ class ACBSimulator(unittest.TestCase):
         self._logging = Logging()
         self._bond_operation = BondOperation(self._bond)
         self._open_market_operation = OpenMarketOperation()
+        self._eth_pool = EthPool()
         self._acb = ACB(self._coin, self._oracle, self._bond_operation,
-                       self._open_market_operation, self._logging)
+                        self._open_market_operation, self._eth_pool,
+                        self._logging)
         self._oracle.override_constants_for_testing(
             self._level_max, self._reclaim_threshold,
             self._proportional_reward_rate)

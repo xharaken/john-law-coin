@@ -12,6 +12,7 @@ const Oracle_v3 = artifacts.require("Oracle_v3");
 const Oracle_v5 = artifacts.require("Oracle_v5");
 const BondOperation_v2 = artifacts.require("BondOperation_v2");
 const OpenMarketOperation_v2 = artifacts.require("OpenMarketOperation_v2");
+const EthPool_v2 = artifacts.require("EthPool_v2");
 const Logging_v2 = artifacts.require("Logging_v2");
 const ACB_v4 = artifacts.require("ACB_v4");
 const ACB_v5 = artifacts.require("ACB_v5");
@@ -27,6 +28,7 @@ module.exports = async function (deployer) {
     await old_acb.bond_operation_());
   const open_market_operation = await OpenMarketOperation_v2.at(
     await old_acb.open_market_operation_());
+  const eth_pool = await EthPool_v2.at(await old_acb.eth_pool_());
   const old_oracle = await Oracle_v3.at(await old_acb.oracle_());
   const logging = await Logging_v2.at(await old_acb.logging_());
   const oracle = await deployProxy(
@@ -34,7 +36,7 @@ module.exports = async function (deployer) {
   const acb = await deployProxy(
     ACB_v5, [coin.address, old_oracle.address, oracle.address,
              bond_operation.address, open_market_operation.address,
-             logging.address,
+             eth_pool.address, logging.address,
              await old_acb.oracle_level_(),
              await old_acb.current_epoch_start_()]);
   await old_acb.deprecate();
@@ -44,6 +46,7 @@ module.exports = async function (deployer) {
   await oracle.transferOwnership(acb.address);
   await bond_operation.transferOwnership(acb.address);
   await open_market_operation.transferOwnership(acb.address);
+  await eth_pool.transferOwnership(acb.address);
   await logging.transferOwnership(acb.address);
   await acb.unpause();
   

@@ -7,7 +7,7 @@
 
 \title{\textbf{JohnLawCoin: A Non-Collateralized Stablecoin\\ with an Algorithmic Central Bank}}
 \author{Kentaro Hara\footnote{Twitter: @johnlawcoin, GitHub: https://github.com/xharaken/john-law-coin. Opinions are my own and not the views of my employer.}}
-\date{2021 Sep}
+\date{2021 September}
 
 \begin{document}
 
@@ -85,6 +85,8 @@ Third, BasisCoin assumes that it can contract the total coin supply by issuing b
 
 Empty Set Dollar (ESD)~\cite{emptysetdollar} expanded on the pioneering work of BasisCoin. ESD addressed the regulation problem by launching the system with an anonymous team and implementing a fully decentralized community-based governance. After the launch, ESD had succeeded in stabilizing the coin price to mostly 1.0 USD from 2020 September to 2021 January but then the coin price dropped to 0.05 USD or less. As of 2021 August, the coin price is 0.04 USD and it is hard to say that ESD is working as a stablecoin.
 
+\subsubsection{Problems}
+
 What are the reasons ESD failed in stabilizing the coin price?
 
 The first problem is that ESD's bonds (they are called coupons in ESD) are redeemable only when the coin price becomes higher than 1.0 USD and expire in 90 days. This design looks problematic. A bond-based non-collateralized stablecoin works only when it can find users who are willing to purchase the bonds when the total coin supply needs to be contracted (i.e., the coin price is lower than 1.0 USD). If the current coin price is 0.04 USD (this is the actual ESD price as of 2021 August) and the bonds expire if the coin price does not recover to 1.0 USD in 90 days, who purchases the bonds? ESD sets a high risk premium in these cases but it is really questionable whether it can find users who are willing to purchase the bonds. On the other hand, JohnLawCoin guarantees that issued bonds are redeemed at their redemption dates.
@@ -93,7 +95,9 @@ The second problem is that the assumption that ESD can contract the total coin s
 
 The third problem is that various parameters of ESD are too aggressive. For example, ESD adjusts the total coin supply every 8 hours while JohnLawCoin adjusts it only every 1 week. The maximum increase of the total coin supply of ESD is set to 6\% per 8 hours while that of JohnLawCoin is set to 4\% per week. The risk premium of ESD's bonds is set much higher than that of JohnLawCoin.\footnote{The risk premium of ESD's bonds is high because they are not guaranteed to be redeemed. On the other hand, JohnLawCoin's bonds are guaranteed to be redeemed.} JohnLawCoin is more conservative about making changes in the total coin supply. JohnLawCoin may be less interesting for speculative investors but is more robust to stabilize the coin price in the long run.
 
-In addition, ESD and JohnLawCoin have a few differences in its design.
+\subsubsection{Other differences}
+
+ESD and JohnLawCoin have a few other differences in its design.
 
 First, ESD's protocol can be updated by the community-based governance. Any person who holds a certain percentage of the total coin supply can propose changes to the protocol. When the proposal obtains a certain amount of votes, the protocol is accepted. Actually a couple of fundamental changes were made to the ESD's protocol by this process since its launch. The community-based governance is good as long as it is making good changes. However, it has a risk of moving the protocol in an undesirable direction, and more importantly, the community-based governance makes the future shape of the protocol unpredictable. The unpredictability increases the risk of holding ESD. On the other hand, JohnLawCoin's protocol is fully algorithmically defined and immutable.
 
@@ -129,13 +133,13 @@ Since the information about the JohnLawCoin / USD exchange rate is external to t
 \begin{center}
 \caption{An overview of how the oracle works.}\vspace{2ex}
 \begin{tabular}{p{8em}p{24em}}\hline
-1. Commit phase & \begin{tabular}{p{22em}}
+Commit phase & \begin{tabular}{p{22em}}
 A voter deposits $D$\% of their coin balance. The voter commits hash(\textit{quantized exchange rate}, \textit{salt}).
 \end{tabular}\\\hline
-2. Reveal phase & \begin{tabular}{p{22em}}
+Reveal phase & \begin{tabular}{p{22em}}
 The voter reveals the \textit{quantized exchange rate} and the \textit{salt}.
 \end{tabular}\\\hline
-3. Reclaim phase & \begin{tabular}{p{22em}}
+Reclaim phase & \begin{tabular}{p{22em}}
 Category-1 and Category-2 voters can reclaim the coins they deposited in the commit phase. In addition, Category-1 voters can get a reward.
 \end{tabular}\\\hline
 \end{tabular}
@@ -192,7 +196,7 @@ The ACB obtains the quantized exchange rate from the oracle. The ACB adjusts the
 \\
 \texttt{\# The ACB calls this function every phase.}\\
 \textbf{function} AdjustTotalCoinSupply(ACB \textit{acb}):\\
-\tab \textit{acb.bond\_supply} $=$ \textit{acb.bond\_supply} $-$ \textit{acb}.GetNumberOfBondsExpiredInThisPhase();\\
+\tab \textit{acb.bond\_supply} $=$ \textit{acb.bond\_supply} $-$ \textit{acb}.numberOfBondsExpiredInThisPhase();\\
 \tab float \textit{exchange\_rate} $=$ \textit{acb.oracle}.GetExchangeRate();\\
 \tab \texttt{\# Calculate the amount of coins to be minted or burned.}\\
 \tab int \textit{delta} $=$ int($K$ $*$ \textit{acb.coin\_supply} $*$ (\textit{exchange\_rate} $-$ 1.0));\\
@@ -209,15 +213,15 @@ The ACB obtains the quantized exchange rate from the oracle. The ACB adjusts the
 \tab\tab\tab \textit{acb.bond\_budget} $=$ $-$\textit{acb.bond\_supply};\\
 \tab\tab\tab \texttt{\# Mint the remaining coins to achieve the target total coin supply.}\\
 \tab\tab\tab int \textit{mint} = (\textit{count} $-$ \textit{acb.bond\_supply}) $*$ $B_\mathrm{redemp}$;\\
-\tab\tab\tab \texttt{\# Sell \textit{mint} coins with the open market operation.}\\
-\tab\tab\tab \texttt{\# This increases \textit{acb.coin\_supply} by \textit{mint}.}\\
+\tab\tab\tab \texttt{\# Sell} \textit{mint} \texttt{coins with the open market operation.}\\
+\tab\tab\tab \texttt{\# This increases} \textit{acb.coin\_supply} \texttt{by} \textit{mint}\texttt{.}\\
 \tab\tab\tab \textit{acb}.increaseCoinSupplyWithOpenMarketOperation(\textit{mint});\\
 \tab \textbf{else}:\\
 \tab\tab \texttt{\# Issue new bonds to decrease the total coin supply.}\\
 \tab\tab \textit{acb.bond\_budget} $=$ $-$\textit{delta} $/$ $B_\mathrm{issue}$;\\
 \tab\tab \textbf{if} \textit{exchange\_rate} $<=$ \textit{THRESHOLD}:\\
-\tab\tab\tab \texttt{\# Purchase $-$\textit{delta} coins with the open market operation.}\\
-\tab\tab\tab \texttt{\# This decreases \textit{acb.coin\_supply} by $-$\textit{delta}.}\\
+\tab\tab\tab \texttt{\# Purchase} $-$\textit{delta} \texttt{coins with the open market operation.}\\
+\tab\tab\tab \texttt{\# This decreases} \textit{acb.coin\_supply} \texttt{by} $-$\textit{delta}\texttt{.}\\
 \tab\tab\tab \textit{acb}.decreaseCoinSupplyWithOpenMarketOperation($-$\textit{delta});\\
 \\
 \texttt{\# The ACB calls this function when} \textit{user} \texttt{requested to purchase} \textit{count} \texttt{bonds.}\\
@@ -268,15 +272,15 @@ The ACB obtains the quantized exchange rate from the oracle. The ACB adjusts the
 
 Let $M$ be the total coin supply and $E$ be the quantized exchange rate obtained from the oracle; i.e., one coin is convertible to $E$ USD.
 
-If $E>1$, the ACB increases the total coin supply by $K\,M\,(E-1)$. If $E<1$, the ACB decreases the total coin supply by $K\,M\,(1-E)$. $K$ $(0<k<1)$ is a damping factor to avoid making an overly aggressive change to the total coin supply. According to the Quantity Theory of Money~\cite{mankiwmacro}, $K$ should be set to 1. For example, if $E$ is 2.0, the Quantity Theory of Money states that the total coin supply should be doubled and then $E$ is adjusted to 1.0. However, the Quantity Theory of Money oversimplifies the reality where velocity of money is not constant. Therefore the ACB sets $K$ to a lower value to avoid minting or burning too many coins in one phase.
+If $E>1$, the ACB increases the total coin supply by $KM(E-1)$. If $E<1$, the ACB decreases the total coin supply by $KM(1-E)$. $K\,(0<K<1)$ is a damping factor to avoid making an overly aggressive change to the total coin supply. According to the Quantity Theory of Money~\cite{mankiwmacro}, $K$ should be set to 1. For example, if $E$ is 2.0, the Quantity Theory of Money states that the total coin supply should be doubled and then $E$ is adjusted to 1.0. However, the Quantity Theory of Money oversimplifies the reality where velocity of money is not constant. Therefore the ACB sets $K$ to a lower value to avoid minting or burning too many coins in one phase.
 
 \subsubsection{Bond operation}
 
 Now the ACB knows how many coins should be minted (when $E>1$) or burned (when $E<1$). The next question is how the ACB mints or burns the coins.
 
-The ACB mints coins by redeeming issued bonds regardless of their redemption dates. Specifically, the ACB redeems $K\,M\,(E-1)/B_{\mathrm{redemp}}$ bonds regardless of their redemption dates. The ACB does not need to worry about what bonds should be redeemed first (e.g., first-issued-first-redeemed) because it is bondholder's responsibility to request the redemption. The ACB only needs to redeem bonds as requested reactively until $K\,M\,(E-1)/B_{\mathrm{redemp}}$ bonds are redeemed. Note that bondholders are incentivized to redeem bonds as soon as possible to maximize their profit. If $K\,M\,(E-1)/B_{\mathrm{redemp}}$ exceeds the number of already issued bonds, the ACB mints the remaining coins with the open market operation.\footnote{Bonds are designed to be expired $T_{\mathrm{expire}}$ days after the redemption dates. This is important to avoid the following situation. If some bondholders stop using the system, the bonds they own are left unredeemed forever. The ACB cannot mint coins with the open market operation because the ACB thinks that there are bonds to be redeemed. This prevents the ACB from increasing the total coin supply.}
+The ACB mints coins by redeeming issued bonds regardless of their redemption dates. Specifically, the ACB redeems $KM(E-1)/B_{\mathrm{redemp}}$ bonds regardless of their redemption dates. The ACB does not need to worry about what bonds should be redeemed first (e.g., first-issued-first-redeemed) because it is bondholder's responsibility to request the redemption. The ACB only needs to redeem bonds as requested reactively until $KM(E-1)/B_{\mathrm{redemp}}$ bonds are redeemed. Note that bondholders are incentivized to redeem bonds as soon as possible to maximize their profit. If $KM(E-1)/B_{\mathrm{redemp}}$ exceeds the number of already issued bonds, the ACB mints the remaining coins with the open market operation.\footnote{Bonds are designed to be expired $T_{\mathrm{expire}}$ days after the redemption dates. This is important to avoid the following situation. If some bondholders stop using the system, the bonds they own are left unredeemed forever. The ACB cannot mint coins with the open market operation because the ACB thinks that there are bonds to be redeemed. This prevents the ACB from increasing the total coin supply.}
 
-The ACB burns coins by issuing new bonds. Specifically, the ACB issues $K\,M\,(1-E)/B_{\mathrm{issue}}$ bonds.
+The ACB burns coins by issuing new bonds. Specifically, the ACB issues $KM(1-E)/B_{\mathrm{issue}}$ bonds.
 
 In this way, the ACB increases / decreases the total coin supply by redeeming / issuing bonds. The ACB issues a bond at the price of $B_{\mathrm{issue}}$ and redeems a bond at the price of $B_{\mathrm{redemp}}$.
 
@@ -292,9 +296,9 @@ The open market operation solves the problems. When the ACB needs to mint new co
 
 The price to exchange JLC and ETH is determined by a Dutch price auction.\footnote{Real-world open market operations are sometimes implemented as a Dutch price auction.~\cite{ayuso2003model}} Let $P$ be the latest price at which the open market operation exchanged JLC with ETH (i.e., 1 JLC = $P$ ETH).
 
-When the open market operation increases the total coin supply, the auction starts with the price of $uP (u>1)$. Then the price is decreased by $v$\% every hour. The open market operation purchases ETH and sells JLC at the given price of the time. The auction stops when the open market operation finished selling JLC to be minted.
+When the open market operation increases the total coin supply, the auction starts with the price of $uP\,(u>1)$. Then the price is decreased by $v$\% every hour. The open market operation purchases ETH and sells JLC at the given price of the time. The auction stops when the open market operation finished selling JLC to be minted.
 
-When the open market operation decreases the total coin supply, the auction starts with the price of $u'P (u'<1)$. Then the price is increased by $v'$\% every hour. The open market operation purchases JLC and sells ETH at the given price of the time. The auction stops when the open market operation finished purchasing JLC to be contracted or the ETH balance goes down to zero.\footnote{If the ETH balance goes down to zero, JohnLawCoin no longer works as stablecoin. In theory, there is no guarantee that the open market operation can contract necessary JLC without exhausting the ETH balance in the pool. However, it happens only when the market expectation overshoots extremely or the ETH price crashes significantly.}
+When the open market operation decreases the total coin supply, the auction starts with the price of $u'P\,(u'<1)$. Then the price is increased by $v'$\% every hour. The open market operation purchases JLC and sells ETH at the given price of the time. The auction stops when the open market operation finished purchasing JLC to be contracted or the ETH balance goes down to zero.\footnote{If the ETH balance goes down to zero, JohnLawCoin no longer works as stablecoin. In theory, there is no guarantee that the open market operation can contract necessary JLC without exhausting the ETH balance in the pool. However, it happens only when the market expectation overshoots extremely or the ETH price crashes significantly.}
 
 \subsubsection{Taxation}
 
@@ -311,8 +315,8 @@ JohnLawCoin does not conduct Initial Coin Offering (ICO). ICO does not make sens
 For the described algorithm to work, the following conditions must be met:
 
 \begin{description}
-\item{\textbf{[Condition 1]}} The ACB can find users who are willing to purchase issued bonds.
-\item{\textbf{[Condition 2]}} The ACB does not exhaust the ETH balance in the open market operation pool.
+\item{Condition 1}: The ACB can find users who are willing to purchase issued bonds.
+\item{Condition 2}: The ACB does not exhaust the ETH balance in the open market operation pool.
 \end{description}
 
 If the Conditions are met, the algorithm works and the JLC / USD exchange rate is adjusted toward 1 JLC = 1.0 USD. Otherwise, the algorithm does not work because the ACB cannot decrease the total coin supply. This section analyzes when the Conditions are met or not met.
@@ -329,7 +333,7 @@ Case 3: $G<R$. In this case, the total bond supply increases over time because t
 
 The key observation is that if users believe that other users have a willingness to purchase bonds, they believe that the ACB has the ability of adjusting the exchange rate toward 1.0. Then they purchase bonds regardless of the total bond supply. The infinite incentive recursion plays a critical role here. Money is accepted as money by everybody merely because it is accepted as money by everybody else~\cite{iwai1996boostrap,iwai1997evolution}. Similarly, bonds are accepted as bonds by everybody merely because they are accepted as bonds by everybody else. When the gap between $G$ and $R$ is small, $G<R$ will not break the infinite incentive recursion even when the total bond supply increases. When the gap becomes large, the open market operation fills the gap by selling ETH and purchasing JLC. This works until the open market operation exhausts the ETH balance.
 
-The conclusion is that \textbf{the Conditions are met if $G>=R$, or $G<R$ but the gap between $G$ and $R$ is limited}. For this reason, JohnLawCoin sets a small value to $R$ (1.76\%).\footnote{Even if $R$ is set to 1.76\%, the gap between $G$ and $R$ becomes large when $G$ is negative. This happens when the market expectation about the coin value overshoots and then drops. The open market operation can fill the gap as long as it has the ETH balance.}
+The conclusion is that \textbf{the Conditions are met if $G>=R$, or $G<R$ but the gap between $G$ and $R$ is limited}. For this reason, JohnLawCoin sets a small value to $R$.\footnote{$R$ is set to 1.76\%. Even in this case, the gap between $G$ and $R$ becomes large when $G$ is negative. This happens when the market expectation about the coin value overshoots and then drops. The open market operation can fill the gap as long as it has the ETH balance.}
 
 \subsection{Incentive alignment}
 
@@ -368,17 +372,17 @@ The bonds are implemented as non-transferable tokens. Bondholders can purchase a
 \begin{table}[htb]
 \begin{center}
 \caption{The quantized exchange rates supported by the oracle.}\vspace{2ex}
-\begin{tabular}{rr}\hline
-\multicolumn{1}{c}{The quantized exchange rate} & How does the ACB increase or decrease the total coin supply?\\\hline
-1 JLC = 0.6 USD & Issue bonds \& Purchase JLC and sell ETH with the open market operation\\
+\begin{tabular}{p{11em}|p{24em}}\hline
+The quantized exchange rate & How does the ACB increase or decrease the total coin supply?\\\hline
+1 JLC = 0.6 USD & Issue bonds \& Purchase JLC and sell ETH\\
 1 JLC = 0.7 USD & Issue bonds\\
 1 JLC = 0.8 USD & Issue bonds\\
 1 JLC = 0.9 USD & Issue bonds\\
 1 JLC = 1.0 USD & Do nothing\\
-1 JLC = 1.1 USD & Redeem bonds \& Purchase ETH and sell JLC with the open market operation\\
-1 JLC = 1.2 USD & Redeem bonds \& Purchase ETH and sell JLC with the open market operation\\
-1 JLC = 1.3 USD & Redeem bonds \& Purchase ETH and sell JLC with the open market operation\\
-1 JLC = 1.4 USD & Redeem bonds \& Purchase ETH and sell JLC with the open market operation\\\hline
+1 JLC = 1.1 USD & Redeem bonds \& Purchase ETH and sell JLC\\
+1 JLC = 1.2 USD & Redeem bonds \& Purchase ETH and sell JLC\\
+1 JLC = 1.3 USD & Redeem bonds \& Purchase ETH and sell JLC\\
+1 JLC = 1.4 USD & Redeem bonds \& Purchase ETH and sell JLC\\\hline
 \end{tabular}
 \label{table1}
 \end{center}
@@ -389,7 +393,7 @@ Table \ref{table1} shows the quantized exchange rates supported by the oracle. W
 \begin{table}[htb]
 \begin{center}
 \caption{Constant values.}\vspace{2ex}
-\begin{tabular}{p{26em}|p{10em}}\hline
+\begin{tabular}{p{24em}|p{14em}}\hline
 $D$ (A voter needs to deposit $D$\% of their coin balance to the oracle.) & 10\%\\\hline
 $C$ (The oracle evenly distributes $C$\% of the reward to the Category-1 voters. $(100-C)$\% of the reward is distributed to the Category-1 voters in proportion to the coins they deposited.) & 10\%\\\hline
 Category-2 threshold (What exchange rates are considered as around the ``truth'' exchange rate to identify Category-2 voters?) & 0.1 (For example, if the ``truth'' exchange rate is 1.1, voters who voted for the exchange rate between 1.0 and 1.2 are identified as Category-2 voters.)\\\hline

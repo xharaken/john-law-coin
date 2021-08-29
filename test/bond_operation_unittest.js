@@ -365,10 +365,8 @@ function parameterized_test(accounts,
       let t4 = _epoch_id + _bond_redemption_period;
       redemptions = [t1, t2, t3, t4];
 
-      assert.equal(await _bond_operation.decreaseBondSupply.call(
-        accounts[4], [t1], _epoch_id, _coin.address, {from: accounts[1]}), 0);
-      assert.equal(await _bond_operation.decreaseBondSupply.call(
-        accounts[2], [], _epoch_id, _coin.address, {from: accounts[1]}), 0);
+      await check_decrease_bond_supply(accounts[4], [t1], 0, 0);
+      await check_decrease_bond_supply(accounts[2], [], 0, 0);
 
       current = await get_current(sub_accounts, redemptions);
       coin_supply = current.coin_supply;
@@ -400,8 +398,7 @@ function parameterized_test(accounts,
       assert.equal(current.coin_supply,
                    coin_supply + 22 * _bond_redemption_price);
 
-      assert.equal(await _bond_operation.decreaseBondSupply.call(
-        accounts[2], [t3], _epoch_id, _coin.address, {from: accounts[1]}), 0);
+      await check_decrease_bond_supply(accounts[2], [t3], 0, 0);
       current = await get_current(sub_accounts, redemptions);
       assert.equal(current.bonds[accounts[2]][t1], 0);
       assert.equal(current.bonds[accounts[2]][t2], 0);
@@ -415,9 +412,7 @@ function parameterized_test(accounts,
                    coin_supply + 22 * _bond_redemption_price);
 
       balance = current.balances[accounts[3]];
-      assert.equal(await _bond_operation.decreaseBondSupply.call(
-        accounts[3], [t2, t2, t1], _epoch_id, _coin.address,
-        {from: accounts[1]}), 0);
+      await check_decrease_bond_supply(accounts[3], [t2, t2, t1], 0, 0);
       current = await get_current(sub_accounts, redemptions);
       assert.equal(current.bonds[accounts[3]][t1], 0);
       assert.equal(current.bonds[accounts[3]][t2], 0);

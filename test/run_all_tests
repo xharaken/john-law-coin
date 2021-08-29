@@ -12,8 +12,8 @@ mkdir -p ./log
 #./test/run_logging_unittest.py > ./log/truffle_logging_unittest.log
 #./test/run_oracle_unittest.py > ./log/truffle_oracle_unittest.log
 #./test/run_oracle_simulator.py > ./log/truffle_oracle_simulator.log
-#./test/run_bond_operation_unittest.py > ./log/truffle_bond_operation_unittest.log
+./test/run_bond_operation_unittest.py > ./log/truffle_bond_operation_unittest.log
 #./test/run_open_market_operation_unittest.py > ./log/truffle_open_market_operation_unittest.log
 #./test/run_acb_unittest.py > ./log/truffle_acb_unittest.log
-#./test/run_acb_upgrade.py > ./log/truffle_acb_upgrade.log
-./test/run_acb_simulator.py > ./log/truffle_acb_simulator.log
+./test/run_acb_upgrade.py > ./log/truffle_acb_upgrade.log
+#./test/run_acb_simulator.py > ./log/truffle_acb_simulator.log

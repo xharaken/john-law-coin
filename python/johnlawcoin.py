@@ -1347,16 +1347,27 @@ class OpenMarketOperation:
                 self.start_price = 1
             assert(self.start_price > 0)
 
-    # Receive ETH from the |sender| and increase ETH in the pool.
-    def increase_eth_in_pool(self, sender, eth_amount):
-        self.actual_eth_balance += eth_amount
-
-    # Decrease |eth_amount| ETH in the pool and send it to the |sender|.
-    def decrease_eth_in_pool(self, sender, eth_amount):
-        assert(self.actual_eth_balance >= eth_amount)
-        self.actual_eth_balance -= eth_amount
-
         
+#-------------------------------------------------------------------------------
+# [EthPool contract]
+#
+# The EthPool contract stores ETH for the open market operation.
+#-------------------------------------------------------------------------------
+class EthPool:
+    # Constructor.
+    def __init__(self):
+        self.eth_balance = 0
+
+    # Increase ETH.
+    def increase_eth(self, eth_amount):
+        self.eth_balance += eth_amount
+
+    # Decrease |eth_amount| ETH and send it to the |receiver|.
+    def decrease_eth(self, receiver, eth_amount):
+        assert(self.eth_balance >= eth_amount)
+        self.eth_balance -= eth_amount
+    
+
 #-------------------------------------------------------------------------------
 # [ACB contract]
 #
@@ -1384,9 +1395,10 @@ class ACB:
     # |oracle|: The Oracle contract.
     # |bond_operation|: The BondOperation contract.
     # |open_market_operation|: The OpenMarketOperation contract.
+    # |eth_pool|: The EthPool contract.
     # |logging|: The Logging contract.
     def __init__(self, coin, oracle, bond_operation,
-                 open_market_operation, logging):
+                 open_market_operation, eth_pool, logging):
         # ----------------
         # Constants
         # ----------------
@@ -1481,6 +1493,9 @@ class ACB:
 
         # The OpenMarketOperation contract.
         self.open_market_operation = open_market_operation
+
+        # The EthPool contract.
+        self.eth_pool = eth_pool
 
         # The current oracle level.
         self.oracle_level = Oracle.LEVEL_MAX
@@ -1664,6 +1679,9 @@ class ACB:
     # - The amount of coins the sender purchased.
     def purchase_coins(self, sender, requested_eth_amount):
         elapsed_time = self.get_timestamp() - self.current_epoch_start
+
+        assert(self.open_market_operation.eth_balance <=
+               self.eth_pool.eth_balance)
         
         # Calculate the amount of ETH and coins to be exchanged.
         (eth_amount, coin_amount) = (
@@ -1672,10 +1690,13 @@ class ACB:
         
         self.coin.mint(sender, coin_amount)
 
-        self.open_market_operation.increase_eth_in_pool(sender, eth_amount)
-
         self.logging.purchase_coins(
             self.oracle.epoch_id, eth_amount, coin_amount)
+        
+        self.eth_pool.increase_eth(eth_amount)
+        assert(self.open_market_operation.eth_balance <=
+               self.eth_pool.eth_balance)
+
         return (eth_amount, coin_amount)
 
     # Pay coins and purchase ETH from the open market operation.
@@ -1697,6 +1718,9 @@ class ACB:
         
         elapsed_time = self.get_timestamp() - self.current_epoch_start
         
+        assert(self.open_market_operation.eth_balance <=
+               self.eth_pool.eth_balance)
+        
         # Calculate the amount of ETH and coins to be exchanged.
         (eth_amount, coin_amount) = (
             self.open_market_operation.decrease_coin_supply(
@@ -1704,10 +1728,13 @@ class ACB:
         
         self.coin.burn(sender, coin_amount)
 
-        self.open_market_operation.decrease_eth_in_pool(sender, eth_amount)
-
         self.logging.sell_coins(
             self.oracle.epoch_id, eth_amount, coin_amount)
+        
+        self.eth_pool.decrease_eth(sender, eth_amount)
+        assert(self.open_market_operation.eth_balance <=
+               self.eth_pool.eth_balance)
+
         return (eth_amount, coin_amount)
 
     # Calculate a hash to be committed. Voters are expected to use this

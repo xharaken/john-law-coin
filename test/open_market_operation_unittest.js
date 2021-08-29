@@ -7,6 +7,7 @@ const { deployProxy } = require('@openzeppelin/truffle-upgrades');
 const OpenMarketOperation = artifacts.require("OpenMarketOperation");
 const OpenMarketOperationForTesting =
       artifacts.require("OpenMarketOperationForTesting");
+const EthPool = artifacts.require("EthPool");
 const common = require("./common.js");
 const should_throw = common.should_throw;
 const array_equal = common.array_equal;
@@ -36,6 +37,8 @@ function parameterized_test(accounts,
                                        _price_change_percentage,
                                        _start_price_multiplier);
     common.print_contract_size(_operation, "OpenMarketOperationForTesting");
+    _eth_pool = await deployProxy(EthPool, []);
+    common.print_contract_size(_operation, "EthPool");
 
     let latest_price = (await _operation.latest_price_()).toNumber();
         
@@ -236,20 +239,27 @@ function parameterized_test(accounts,
       }
     }
 
-    assert.equal(await web3.eth.getBalance(_operation.address), 0);
-    await _operation.increaseEthInPool(accounts[0], {value: 10});
-    assert.equal(await web3.eth.getBalance(_operation.address), 10);
-    await _operation.increaseEthInPool(accounts[0], {value: 100});
-    assert.equal(await web3.eth.getBalance(_operation.address), 110);
-    await _operation.decreaseEthInPool(accounts[0], 20);
-    assert.equal(await web3.eth.getBalance(_operation.address), 90);
+    assert.equal(await web3.eth.getBalance(_eth_pool.address), 0);
+    await _eth_pool.increaseEth({value: 10});
+    assert.equal(await web3.eth.getBalance(_eth_pool.address), 10);
+    await _eth_pool.increaseEth({value: 100});
+    assert.equal(await web3.eth.getBalance(_eth_pool.address), 110);
+    await _eth_pool.decreaseEth(accounts[0], 20);
+    assert.equal(await web3.eth.getBalance(_eth_pool.address), 90);
     await should_throw(async () => {
-      await _operation.decreaseEthInPool(accounts[0], 91);
+      await _eth_pool.decreaseEth(accounts[0], 91);
     }, "");
-    await _operation.decreaseEthInPool(accounts[0], 90);
-    assert.equal(await web3.eth.getBalance(_operation.address), 0);
-    await _operation.decreaseEthInPool(accounts[0], 0);
-    assert.equal(await web3.eth.getBalance(_operation.address), 0);
+    await _eth_pool.decreaseEth(accounts[0], 90);
+    assert.equal(await web3.eth.getBalance(_eth_pool.address), 0);
+    await _eth_pool.decreaseEth(accounts[0], 0);
+    assert.equal(await web3.eth.getBalance(_eth_pool.address), 0);
+    
+    await should_throw(async () => {
+      await _eth_pool.sendTransaction({value: 0});
+    }, "revert");
+    await should_throw(async () => {
+      await _eth_pool.sendTransaction({value: 1});
+    }, "revert");
 
     async function check_increase_coin_supply(
       requested_eth_amount, elapsed_time, eth_amount, coin_amount) {
@@ -290,10 +300,10 @@ function parameterized_test(accounts,
       await _operation.updateCoinBudget(1, {from: accounts[1]});
     }, "Ownable");
     await should_throw(async () => {
-      await _operation.increaseEthInPool(accounts[0], {from: accounts[1]});
+      await _eth_pool.increaseEth({from: accounts[1]});
     }, "Ownable");
     await should_throw(async () => {
-      await _operation.decreaseEthInPool(accounts[0], 1, {from: accounts[1]});
+      await _eth_pool.decreaseEth(accounts[0], 1, {from: accounts[1]});
     }, "Ownable");
   });
 }

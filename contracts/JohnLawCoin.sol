@@ -1419,7 +1419,7 @@ contract OpenMarketOperation is OwnableUpgradeable {
     START_PRICE_MULTIPILER = 3;
     
     // Attributes.
-    
+
     // The latest price at which the OpenMarketOperation exchanged coins
     // with ETH.
     latest_price_ = 1000;
@@ -1557,20 +1557,6 @@ contract OpenMarketOperation is OwnableUpgradeable {
     return 0;
   }
   
-  // Receive ETH from the |sender| and increase ETH in the pool.
-  function increaseEthInPool(address sender)
-      public onlyOwner payable {
-  }
-
-  // Decrease |eth_amount| ETH in the pool and send it to the |sender|.
-  function decreaseEthInPool(address sender, uint eth_amount)
-      public onlyOwner {
-    require(address(this).balance >= eth_amount, "se1");
-    (bool success,) =
-        payable(sender).call{value: eth_amount}("");
-    require(success, "se2");
-  }
-
   // Update the coin budget (i.e., how many coins should be added to / removed
   // from the total coin supply). The ACB calls the method at the beginning of
   // each epoch.
@@ -1599,6 +1585,33 @@ contract OpenMarketOperation is OwnableUpgradeable {
       require(start_price_ > 0, "uc3");
     }
     emit UpdateCoinBudgetEvent(coin_budget_);
+  }
+}
+
+//------------------------------------------------------------------------------
+// [EthPool contract]
+//
+// The EthPool contract stores ETH for the open market operation.
+//------------------------------------------------------------------------------
+contract EthPool is OwnableUpgradeable {
+  // Constructor.
+  function initialize()
+      public initializer {
+    __Ownable_init();
+  }
+  
+  // Increase ETH.
+  function increaseEth()
+      public onlyOwner payable {
+  }
+
+  // Decrease |eth_amount| ETH and send it to the |receiver|.
+  function decreaseEth(address receiver, uint eth_amount)
+      public onlyOwner {
+    require(address(this).balance >= eth_amount, "de1");
+    (bool success,) =
+        payable(receiver).call{value: eth_amount}("");
+    require(success, "de2");
   }
 }
 
@@ -1648,6 +1661,7 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
   Oracle public oracle_;
   BondOperation public bond_operation_;
   OpenMarketOperation public open_market_operation_;
+  EthPool public eth_pool_;
   Logging public logging_;
   uint public oracle_level_;
   uint public current_epoch_start_;
@@ -1679,10 +1693,12 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
   // |oracle|: The Oracle contract.
   // |bond_operation|: The BondOperation contract.
   // |open_market_operation|: The OpenMarketOperation contract.
+  // |eth_pool|: The EthPool contract.
   // |logging|: The Logging contract.
   function initialize(JohnLawCoin coin, Oracle oracle,
                       BondOperation bond_operation,
                       OpenMarketOperation open_market_operation,
+                      EthPool eth_pool,
                       Logging logging)
       public initializer {
     __Ownable_init();
@@ -1774,6 +1790,9 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
     // The OpenMarketOperation contract.
     open_market_operation_ = open_market_operation;
 
+    // The EthPool contract.
+    eth_pool_ = eth_pool;
+
     // The Logging contract.
     logging_ = logging;
 
@@ -1793,6 +1812,7 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
     oracle_.transferOwnership(msg.sender);
     bond_operation_.transferOwnership(msg.sender);
     open_market_operation_.transferOwnership(msg.sender);
+    eth_pool_.transferOwnership(msg.sender);
     logging_.transferOwnership(msg.sender);
   }
 
@@ -1928,7 +1948,7 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
           bond_operation_.validBondSupply(result.epoch_id));
       logging_.updateCoinBudget(
           result.epoch_id, open_market_operation_.coin_budget_(),
-          address(open_market_operation_).balance,
+          address(eth_pool_).balance,
           open_market_operation_.latest_price_());
       emit UpdateEpochEvent(result.epoch_id, current_epoch_start_, tax,
                             burned, delta, mint);
@@ -2039,6 +2059,9 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
     uint requested_eth_amount = msg.value;
     uint elapsed_time = getTimestamp() - current_epoch_start_;
     
+    require(open_market_operation_.eth_balance_() <=
+            address(eth_pool_).balance, "pc1");
+    
     // Calculate the amount of ETH and coins to be exchanged.
     (uint eth_amount, uint coin_amount) =
         open_market_operation_.increaseCoinSupply(
@@ -2046,21 +2069,24 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
     
     coin_.mint(msg.sender, coin_amount);
     
-    require(address(this).balance >= requested_eth_amount, "pc1");
+    require(address(this).balance >= requested_eth_amount, "pc2");
     bool success;
     (success,) =
-        payable(address(open_market_operation_)).call{value: eth_amount}(
-            abi.encodeWithSignature("increaseEthInPool(address)", msg.sender));
-    require(success, "pc2");
+        payable(address(eth_pool_)).call{value: eth_amount}(
+            abi.encodeWithSignature("increaseEth()"));
+    require(success, "pc3");
+    require(open_market_operation_.eth_balance_() <=
+            address(eth_pool_).balance, "pc4");
+    
+    logging_.purchaseCoins(oracle_.epoch_id_(), eth_amount, coin_amount);
     
     // Pay back the remaining ETH to the sender. This may trigger any arbitrary
     // operations in an external smart contract. This must be called at the very
     // end of purchaseCoins().
     (success,) =
         payable(msg.sender).call{value: requested_eth_amount - eth_amount}("");
-    require(success, "pc3");
+    require(success, "pc5");
 
-    logging_.purchaseCoins(oracle_.epoch_id_(), eth_amount, coin_amount);
     emit PurchaseCoinsEvent(msg.sender, requested_eth_amount,
                             eth_amount, coin_amount);
     return (eth_amount, coin_amount);
@@ -2085,6 +2111,9 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
     require(coin_.balanceOf(msg.sender) >= requested_coin_amount,
             "OpenMarketOperation: Your coin balance is not enough.");
         
+    require(open_market_operation_.eth_balance_() <=
+            address(eth_pool_).balance, "sc1");
+    
     // Calculate the amount of ETH and coins to be exchanged.
     uint elapsed_time = getTimestamp() - current_epoch_start_;
     (uint eth_amount, uint coin_amount) =
@@ -2093,12 +2122,15 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
 
     coin_.burn(msg.sender, coin_amount);
     
+    logging_.sellCoins(oracle_.epoch_id_(), eth_amount, coin_amount);
+    
     // Send ETH to the sender. This may trigger any arbitrary operations in an
     // external smart contract. This must be called at the very end of
     // sellCoins().
-    open_market_operation_.decreaseEthInPool(msg.sender, eth_amount);
+    eth_pool_.decreaseEth(msg.sender, eth_amount);
+    require(open_market_operation_.eth_balance_() <=
+            address(eth_pool_).balance, "sc2");
     
-    logging_.sellCoins(oracle_.epoch_id_(), eth_amount, coin_amount);
     emit SellCoinsEvent(msg.sender, requested_coin_amount,
                         eth_amount, coin_amount);
     return (eth_amount, coin_amount);

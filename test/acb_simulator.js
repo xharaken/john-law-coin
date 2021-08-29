@@ -12,6 +12,7 @@ const OracleForTesting = artifacts.require("OracleForTesting");
 const BondOperationForTesting = artifacts.require("BondOperationForTesting");
 const OpenMarketOperationForTesting =
       artifacts.require("OpenMarketOperationForTesting");
+const EthPool = artifacts.require("EthPool");
 const Logging = artifacts.require("Logging");
 const ACBForTesting = artifacts.require("ACBForTesting");
 const JohnLawCoin_v2 = artifacts.require("JohnLawCoin_v2");
@@ -21,6 +22,7 @@ const BondOperationForTesting_v2 =
       artifacts.require("BondOperationForTesting_v2");
 const OpenMarketOperationForTesting_v2 =
       artifacts.require("OpenMarketOperationForTesting_v2");
+const EthPool_v2 = artifacts.require("EthPool_v2");
 const Logging_v2 = artifacts.require("Logging_v2");
 const ACBForTesting_v2 = artifacts.require("ACBForTesting_v2");
 const OracleForTesting_v3 = artifacts.require("OracleForTesting_v3");
@@ -115,10 +117,13 @@ function parameterized_test(accounts,
         await deployProxy(OpenMarketOperationForTesting, []);
     common.print_contract_size(_open_market_operation,
                                "OpenMarketOperationForTesting");
+    let _eth_pool = await deployProxy(EthPool, []);
+    common.print_contract_size(_eth_pool,"EthPool");
     let _acb = await deployProxy(
       ACBForTesting, [_coin.address, _oracle.address,
                       _bond_operation.address,
                       _open_market_operation.address,
+                      _eth_pool.address,
                       _logging.address]);
     common.print_contract_size(_acb, "ACBForTesting");
 
@@ -140,6 +145,7 @@ function parameterized_test(accounts,
     await _coin.transferOwnership(_acb.address);
     await _bond_operation.transferOwnership(_acb.address);
     await _open_market_operation.transferOwnership(_acb.address);
+    await _eth_pool.transferOwnership(_acb.address);
     await _oracle.transferOwnership(_acb.address);
     await _logging.transferOwnership(_acb.address);
 
@@ -565,8 +571,7 @@ function parameterized_test(accounts,
         let voter = _voters[(start_index + index) % _voter_count];
         let requested_coin_amount =
             Math.min(Math.trunc(-coin_budget / _voter_count), voter.balance);
-        let eth_balance = await web3.eth.getBalance(
-          _open_market_operation.address);
+        let eth_balance = await web3.eth.getBalance(_eth_pool.address);
         requested_coin_amount =
           Math.min(requested_coin_amount, Math.trunc(eth_balance / price));
 
@@ -1034,6 +1039,8 @@ function parameterized_test(accounts,
                              OpenMarketOperationForTesting_v2);
         common.print_contract_size(_open_market_operation,
                                    "OpenMarketOperation_v2");
+        _eth_pool = await upgradeProxy(_eth_pool.address, EthPool_v2);
+        common.print_contract_size(_eth_pool, "EthPool_v2");
         _logging = await upgradeProxy(_logging.address, Logging_v2);
         common.print_contract_size(_logging, "Logging_v2");
         _acb = await upgradeProxy(_acb.address, ACBForTesting_v2);
@@ -1056,6 +1063,7 @@ function parameterized_test(accounts,
         await _acb.upgrade(_coin.address, _bond.address, _oracle.address,
                            _bond_operation.address,
                            _open_market_operation.address,
+                           _eth_pool.address,
                            _logging.address);
       } else if (epoch_offset == repeat * 2) {
         _bond_price = _tmp_bond_price;
@@ -1128,6 +1136,7 @@ function parameterized_test(accounts,
           ACBForTesting_v4, [_coin.address, _oracle.address,
                              _bond_operation.address,
                              _open_market_operation.address,
+                             _eth_pool.address,
                              _logging.address,
                              await old_acb.oracle_level_(),
                              await old_acb.current_epoch_start_()]);
@@ -1151,6 +1160,7 @@ function parameterized_test(accounts,
         await _coin.transferOwnership(_acb.address);
         await _bond_operation.transferOwnership(_acb.address);
         await _open_market_operation.transferOwnership(_acb.address);
+        await _eth_pool.transferOwnership(_acb.address);
         await _oracle.transferOwnership(_acb.address);
         await _logging.transferOwnership(_acb.address);
         
@@ -1198,6 +1208,7 @@ function parameterized_test(accounts,
           ACBForTesting_v5, [_coin.address, old_oracle.address,
                              _oracle.address, _bond_operation.address,
                              _open_market_operation.address,
+                             _eth_pool.address,
                              _logging.address,
                              await old_acb.oracle_level_(),
                              await old_acb.current_epoch_start_()]);
@@ -1225,6 +1236,7 @@ function parameterized_test(accounts,
         await _coin.transferOwnership(_acb.address);
         await _bond_operation.transferOwnership(_acb.address);
         await _open_market_operation.transferOwnership(_acb.address);
+        await _eth_pool.transferOwnership(_acb.address);
         await old_oracle.transferOwnership(_acb.address);
         await _oracle.transferOwnership(_acb.address);
         await _logging.transferOwnership(_acb.address);
@@ -1261,22 +1273,28 @@ function parameterized_test(accounts,
     }
 
     async function check_purchase_coins(option, eth_amount, coin_amount) {
+      let old_eth_balance = await web3.eth.getBalance(_eth_pool.address);
       let receipt = await _acb.purchaseCoins(option);
       let args =
           receipt.logs.filter(e => e.event == 'PurchaseCoinsEvent')[0].args;
       assert.equal(args.sender, option.from);
       assert.equal(args.eth_amount, eth_amount);
       assert.equal(args.coin_amount, coin_amount);
+      let eth_balance = await web3.eth.getBalance(_eth_pool.address);
+      assert.equal(eth_balance - old_eth_balance, eth_amount);
     }
 
     async function check_sell_coins(
       requested_coin_amount, option, eth_amount, coin_amount) {
+      let old_eth_balance = await web3.eth.getBalance(_eth_pool.address);
       let receipt = await _acb.sellCoins(requested_coin_amount, option);
       let args =
           receipt.logs.filter(e => e.event == 'SellCoinsEvent')[0].args;
       assert.equal(args.sender, option.from);
       assert.equal(args.eth_amount, eth_amount);
       assert.equal(args.coin_amount, coin_amount);
+      let eth_balance = await web3.eth.getBalance(_eth_pool.address);
+      assert.equal(old_eth_balance - eth_balance, eth_amount);
     }
 
     async function check_purchase_bonds(purchased_bonds, option, redemption) {

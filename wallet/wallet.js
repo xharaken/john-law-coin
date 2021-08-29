@@ -9,6 +9,7 @@ var _logging_contract = null;
 var _oracle_contract = null;
 var _bond_operation_contract = null;
 var _open_market_operation_contract = null;
+var _eth_pool_contract = null;
 var _acb_contract = null;
 var _web3 = null;
 var _chain_id = null;
@@ -118,6 +119,9 @@ window.onload = async () => {
                                    open_market_operation);
     console.log("OpenMarketOperation contract: ",
                 _open_market_operation_contract);
+    const eth_pool = await _acb_contract.methods.eth_pool_().call();
+    _eth_pool_contract = await new _web3.eth.Contract(ETH_POOL_ABI, eth_pool);
+    console.log("EthPool contract: ", _eth_pool_contract);
     
     console.log("selectedAddress: ", _selected_address);
   } catch (error) {
@@ -664,16 +668,13 @@ async function reloadInfo() {
       current_state + "</a></td></tr>";
     html += "<tr><td>Coin budget</td><td class='right'>" +
       coin_budget + "</td></tr>";
-    const eth_balance = await _web3.eth.getBalance(
-      _open_market_operation_contract._address);
+    const eth_balance = await _web3.eth.getBalance(_eth_pool_contract._address);
     html += "<tr><td>ETH balance</td><td class='right'>" +
       _web3.utils.fromWei(eth_balance) + " ETH<br>" +
       "(" + eth_balance + " wei)</td></tr>";
-    console.log(_open_market_operation_contract);
     const current_price =
           await _open_market_operation_contract.methods.getCurrentPrice(
             Math.trunc((Date.now() - current_epoch_start_ms) / 1000)).call();
-    console.log(_open_market_operation_contract);
     html += "<tr><td>Current price</td><td class='right'>" +
       "1 JLC = " + _web3.utils.fromWei(current_price) + " ETH<br>" +
       "(1 JLC = " + current_price + " wei)</td></tr>";

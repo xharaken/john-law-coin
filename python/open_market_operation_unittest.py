@@ -21,6 +21,7 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
         self.open_market_operation.override_constants_for_testing(
             price_change_interval, price_change_percentage,
             start_price_multiplier)
+        self.eth_pool = EthPool()
         self.price_change_interval = price_change_interval
         self.price_change_percentage = price_change_percentage
         self.start_price_multiplier = start_price_multiplier
@@ -191,19 +192,19 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
                         self.assertEqual(operation.coin_budget, coin_budget)
                         self.assertEqual(operation.eth_balance, eth_balance)
 
-        self.assertEqual(operation.actual_eth_balance, 0)
-        operation.increase_eth_in_pool(accounts[0], 10)
-        self.assertEqual(operation.actual_eth_balance, 10)
-        operation.increase_eth_in_pool(accounts[0], 100)
-        self.assertEqual(operation.actual_eth_balance, 110)
-        operation.decrease_eth_in_pool(accounts[0], 20)
-        self.assertEqual(operation.actual_eth_balance, 90)
+        self.assertEqual(self.eth_pool.eth_balance, 0)
+        self.eth_pool.increase_eth(10)
+        self.assertEqual(self.eth_pool.eth_balance, 10)
+        self.eth_pool.increase_eth(100)
+        self.assertEqual(self.eth_pool.eth_balance, 110)
+        self.eth_pool.decrease_eth(accounts[0], 20)
+        self.assertEqual(self.eth_pool.eth_balance, 90)
         with self.assertRaises(Exception):
-            operation.decrease_eth_in_pool(accounts[0], 91)
-        operation.decrease_eth_in_pool(accounts[0], 90)
-        self.assertEqual(operation.actual_eth_balance, 0)
-        operation.decrease_eth_in_pool(accounts[0], 0)
-        self.assertEqual(operation.actual_eth_balance, 0)
+            self.eth_pool.decrease_eth(accounts[0], 91)
+        self.eth_pool.decrease_eth(accounts[0], 90)
+        self.assertEqual(self.eth_pool.eth_balance, 0)
+        self.eth_pool.decrease_eth(accounts[0], 0)
+        self.assertEqual(self.eth_pool.eth_balance, 0)
         
 
 def main():

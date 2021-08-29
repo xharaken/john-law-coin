@@ -11,6 +11,8 @@ const BondOperation = artifacts.require("BondOperation");
 const BondOperation_v2 = artifacts.require("BondOperation_v2");
 const OpenMarketOperation = artifacts.require("OpenMarketOperation");
 const OpenMarketOperation_v2 = artifacts.require("OpenMarketOperation_v2");
+const EthPool = artifacts.require("EthPool");
+const EthPool_v2 = artifacts.require("EthPool_v2");
 const Logging_v2 = artifacts.require("Logging_v2");
 const ACB = artifacts.require("ACB");
 const ACB_v2 = artifacts.require("ACB_v2");
@@ -26,6 +28,7 @@ module.exports = async function (deployer) {
     await old_acb.bond_operation_());
   const old_open_market_operation = await OpenMarketOperation.at(
     await old_acb.open_market_operation_());
+  const old_eth_pool = await EthPool.at(await old_acb.eth_pool_());
 
   const coin = await upgradeProxy(await old_acb.coin_(), JohnLawCoin_v2);
   const bond = await upgradeProxy(
@@ -35,11 +38,13 @@ module.exports = async function (deployer) {
     old_bond_operation.address, BondOperation_v2);
   const open_market_operation = await upgradeProxy(
     old_open_market_operation.address, OpenMarketOperation_v2);
+  const eth_pool = await upgradeProxy(old_eth_pool.address, EthPool_v2);
   const logging = await upgradeProxy(await old_acb.logging_(), Logging_v2);
   const acb = await upgradeProxy(old_acb.address, ACB_v2);
   await acb.upgrade(
     coin.address, bond.address, oracle.address,
-    bond_operation.address, open_market_operation.address, logging.address);
+    bond_operation.address, open_market_operation.address,
+    eth_pool.address, logging.address);
   await acb.unpause();
   
   console.log("JohnLawCoin_v2 address: ", coin.address);
@@ -48,6 +53,7 @@ module.exports = async function (deployer) {
   console.log("BondOperation_v2 address: ", bond_operation.address);
   console.log("OpenMarketOperation_v2 address: ",
               open_market_operation.address);
+  console.log("EthPool_v2 address: ", eth_pool.address);
   console.log("Logging_v2 address: ", logging.address);
   console.log("ACB_v2 address: ", acb.address);
 };
