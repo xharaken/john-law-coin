@@ -14,9 +14,8 @@ import "../JohnLawCoin.sol";
 //
 // JohnLawCoin is implemented as ERC20 tokens.
 //
-// Permission: Only the ACB and its oracle can mint, burn and transfer the
-// coins. Only the ACB can pause and unpause the contract. Coin holders can
-// transfer their coins using the ERC20 token APIs.
+// Permission: Except public getters, only the ACB can call the methods.
+// Coin holders can transfer their coins using the ERC20 token APIs.
 //------------------------------------------------------------------------------
 contract JohnLawCoin_v2 is ERC20PausableUpgradeable, OwnableUpgradeable {
   // Constants.
@@ -50,8 +49,7 @@ contract JohnLawCoin_v2 is ERC20PausableUpgradeable, OwnableUpgradeable {
     tax_account_v2_ = tax_account_;
   }
 
-  // Mint coins to one account. Only the ACB and its oracle can call this
-  // method.
+  // Mint coins to one account.
   //
   // Parameters
   // ----------------
@@ -72,8 +70,7 @@ contract JohnLawCoin_v2 is ERC20PausableUpgradeable, OwnableUpgradeable {
     dummy_[account] = amount;
   }
 
-  // Burn coins from one account. Only the ACB and its oracle can call this
-  // method.
+  // Burn coins from one account.
   //
   // Parameters
   // ----------------
@@ -94,9 +91,8 @@ contract JohnLawCoin_v2 is ERC20PausableUpgradeable, OwnableUpgradeable {
     dummy_[account] = amount;
   }
 
-  // Move coins from one account to another account. Only the ACB and its
-  // oracle can call this method. Coin holders should use ERC20's transfer
-  // method instead.
+  // Move coins from one account to another account. Coin holders should use
+  // ERC20's transfer method instead.
   //
   // Parameters
   // ----------------
@@ -118,7 +114,7 @@ contract JohnLawCoin_v2 is ERC20PausableUpgradeable, OwnableUpgradeable {
     dummy_[receiver] = amount;
   }
 
-  // Pause the contract. Only the ACB can call this method.
+  // Pause the contract.
   function pause()
       public onlyOwner {
     if (!paused()) {
@@ -126,7 +122,7 @@ contract JohnLawCoin_v2 is ERC20PausableUpgradeable, OwnableUpgradeable {
     }
   }
   
-  // Unpause the contract. Only the ACB can call this method.
+  // Unpause the contract.
   function unpause()
       public onlyOwner {
     if (paused()) {
@@ -140,7 +136,7 @@ contract JohnLawCoin_v2 is ERC20PausableUpgradeable, OwnableUpgradeable {
     return 18;
   }
 
-  // Set the tax rate. Only the ACB can call this method.
+  // Set the tax rate.
   function resetTaxAccount()
       public onlyOwner {
     resetTaxAccount_v2();
@@ -174,10 +170,10 @@ contract JohnLawCoin_v2 is ERC20PausableUpgradeable, OwnableUpgradeable {
 //------------------------------------------------------------------------------
 // [JohnLawBond contract]
 //
-// JohnLawBond is an implementation of the bonds to control the total coin
-// supply. The bonds are not transferable.
+// JohnLawBond is an implementation of the bonds to increase / decrease the
+// total coin supply. The bonds are not transferable.
 //
-// Permission: Only the ACB can mint and burn the bonds. 
+// Permission: Except public getters, only the ACB can call the methods.
 //------------------------------------------------------------------------------
 contract JohnLawBond_v2 is OwnableUpgradeable {
   using EnumerableSet for EnumerableSet.UintSet;
@@ -220,7 +216,7 @@ contract JohnLawBond_v2 is OwnableUpgradeable {
     }
   }
   
-  // Mint bonds to one account. Only the ACB can call this method.
+  // Mint bonds to one account.
   //
   // Parameters
   // ----------------
@@ -252,7 +248,7 @@ contract JohnLawBond_v2 is OwnableUpgradeable {
     emit MintEvent(account, redemption_epoch, amount);
   }
 
-  // Burn bonds from one account. Only the ACB can call this method.
+  // Burn bonds from one account.
   //
   // Parameters
   // ----------------
@@ -338,8 +334,7 @@ contract JohnLawBond_v2 is OwnableUpgradeable {
 // from 0, 1, 2, ..., LEVEL_MAX - 1. The oracle uses the commit-reveal-reclaim
 // voting scheme.
 //
-// Permission: Except public getters, only the ACB can call the methods of the
-// oracle.
+// Permission: Except public getters, only the ACB can call the methods.
 //------------------------------------------------------------------------------
 contract Oracle_v2 is OwnableUpgradeable {
   // Constants. The values are defined in initialize(). The values never
@@ -374,11 +369,10 @@ contract Oracle_v2 is OwnableUpgradeable {
     uint epoch_id_v2;
   }
 
-  // Vote is a struct to count votes for each oracle level.
+  // Vote is a struct to aggregate voting statistics for each oracle level.
+  // The data is aggregated during the reveal phase and finalized at the end
+  // of the reveal phase.
   struct Vote {
-    // Voting statistics are aggregated during the reveal phase and finalized
-    // at the end of the reveal phase.
-
     // The total amount of the coins deposited by the voters who voted for this
     // oracle level.
     uint deposit;
@@ -397,7 +391,7 @@ contract Oracle_v2 is OwnableUpgradeable {
     uint count_v2;
   }
 
-  // Epoch is a struct to keep track of states in the commit-reveal-reclaim
+  // Epoch is a struct to keep track of the states in the commit-reveal-reclaim
   // scheme. The oracle creates three Epoch objects and uses them in a
   // round-robin manner. For example, when the first Epoch object is in use for
   // the commit phase, the second Epoch object is in use for the reveal phase,
@@ -405,9 +399,8 @@ contract Oracle_v2 is OwnableUpgradeable {
   struct Epoch {
     // The commit entries.
     mapping (address => Commit) commits;
-    // The voting statistics for all the oracle levels. This can be an array
-    // of Votes but intentionally uses a mapping to make the Vote struct
-    // upgradeable.
+    // The voting statistics for all the oracle levels. This uses a mapping
+    // (instead of an array) to make the Vote struct upgradeable.
     mapping (uint => Vote) votes;
     // An account to store coins deposited by the voters.
     address deposit_account;
@@ -425,8 +418,8 @@ contract Oracle_v2 is OwnableUpgradeable {
   }
 
   // Attributes. See the comment in initialize().
-  // This can be an array of Epochs but is intentionally using a mapping to
-  // make the Epoch struct upgradeable.
+  // This uses a mapping (instead of an array) to make the Epoch struct
+  // upgradeable.
   mapping (uint => Epoch) public epochs_;
   uint public epoch_id_;
 
@@ -467,7 +460,8 @@ contract Oracle_v2 is OwnableUpgradeable {
   //
   // Parameters
   // ----------------
-  // |coin|: The JohnLawCoin contract.
+  // |coin|: The JohnLawCoin contract. The ownership needs to be transferred to
+  // this contract.
   // |sender|: The voter's account.
   // |hash|: The committed hash.
   // |deposit|: The amount of the deposited coins.
@@ -561,7 +555,8 @@ contract Oracle_v2 is OwnableUpgradeable {
   //
   // Parameters
   // ----------------
-  // |coin|: The JohnLawCoin contract.
+  // |coin|: The JohnLawCoin contract. The ownership needs to be transferred to
+  // this contract.
   // |sender|: The voter's account.
   //
   // Returns
@@ -611,7 +606,7 @@ contract Oracle_v2 is OwnableUpgradeable {
       //
       // The PROPORTIONAL_REWARD_RATE of the reward is distributed to the
       // voters in proportion to the coins they deposited. This incentivizes
-      // voters who have many coins (and thus have more power on determining
+      // voters who have more coins (and thus have more power on determining
       // the "truth" level) to join the oracle.
       //
       // The rest of the reward is distributed to the voters evenly. This
@@ -635,7 +630,8 @@ contract Oracle_v2 is OwnableUpgradeable {
   //
   // Parameters
   // ----------------
-  // |coin|: The JohnLawCoin contract.
+  // |coin|: The JohnLawCoin contract. The ownership needs to be transferred to
+  // this contract.
   //
   // Returns
   // ----------------
@@ -866,6 +862,8 @@ contract Oracle_v2 is OwnableUpgradeable {
 // [Logging contract]
 //
 // The Logging contract records various metrics for analysis purpose.
+//
+// Permission: Except public getters, only the ACB can call the methods.
 //------------------------------------------------------------------------------
 contract Logging_v2 is OwnableUpgradeable {
   using SafeCast for uint;
@@ -1277,6 +1275,8 @@ contract Logging_v2 is OwnableUpgradeable {
 //
 // The BondOperation contract increases / decreases the total coin supply by
 // redeeming / issuing bonds. The bond budget is updated by the ACB every epoch.
+//
+// Permission: Except public getters, only the ACB can call the methods.
 //------------------------------------------------------------------------------
 contract BondOperation_v2 is OwnableUpgradeable {
   using SafeCast for uint;
@@ -1313,7 +1313,7 @@ contract BondOperation_v2 is OwnableUpgradeable {
     bond_v2_.upgrade();
   }
 
-  // Deprecate the contract. Only the owner can call this method.
+  // Deprecate the contract.
   function deprecate()
       public onlyOwner {
     bond_v2_.transferOwnership(msg.sender);
@@ -1325,7 +1325,8 @@ contract BondOperation_v2 is OwnableUpgradeable {
   // ----------------
   // |count|: The number of bonds to issue.
   // |epoch_id|: The current epoch ID.
-  // |coin|: The JohnLawCoin contract.
+  // |coin|: The JohnLawCoin contract. The ownership needs to be transferred to
+  // this contract.
   //
   // Returns
   // ----------------
@@ -1371,7 +1372,8 @@ contract BondOperation_v2 is OwnableUpgradeable {
   // |redemption_epochs|: An array of bonds to be redeemed. Bonds are
   // identified by their redemption epochs.
   // |epoch_id|: The current epoch ID.
-  // |coin|: The JohnLawCoin contract.
+  // |coin|: The JohnLawCoin contract. The ownership needs to be transferred to
+  // this contract.
   //
   // Returns
   // ----------------
@@ -1520,8 +1522,10 @@ contract BondOperation_v2 is OwnableUpgradeable {
 // [OpenMarketOperation contract]
 //
 // The OpenMarketOperation contract increases / decreases the total coin supply
-// by purchasing / selling ETH from the open market. The price auction is
-// implemented as a Dutch auction.
+// by purchasing / selling ETH from the open market. The price between JLC and
+// ETH is determined by a Dutch auction.
+//
+// Permission: Except public getters, only the ACB can call the methods.
 //------------------------------------------------------------------------------
 contract OpenMarketOperation_v2 is OwnableUpgradeable {
   using SafeCast for uint;
@@ -1561,9 +1565,8 @@ contract OpenMarketOperation_v2 is OwnableUpgradeable {
   }
 
   // Increase the total coin supply by purchasing ETH from the sender account.
-  // This method returns the amount of coins and ETH to be exchanged.
-  // The actual change to the total coin supply and the ETH pool is made by
-  // the ACB.
+  // This method returns the amount of JLC and ETH to be exchanged. The actual
+  // change to the total coin supply and the ETH pool is made by the ACB.
   //
   // Parameters
   // ----------------
@@ -1575,8 +1578,8 @@ contract OpenMarketOperation_v2 is OwnableUpgradeable {
   // A tuple of two values:
   // - The amount of ETH to be exchanged. This can be smaller than
   // |requested_eth_amount| when the open market operation does not have
-  // enough coins in the pool.
-  // - The amount of coins to be exchanged.
+  // enough coin budget.
+  // - The amount of JLC to be exchanged.
   function increaseCoinSupply(uint requested_eth_amount, uint elapsed_time)
       public onlyOwner returns (uint, uint) {
     return increaseCoinSupply_v2(requested_eth_amount, elapsed_time);
@@ -1587,7 +1590,7 @@ contract OpenMarketOperation_v2 is OwnableUpgradeable {
     require(coin_budget_v2_ > 0,
             "OpenMarketOperation: The coin budget must be positive.");
         
-    // Calculate the amount of coins and ETH to be exchanged.
+    // Calculate the amount of JLC and ETH to be exchanged.
     uint price = getCurrentPrice(elapsed_time);
     uint coin_amount = requested_eth_amount / price;
     if (coin_amount > coin_budget_v2_.toUint256()) {
@@ -1613,20 +1616,19 @@ contract OpenMarketOperation_v2 is OwnableUpgradeable {
   }
 
   // Decrease the total coin supply by selling ETH to the sender account.
-  // This method returns the amount of coins and ETH to be exchanged.
-  // The actual change to the total coin supply and the ETH pool is made by
-  // the ACB.
+  // This method returns the amount of JLC and ETH to be exchanged. The actual
+  // change to the total coin supply and the ETH pool is made by the ACB.
   //
   // Parameters
   // ----------------
-  // |requested_coin_amount|: The amount of coins the sender is willing to pay.
+  // |requested_coin_amount|: The amount of JLC the sender is willing to pay.
   // |elapsed_time|: The elapsed seconds from the current epoch start.
   //
   // Returns
   // ----------------
   // A tuple of two values:
   // - The amount of ETH to be exchanged.
-  // - The amount of coins to be exchanged. This can be smaller than
+  // - The amount of JLC to be exchanged. This can be smaller than
   // |requested_coin_amount| when the open market operation does not have
   // enough ETH in the pool.
   function decreaseCoinSupply(uint requested_coin_amount, uint elapsed_time)
@@ -1639,7 +1641,7 @@ contract OpenMarketOperation_v2 is OwnableUpgradeable {
     require(coin_budget_v2_ < 0,
             "OpenMarketOperation: The coin budget must be negative.");
         
-    // Calculate the amount of coins and ETH to be exchanged.
+    // Calculate the amount of JLC and ETH to be exchanged.
     uint price = getCurrentPrice(elapsed_time);
     uint coin_amount = requested_coin_amount;
     if (coin_amount >= (-coin_budget_v2_).toUint256()) {
@@ -1706,9 +1708,10 @@ contract OpenMarketOperation_v2 is OwnableUpgradeable {
     return 0;
   }
   
-  // Update the coin budget (i.e., how many coins should be added to / removed
-  // from the total coin supply). The ACB calls the method at the beginning of
-  // each epoch.
+  // Update the coin budget. The coin budget indicates how many coins should
+  // be added to / removed from the total coin supply; i.e., the amount of JLC
+  // to be purchased / sold by the open market operation. The ACB calls the
+  // method at the beginning of each epoch.
   //
   // Parameters
   // ----------------
@@ -1750,6 +1753,8 @@ contract OpenMarketOperation_v2 is OwnableUpgradeable {
 // [EthPool contract]
 //
 // The EthPool contract stores ETH for the open market operation.
+//
+// Permission: Except public getters, only the ACB can call the methods.
 //------------------------------------------------------------------------------
 contract EthPool_v2 is OwnableUpgradeable {
 
@@ -1785,25 +1790,26 @@ contract EthPool_v2 is OwnableUpgradeable {
 //------------------------------------------------------------------------------
 // [ACB contract]
 //
-// The ACB stabilizes the coin price with algorithmically defined monetary
-// policies without holding any collateral. The ACB stabilizes the JLC / USD
-// exchange rate to 1.0 as follows:
+// The ACB stabilizes the JLC / USD exchange rate to 1.0 with algorithmically
+// defined monetary policies:
 //
 // 1. The ACB obtains the exchange rate from the oracle.
 // 2. If the exchange rate is 1.0, the ACB does nothing.
 // 3. If the exchange rate is higher than 1.0, the ACB increases the total coin
 //    supply by redeeming issued bonds (regardless of their redemption dates).
-//    If that is not enough to supply sufficient coins, the ACB mints new coins
-//    and provides the coins to the oracle as a reward.
+//    If that is not enough to supply sufficient coins, the ACB performs an open
+//    market operation to sell JLC and purchase ETH to increase the total coin
+//    supply.
 // 4. If the exchange rate is lower than 1.0, the ACB decreases the total coin
-//    supply by issuing new bonds.
+//    supply by issuing new bonds. If the exchange rate drops down to 0.6, the
+//    ACB performs an open market operation to sell ETH and purchase JLC to
+//    decrease the total coin supply.
 //
-// Permission: All methods are public. No one (including the genesis account)
-// is privileged to influence the monetary policies of the ACB. The ACB
+// Permission: All the methods are public. No one (including the genesis
+// account) is privileged to influence the monetary policies of the ACB. The ACB
 // is fully decentralized and there is truly no gatekeeper. The only exceptions
-// are a few methods that can be called only by the genesis account. They are
-// needed for the genesis account to upgrade the smart contract and fix bugs
-// in a development phase.
+// are a few methods the genesis account may use to upgrade the smart contracts
+// and fix bugs in a development phase.
 //------------------------------------------------------------------------------
 contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
   using SafeCast for uint;
@@ -1883,7 +1889,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
     logging_v2_.upgrade();
   }
 
-  // Deprecate the ACB. Only the owner can call this method.
+  // Deprecate the ACB. Only the genesis account can call this method.
   function deprecate()
       public onlyOwner {
     coin_v2_.transferOwnership(msg.sender);
@@ -1894,7 +1900,8 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
     logging_v2_.transferOwnership(msg.sender);
   }
 
-  // Pause the ACB in emergency cases. Only the owner can call this method.
+  // Pause the ACB in emergency cases. Only the genesis account can call this
+  // method.
   function pause()
       public onlyOwner {
     if (!paused()) {
@@ -1903,7 +1910,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
     coin_v2_.pause();
   }
 
-  // Unpause the ACB. Only the owner can call this method.
+  // Unpause the ACB. Only the genesis account can call this method.
   function unpause()
       public onlyOwner {
     if (paused()) {
@@ -1912,7 +1919,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
     coin_v2_.unpause();
   }
 
-  // Payable fallback to receive and store ETH. Give us a tip :)
+  // Payable fallback to receive and store ETH. Give us tips :)
   fallback() external payable {
     require(msg.data.length == 0, "fb1");
     emit PayableEvent(msg.sender, msg.value);
@@ -1921,7 +1928,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
     emit PayableEvent(msg.sender, msg.value);
   }
 
-  // Withdraw the tips. Only the owner can call this method.
+  // Withdraw the tips. Only the genesis account can call this method.
   function withdrawTips()
       public whenNotPaused onlyOwner {
     (bool success,) =
@@ -1930,7 +1937,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
   }
 
   // A struct to pack local variables. This is needed to avoid a stack-too-deep
-  // error of Solidity.
+  // error in Solidity.
   struct VoteResult {
     uint epoch_id;
     bool epoch_updated;
@@ -2139,7 +2146,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
     return redeemed_bonds;
   }
 
-  // Pay ETH and purchase coins from the open market operation.
+  // Pay ETH and purchase JLC from the open market operation.
   //
   // Parameters
   // ----------------
@@ -2150,8 +2157,8 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
   // A tuple of two values:
   // - The amount of ETH the sender paied. This value can be smaller than
   // |requested_eth_amount| when the open market operation does not have enough
-  // coins in the pool. The remaining ETH is returned to the sender's wallet.
-  // - The amount of coins the sender purchased.
+  // coin budget. The remaining ETH is returned to the sender's wallet.
+  // - The amount of JLC the sender purchased.
   function purchaseCoins()
       public whenNotPaused payable returns (uint, uint) {
     uint requested_eth_amount = msg.value;
@@ -2160,7 +2167,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
     require(open_market_operation_v2_.eth_balance_() <=
             address(eth_pool_v2_).balance, "pc1");
     
-    // Calculate the amount of ETH and coins to be exchanged.
+    // Calculate the amount of ETH and JLC to be exchanged.
     (uint eth_amount, uint coin_amount) =
         open_market_operation_v2_.increaseCoinSupply(
             requested_eth_amount, elapsed_time);
@@ -2190,17 +2197,17 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
     return (eth_amount, coin_amount);
   }
   
-  // Pay coins and purchase ETH from the open market operation.
+  // Pay JLC and purchase ETH from the open market operation.
   //
   // Parameters
   // ----------------
-  // |requested_coin_amount|: The amount of coins the sender is willing to pay.
+  // |requested_coin_amount|: The amount of JLC the sender is willing to pay.
   //
   // Returns
   // ----------------
   // A tuple of two values:
   // - The amount of ETH the sender purchased.
-  // - The amount of coins the sender paied. This value can be smaller than
+  // - The amount of JLC the sender paied. This value can be smaller than
   // |requested_coin_amount| when the open market operation does not have
   // enough ETH in the pool.
   function sellCoins(uint requested_coin_amount)
@@ -2217,7 +2224,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
     require(open_market_operation_v2_.eth_balance_() <=
             address(eth_pool_v2_).balance, "sc1");
     
-    // Calculate the amount of ETH and coins to be exchanged.
+    // Calculate the amount of ETH and JLC to be exchanged.
     uint elapsed_time = getTimestamp() - current_epoch_start_v2_;
     (uint eth_amount, uint coin_amount) =
         open_market_operation_v2_.decreaseCoinSupply(

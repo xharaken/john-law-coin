@@ -10,34 +10,36 @@ import hashlib, random
 #-------------------------------------------------------------------------------
 # [Overview]
 #
-# JohnLawCoin is a stable coin realized by an Algorithmic Central Bank (ACB).
-# The system is fully decentralized and there is truly no gatekeeper.
+# JohnLawCoin is a non-collateralized stablecoin realized by an Algorithmic
+# Central Bank (ACB). The system is fully decentralized and there is truly
+# no gatekeeper. No gatekeeper means there is no entity to be regulated.
 #
-# JohnLawCoin is a real-world experiment to verify the following assumption:
-#
-# - There is a way to stabilize the coin price with algorithmically defined
-#   monetary policies without holding any collateral.
+# JohnLawCoin is a real-world experiment to verify one assumption: There is
+# a way to stabilize the currency price with algorithmically defined monetary
+# policies without holding any collateral like USD.
 #
 # If JohnLawCoin is successful and proves the assumption is correct, it will
-# provide interesting insights for both non-fiat currencies and fiat
-# currencies; i.e., 1) there is a way for non-fiat cryptocurrencies to
+# provide interesting insights for both non-fiat cryptocurrencies and fiat
+# currencies; i.e., 1) non-fiat cryptocurrencies can use the algorithm to
 # implement a stablecoin without having any gatekeeper that holds collateral,
-# and 2) there is a way for developing countries to implement a fixed exchange
-# rate system for their fiat currencies without holding adequate USD reserves.
-# This will upgrade human's understanding about money.
+# and 2) real-world central banks of developing countries can use the
+# algorithm to implement a fixed exchange rate system for their fiat
+# currencies without holding adequate USD reserves. This will upgrade
+# human's understanding about money.
 #
 # JohnLawCoin has the following important properties:
 #
 # - There is truly no gatekeeper. The ACB is fully automated and no one
-#   (including the author of the smart contract) has the privileges of
+#   (including the author of the smart contracts) has the privilege of
 #   influencing the monetary policies of the ACB. This can be verified by the
-#   fact that the smart contract has no operations that need privileged
+#   fact that the smart contracts have no operations that need privileged
 #   permissions.
-# - The smart contract is self-contained. There are no dependencies on other
+# - The smart contracts are self-contained. There are no dependencies on other
 #   smart contracts and external services.
-# - All operations are guaranteed to terminate in the time complexity of O(1).
-#   The time complexity of each operation is determined solely by the input
-#   size of the operation and not affected by the state of the smart contract.
+# - All operations are guaranteed to terminate with the time complexity of
+#   O(1). The time complexity of each operation is determined solely by the
+#   input size of the operation and not affected by the state of the smart
+#   contracts.
 #
 # See the whitepaper for more details
 # (https://github.com/xharaken/john-law-coin/blob/main/docs/whitepaper.pdf).
@@ -148,8 +150,8 @@ class JohnLawCoin:
 #------------------------------------------------------------------------------
 # [JohnLawBond contract]
 #
-# JohnLawBond is an implementation of the bonds to control the total coin
-# supply. The bonds are not transferable.
+# JohnLawBond is an implementation of the bonds to increase / decrease the
+# total coin supply. The bonds are not transferable.
 #------------------------------------------------------------------------------
 class JohnLawBond:
     # Constructor.
@@ -307,10 +309,10 @@ class Oracle:
             # The epoch ID when this commit entry is created.
             self.epoch_id = epoch_id
 
-    # Vote is a struct to count votes for each oracle level.
+    # Vote is a struct to aggregate voting statistics for each oracle level.
+    # The data is aggregated during the reveal phase and finalized at the end
+    # of the reveal phase.
     class Vote:
-        # Voting statitics are aggregated during the reveal phase and finalized
-        # at the end of the reveal phase.
         def __init__(self, deposit, count, should_reclaim, should_reward):
             # The total amount of the coins deposited by the voters who voted
             # for this oracle level.
@@ -324,7 +326,7 @@ class Oracle:
             # receive a reward.
             self.should_reward = should_reward
 
-    # Epoch is a struct to keep track of states in the commit-reveal-reclaim
+    # Epoch is a struct to keep track of the states in the commit-reveal-reclaim
     # scheme. The oracle creates three Epoch objects and uses them in a
     # round-robin manner. For example, when the first Epoch object is in use for
     # the commit phase, the second Epoch object is in use for the reveal phase,
@@ -534,7 +536,7 @@ class Oracle:
             #
             # The PROPORTIONAL_REWARD_RATE of the reward is distributed to the
             # voters in proportion to the coins they deposited. This
-            # incentivizes voters who have many coins (and thus have more power
+            # incentivizes voters who have more coins (and thus have more power
             # on determining the "truth" level) to join the oracle.
             #
             # The rest of the reward is distributed to the voters evenly. This
@@ -1149,8 +1151,8 @@ class BondOperation:
 # [OpenMarketOperation contract]
 #
 # The OpenMarketOperation contract increases / decreases the total coin supply
-# by purchasing / selling ETH from the open market. The price auction is
-# implemented as a Dutch auction.
+# by purchasing / selling ETH from the open market. The price between JLC and
+# ETH is determined by a Dutch auction.
 #-------------------------------------------------------------------------------
 class OpenMarketOperation:
 
@@ -1160,32 +1162,35 @@ class OpenMarketOperation:
         
         # The price auction is implemented as a Dutch auction as follows:
         #
-        # Let P be the latest price at which the OpenMarketOperation exchanged
-        # coins with ETH. The price is measured by JLC / ETH wei. If the price
-        # is P, it means 1 JLC is exchanged with 1000 ETH wei. At the beginning
-        # of each epoch, the ACB sets the coin budget (i.e., how many coins
-        # should be added to / removed from the total coin supply).
+        # Let P be the latest price at which the open market operation exchanged
+        # JLC with ETH. The price is measured by JLC / ETH wei. When the price
+        # is P, it means 1 JLC is exchanged with 1000 ETH wei.
         #
-        # When the OpenMarketOperation increases the total coin supply,
+        # At the beginning of each epoch, the ACB sets the coin budget; i.e.,
+        # the amount of JLC to be purchased / sold by the open market operation.
+        #
+        # When the open market operation increases the total coin supply,
         # the auction starts with the price of P * START_PRICE_MULTIPILER.
         # Then the price is decreased by PRICE_CHANGE_PERCENTAGE % every
-        # PRICE_CHANGE_INTERVAL seconds. Coins and ETH are exchanged at the
-        # given price (the OpenMarketOperation sells coins and purchases ETH).
-        # The auction stops when all the coins in the coin budget are sold.
+        # PRICE_CHANGE_INTERVAL seconds. JLC and ETH are exchanged at the
+        # given price (the open market operation sells JLC and purchases ETH).
+        # The auction stops when the open market operation finished selling JLC
+        # in the coin budget.
         #
-        # When the OpenMarketOperation decreases the total coin supply,
+        # When the open market operation decreases the total coin supply,
         # the auction starts with the price of P / START_PRICE_MULTIPILER.
         # Then the price is increased by PRICE_CHANGE_PERCENTAGE % every
-        # PRICE_CHANGE_INTERVAL seconds. Coins and ETH are exchanged at the
-        # given price (the OpenMarketOperation sells ETH and purchases coins).
-        # The auction stops when all the coins in the coin budget are purchased.
+        # PRICE_CHANGE_INTERVAL seconds. JLC and ETH are exchanged at the
+        # given price (the open market operation sells ETH and purchases JLC).
+        # The auction stops when the open market operation finished purchasing
+        # JLC in the coin budget.
         OpenMarketOperation.PRICE_CHANGE_INTERVAL = 8 * 60 * 60 # 8 hours
         OpenMarketOperation.PRICE_CHANGE_PERCENTAGE = 15 # 15%
         OpenMarketOperation.START_PRICE_MULTIPILER = 3
 
         # Attributes.
 
-        # The latest price at which the OpenMarketOperation exchanged coins
+        # The latest price at which the open market operation exchanged JLC
         # with ETH.
         self.latest_price = 1000
         
@@ -1215,9 +1220,8 @@ class OpenMarketOperation:
         assert(1 <= OpenMarketOperation.START_PRICE_MULTIPILER)
 
     # Increase the total coin supply by purchasing ETH from the sender account.
-    # This method returns the amount of coins and ETH to be exchanged.
-    # The actual change to the total coin supply and the ETH pool is made by
-    # the ACB.
+    # This method returns the amount of JLC and ETH to be exchanged. The actual
+    # change to the total coin supply and the ETH pool is made by the ACB.
     #
     # Parameters
     # ----------------
@@ -1229,12 +1233,12 @@ class OpenMarketOperation:
     # A tuple of two values:
     # - The amount of ETH to be exchanged. This can be smaller than
     # |requested_eth_amount| when the open market operation does not have
-    # enough coins in the pool.
-    # - The amount of coins to be exchanged.
+    # enough coin budget.
+    # - The amount of JLC to be exchanged.
     def increase_coin_supply(self, requested_eth_amount, elapsed_time):
         assert(self.coin_budget > 0)
         
-        # Calculate the amount of coins and ETH to be exchanged.
+        # Calculate the amount of JLC and ETH to be exchanged.
         price = self.get_current_price(elapsed_time)
         coin_amount = int(requested_eth_amount / price)
         if coin_amount > self.coin_budget:
@@ -1250,26 +1254,25 @@ class OpenMarketOperation:
         return (eth_amount, coin_amount)
 
     # Decrease the total coin supply by selling ETH to the sender account.
-    # This method returns the amount of coins and ETH to be exchanged.
-    # The actual change to the total coin supply and the ETH pool is made by
-    # the ACB.
+    # This method returns the amount of JLC and ETH to be exchanged. The actual
+    # change to the total coin supply and the ETH pool is made by the ACB.
     #
     # Parameters
     # ----------------
-    # |requested_coin_amount|: The amount of coins the sender is willing to pay.
+    # |requested_coin_amount|: The amount of JLC the sender is willing to pay.
     # |elapsed_time|: The elapsed seconds from the current epoch start.
     #
     # Returns
     # ----------------
     # A tuple of two values:
     # - The amount of ETH to be exchanged.
-    # - The amount of coins to be exchanged. This can be smaller than
+    # - The amount of JLC to be exchanged. This can be smaller than
     # |requested_coin_amount| when the open market operation does not have
     # enough ETH in the pool.
     def decrease_coin_supply(self, requested_coin_amount, elapsed_time):
         assert(self.coin_budget < 0)
         
-        # Calculate the amount of coins and ETH to be exchanged.
+        # Calculate the amount of JLC and ETH to be exchanged.
         price = self.get_current_price(elapsed_time)
         coin_amount = requested_coin_amount
         if coin_amount >= -self.coin_budget:
@@ -1318,9 +1321,10 @@ class OpenMarketOperation:
             return price
         return 0
     
-    # Update the coin budget (i.e., how many coins should be added to / removed
-    # from the total coin supply). The ACB calls the method at the beginning of
-    # each epoch.
+    # Update the coin budget. The coin budget indicates how many coins should
+    # be added to / removed from the total coin supply; i.e., the amount of JLC
+    # to be purchased / sold by the open market operation. The ACB calls the
+    # method at the beginning of each epoch.
     #
     # Parameters
     # ----------------
@@ -1368,22 +1372,30 @@ class EthPool:
         self.eth_balance -= eth_amount
     
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # [ACB contract]
 #
-# The ACB stabilizes the coin price with algorithmically defined monetary
-# policies without holding any collateral. The ACB stabilizes the JLC / USD
-# exchange rate to 1.0 as follows:
+# The ACB stabilizes the JLC / USD exchange rate to 1.0 with algorithmically
+# defined monetary policies:
 #
 # 1. The ACB obtains the exchange rate from the oracle.
 # 2. If the exchange rate is 1.0, the ACB does nothing.
 # 3. If the exchange rate is higher than 1.0, the ACB increases the total coin
 #    supply by redeeming issued bonds (regardless of their redemption dates).
-#    If that is not enough to supply sufficient coins, the ACB mints new coins
-#    and provides the coins to the oracle as a reward.
+#    If that is not enough to supply sufficient coins, the ACB performs an open
+#    market operation to sell JLC and purchase ETH to increase the total coin
+#    supply.
 # 4. If the exchange rate is lower than 1.0, the ACB decreases the total coin
-#    supply by issuing new bonds.
-#-------------------------------------------------------------------------------
+#    supply by issuing new bonds. If the exchange rate drops down to 0.6, the
+#    ACB performs an open market operation to sell ETH and purchase JLC to
+#    decrease the total coin supply.
+#
+# Permission: All the methods are public. No one (including the genesis
+# account) is privileged to influence the monetary policies of the ACB. The ACB
+# is fully decentralized and there is truly no gatekeeper. The only exceptions
+# are a few methods the genesis account may use to upgrade the smart contracts
+# and fix bugs in a development phase.
+#------------------------------------------------------------------------------
 class ACB:
     NULL_HASH = 0
 
@@ -1408,7 +1420,6 @@ class ACB:
         #
         # -----------------------------------
         # | oracle level | exchange rate    |
-        # |              |                  |
         # -----------------------------------
         # |             0| 1 coin = 0.6 USD |
         # |             1| 1 coin = 0.7 USD |
@@ -1423,18 +1434,29 @@ class ACB:
         #
         # Voters are expected to look up the current exchange rate using
         # real-world currency exchangers and vote for the oracle level that
-        # corresponds to the exchange rate. Strictly speaking, the current
-        # exchange rate is defined as the exchange rate at the point when the
-        # current epoch started (i.e., current_epoch_start_).
+        # is closest to the current exchange rate. Strictly speaking, the
+        # current exchange rate is defined as the exchange rate at the point
+        # when the current epoch started (i.e., current_epoch_start_).
         #
-        # In the bootstrap phase in which no currency exchanger supports JLC
-        # <=> USD conversions, voters are expected to vote for the oracle
-        # level 5 (i.e., 1 coin = 1.1 USD). This helps increase the total coin
-        # supply gradually in the bootstrap phase and incentivize early
-        # adopters. Once currency exchangers support the conversions, voters
-        # are expected to vote for the oracle level that corresponds to the
-        # real-world exchange rate.
+        # In the bootstrap phase where no currency exchanger supports JLC <->
+        # USD conversion, voters are expected to vote for the oracle level 5
+        # (i.e., 1 coin = 1.1 USD). This helps increase the total coin supply
+        # gradually and incentivize early adopters in the bootstrap phase. Once
+        # a currency exchanger supports the conversion, voters are expected to
+        # vote for the oracle level that is closest to the real-world exchange
+        # rate.
         #
+        # Note that 10000000 coins (corresponding to 10 M USD) are given to the
+        # genesis account initially. This is important to make sure that the
+        # genesis account has power to determine the exchange rate until
+        # the ecosystem stabilizes. Once a real-world currency exchanger
+        # supports the conversion and the oracle gets a sufficient number of
+        # honest voters to agree on the real-world exchange rate consistently,
+        # the genesis account can lose its power by decreasing its coin
+        # balance, moving the oracle to a fully decentralized system. This
+        # mechanism is mandatory to stabilize the exchange rate and bootstrap
+        # the ecosystem successfully.
+        
         # LEVEL_TO_EXCHANGE_RATE is the mapping from the oracle levels to the
         # exchange rates. The real exchange rate is obtained by dividing the
         # values by EXCHANGE_RATE_DIVISOR. For example, 11 corresponds to the
@@ -1459,24 +1481,6 @@ class ACB:
         # ----------------
 
         # The JohnLawCoin contract.
-        #
-        # Note that 10000000 coins (corresponding to 10 M USD) are given to the
-        # genesis account initially. This is important to make sure that the
-        # genesis account can have power to determine the exchange rate until
-        # the ecosystem stabilizes. Once real-world currency exchangers start
-        # converting JLC with USD and the oracle gets a sufficient number of
-        # honest voters to agree on the real-world exchange rate consistently,
-        # the genesis account can lose its power by decreasing its coin balance.
-        # This mechanism is mandatory to stabilize the exchange rate and
-        # bootstrap the ecosystem successfully.
-        #
-        # Specifically, the genesis account votes for the oracle level 5 until
-        # real-world currency exchangers appear. Once real-world currency
-        # exchangers appear, the genesis account votes for the oracle level
-        # corresponding to the real-world exchange rate. Other voters are
-        # expected to follow the genesis account. Once the oracle gets enough
-        # honest voters, the genesis account decreases its coin balance and
-        # loses its power, moving the oracle to a fully decentralized system.
         self.coin = coin
 
         # The current timestamp.
@@ -1664,7 +1668,7 @@ class ACB:
             self.oracle.epoch_id, redeemed_bonds, expired_bonds)
         return redeemed_bonds
 
-    # Pay ETH and purchase coins from the open market operation.
+    # Pay ETH and purchase JLC from the open market operation.
     #
     # Parameters
     # ----------------
@@ -1675,15 +1679,15 @@ class ACB:
     # A tuple of two values:
     # - The amount of ETH the sender paied. This value can be smaller than
     # |requested_eth_amount| when the open market operation does not have enough
-    # coins in the pool. The remaining ETH is returned to the sender's wallet.
-    # - The amount of coins the sender purchased.
+    # coin budget. The remaining ETH is returned to the sender's wallet.
+    # - The amount of JLC the sender purchased.
     def purchase_coins(self, sender, requested_eth_amount):
         elapsed_time = self.get_timestamp() - self.current_epoch_start
 
         assert(self.open_market_operation.eth_balance <=
                self.eth_pool.eth_balance)
         
-        # Calculate the amount of ETH and coins to be exchanged.
+        # Calculate the amount of ETH and JLC to be exchanged.
         (eth_amount, coin_amount) = (
             self.open_market_operation.increase_coin_supply(
                 requested_eth_amount, elapsed_time))
@@ -1699,17 +1703,17 @@ class ACB:
 
         return (eth_amount, coin_amount)
 
-    # Pay coins and purchase ETH from the open market operation.
+    # Pay JLC and purchase ETH from the open market operation.
     #
     # Parameters
     # ----------------
-    # |requested_coin_amount|: The amount of coins the sender is willing to pay.
+    # |requested_coin_amount|: The amount of JLC the sender is willing to pay.
     #
     # Returns
     # ----------------
     # A tuple of two values:
     # - The amount of ETH the sender purchased.
-    # - The amount of coins the sender paied. This value can be smaller than
+    # - The amount of JLC the sender paied. This value can be smaller than
     # |requested_coin_amount| when the open market operation does not have
     # enough ETH in the pool.
     def sell_coins(self, sender, requested_coin_amount):
@@ -1721,7 +1725,7 @@ class ACB:
         assert(self.open_market_operation.eth_balance <=
                self.eth_pool.eth_balance)
         
-        # Calculate the amount of ETH and coins to be exchanged.
+        # Calculate the amount of ETH and JLC to be exchanged.
         (eth_amount, coin_amount) = (
             self.open_market_operation.decrease_coin_supply(
                 requested_coin_amount, elapsed_time))

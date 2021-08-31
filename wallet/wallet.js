@@ -219,7 +219,7 @@ async function purchaseCoins() {
     }
     if (coin_amount > coin_budget) {
       throw("The current coin budget is " + coin_budget +
-            ". You cannot purchase coins exceeding this budget.");
+            ". You cannot purchase coins exceeding the budget.");
     }
     const current_epoch_start =
           parseInt(await _acb_contract.methods.current_epoch_start_().call());
@@ -276,7 +276,7 @@ async function sellCoins() {
     }
     if (coin_amount > -coin_budget) {
       throw("The current coin budget is " + coin_budget +
-            ". You cannot sell coins exceeding this budget.");
+            ". You cannot sell coins exceeding the budget.");
     }
     const current_epoch_start =
           parseInt(await _acb_contract.methods.current_epoch_start_().call());
@@ -288,8 +288,8 @@ async function sellCoins() {
       await _open_market_operation_contract.methods.eth_balance_().call());
     if (eth_amount > eth_balance) {
       throw("The Open Market Operation does not have enough ETH to purchase " +
-            "the coins you specified. Check the current JLC / ETH price and " +
-            "specify a lower value.");
+            "the JLC coins you specified. Check the current JLC / ETH price " +
+            "and specify a lower value.");
     }
     
     const promise = _acb_contract.methods.sellCoins(coin_amount).send(
@@ -337,7 +337,7 @@ async function purchaseBonds() {
       await _bond_operation_contract.methods.bond_budget_().call());
     if (amount > bond_budget) {
       throw("The current bond budget is " + bond_budget +
-            ". You cannot purchase bonds exceeding this budget.");
+            ". You cannot purchase bonds exceeding the budget.");
     }
     const coin_balance =
           parseInt(await _coin_contract.methods.balanceOf(
@@ -1091,7 +1091,7 @@ async function showHistoryChart() {
       table.addColumn("number", "exchanged_coins");
       table.addRows(logs["exchanged_coins_with_budget"]);
       const options = {
-        title: "OpenMarketOperation: exchanged coins",
+        title: "OpenMarketOperation: coin budget / exchanged coins",
         legend: {position: "bottom"}};
       const chart = new google.visualization.LineChart(
         $("chart_exchanged_coins_with_budget"));

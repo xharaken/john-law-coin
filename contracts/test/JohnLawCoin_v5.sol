@@ -10,504 +10,13 @@ pragma solidity ^0.8.0;
 import "./JohnLawCoin_v4.sol";
 
 //------------------------------------------------------------------------------
-// [BondOperation contract]
-//
-// The BondOperation contract increases / decreases the total coin supply by
-// redeeming / issuing bonds. The bond budget is updated by the ACB every epoch.
-//------------------------------------------------------------------------------
-contract BondOperation_v5 is OwnableUpgradeable {
-  using SafeCast for uint;
-  using SafeCast for int;
-
-  // Constants. The values are defined in initialize(). The values never
-  // change during the contract execution but use 'public' (instead of
-  // 'constant') because tests want to override the values.
-  uint public BOND_PRICE;
-  uint public BOND_REDEMPTION_PRICE;
-  uint public BOND_REDEMPTION_PERIOD;
-  uint public BOND_REDEEMABLE_PERIOD;
-
-  // Attributes. See the comment in initialize().
-  JohnLawBond_v2 public bond_;
-  int public bond_budget_;
-
-  // Events.
-  event IncreaseBondSupplyEvent(address indexed sender, uint indexed epoch_id,
-                                uint issued_bonds, uint redemption_epoch);
-  event DecreaseBondSupplyEvent(address indexed sender, uint indexed epoch_id,
-                                uint redeemed_bonds, uint expired_bonds);
-  event UpdateBondBudgetEvent(uint indexed epoch_id, int delta,
-                              int bond_budget, uint mint);
-
-  // Initializer. The ownership of the contracts needs to be transferred to the
-  // ACB just after the initializer is invoked.
-  //
-  // Parameters
-  // ----------------
-  // |coin|: The JohnLawCoin contract.
-  // |bond|: The JohnLawBond contract.
-  // |oracle|: The Oracle contract.
-  // |logging|: The Logging contract.
-  function initialize(JohnLawBond_v2 bond, int bond_budget)
-      public initializer {
-    __Ownable_init();
-    
-    // Constants.
-    
-    // The bond structure.
-    //
-    // |<---BOND_REDEMPTION_PERIOD--->|<---BOND_REDEEMABLE_PERIOD--->|
-    // ^                              ^                              ^
-    // Issued                         Becomes redeemable             Expired
-    //
-    // During BOND_REDEMPTION_PERIOD, the bonds are redeemable as long as the
-    // ACB's bond budget is negative. During BOND_REDEEMABLE_PERIOD, the
-    // bonds are redeemable regardless of the ACB's bond budget. After
-    // BOND_REDEEMABLE_PERIOD, the bonds are expired.
-    BOND_PRICE = 996; // One bond is sold for 996 coins.
-    BOND_REDEMPTION_PRICE = 1000; // One bond is redeemed for 1000 coins.
-    BOND_REDEMPTION_PERIOD = 12; // 12 epochs.
-    BOND_REDEEMABLE_PERIOD = 2; // 2 epochs.
-
-    // The JohnLawBond contract.
-    bond_ = bond;
-    
-    // If |bond_budget_| is positive, it indicates the number of bonds the ACB
-    // can issue to decrease the total coin supply. If |bond_budget_| is
-    // negative, it indicates the number of bonds the ACB can redeem to
-    // increase the total coin supply.
-    bond_budget_ = bond_budget;
-  }
-
-  // Deprecate the contract. Only the owner can call this method.
-  function deprecate()
-      public onlyOwner {
-    bond_.transferOwnership(msg.sender);
-  }
-
-  // Increase the total bond supply.
-  //
-  // Parameters
-  // ----------------
-  // |sender|: The sender account.
-  // |count|: The number of bonds to issue.
-  // |epoch_id|: The current epoch ID.
-  // |coin|: The JohnLawCoin contract.
-  //
-  // Returns
-  // ----------------
-  // The redemption epoch of the issued bonds if it succeeds. 0 otherwise.
-  function increaseBondSupply(address sender, uint count,
-                              uint epoch_id, JohnLawCoin_v2 coin)
-      public onlyOwner returns (uint) {
-    require(count > 0, "BondOperation: You must purchase at least one bond.");
-    require(bond_budget_ >= count.toInt256(),
-            "BondOperation: The bond budget is not enough.");
-
-    uint amount = BOND_PRICE * count;
-    require(coin.balanceOf(sender) >= amount,
-            "BondOperation: Your coin balance is not enough.");
-
-    // Set the redemption epoch of the bonds.
-    uint redemption_epoch = epoch_id + BOND_REDEMPTION_PERIOD;
-
-    // Issue new bonds.
-    bond_.mint(sender, redemption_epoch, count);
-    bond_budget_ -= count.toInt256();
-    require(bond_budget_ >= 0, "pb1");
-    require(bond_.balanceOf(sender, redemption_epoch) > 0, "pb2");
-
-    // Burn the corresponding coins.
-    coin.burn(sender, amount);
-    emit IncreaseBondSupplyEvent(sender, epoch_id, count, redemption_epoch);
-    return redemption_epoch;
-  }
-  
-  // Decrease the total bond supply.
-  //
-  // Parameters
-  // ----------------
-  // |sender|: The sender account.
-  // |redemption_epochs|: An array of bonds to be redeemed. Bonds are
-  // identified by their redemption epochs.
-  // |epoch_id|: The current epoch ID.
-  // |coin|: The JohnLawCoin contract.
-  //
-  // Returns
-  // ----------------
-  // A tuple of two values:
-  // - The number of redeemed bonds.
-  // - The number of expired bonds.
-  function decreaseBondSupply(address sender, uint[] memory redemption_epochs,
-                              uint epoch_id, JohnLawCoin_v2 coin)
-      public onlyOwner returns (uint, uint) {
-    uint redeemed_bonds = 0;
-    uint expired_bonds = 0;
-    for (uint i = 0; i < redemption_epochs.length; i++) {
-      uint redemption_epoch = redemption_epochs[i];
-      uint count = bond_.balanceOf(sender, redemption_epoch);
-      if (epoch_id < redemption_epoch) {
-        // If the bonds have not yet hit their redemption epoch, the
-        // BondOperation accepts the redemption as long as |bond_budget_| is
-        // negative.
-        if (bond_budget_ >= 0) {
-          continue;
-        }
-        if (count > (-bond_budget_).toUint256()) {
-          count = (-bond_budget_).toUint256();
-        }
-        bond_budget_ += count.toInt256();
-      }
-      if (epoch_id < redemption_epoch + BOND_REDEEMABLE_PERIOD) {
-        // If the bonds are not expired, mint the corresponding coins to the
-        // user account.
-        uint amount = count * BOND_REDEMPTION_PRICE;
-        coin.mint(sender, amount);
-        redeemed_bonds += count;
-      } else {
-        expired_bonds += count;
-      }
-      // Burn the redeemed / expired bonds.
-      bond_.burn(sender, redemption_epoch, count);
-    }
-    emit DecreaseBondSupplyEvent(sender, epoch_id,
-                                 redeemed_bonds, expired_bonds);
-    return (redeemed_bonds, expired_bonds);
-  }
-
-  // Update the bond budget to increase or decrease the total coin supply.
-  //
-  // Parameters
-  // ----------------
-  // |delta|: The target increase or decrease of the total coin supply.
-  // |epoch_id|: The current epoch ID.
-  //
-  // Returns
-  // ----------------
-  // The amount of coins that cannot be increased by adjusting the bond budget
-  // and thus need to be newly minted.
-  function updateBondBudget(int delta, uint epoch_id)
-      public onlyOwner returns (uint) {
-    uint mint = 0;
-    uint bond_supply = validBondSupply(epoch_id);
-    if (delta == 0) {
-      // No change in the total coin supply.
-      bond_budget_ = 0;
-    } else if (delta > 0) {
-      // Increase the total coin supply.
-      uint count = delta.toUint256() / BOND_REDEMPTION_PRICE;
-      if (count <= bond_supply) {
-        // If there are sufficient bonds to redeem, increase the total coin
-        // supply by redeeming the bonds.
-        bond_budget_ = -count.toInt256();
-      } else {
-        // Otherwise, redeem all the issued bonds.
-        bond_budget_ = -bond_supply.toInt256();
-        // The remaining coins need to be newly minted.
-        mint = (count - bond_supply) * BOND_REDEMPTION_PRICE;
-      }
-      require(bond_budget_ <= 0, "cs1");
-    } else {
-      // Issue new bonds to decrease the total coin supply.
-      bond_budget_ = -delta / BOND_PRICE.toInt256();
-      require(bond_budget_ >= 0, "cs2");
-    }
-
-    require(bond_supply.toInt256() + bond_budget_ >= 0, "cs3");
-    emit UpdateBondBudgetEvent(epoch_id, delta, bond_budget_, mint);
-    return mint;
-  }
-
-  // Public getter: Return the valid bond supply; i.e., the total supply of
-  // not-yet-expired bonds.
-  function validBondSupply(uint epoch_id)
-      public view returns (uint) {
-    uint count = 0;
-    for (uint redemption_epoch =
-             (epoch_id > BOND_REDEEMABLE_PERIOD ?
-              epoch_id - BOND_REDEEMABLE_PERIOD + 1 : 0);
-         redemption_epoch <= epoch_id + BOND_REDEMPTION_PERIOD;
-         redemption_epoch++) {
-      count += bond_.bondSupplyAt(redemption_epoch);
-    }
-    return count;
-  }
-  
-  // Return the ownership of the JohnLawCoin contract to the ACB.
-  //
-  // Parameters
-  // ----------------
-  // |coin|: The JohnLawCoin contract.
-  //
-  // Returns
-  // ----------------
-  // None.
-  function revokeOwnership(JohnLawCoin_v2 coin)
-      public onlyOwner {
-    coin.transferOwnership(msg.sender);
-  }
-}
-
-//------------------------------------------------------------------------------
-// [OpenMarketOperation contract]
-//
-// The OpenMarketOperation contract increases / decreases the total coin supply
-// by purchasing / selling ETH from the open market. The price auction is
-// implemented as a Dutch auction.
-//------------------------------------------------------------------------------
-contract OpenMarketOperation_v5 is OwnableUpgradeable {
-  using SafeCast for uint;
-  using SafeCast for int;
-
-  // Constants. The values are defined in initialize(). The values never
-  // change during the contract execution but use 'public' (instead of
-  // 'constant') because tests want to override the values.
-  uint public PRICE_CHANGE_INTERVAL;
-  uint public PRICE_CHANGE_PERCENTAGE;
-  uint public START_PRICE_MULTIPILER;
-
-  // Attributes. See the comment in initialize().
-  uint public latest_price_;
-  uint public start_price_;
-  uint public eth_balance_;
-  int public coin_budget_;
-
-  // Events.
-  event IncreaseCoinSupplyEvent(uint requested_eth_amount, uint elapsed_time,
-                                uint eth_amount, uint coin_amount);
-  event DecreaseCoinSupplyEvent(uint requested_coin_amount, uint elapsed_time,
-                                uint eth_amount, uint coin_amount);
-  event UpdateCoinBudgetEvent(int coin_budget);
-  
-  // Constructor.
-  function initialize(uint latest_price, uint start_price, uint eth_balance,
-                      int coin_budget)
-      public initializer {
-    __Ownable_init();
-    
-    // Constants.
-
-    // The price auction is implemented as a Dutch auction as follows:
-    //
-    // Let P be the latest price at which the OpenMarketOperation exchanged
-    // coins with ETH. The price is measured by JLC / ETH wei. If the price is
-    // P, it means 1 JLC is exchanged with 1000 ETH wei. At the beginning of
-    // each epoch, the ACB sets the coin budget (i.e., how many coins should
-    // be added to / removed from the total coin supply).
-    //
-    // When the OpenMarketOperation increases the total coin supply,
-    // the auction starts with the price of P * START_PRICE_MULTIPILER.
-    // Then the price is decreased by PRICE_CHANGE_PERCENTAGE % every
-    // PRICE_CHANGE_INTERVAL seconds. Coins and ETH are exchanged at the
-    // given price (the OpenMarketOperation sells coins and purchases ETH).
-    // The auction stops when all the coins in the coin budget are sold.
-    //
-    // When the OpenMarketOperation decreases the total coin supply,
-    // the auction starts with the price of P / START_PRICE_MULTIPILER.
-    // Then the price is increased by PRICE_CHANGE_PERCENTAGE % every
-    // PRICE_CHANGE_INTERVAL seconds. Coins and ETH are exchanged at the
-    // given price (the OpenMarketOperation sells ETH and purchases coins).
-    // The auction stops when all the coins in the coin budget are purchased.
-    //
-    // TODO: Change PRICE_CHANGE_INTERVAL to 8 * 60 * 60 before launching to the
-    // mainnet. It's set to 60 seconds for the Ropsten Testnet.
-    PRICE_CHANGE_INTERVAL = 60; // 8 hours
-    PRICE_CHANGE_PERCENTAGE = 15; // 15%
-    START_PRICE_MULTIPILER = 3;
-    
-    // Attributes.
-    
-    // The latest price at which the OpenMarketOperation exchanged coins
-    // with ETH.
-    latest_price_ = latest_price;
-    
-    // The start price is updated at the beginning of each epoch.
-    start_price_ = start_price;
-    
-    // The current ETH balance.
-    eth_balance_ = eth_balance;
-    
-    // The current coin budget.
-    coin_budget_ = coin_budget;
-  }
-  
-  // Increase the total coin supply by purchasing ETH from the sender account.
-  // This method returns the amount of coins and ETH to be exchanged.
-  // The actual change to the total coin supply and the ETH pool is made by
-  // the ACB.
-  //
-  // Parameters
-  // ----------------
-  // |requested_eth_amount|: The amount of ETH the sender is willing to pay.
-  // |elapsed_time|: The elapsed seconds from the current epoch start.
-  //
-  // Returns
-  // ----------------
-  // A tuple of two values:
-  // - The amount of ETH to be exchanged. This can be smaller than
-  // |requested_eth_amount| when the open market operation does not have
-  // enough coins in the pool.
-  // - The amount of coins to be exchanged.
-  function increaseCoinSupply(uint requested_eth_amount, uint elapsed_time)
-      public onlyOwner returns (uint, uint) {
-    require(coin_budget_ > 0,
-            "OpenMarketOperation: The coin budget must be positive.");
-        
-    // Calculate the amount of coins and ETH to be exchanged.
-    uint price = getCurrentPrice(elapsed_time);
-    uint coin_amount = requested_eth_amount / price;
-    if (coin_amount > coin_budget_.toUint256()) {
-      coin_amount = coin_budget_.toUint256();
-    }
-    uint eth_amount = coin_amount * price;
-        
-    if (coin_amount > 0) {
-      latest_price_ = price;
-    }
-    coin_budget_ -= coin_amount.toInt256();
-    eth_balance_ += eth_amount;
-    require(coin_budget_ >= 0, "ic1");
-    require(eth_amount <= requested_eth_amount, "ic2");
-
-    emit IncreaseCoinSupplyEvent(requested_eth_amount, elapsed_time,
-                                 eth_amount, coin_amount);
-    return (eth_amount, coin_amount);
-  }
-
-  // Decrease the total coin supply by selling ETH to the sender account.
-  // This method returns the amount of coins and ETH to be exchanged.
-  // The actual change to the total coin supply and the ETH pool is made by
-  // the ACB.
-  //
-  // Parameters
-  // ----------------
-  // |requested_coin_amount|: The amount of coins the sender is willing to pay.
-  // |elapsed_time|: The elapsed seconds from the current epoch start.
-  //
-  // Returns
-  // ----------------
-  // A tuple of two values:
-  // - The amount of ETH to be exchanged.
-  // - The amount of coins to be exchanged. This can be smaller than
-  // |requested_coin_amount| when the open market operation does not have
-  // enough ETH in the pool.
-  function decreaseCoinSupply(uint requested_coin_amount, uint elapsed_time)
-      public onlyOwner returns (uint, uint) {
-    require(coin_budget_ < 0,
-            "OpenMarketOperation: The coin budget must be negative.");
-        
-    // Calculate the amount of coins and ETH to be exchanged.
-    uint price = getCurrentPrice(elapsed_time);
-    uint coin_amount = requested_coin_amount;
-    if (coin_amount >= (-coin_budget_).toUint256()) {
-      coin_amount = (-coin_budget_).toUint256();
-    }
-    uint eth_amount = coin_amount * price;
-    if (eth_amount >= eth_balance_) {
-      eth_amount = eth_balance_;
-    }
-    coin_amount = eth_amount / price;
-        
-    if (coin_amount > 0) {
-      latest_price_ = price;
-    }
-    coin_budget_ += coin_amount.toInt256();
-    eth_balance_ -= eth_amount;
-    require(coin_budget_ <= 0, "dc1");
-    require(coin_amount <= requested_coin_amount, "dc2");
-
-    emit DecreaseCoinSupplyEvent(requested_coin_amount, elapsed_time,
-                                 eth_amount, coin_amount);
-    return (eth_amount, coin_amount);
-  }
-  
-  // Return the current price in the Dutch auction.
-  //
-  // Parameters
-  // ----------------
-  // |elapsed_time|: The elapsed seconds from the current epoch start.
-  //
-  // Returns
-  // ----------------
-  // The current price.
-  function getCurrentPrice(uint elapsed_time)
-      public view returns (uint) {
-    if (coin_budget_ > 0) {
-      uint price = start_price_;
-      for (uint i = 0;
-           i < elapsed_time / PRICE_CHANGE_INTERVAL && i < 100; i++) {
-        price = price * (100 - PRICE_CHANGE_PERCENTAGE) / 100;
-      }
-      if (price == 0) {
-        price = 1;
-      }
-      return price;
-    } else if (coin_budget_ < 0) {
-      uint price = start_price_;
-      for (uint i = 0;
-           i < elapsed_time / PRICE_CHANGE_INTERVAL && i < 100; i++) {
-        price = price * (100 + PRICE_CHANGE_PERCENTAGE) / 100;
-      }
-      require(price > 0, "gc1");
-      return price;
-    }
-    return 0;
-  }
-  
-  // Receive ETH from the |sender| and increase ETH in the pool.
-  function increaseEthInPool(address sender)
-      public onlyOwner payable {
-  }
-
-  // Decrease |eth_amount| ETH in the pool and send it to the |sender|.
-  function decreaseEthInPool(address sender, uint eth_amount)
-      public onlyOwner {
-    require(address(this).balance >= eth_amount, "se1");
-    (bool success,) =
-        payable(sender).call{value: eth_amount}("");
-    require(success, "se2");
-  }
-
-  // Update the coin budget (i.e., how many coins should be added to / removed
-  // from the total coin supply). The ACB calls the method at the beginning of
-  // each epoch.
-  //
-  // Parameters
-  // ----------------
-  // |coin_budget|: The coin budget.
-  //
-  // Returns
-  // ----------------
-  // None.
-  function updateCoinBudget(int coin_budget)
-      public onlyOwner {
-    coin_budget_ = coin_budget;
-    require(latest_price_ > 0, "uc1");
-    if (coin_budget_ > 0) {
-      start_price_ = latest_price_ * START_PRICE_MULTIPILER;
-      require(start_price_ > 0, "uc2");
-    } else if (coin_budget_ == 0) {
-      start_price_ = 0;
-    } else {
-      start_price_ = latest_price_ / START_PRICE_MULTIPILER;
-      if (start_price_ == 0) {
-        start_price_ = 1;
-      }
-      require(start_price_ > 0, "uc3");
-    }
-    emit UpdateCoinBudgetEvent(coin_budget_);
-  }
-}
-
-//------------------------------------------------------------------------------
 // [Oracle contract]
 //
 // The oracle is a decentralized mechanism to determine one "truth" level
 // from 0, 1, 2, ..., LEVEL_MAX - 1. The oracle uses the commit-reveal-reclaim
 // voting scheme.
 //
-// Permission: Except public getters, only the ACB can call the methods of the
-// oracle.
+// Permission: Except public getters, only the ACB can call the methods.
 //------------------------------------------------------------------------------
 contract Oracle_v5 is OwnableUpgradeable {
   // Constants. The values are defined in initialize(). The values never
@@ -537,11 +46,10 @@ contract Oracle_v5 is OwnableUpgradeable {
     uint epoch_id;
   }
 
-  // Vote is a struct to count votes for each oracle level.
+  // Vote is a struct to aggregate voting statistics for each oracle level.
+  // The data is aggregated during the reveal phase and finalized at the end
+  // of the reveal phase.
   struct Vote {
-    // Voting statistics are aggregated during the reveal phase and finalized
-    // at the end of the reveal phase.
-
     // The total amount of the coins deposited by the voters who voted for this
     // oracle level.
     uint deposit;
@@ -555,7 +63,7 @@ contract Oracle_v5 is OwnableUpgradeable {
     bool should_reward;
   }
 
-  // Epoch is a struct to keep track of states in the commit-reveal-reclaim
+  // Epoch is a struct to keep track of the states in the commit-reveal-reclaim
   // scheme. The oracle creates three Epoch objects and uses them in a
   // round-robin manner. For example, when the first Epoch object is in use for
   // the commit phase, the second Epoch object is in use for the reveal phase,
@@ -563,9 +71,8 @@ contract Oracle_v5 is OwnableUpgradeable {
   struct Epoch {
     // The commit entries.
     mapping (address => Commit) commits;
-    // The voting statistics for all the oracle levels. This can be an array
-    // of Votes but intentionally uses a mapping to make the Vote struct
-    // upgradeable.
+    // The voting statistics for all the oracle levels. This uses a mapping
+    // (instead of an array) to make the Vote struct upgradeable.
     mapping (uint => Vote) votes;
     // An account to store coins deposited by the voters.
     address deposit_account;
@@ -578,8 +85,8 @@ contract Oracle_v5 is OwnableUpgradeable {
   }
 
   // Attributes. See the comment in initialize().
-  // This can be an array of Epochs but is intentionally using a mapping to
-  // make the Epoch struct upgradeable.
+  // This uses a mapping (instead of an array) to make the Epoch struct
+  // upgradeable.
   mapping (uint => Epoch) public epochs_;
   uint public epoch_id_;
 
@@ -647,7 +154,8 @@ contract Oracle_v5 is OwnableUpgradeable {
   //
   // Parameters
   // ----------------
-  // |coin|: The JohnLawCoin contract.
+  // |coin|: The JohnLawCoin contract. The ownership needs to be transferred to
+  // this contract.
   // |sender|: The voter's account.
   // |hash|: The committed hash.
   // |deposit|: The amount of the deposited coins.
@@ -730,7 +238,8 @@ contract Oracle_v5 is OwnableUpgradeable {
   //
   // Parameters
   // ----------------
-  // |coin|: The JohnLawCoin contract.
+  // |coin|: The JohnLawCoin contract. The ownership needs to be transferred to
+  // this contract.
   // |sender|: The voter's account.
   //
   // Returns
@@ -776,7 +285,7 @@ contract Oracle_v5 is OwnableUpgradeable {
       //
       // The PROPORTIONAL_REWARD_RATE of the reward is distributed to the
       // voters in proportion to the coins they deposited. This incentivizes
-      // voters who have many coins (and thus have more power on determining
+      // voters who have more coins (and thus have more power on determining
       // the "truth" level) to join the oracle.
       //
       // The rest of the reward is distributed to the voters evenly. This
@@ -798,7 +307,8 @@ contract Oracle_v5 is OwnableUpgradeable {
   //
   // Parameters
   // ----------------
-  // |coin|: The JohnLawCoin contract.
+  // |coin|: The JohnLawCoin contract. The ownership needs to be transferred to
+  // this contract.
   //
   // Returns
   // ----------------
@@ -999,27 +509,509 @@ contract Oracle_v5 is OwnableUpgradeable {
 }
 
 //------------------------------------------------------------------------------
+// [BondOperation contract]
+//
+// The BondOperation contract increases / decreases the total coin supply by
+// redeeming / issuing bonds. The bond budget is updated by the ACB every epoch.
+//
+// Permission: Except public getters, only the ACB can call the methods.
+//------------------------------------------------------------------------------
+contract BondOperation_v5 is OwnableUpgradeable {
+  using SafeCast for uint;
+  using SafeCast for int;
+
+  // Constants. The values are defined in initialize(). The values never
+  // change during the contract execution but use 'public' (instead of
+  // 'constant') because tests want to override the values.
+  uint public BOND_PRICE;
+  uint public BOND_REDEMPTION_PRICE;
+  uint public BOND_REDEMPTION_PERIOD;
+  uint public BOND_REDEEMABLE_PERIOD;
+
+  // Attributes. See the comment in initialize().
+  JohnLawBond_v2 public bond_;
+  int public bond_budget_;
+
+  // Events.
+  event IncreaseBondSupplyEvent(address indexed sender, uint indexed epoch_id,
+                                uint issued_bonds, uint redemption_epoch);
+  event DecreaseBondSupplyEvent(address indexed sender, uint indexed epoch_id,
+                                uint redeemed_bonds, uint expired_bonds);
+  event UpdateBondBudgetEvent(uint indexed epoch_id, int delta,
+                              int bond_budget, uint mint);
+
+  // Initializer.
+  //
+  // Parameters
+  // ----------------
+  // |bond|: The JohnLawBond contract. The ownership of the JohnLawBond
+  // contract needs to be transferred to the BondOperation contract.
+  function initialize(JohnLawBond_v2 bond, int bond_budget)
+      public initializer {
+    __Ownable_init();
+    
+    // Constants.
+    
+    // The bond structure.
+    //
+    // |<---BOND_REDEMPTION_PERIOD--->|<---BOND_REDEEMABLE_PERIOD--->|
+    // ^                              ^                              ^
+    // Issued                         Becomes redeemable             Expired
+    //
+    // During BOND_REDEMPTION_PERIOD, the bonds are redeemable as long as the
+    // ACB's bond budget is negative. During BOND_REDEEMABLE_PERIOD, the
+    // bonds are redeemable regardless of the ACB's bond budget. After
+    // BOND_REDEEMABLE_PERIOD, the bonds are expired.
+    BOND_PRICE = 996; // One bond is sold for 996 coins.
+    BOND_REDEMPTION_PRICE = 1000; // One bond is redeemed for 1000 coins.
+    BOND_REDEMPTION_PERIOD = 12; // 12 epochs.
+    BOND_REDEEMABLE_PERIOD = 2; // 2 epochs.
+
+    // The JohnLawBond contract.
+    bond_ = bond;
+    
+    // If |bond_budget_| is positive, it indicates the number of bonds the ACB
+    // can issue to decrease the total coin supply. If |bond_budget_| is
+    // negative, it indicates the number of bonds the ACB can redeem to
+    // increase the total coin supply.
+    bond_budget_ = bond_budget;
+  }
+
+  // Deprecate the contract.
+  function deprecate()
+      public onlyOwner {
+    bond_.transferOwnership(msg.sender);
+  }
+
+  // Increase the total bond supply.
+  //
+  // Parameters
+  // ----------------
+  // |sender|: The sender account.
+  // |count|: The number of bonds to issue.
+  // |epoch_id|: The current epoch ID.
+  // |coin|: The JohnLawCoin contract. The ownership needs to be transferred to
+  // this contract.
+  //
+  // Returns
+  // ----------------
+  // The redemption epoch of the issued bonds if it succeeds. 0 otherwise.
+  function increaseBondSupply(address sender, uint count,
+                              uint epoch_id, JohnLawCoin_v2 coin)
+      public onlyOwner returns (uint) {
+    require(count > 0, "BondOperation: You must purchase at least one bond.");
+    require(bond_budget_ >= count.toInt256(),
+            "BondOperation: The bond budget is not enough.");
+
+    uint amount = BOND_PRICE * count;
+    require(coin.balanceOf(sender) >= amount,
+            "BondOperation: Your coin balance is not enough.");
+
+    // Set the redemption epoch of the bonds.
+    uint redemption_epoch = epoch_id + BOND_REDEMPTION_PERIOD;
+
+    // Issue new bonds.
+    bond_.mint(sender, redemption_epoch, count);
+    bond_budget_ -= count.toInt256();
+    require(bond_budget_ >= 0, "pb1");
+    require(bond_.balanceOf(sender, redemption_epoch) > 0, "pb2");
+
+    // Burn the corresponding coins.
+    coin.burn(sender, amount);
+    emit IncreaseBondSupplyEvent(sender, epoch_id, count, redemption_epoch);
+    return redemption_epoch;
+  }
+  
+  // Decrease the total bond supply.
+  //
+  // Parameters
+  // ----------------
+  // |sender|: The sender account.
+  // |redemption_epochs|: An array of bonds to be redeemed. Bonds are
+  // identified by their redemption epochs.
+  // |epoch_id|: The current epoch ID.
+  // |coin|: The JohnLawCoin contract. The ownership needs to be transferred to
+  // this contract.
+  //
+  // Returns
+  // ----------------
+  // A tuple of two values:
+  // - The number of redeemed bonds.
+  // - The number of expired bonds.
+  function decreaseBondSupply(address sender, uint[] memory redemption_epochs,
+                              uint epoch_id, JohnLawCoin_v2 coin)
+      public onlyOwner returns (uint, uint) {
+    uint redeemed_bonds = 0;
+    uint expired_bonds = 0;
+    for (uint i = 0; i < redemption_epochs.length; i++) {
+      uint redemption_epoch = redemption_epochs[i];
+      uint count = bond_.balanceOf(sender, redemption_epoch);
+      if (epoch_id < redemption_epoch) {
+        // If the bonds have not yet hit their redemption epoch, the
+        // BondOperation accepts the redemption as long as |bond_budget_| is
+        // negative.
+        if (bond_budget_ >= 0) {
+          continue;
+        }
+        if (count > (-bond_budget_).toUint256()) {
+          count = (-bond_budget_).toUint256();
+        }
+        bond_budget_ += count.toInt256();
+      }
+      if (epoch_id < redemption_epoch + BOND_REDEEMABLE_PERIOD) {
+        // If the bonds are not expired, mint the corresponding coins to the
+        // user account.
+        uint amount = count * BOND_REDEMPTION_PRICE;
+        coin.mint(sender, amount);
+        redeemed_bonds += count;
+      } else {
+        expired_bonds += count;
+      }
+      // Burn the redeemed / expired bonds.
+      bond_.burn(sender, redemption_epoch, count);
+    }
+    emit DecreaseBondSupplyEvent(sender, epoch_id,
+                                 redeemed_bonds, expired_bonds);
+    return (redeemed_bonds, expired_bonds);
+  }
+
+  // Update the bond budget to increase or decrease the total coin supply.
+  //
+  // Parameters
+  // ----------------
+  // |delta|: The target increase or decrease of the total coin supply.
+  // |epoch_id|: The current epoch ID.
+  //
+  // Returns
+  // ----------------
+  // The amount of coins that cannot be increased by adjusting the bond budget
+  // and thus need to be newly minted.
+  function updateBondBudget(int delta, uint epoch_id)
+      public onlyOwner returns (uint) {
+    uint mint = 0;
+    uint bond_supply = validBondSupply(epoch_id);
+    if (delta == 0) {
+      // No change in the total coin supply.
+      bond_budget_ = 0;
+    } else if (delta > 0) {
+      // Increase the total coin supply.
+      uint count = delta.toUint256() / BOND_REDEMPTION_PRICE;
+      if (count <= bond_supply) {
+        // If there are sufficient bonds to redeem, increase the total coin
+        // supply by redeeming the bonds.
+        bond_budget_ = -count.toInt256();
+      } else {
+        // Otherwise, redeem all the issued bonds.
+        bond_budget_ = -bond_supply.toInt256();
+        // The remaining coins need to be newly minted.
+        mint = (count - bond_supply) * BOND_REDEMPTION_PRICE;
+      }
+      require(bond_budget_ <= 0, "cs1");
+    } else {
+      // Issue new bonds to decrease the total coin supply.
+      bond_budget_ = -delta / BOND_PRICE.toInt256();
+      require(bond_budget_ >= 0, "cs2");
+    }
+
+    require(bond_supply.toInt256() + bond_budget_ >= 0, "cs3");
+    emit UpdateBondBudgetEvent(epoch_id, delta, bond_budget_, mint);
+    return mint;
+  }
+
+  // Public getter: Return the valid bond supply; i.e., the total supply of
+  // not-yet-expired bonds.
+  function validBondSupply(uint epoch_id)
+      public view returns (uint) {
+    uint count = 0;
+    for (uint redemption_epoch =
+             (epoch_id > BOND_REDEEMABLE_PERIOD ?
+              epoch_id - BOND_REDEEMABLE_PERIOD + 1 : 0);
+         redemption_epoch <= epoch_id + BOND_REDEMPTION_PERIOD;
+         redemption_epoch++) {
+      count += bond_.bondSupplyAt(redemption_epoch);
+    }
+    return count;
+  }
+  
+  // Return the ownership of the JohnLawCoin contract to the ACB.
+  //
+  // Parameters
+  // ----------------
+  // |coin|: The JohnLawCoin contract.
+  //
+  // Returns
+  // ----------------
+  // None.
+  function revokeOwnership(JohnLawCoin_v2 coin)
+      public onlyOwner {
+    coin.transferOwnership(msg.sender);
+  }
+}
+
+//------------------------------------------------------------------------------
+// [OpenMarketOperation contract]
+//
+// The OpenMarketOperation contract increases / decreases the total coin supply
+// by purchasing / selling ETH from the open market. The price between JLC and
+// ETH is determined by a Dutch auction.
+//
+// Permission: Except public getters, only the ACB can call the methods.
+//------------------------------------------------------------------------------
+contract OpenMarketOperation_v5 is OwnableUpgradeable {
+  using SafeCast for uint;
+  using SafeCast for int;
+
+  // Constants. The values are defined in initialize(). The values never
+  // change during the contract execution but use 'public' (instead of
+  // 'constant') because tests want to override the values.
+  uint public PRICE_CHANGE_INTERVAL;
+  uint public PRICE_CHANGE_PERCENTAGE;
+  uint public START_PRICE_MULTIPILER;
+
+  // Attributes. See the comment in initialize().
+  uint public latest_price_;
+  uint public start_price_;
+  uint public eth_balance_;
+  int public coin_budget_;
+
+  // Events.
+  event IncreaseCoinSupplyEvent(uint requested_eth_amount, uint elapsed_time,
+                                uint eth_amount, uint coin_amount);
+  event DecreaseCoinSupplyEvent(uint requested_coin_amount, uint elapsed_time,
+                                uint eth_amount, uint coin_amount);
+  event UpdateCoinBudgetEvent(int coin_budget);
+  
+  // Constructor.
+  function initialize(uint latest_price, uint start_price, uint eth_balance,
+                      int coin_budget)
+      public initializer {
+    __Ownable_init();
+    
+    // Constants.
+
+    // The price auction is implemented as a Dutch auction as follows:
+    //
+    // Let P be the latest price at which the open market operation exchanged
+    // JLC with ETH. The price is measured by JLC / ETH wei. When the price is
+    // P, it means 1 JLC is exchanged with 1000 ETH wei.
+    //
+    // At the beginning of each epoch, the ACB sets the coin budget; i.e., the
+    // amount of JLC to be purchased / sold by the open market operation.
+    //
+    // When the open market operation increases the total coin supply,
+    // the auction starts with the price of P * START_PRICE_MULTIPILER.
+    // Then the price is decreased by PRICE_CHANGE_PERCENTAGE % every
+    // PRICE_CHANGE_INTERVAL seconds. JLC and ETH are exchanged at the
+    // given price (the open market operation sells JLC and purchases ETH).
+    // The auction stops when the open market operation finished selling JLC
+    // in the coin budget.
+    //
+    // When the open market operation decreases the total coin supply,
+    // the auction starts with the price of P / START_PRICE_MULTIPILER.
+    // Then the price is increased by PRICE_CHANGE_PERCENTAGE % every
+    // PRICE_CHANGE_INTERVAL seconds. JLC and ETH are exchanged at the
+    // given price (the open market operation sells ETH and purchases JLC).
+    // The auction stops when the open market operation finished purchasing JLC
+    // in the coin budget.
+    //
+    // TODO: Change PRICE_CHANGE_INTERVAL to 8 * 60 * 60 before launching to the
+    // mainnet. It's set to 60 seconds for the Ropsten Testnet.
+    PRICE_CHANGE_INTERVAL = 60; // 8 hours
+    PRICE_CHANGE_PERCENTAGE = 15; // 15%
+    START_PRICE_MULTIPILER = 3;
+    
+    // Attributes.
+    
+    // The latest price at which the open market operation exchanged JLC with
+    // ETH.
+    latest_price_ = latest_price;
+    
+    // The start price is updated at the beginning of each epoch.
+    start_price_ = start_price;
+    
+    // The current ETH balance.
+    eth_balance_ = eth_balance;
+    
+    // The current coin budget.
+    coin_budget_ = coin_budget;
+  }
+  
+  // Increase the total coin supply by purchasing ETH from the sender account.
+  // This method returns the amount of JLC and ETH to be exchanged. The actual
+  // change to the total coin supply and the ETH pool is made by the ACB.
+  //
+  // Parameters
+  // ----------------
+  // |requested_eth_amount|: The amount of ETH the sender is willing to pay.
+  // |elapsed_time|: The elapsed seconds from the current epoch start.
+  //
+  // Returns
+  // ----------------
+  // A tuple of two values:
+  // - The amount of ETH to be exchanged. This can be smaller than
+  // |requested_eth_amount| when the open market operation does not have
+  // enough coin budget.
+  // - The amount of JLC to be exchanged.
+  function increaseCoinSupply(uint requested_eth_amount, uint elapsed_time)
+      public onlyOwner returns (uint, uint) {
+    require(coin_budget_ > 0,
+            "OpenMarketOperation: The coin budget must be positive.");
+        
+    // Calculate the amount of JLC and ETH to be exchanged.
+    uint price = getCurrentPrice(elapsed_time);
+    uint coin_amount = requested_eth_amount / price;
+    if (coin_amount > coin_budget_.toUint256()) {
+      coin_amount = coin_budget_.toUint256();
+    }
+    uint eth_amount = coin_amount * price;
+        
+    if (coin_amount > 0) {
+      latest_price_ = price;
+    }
+    coin_budget_ -= coin_amount.toInt256();
+    eth_balance_ += eth_amount;
+    require(coin_budget_ >= 0, "ic1");
+    require(eth_amount <= requested_eth_amount, "ic2");
+
+    emit IncreaseCoinSupplyEvent(requested_eth_amount, elapsed_time,
+                                 eth_amount, coin_amount);
+    return (eth_amount, coin_amount);
+  }
+
+  // Decrease the total coin supply by selling ETH to the sender account.
+  // This method returns the amount of JLC and ETH to be exchanged. The actual
+  // change to the total coin supply and the ETH pool is made by the ACB.
+  //
+  // Parameters
+  // ----------------
+  // |requested_coin_amount|: The amount of JLC the sender is willing to pay.
+  // |elapsed_time|: The elapsed seconds from the current epoch start.
+  //
+  // Returns
+  // ----------------
+  // A tuple of two values:
+  // - The amount of ETH to be exchanged.
+  // - The amount of JLC to be exchanged. This can be smaller than
+  // |requested_coin_amount| when the open market operation does not have
+  // enough ETH in the pool.
+  function decreaseCoinSupply(uint requested_coin_amount, uint elapsed_time)
+      public onlyOwner returns (uint, uint) {
+    require(coin_budget_ < 0,
+            "OpenMarketOperation: The coin budget must be negative.");
+        
+    // Calculate the amount of JLC and ETH to be exchanged.
+    uint price = getCurrentPrice(elapsed_time);
+    uint coin_amount = requested_coin_amount;
+    if (coin_amount >= (-coin_budget_).toUint256()) {
+      coin_amount = (-coin_budget_).toUint256();
+    }
+    uint eth_amount = coin_amount * price;
+    if (eth_amount >= eth_balance_) {
+      eth_amount = eth_balance_;
+    }
+    coin_amount = eth_amount / price;
+        
+    if (coin_amount > 0) {
+      latest_price_ = price;
+    }
+    coin_budget_ += coin_amount.toInt256();
+    eth_balance_ -= eth_amount;
+    require(coin_budget_ <= 0, "dc1");
+    require(coin_amount <= requested_coin_amount, "dc2");
+
+    emit DecreaseCoinSupplyEvent(requested_coin_amount, elapsed_time,
+                                 eth_amount, coin_amount);
+    return (eth_amount, coin_amount);
+  }
+  
+  // Return the current price in the Dutch auction.
+  //
+  // Parameters
+  // ----------------
+  // |elapsed_time|: The elapsed seconds from the current epoch start.
+  //
+  // Returns
+  // ----------------
+  // The current price.
+  function getCurrentPrice(uint elapsed_time)
+      public view returns (uint) {
+    if (coin_budget_ > 0) {
+      uint price = start_price_;
+      for (uint i = 0;
+           i < elapsed_time / PRICE_CHANGE_INTERVAL && i < 100; i++) {
+        price = price * (100 - PRICE_CHANGE_PERCENTAGE) / 100;
+      }
+      if (price == 0) {
+        price = 1;
+      }
+      return price;
+    } else if (coin_budget_ < 0) {
+      uint price = start_price_;
+      for (uint i = 0;
+           i < elapsed_time / PRICE_CHANGE_INTERVAL && i < 100; i++) {
+        price = price * (100 + PRICE_CHANGE_PERCENTAGE) / 100;
+      }
+      require(price > 0, "gc1");
+      return price;
+    }
+    return 0;
+  }
+  
+  // Update the coin budget. The coin budget indicates how many coins should
+  // be added to / removed from the total coin supply; i.e., the amount of JLC
+  // to be purchased / sold by the open market operation. The ACB calls the
+  // method at the beginning of each epoch.
+  //
+  // Parameters
+  // ----------------
+  // |coin_budget|: The coin budget.
+  //
+  // Returns
+  // ----------------
+  // None.
+  function updateCoinBudget(int coin_budget)
+      public onlyOwner {
+    coin_budget_ = coin_budget;
+    require(latest_price_ > 0, "uc1");
+    if (coin_budget_ > 0) {
+      start_price_ = latest_price_ * START_PRICE_MULTIPILER;
+      require(start_price_ > 0, "uc2");
+    } else if (coin_budget_ == 0) {
+      start_price_ = 0;
+    } else {
+      start_price_ = latest_price_ / START_PRICE_MULTIPILER;
+      if (start_price_ == 0) {
+        start_price_ = 1;
+      }
+      require(start_price_ > 0, "uc3");
+    }
+    emit UpdateCoinBudgetEvent(coin_budget_);
+  }
+}
+
+//------------------------------------------------------------------------------
 // [ACB contract]
 //
-// The ACB stabilizes the coin price with algorithmically defined monetary
-// policies without holding any collateral. The ACB stabilizes the JLC / USD
-// exchange rate to 1.0 as follows:
+// The ACB stabilizes the JLC / USD exchange rate to 1.0 with algorithmically
+// defined monetary policies:
 //
 // 1. The ACB obtains the exchange rate from the oracle.
 // 2. If the exchange rate is 1.0, the ACB does nothing.
 // 3. If the exchange rate is higher than 1.0, the ACB increases the total coin
 //    supply by redeeming issued bonds (regardless of their redemption dates).
-//    If that is not enough to supply sufficient coins, the ACB mints new coins
-//    and provides the coins to the oracle as a reward.
+//    If that is not enough to supply sufficient coins, the ACB performs an open
+//    market operation to sell JLC and purchase ETH to increase the total coin
+//    supply.
 // 4. If the exchange rate is lower than 1.0, the ACB decreases the total coin
-//    supply by issuing new bonds.
+//    supply by issuing new bonds. If the exchange rate drops down to 0.6, the
+//    ACB performs an open market operation to sell ETH and purchase JLC to
+//    decrease the total coin supply.
 //
-// Permission: All methods are public. No one (including the genesis account)
-// is privileged to influence the monetary policies of the ACB. The ACB
+// Permission: All the methods are public. No one (including the genesis
+// account) is privileged to influence the monetary policies of the ACB. The ACB
 // is fully decentralized and there is truly no gatekeeper. The only exceptions
-// are a few methods that can be called only by the genesis account. They are
-// needed for the genesis account to upgrade the smart contract and fix bugs
-// in a development phase.
+// are a few methods the genesis account may use to upgrade the smart contracts
+// and fix bugs in a development phase.
 //------------------------------------------------------------------------------
 contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
   using SafeCast for uint;
@@ -1097,7 +1089,6 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
     //
     // -----------------------------------
     // | oracle level | exchange rate    |
-    // |              |                  |
     // -----------------------------------
     // |             0| 1 coin = 0.6 USD |
     // |             1| 1 coin = 0.7 USD |
@@ -1112,17 +1103,28 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
     //
     // Voters are expected to look up the current exchange rate using
     // real-world currency exchangers and vote for the oracle level that
-    // corresponds to the exchange rate. Strictly speaking, the current
+    // is closest to the current exchange rate. Strictly speaking, the current
     // exchange rate is defined as the exchange rate at the point when the
     // current epoch started (i.e., current_epoch_start_).
     //
-    // In the bootstrap phase in which no currency exchanger supports JLC <=>
-    // USD conversions, voters are expected to vote for the oracle level 5
+    // In the bootstrap phase where no currency exchanger supports JLC <->
+    // USD conversion, voters are expected to vote for the oracle level 5
     // (i.e., 1 coin = 1.1 USD). This helps increase the total coin supply
-    // gradually in the bootstrap phase and incentivize early adopters. Once
-    // currency exchangers support the conversions, voters are expected to vote
-    // for the oracle level that corresponds to the real-world exchange rate.
+    // gradually and incentivize early adopters in the bootstrap phase. Once
+    // a currency exchanger supports the conversion, voters are expected to
+    // vote for the oracle level that is closest to the real-world exchange
+    // rate.
     //
+    // Note that 10000000 coins (corresponding to 10 M USD) are given to the
+    // genesis account initially. This is important to make sure that the
+    // genesis account has power to determine the exchange rate until
+    // the ecosystem stabilizes. Once a real-world currency exchanger supports
+    // the conversion and the oracle gets a sufficient number of honest voters
+    // to agree on the real-world exchange rate consistently, the genesis
+    // account can lose its power by decreasing its coin balance, moving the
+    // oracle to a fully decentralized system. This mechanism is mandatory
+    // to stabilize the exchange rate and bootstrap the ecosystem successfully.
+    
     // LEVEL_TO_EXCHANGE_RATE is the mapping from the oracle levels to the
     // exchange rates. The real exchange rate is obtained by dividing the values
     // by EXCHANGE_RATE_DIVISOR. For example, 11 corresponds to the exchange
@@ -1144,24 +1146,6 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
     // Attributes.
 
     // The JohnLawCoin contract.
-    //
-    // Note that 10000000 coins (corresponding to 10 M USD) are given to the
-    // genesis account initially. This is important to make sure that the
-    // genesis account can have power to determine the exchange rate until
-    // the ecosystem stabilizes. Once real-world currency exchangers start
-    // converting JLC with USD and the oracle gets a sufficient number of
-    // honest voters to agree on the real-world exchange rate consistently,
-    // the genesis account can lose its power by decreasing its coin balance.
-    // This mechanism is mandatory to stabilize the exchange rate and
-    // bootstrap the ecosystem successfully.
-    //
-    // Specifically, the genesis account votes for the oracle level 5 until
-    // real-world currency exchangers appear. When real-world currency
-    // exchangers appear, the genesis account votes for the oracle level
-    // corresponding to the real-world exchange rate. Other voters are
-    // expected to follow the genesis account. When the oracle gets enough
-    // honest voters, the genesis account decreases its coin balance and loses
-    // its power, moving the oracle to a fully decentralized system.
     coin_ = coin;
     
     // The Oracle contract.
@@ -1195,7 +1179,7 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
     */
   }
 
-  // Deprecate the ACB. Only the owner can call this method.
+  // Deprecate the ACB. Only the genesis account can call this method.
   function deprecate()
       public onlyOwner {
     coin_.transferOwnership(msg.sender);
@@ -1207,7 +1191,8 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
     logging_.transferOwnership(msg.sender);
   }
 
-  // Pause the ACB in emergency cases. Only the owner can call this method.
+  // Pause the ACB in emergency cases. Only the genesis account can call this
+  // method.
   function pause()
       public onlyOwner {
     if (!paused()) {
@@ -1216,7 +1201,7 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
     coin_.pause();
   }
 
-  // Unpause the ACB. Only the owner can call this method.
+  // Unpause the ACB. Only the genesis account can call this method.
   function unpause()
       public onlyOwner {
     if (paused()) {
@@ -1225,7 +1210,7 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
     coin_.unpause();
   }
 
-  // Payable fallback to receive and store ETH. Give us a tip :)
+  // Payable fallback to receive and store ETH. Give us tips :)
   fallback() external payable {
     require(msg.data.length == 0, "fb1");
     emit PayableEvent(msg.sender, msg.value);
@@ -1234,7 +1219,7 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
     emit PayableEvent(msg.sender, msg.value);
   }
 
-  // Withdraw the tips. Only the owner can call this method.
+  // Withdraw the tips. Only the genesis account can call this method.
   function withdrawTips()
       public whenNotPaused onlyOwner {
     (bool success,) =
@@ -1243,7 +1228,7 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
   }
 
   // A struct to pack local variables. This is needed to avoid a stack-too-deep
-  // error of Solidity.
+  // error in Solidity.
   struct VoteResult {
     uint epoch_id;
     bool epoch_updated;
@@ -1495,7 +1480,7 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
     return redeemed_bonds;
   }
 
-  // Pay ETH and purchase coins from the open market operation.
+  // Pay ETH and purchase JLC from the open market operation.
   //
   // Parameters
   // ----------------
@@ -1506,8 +1491,8 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
   // A tuple of two values:
   // - The amount of ETH the sender paied. This value can be smaller than
   // |requested_eth_amount| when the open market operation does not have enough
-  // coins in the pool. The remaining ETH is returned to the sender's wallet.
-  // - The amount of coins the sender purchased.
+  // coin budget. The remaining ETH is returned to the sender's wallet.
+  // - The amount of JLC the sender purchased.
   function purchaseCoins()
       public whenNotPaused payable returns (uint, uint) {
     uint requested_eth_amount = msg.value;
@@ -1516,7 +1501,7 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
     require(open_market_operation_.eth_balance_() <=
             address(eth_pool_).balance, "pc1");
     
-    // Calculate the amount of ETH and coins to be exchanged.
+    // Calculate the amount of ETH and JLC to be exchanged.
     (uint eth_amount, uint coin_amount) =
         open_market_operation_.increaseCoinSupply(
             requested_eth_amount, elapsed_time);
@@ -1546,17 +1531,17 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
     return (eth_amount, coin_amount);
   }
   
-  // Pay coins and purchase ETH from the open market operation.
+  // Pay JLC and purchase ETH from the open market operation.
   //
   // Parameters
   // ----------------
-  // |requested_coin_amount|: The amount of coins the sender is willing to pay.
+  // |requested_coin_amount|: The amount of JLC the sender is willing to pay.
   //
   // Returns
   // ----------------
   // A tuple of two values:
   // - The amount of ETH the sender purchased.
-  // - The amount of coins the sender paied. This value can be smaller than
+  // - The amount of JLC the sender paied. This value can be smaller than
   // |requested_coin_amount| when the open market operation does not have
   // enough ETH in the pool.
   function sellCoins(uint requested_coin_amount)
@@ -1568,7 +1553,7 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
     require(open_market_operation_.eth_balance_() <=
             address(eth_pool_).balance, "sc1");
     
-    // Calculate the amount of ETH and coins to be exchanged.
+    // Calculate the amount of ETH and JLC to be exchanged.
     uint elapsed_time = getTimestamp() - current_epoch_start_;
     (uint eth_amount, uint coin_amount) =
         open_market_operation_.decreaseCoinSupply(
