@@ -87,11 +87,11 @@ function parameterized_test(accounts,
           voters[i].committed_correctly = true;
 
           assert.equal(await _oracle.commit.call(
-              _coin.address, voters[i].address,
-              await _oracle.encrypt(voters[i].address,
-                                 voters[i].committed_level,
-                                 voters[i].committed_salt),
-              0), false);
+            voters[i].address,
+            await _oracle.encrypt(voters[i].address,
+                                  voters[i].committed_level,
+                                  voters[i].committed_salt),
+            0, _coin.address), false);
         }
       }
 
@@ -219,7 +219,7 @@ function parameterized_test(accounts,
             await check_reclaim(voters[i].address, reclaimed, reward);
           }
           common.array_equal(await _oracle.reclaim.call(
-              _coin.address, voters[i].address), [0, 0]);
+            voters[i].address, _coin.address), [0, 0]);
           reclaim_total += reclaimed + reward;
           assert.equal(await _coin.balanceOf(voters[i].address),
                        reclaimed + reward);
@@ -240,7 +240,7 @@ function parameterized_test(accounts,
     async function check_commit(account, hash, deposit) {
       await _coin.transferOwnership(_oracle.address);
       let receipt =
-          await _oracle.commit(_coin.address, account, hash, deposit);
+          await _oracle.commit(account, hash, deposit, _coin.address);
       await _oracle.revokeOwnership(_coin.address);
       let args = receipt.logs.filter(e => e.event == 'CommitEvent')[0].args;
       assert.equal(args.sender, account);
@@ -258,7 +258,7 @@ function parameterized_test(accounts,
 
     async function check_reclaim(account, reclaimed, reward) {
       await _coin.transferOwnership(_oracle.address);
-      let receipt = await _oracle.reclaim(_coin.address, account);
+      let receipt = await _oracle.reclaim(account, _coin.address);
       await _oracle.revokeOwnership(_coin.address);
       let args = receipt.logs.filter(e => e.event == 'ReclaimEvent')[0].args;
       assert.equal(args.sender, account);

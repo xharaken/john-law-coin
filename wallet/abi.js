@@ -2573,7 +2573,7 @@ const OPEN_MARKET_OPERATION_ABI = [
     },
     {
       "inputs": [],
-      "name": "START_PRICE_MULTIPILER",
+      "name": "START_PRICE_MULTIPLIER",
       "outputs": [
         {
           "internalType": "uint256",

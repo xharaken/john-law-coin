@@ -152,6 +152,15 @@ contract JohnLawCoin_v2 is ERC20PausableUpgradeable, OwnableUpgradeable {
   }
 
   // Override ERC20's transfer method to impose a tax set by the ACB.
+  //
+  // Parameters
+  // ----------------
+  // |account|: The receiver account.
+  // |amount|: The amount to be transferred.
+  //
+  // Returns
+  // ----------------
+  // None.
   function transfer(address account, uint amount)
       public override returns (bool) {
     return transfer_v2(account, amount);
@@ -181,18 +190,18 @@ contract JohnLawBond_v2 is OwnableUpgradeable {
   // Attributes.
   
   // _bonds[account][redemption_epoch] stores the number of the bonds
-  // owned by the |account| and have the |redemption_epoch|.
+  // owned by the |account| that become redeemable at |redemption_epoch|.
   mapping (address => mapping (uint => uint)) private _bonds;
 
-  // redemption_epochs[account] is a set of the redemption epochs of the
+  // _redemption_epochs[account] is a set of the redemption epochs of the
   // bonds owned by the |account|.
   mapping (address => EnumerableSet.UintSet) private _redemption_epochs;
 
-  // bond_count[account] is the number of bonds owned by the |account|.
+  // _bond_count[account] is the number of the bonds owned by the |account|.
   mapping (address => uint) private _bond_count;
   
-  // bond_supply[redemption_epoch] is the total number of bonds that have
-  // the |redemption_epoch|.
+  // _bond_supply[redemption_epoch] is the total number of the bonds that
+  // become redeemable at |redemption_epoch|.
   mapping (uint => uint) private _bond_supply;
   
   // The total bond supply.
@@ -280,7 +289,7 @@ contract JohnLawBond_v2 is OwnableUpgradeable {
     emit BurnEvent(account, redemption_epoch, amount);
   }
 
-  // Public getter: Return the number of bonds owned by the |account|.
+  // Public getter: Return the number of the bonds owned by the |account|.
   function numberOfBondsOwnedBy(address account)
       public view returns (uint) {
     return _bond_count[account];
@@ -301,8 +310,8 @@ contract JohnLawBond_v2 is OwnableUpgradeable {
     return _redemption_epochs[account].at(index);
   }
 
-  // Public getter: Return the number of the bonds owned by the |account| and
-  // have the |redemption_epoch|.
+  // Public getter: Return the number of the bonds owned by the |account| that
+  // become redeemable at |redemption_epoch|.
   function balanceOf(address account, uint redemption_epoch)
       public view returns (uint) {
     return balanceOf_v2(account, redemption_epoch);
@@ -319,7 +328,7 @@ contract JohnLawBond_v2 is OwnableUpgradeable {
     return _total_supply_v2;
   }
 
-  // Public getter: Return the number of bonds whose redemption epoch is
+  // Public getter: Return the number of the bonds that become redeemable at
   // |redemption_epoch|.
   function bondSupplyAt(uint redemption_epoch)
       public view returns (uint) {
@@ -337,9 +346,9 @@ contract JohnLawBond_v2 is OwnableUpgradeable {
 // Permission: Except public getters, only the ACB can call the methods.
 //------------------------------------------------------------------------------
 contract Oracle_v2 is OwnableUpgradeable {
-  // Constants. The values are defined in initialize(). The values never
-  // change during the contract execution but use 'public' (instead of
-  // 'constant') because tests want to override the values.
+  // Constants. The values are defined in initialize(). The values never change
+  // during the contract execution but use 'public' (instead of 'constant')
+  // because tests want to override the values.
   uint public LEVEL_MAX;
   uint public RECLAIM_THRESHOLD;
   uint public PROPORTIONAL_REWARD_RATE;
@@ -446,7 +455,7 @@ contract Oracle_v2 is OwnableUpgradeable {
           epochs_[epoch_index].reward_total;
       epochs_[epoch_index].phase_v2 =
           epochs_[epoch_index].phase;
-      for (uint level = 0; level < getLevelMax(); level++) {
+      for (uint level = 0; level < LEVEL_MAX; level++) {
         Vote storage vote = epochs_[epoch_index].votes[level];
         vote.should_reclaim_v2 = vote.should_reclaim;
         vote.should_reward_v2 = vote.should_reward;
@@ -460,23 +469,23 @@ contract Oracle_v2 is OwnableUpgradeable {
   //
   // Parameters
   // ----------------
-  // |coin|: The JohnLawCoin contract. The ownership needs to be transferred to
-  // this contract.
   // |sender|: The voter's account.
   // |hash|: The committed hash.
   // |deposit|: The amount of the deposited coins.
+  // |coin|: The JohnLawCoin contract. The ownership needs to be transferred to
+  // this contract.
   //
   // Returns
   // ----------------
   // True if the commit succeeded. False otherwise.
-  function commit(JohnLawCoin_v2 coin, address sender,
-                  bytes32 hash, uint deposit)
+  function commit(address sender, bytes32 hash, uint deposit,
+                  JohnLawCoin_v2 coin)
       public onlyOwner returns (bool) {
-    return commit_v2(coin, sender, hash, deposit);
+    return commit_v2(sender, hash, deposit, coin);
   }
   
-  function commit_v2(JohnLawCoin_v2 coin, address sender,
-                     bytes32 hash, uint deposit)
+  function commit_v2(address sender, bytes32 hash, uint deposit,
+                     JohnLawCoin_v2 coin)
       public onlyOwner returns (bool) {
     Epoch storage epoch = epochs_[epoch_id_v2_ % 3];
     require(epoch.phase_v2 == Phase.COMMIT, "co1");
@@ -555,9 +564,9 @@ contract Oracle_v2 is OwnableUpgradeable {
   //
   // Parameters
   // ----------------
+  // |sender|: The voter's account.
   // |coin|: The JohnLawCoin contract. The ownership needs to be transferred to
   // this contract.
-  // |sender|: The voter's account.
   //
   // Returns
   // ----------------
@@ -566,12 +575,12 @@ contract Oracle_v2 is OwnableUpgradeable {
   //    when the voter is eligible to reclaim their deposited coins.
   //  - uint: The amount of the reward. This becomes a positive value when the
   //    voter voted for the "truth" oracle level.
-  function reclaim(JohnLawCoin_v2 coin, address sender)
+  function reclaim(address sender, JohnLawCoin_v2 coin)
       public onlyOwner returns (uint, uint) {
-    return reclaim_v2(coin, sender);
+    return reclaim_v2(sender, coin);
   }
   
-  function reclaim_v2(JohnLawCoin_v2 coin, address sender)
+  function reclaim_v2(address sender, JohnLawCoin_v2 coin)
       public onlyOwner returns (uint, uint) {
     Epoch storage epoch = epochs_[(epoch_id_v2_ - 2) % 3];
     require(epoch.phase_v2 == Phase.RECLAIM, "rc1");
@@ -800,17 +809,11 @@ contract Oracle_v2 is OwnableUpgradeable {
     coin.transferOwnership(msg.sender);
   }
 
-  // Public getter: Return LEVEL_MAX.
-  function getLevelMax()
-      public view returns (uint) {
-    return LEVEL_MAX;
-  }
-
   // Public getter: Return the Vote object at |epoch_index| and |level|.
   function getVote(uint epoch_index, uint level)
       public view returns (uint, uint, bool, bool) {
     require(0 <= epoch_index && epoch_index <= 2, "gv1");
-    require(0 <= level && level < getLevelMax(), "gv2");
+    require(0 <= level && level < LEVEL_MAX, "gv2");
     Vote memory vote = epochs_[epoch_index].votes[level];
     return (vote.deposit_v2, vote.count_v2, vote.should_reclaim_v2,
             vote.should_reward_v2);
@@ -835,8 +838,8 @@ contract Oracle_v2 is OwnableUpgradeable {
             epochs_[epoch_index].phase_v2);
   }
   
-  // Calculate a hash to be committed. Voters are expected to use this
-  // function to create a hash used in the commit phase.
+  // Calculate a hash to be committed. Voters are expected to use this function
+  // to create a hash used in the commit phase.
   //
   // Parameters
   // ----------------
@@ -1094,8 +1097,8 @@ contract Logging_v2 is OwnableUpgradeable {
   // ----------------
   // |epoch_id|: The epoch ID.
   // |coin_budget|: The coin budget.
-  // |eth_balance|: The ETH balance of the OpenMarketOperation.
-  // |latest_price|: The latest price of the OpenMarketOperation.
+  // |eth_balance|: The ETH balance in the EthPool.
+  // |latest_price|: The latest JLC / ETH price.
   //
   // Returns
   // ----------------
@@ -1282,9 +1285,9 @@ contract BondOperation_v2 is OwnableUpgradeable {
   using SafeCast for uint;
   using SafeCast for int;
 
-  // Constants. The values are defined in initialize(). The values never
-  // change during the contract execution but use 'public' (instead of
-  // 'constant') because tests want to override the values.
+  // Constants. The values are defined in initialize(). The values never change
+  // during the contract execution but use 'public' (instead of 'constant')
+  // because tests want to override the values.
   uint public BOND_PRICE;
   uint public BOND_REDEMPTION_PRICE;
   uint public BOND_REDEMPTION_PERIOD;
@@ -1319,11 +1322,11 @@ contract BondOperation_v2 is OwnableUpgradeable {
     bond_v2_.transferOwnership(msg.sender);
   }
 
-  // Increase the total bond supply.
+  // Increase the total bond supply by issuing bonds.
   //
   // Parameters
   // ----------------
-  // |count|: The number of bonds to issue.
+  // |count|: The number of bonds to be issued.
   // |epoch_id|: The current epoch ID.
   // |coin|: The JohnLawCoin contract. The ownership needs to be transferred to
   // this contract.
@@ -1365,11 +1368,11 @@ contract BondOperation_v2 is OwnableUpgradeable {
     return redemption_epoch;
   }
 
-  // Decrease the total bond supply.
+  // Decrease the total bond supply by redeeming bonds.
   //
   // Parameters
   // ----------------
-  // |redemption_epochs|: An array of bonds to be redeemed. Bonds are
+  // |redemption_epochs|: An array of bonds to be redeemed. The bonds are
   // identified by their redemption epochs.
   // |epoch_id|: The current epoch ID.
   // |coin|: The JohnLawCoin contract. The ownership needs to be transferred to
@@ -1409,7 +1412,7 @@ contract BondOperation_v2 is OwnableUpgradeable {
       }
       if (epoch_id < redemption_epoch + BOND_REDEEMABLE_PERIOD) {
         // If the bonds are not expired, mint the corresponding coins to the
-        // user account.
+        // sender account.
         uint amount = count * BOND_REDEMPTION_PRICE;
         coin.mint(sender, amount);
         redeemed_bonds += count;
@@ -1531,12 +1534,12 @@ contract OpenMarketOperation_v2 is OwnableUpgradeable {
   using SafeCast for uint;
   using SafeCast for int;
 
-  // Constants. The values are defined in initialize(). The values never
-  // change during the contract execution but use 'public' (instead of
-  // 'constant') because tests want to override the values.
+  // Constants. The values are defined in initialize(). The values never change
+  // during the contract execution but use 'public' (instead of 'constant')
+  // because tests want to override the values.
   uint public PRICE_CHANGE_INTERVAL;
   uint public PRICE_CHANGE_PERCENTAGE;
-  uint public START_PRICE_MULTIPILER;
+  uint public START_PRICE_MULTIPLIER;
 
   // Attributes. See the comment in initialize().
   uint public latest_price_;
@@ -1710,7 +1713,7 @@ contract OpenMarketOperation_v2 is OwnableUpgradeable {
   
   // Update the coin budget. The coin budget indicates how many coins should
   // be added to / removed from the total coin supply; i.e., the amount of JLC
-  // to be purchased / sold by the open market operation. The ACB calls the
+  // to be sold / purchased by the open market operation. The ACB calls the
   // method at the beginning of each epoch.
   //
   // Parameters
@@ -1730,12 +1733,12 @@ contract OpenMarketOperation_v2 is OwnableUpgradeable {
     coin_budget_v2_ = coin_budget;
     require(latest_price_v2_ > 0, "uc1");
     if (coin_budget_v2_ > 0) {
-      start_price_v2_ = latest_price_v2_ * START_PRICE_MULTIPILER;
+      start_price_v2_ = latest_price_v2_ * START_PRICE_MULTIPLIER;
       require(start_price_v2_ > 0, "uc2");
     } else if (coin_budget_v2_ == 0) {
       start_price_v2_ = 0;
     } else {
-      start_price_v2_ = latest_price_v2_ / START_PRICE_MULTIPILER;
+      start_price_v2_ = latest_price_v2_ / START_PRICE_MULTIPLIER;
       if (start_price_v2_ == 0) {
         start_price_v2_ = 1;
       }
@@ -1809,16 +1812,16 @@ contract EthPool_v2 is OwnableUpgradeable {
 // account) is privileged to influence the monetary policies of the ACB. The ACB
 // is fully decentralized and there is truly no gatekeeper. The only exceptions
 // are a few methods the genesis account may use to upgrade the smart contracts
-// and fix bugs in a development phase.
+// to fix bugs during a development phase.
 //------------------------------------------------------------------------------
 contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
   using SafeCast for uint;
   using SafeCast for int;
   bytes32 public constant NULL_HASH = 0;
 
-  // Constants. The values are defined in initialize(). The values never
-  // change during the contract execution but use 'public' (instead of
-  // 'constant') because tests want to override the values.
+  // Constants. The values are defined in initialize(). The values never change
+  // during the contract execution but use 'public' (instead of 'constant')
+  // because tests want to override the values.
   uint[] public LEVEL_TO_EXCHANGE_RATE;
   uint public EXCHANGE_RATE_DIVISOR;
   uint public EPOCH_DURATION;
@@ -1957,7 +1960,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
   // |hash|: The hash to be committed in the current epoch N. Specify
   // ACB.NULL_HASH if you do not want to commit and only want to reveal and
   // reclaim previous votes.
-  // |oracle_level|: The oracle level you voted for in the epoch N-1
+  // |oracle_level|: The oracle level you voted for in the epoch N-1.
   // |salt|: The salt you used in the epoch N-1.
   //
   // Returns
@@ -1998,13 +2001,13 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
       
       // Reset the tax account address just in case.
       coin_v2_.resetTaxAccount();
-      require(coin_v2_.balanceOf(coin_v2_.tax_account_v2_()) == 0, "vo2");
+      require(coin_v2_.balanceOf(coin_v2_.tax_account_v2_()) == 0, "vo1");
       
       int delta = 0;
       oracle_level_ = oracle_v2_.getModeLevel();
-      if (oracle_level_ != oracle_v2_.getLevelMax()) {
-        require(0 <= oracle_level_ && oracle_level_ < oracle_v2_.getLevelMax(),
-                "vo1");
+      if (oracle_level_ != oracle_v2_.LEVEL_MAX()) {
+        require(0 <= oracle_level_ && oracle_level_ < oracle_v2_.LEVEL_MAX(),
+                "vo2");
         // Translate the oracle level to the exchange rate.
         uint exchange_rate = LEVEL_TO_EXCHANGE_RATE[oracle_level_];
 
@@ -2026,8 +2029,9 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
       uint mint =
           bond_operation_v2_.updateBondBudget(delta, result.epoch_id);
 
+      // Update the coin budget.
       if (oracle_level_ == 0 && delta < 0) {
-        require(mint == 0, "vo2");
+        require(mint == 0, "vo3");
         open_market_operation_v2_.updateCoinBudget(delta);
       } else {
         open_market_operation_v2_.updateCoinBudget(mint.toInt256());
@@ -2059,7 +2063,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
       result.deposited = 0;
     }
     result.commit_result = oracle_v2_.commit(
-        coin_v2_, msg.sender, hash, result.deposited);
+        msg.sender, hash, result.deposited, coin_v2_);
     if (!result.commit_result) {
       result.deposited = 0;
     }
@@ -2069,7 +2073,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
     
     // Reclaim.
     (result.reclaimed, result.rewarded) =
-        oracle_v2_.reclaim(coin_v2_, msg.sender);
+        oracle_v2_.reclaim(msg.sender, coin_v2_);
 
     oracle_v2_.revokeOwnership(coin_v2_);
     
@@ -2092,8 +2096,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
   //
   // Returns
   // ----------------
-  // The redemption epoch of the purchased bonds if it succeeds. 0
-  // otherwise.
+  // The redemption epoch of the purchased bonds.
   function purchaseBonds(uint count)
       public whenNotPaused returns (uint) {
     return purchaseBonds_v2(count);
@@ -2119,7 +2122,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
   //
   // Parameters
   // ----------------
-  // |redemption_epochs|: An array of bonds to be redeemed. Bonds are
+  // |redemption_epochs|: An array of bonds to be redeemed. The bonds are
   // identified by their redemption epochs.
   //
   // Returns
@@ -2155,7 +2158,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
   // Returns
   // ----------------
   // A tuple of two values:
-  // - The amount of ETH the sender paied. This value can be smaller than
+  // - The amount of ETH the sender paid. This value can be smaller than
   // |requested_eth_amount| when the open market operation does not have enough
   // coin budget. The remaining ETH is returned to the sender's wallet.
   // - The amount of JLC the sender purchased.
@@ -2207,7 +2210,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
   // ----------------
   // A tuple of two values:
   // - The amount of ETH the sender purchased.
-  // - The amount of JLC the sender paied. This value can be smaller than
+  // - The amount of JLC the sender paid. This value can be smaller than
   // |requested_coin_amount| when the open market operation does not have
   // enough ETH in the pool.
   function sellCoins(uint requested_coin_amount)

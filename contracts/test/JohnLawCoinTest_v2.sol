@@ -40,12 +40,12 @@ contract OpenMarketOperationForTesting_v2 is OpenMarketOperation_v2 {
       public {
     PRICE_CHANGE_INTERVAL = price_change_interval;
     PRICE_CHANGE_PERCENTAGE = price_change_percentage;
-    START_PRICE_MULTIPILER = start_price_multiplier;
+    START_PRICE_MULTIPLIER = start_price_multiplier;
 
     require(1 <= PRICE_CHANGE_INTERVAL, "oc1");
     require(0 <= PRICE_CHANGE_PERCENTAGE && PRICE_CHANGE_PERCENTAGE <= 100,
             "oc2");
-    require(1 <= START_PRICE_MULTIPILER, "oc3");
+    require(1 <= START_PRICE_MULTIPLIER, "oc3");
   }
 }
 

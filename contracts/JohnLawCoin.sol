@@ -483,7 +483,7 @@ contract Oracle is OwnableUpgradeable {
   // Returns
   // ----------------
   // True if the commit succeeded. False otherwise.
-  function commit(JohnLawCoin coin, address sender, bytes32 hash, uint deposit)
+  function commit(address sender, bytes32 hash, uint deposit, JohnLawCoin coin)
       public onlyOwner returns (bool) {
     Epoch storage epoch = epochs_[epoch_id_ % 3];
     require(epoch.phase == Phase.COMMIT, "co1");
@@ -568,7 +568,7 @@ contract Oracle is OwnableUpgradeable {
   //    when the voter is eligible to reclaim their deposited coins.
   //  - uint: The amount of the reward. This becomes a positive value when the
   //    voter voted for the "truth" oracle level.
-  function reclaim(JohnLawCoin coin, address sender)
+  function reclaim(address sender, JohnLawCoin coin)
       public onlyOwner returns (uint, uint) {
     Epoch storage epoch = epochs_[(epoch_id_ - 2) % 3];
     require(epoch.phase == Phase.RECLAIM, "rc1");
@@ -775,17 +775,11 @@ contract Oracle is OwnableUpgradeable {
     coin.transferOwnership(msg.sender);
   }
 
-  // Public getter: Return LEVEL_MAX.
-  function getLevelMax()
-      public view returns (uint) {
-    return LEVEL_MAX;
-  }
-
   // Public getter: Return the Vote object at |epoch_index| and |level|.
   function getVote(uint epoch_index, uint level)
       public view returns (uint, uint, bool, bool) {
     require(0 <= epoch_index && epoch_index <= 2, "gv1");
-    require(0 <= level && level < getLevelMax(), "gv2");
+    require(0 <= level && level < LEVEL_MAX, "gv2");
     Vote memory vote = epochs_[epoch_index].votes[level];
     return (vote.deposit, vote.count, vote.should_reclaim, vote.should_reward);
   }
@@ -1379,7 +1373,7 @@ contract OpenMarketOperation is OwnableUpgradeable {
   // because tests want to override the values.
   uint public PRICE_CHANGE_INTERVAL;
   uint public PRICE_CHANGE_PERCENTAGE;
-  uint public START_PRICE_MULTIPILER;
+  uint public START_PRICE_MULTIPLIER;
 
   // Attributes. See the comment in initialize().
   uint public latest_price_;
@@ -1411,7 +1405,7 @@ contract OpenMarketOperation is OwnableUpgradeable {
     // amount of JLC to be purchased / sold by the open market operation.
     //
     // When the open market operation increases the total coin supply,
-    // the auction starts with the price of P * START_PRICE_MULTIPILER.
+    // the auction starts with the price of P * START_PRICE_MULTIPLIER.
     // Then the price is decreased by PRICE_CHANGE_PERCENTAGE % every
     // PRICE_CHANGE_INTERVAL seconds. JLC and ETH are exchanged at the
     // given price (the open market operation sells JLC and purchases ETH).
@@ -1419,7 +1413,7 @@ contract OpenMarketOperation is OwnableUpgradeable {
     // in the coin budget.
     //
     // When the open market operation decreases the total coin supply,
-    // the auction starts with the price of P / START_PRICE_MULTIPILER.
+    // the auction starts with the price of P / START_PRICE_MULTIPLIER.
     // Then the price is increased by PRICE_CHANGE_PERCENTAGE % every
     // PRICE_CHANGE_INTERVAL seconds. JLC and ETH are exchanged at the
     // given price (the open market operation sells ETH and purchases JLC).
@@ -1430,7 +1424,7 @@ contract OpenMarketOperation is OwnableUpgradeable {
     // mainnet. It's set to 60 seconds for the Ropsten Testnet.
     PRICE_CHANGE_INTERVAL = 60; // 8 hours
     PRICE_CHANGE_PERCENTAGE = 15; // 15%
-    START_PRICE_MULTIPILER = 3;
+    START_PRICE_MULTIPLIER = 3;
     
     // Attributes.
 
@@ -1586,12 +1580,12 @@ contract OpenMarketOperation is OwnableUpgradeable {
     coin_budget_ = coin_budget;
     require(latest_price_ > 0, "uc1");
     if (coin_budget_ > 0) {
-      start_price_ = latest_price_ * START_PRICE_MULTIPILER;
+      start_price_ = latest_price_ * START_PRICE_MULTIPLIER;
       require(start_price_ > 0, "uc2");
     } else if (coin_budget_ == 0) {
       start_price_ = 0;
     } else {
-      start_price_ = latest_price_ / START_PRICE_MULTIPILER;
+      start_price_ = latest_price_ / START_PRICE_MULTIPLIER;
       if (start_price_ == 0) {
         start_price_ = 1;
       }
@@ -1805,12 +1799,12 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
     logging_ = logging;
 
     // The current oracle level.
-    oracle_level_ = oracle.getLevelMax();
+    oracle_level_ = oracle.LEVEL_MAX();
 
     // The timestamp when the current epoch started.
     current_epoch_start_ = getTimestamp();
 
-    require(LEVEL_TO_EXCHANGE_RATE.length == oracle.getLevelMax(), "AC1");
+    require(LEVEL_TO_EXCHANGE_RATE.length == oracle.LEVEL_MAX(), "AC1");
   }
 
   // Deprecate the ACB. Only the genesis account can call this method.
@@ -1914,13 +1908,13 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
       
       // Reset the tax account address just in case.
       coin_.resetTaxAccount();
-      require(coin_.balanceOf(coin_.tax_account_()) == 0, "vo2");
+      require(coin_.balanceOf(coin_.tax_account_()) == 0, "vo1");
       
       int delta = 0;
       oracle_level_ = oracle_.getModeLevel();
-      if (oracle_level_ != oracle_.getLevelMax()) {
-        require(0 <= oracle_level_ && oracle_level_ < oracle_.getLevelMax(),
-                "vo1");
+      if (oracle_level_ != oracle_.LEVEL_MAX()) {
+        require(0 <= oracle_level_ && oracle_level_ < oracle_.LEVEL_MAX(),
+                "vo2");
         // Translate the oracle level to the exchange rate.
         uint exchange_rate = LEVEL_TO_EXCHANGE_RATE[oracle_level_];
 
@@ -1943,7 +1937,7 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
 
       // Update the coin budget.
       if (oracle_level_ == 0 && delta < 0) {
-        require(mint == 0, "vo2");
+        require(mint == 0, "vo3");
         open_market_operation_.updateCoinBudget(delta);
       } else {
         open_market_operation_.updateCoinBudget(mint.toInt256());
@@ -1975,7 +1969,7 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
       result.deposited = 0;
     }
     result.commit_result = oracle_.commit(
-        coin_, msg.sender, hash, result.deposited);
+        msg.sender, hash, result.deposited, coin_);
     if (!result.commit_result) {
       result.deposited = 0;
     }
@@ -1984,7 +1978,7 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
     result.reveal_result = oracle_.reveal(msg.sender, oracle_level, salt);
     
     // Reclaim.
-    (result.reclaimed, result.rewarded) = oracle_.reclaim(coin_, msg.sender);
+    (result.reclaimed, result.rewarded) = oracle_.reclaim(msg.sender, coin_);
 
     oracle_.revokeOwnership(coin_);
 
@@ -2028,7 +2022,7 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
   //
   // Parameters
   // ----------------
-  // |redemption_epochs|: An array of bonds to be redeemed. Bonds are
+  // |redemption_epochs|: An array of bonds to be redeemed. The bonds are
   // identified by their redemption epochs.
   //
   // Returns

@@ -139,6 +139,15 @@ class JohnLawCoin:
                   self.balance_of(old_tax_account))
 
     # Override ERC20's transfer method to impose a tax set by the ACB.
+    #
+    # Parameters
+    # ----------------
+    # |account|: The receiver account.
+    # |amount|: The amount to be transferred.
+    #
+    # Returns
+    # ----------------
+    # None.
     def transfer(self, sender, receiver, amount):
         assert(sender in self.balances)
         assert(self.balances[sender] >= amount)
@@ -156,19 +165,21 @@ class JohnLawCoin:
 class JohnLawBond:
     # Constructor.
     def __init__(self):
-        # bonds[account][redemption_epoch] stores the number of the
-        # bonds owned by the |account| and have the |redemption_epoch|.
+        # _bonds[account][redemption_epoch] stores the number of the
+        # bonds owned by the |account| that become redeemable at
+        # |redemption_epoch|.
         self.bonds = {}
 
-        # redemption_epochs[account] is a set of the redemption epochs of the
+        # _redemption_epochs[account] is a set of the redemption epochs of the
         # bonds owned by the |account|.
         self.redemption_epochs = {}
 
-        # bond_count[account] is the number of bonds owned by the |account|.
+        # _bond_count[account] is the number of the bonds owned by the
+        # |account|.
         self.bond_count = {}
 
-        # bond_supply[redemption_epoch] is the total number of bonds that have
-        # the |redemption_epoch|.
+        # _bond_supply[redemption_epoch] is the total number of the bonds that
+        # become redeemable at |redemption_epoch|.
         self.bond_supply = {}
 
         # The total bond supply.
@@ -240,28 +251,29 @@ class JohnLawBond:
             redemption_epoch in self.redemption_epochs[account]):
             del self.redemption_epochs[account][redemption_epoch]
 
-    # Return the number of bonds owned by the |account|.
+    # Public getter: Return the number of the bonds owned by the |account|.
     def number_of_bonds_owned_by(self, account):
         if account not in self.bond_count:
             return 0
         return self.bond_count[account]
 
-    # Return the number of redemption epochs of the bonds owned by the
-    # |account|.
+    # Public getter: Return the number of redemption epochs of the bonds owned
+    # by the |account|.
     def number_of_redemption_epochs_owned_by(self, account):
         if account not in self.redemption_epochs:
             return 0
         return len(self.redemption_epochs[account])
 
-    # Return the |index|-th redemption epoch of the bonds owned by the
-    # |account|. |index| must be smaller than the value returned by
+    # Public getter: Return the |index|-th redemption epoch of the bonds owned
+    # by the |account|. |index| must be smaller than the value returned by
     # numberOfRedemptionEpochsOwnedBy(account).
     def get_redemption_epoch_owned_by(self, account, index):
         assert(0 <= index and
                index < self.number_of_redemption_epochs_owned_by(account))
         return list(self.redemption_epochs[account].keys())[index]
 
-    # Return the bond balance.
+    # Public getter: Return the number of the bonds owned by the |account| that
+    # become redeemable at |redemption_epoch|.
     def balance_of(self, account, redemption_epoch):
         if account not in self.bonds:
             return 0
@@ -269,7 +281,8 @@ class JohnLawBond:
             return 0
         return self.bonds[account][redemption_epoch]
 
-    # Return the number of bonds whose redemption epoch is |redemption_epoch|.
+    # Public getter: Return the number of the bonds that become redeemable at
+    # |redemption_epoch|.
     def bond_supply_at(self, redemption_epoch):
         if redemption_epoch not in self.bond_supply:
             return 0
@@ -360,11 +373,11 @@ class Oracle:
         # lose their deposited coins.
         Oracle.RECLAIM_THRESHOLD = 1
 
-        # The lost coins and the coins minted by ACB are distributed to the
-        # voters who voted for the "truth" level as a reward. The
-        # PROPORTIONAL_REWARD_RATE of the reward is distributed to the voters in
-        # proportion to the coins they deposited. The rest of the reward is
-        # distributed to the voters evenly.
+        # The lost coins and the collected tax are distributed to the voters who
+        # voted for the "truth" level as a reward. The PROPORTIONAL_REWARD_RATE
+        # of the reward is distributed to the voters in proportion to the coins
+        # they deposited. The rest of the reward is distributed to the voters
+        # evenly.
         Oracle.PROPORTIONAL_REWARD_RATE = 90 # 90%
 
         # ----------------
@@ -419,10 +432,10 @@ class Oracle:
     #
     # Parameters
     # ----------------
-    # |coin|: The JohnLawCoin contract.
     # |sender|: The voter's account.
     # |hash|: The committed hash.
     # |deposit|: The amount of the deposited coins.
+    # |coin|: The JohnLawCoin contract.
     #
     # Returns
     # ----------------
@@ -493,8 +506,8 @@ class Oracle:
     #
     # Parameters
     # ----------------
-    # |coin|: The JohnLawCoin contract.
     # |sender|: The voter's account.
+    # |coin|: The JohnLawCoin contract.
     #
     # Returns
     # ----------------
@@ -830,6 +843,8 @@ class Logging:
     # ----------------
     # |epoch_id|: The epoch ID.
     # |coin_budget|: The coin budget.
+    # |eth_balance|: The ETH balance in the EthPool.
+    # |latest_price|: The latest JLC / ETH price.
     #
     # Returns
     # ----------------
@@ -912,7 +927,7 @@ class Logging:
     # ----------------
     # |epoch_id|: The epoch ID.
     # |eth_amount|: The amount of ETH exchanged.
-    # |coin_amount|: The amount of coins exchanged.
+    # |coin_amount|: The amount of JLC exchanged.
     #
     # Returns
     # ----------------
@@ -929,7 +944,7 @@ class Logging:
     # ----------------
     # |epoch_id|: The epoch ID.
     # |eth_amount|: The amount of ETH exchanged.
-    # |coin_amount|: The amount of coins exchanged.
+    # |coin_amount|: The amount of JLC exchanged.
     #
     # Returns
     # ----------------
@@ -965,8 +980,8 @@ class BondOperation:
         # Issued                         Becomes redeemable             Expired
         #
         # During BOND_REDEMPTION_PERIOD, the bonds are redeemable as long as the
-        # ACB's bond budget is negative. During BOND_REDEEMABLE_PERIOD, the
-        # bonds are redeemable regardless of the ACB's bond budget. After
+        # bond budget is negative. During BOND_REDEEMABLE_PERIOD, the bonds are
+        # redeemable regardless of the bond budget. After
         # BOND_REDEEMABLE_PERIOD, the bonds are expired.
         #
         # One bond is sold for 996 coins.
@@ -1010,7 +1025,7 @@ class BondOperation:
         assert(1 <= BondOperation.BOND_REDEEMABLE_PERIOD and
                BondOperation.BOND_REDEEMABLE_PERIOD <= 20)
         
-    # Increase the total bond supply.
+    # Increase the total bond supply by issuing bonds.
     #
     # Parameters
     # ----------------
@@ -1024,13 +1039,13 @@ class BondOperation:
     # The redemption epoch of the issued bonds if it succeeds.
     # 0 otherwise.
     def increase_bond_supply(self, sender, count, epoch_id, coin):
-        # The user must purchase at least one bond.
+        # The sender must purchase at least one bond.
         assert(count > 0)
         # The BondOperation does not have enough bonds to issue.
         assert(self.bond_budget >= count)
 
         amount = BondOperation.BOND_PRICE * count
-        # The user does not have enough coins to purchase the bonds.
+        # The sender does not have enough coins to purchase the bonds.
         assert(coin.balance_of(sender) >= amount)
 
         # Set the redemption epoch of the bonds.
@@ -1046,12 +1061,12 @@ class BondOperation:
         coin.burn(sender, amount)
         return redemption_epoch
 
-    # Decrease the total bond supply.
+    # Decrease the total bond supply by redeeming bonds.
     #
     # Parameters
     # ----------------
     # |sender|: The sender account.
-    # |redemption_epochs|: An array of bonds to be redeemed. Bonds are
+    # |redemption_epochs|: An array of bonds to be redeemed. The bonds are
     # identified by their redemption epochs.
     # |epoch_id|: The current epoch ID.
     # |coin|: The JohnLawCoin contract.
@@ -1079,7 +1094,7 @@ class BondOperation:
             if (epoch_id <
                 redemption_epoch + BondOperation.BOND_REDEEMABLE_PERIOD):
                 # If the bonds are not expired, mint the corresponding coins
-                # to the user account.
+                # to the sender account.
                 amount = count * BondOperation.BOND_REDEMPTION_PRICE
                 coin.mint(sender, amount)
                 redeemed_bonds += count
@@ -1156,7 +1171,7 @@ class BondOperation:
 #-------------------------------------------------------------------------------
 class OpenMarketOperation:
 
-    # Constructor.
+    # Initializer.
     def __init__(self):
         # Constants.
         
@@ -1164,7 +1179,7 @@ class OpenMarketOperation:
         #
         # Let P be the latest price at which the open market operation exchanged
         # JLC with ETH. The price is measured by JLC / ETH wei. When the price
-        # is P, it means 1 JLC is exchanged with 1000 ETH wei.
+        # is P, it means 1 JLC is exchanged with P ETH wei.
         #
         # At the beginning of each epoch, the ACB sets the coin budget; i.e.,
         # the amount of JLC to be purchased / sold by the open market operation.
@@ -1323,7 +1338,7 @@ class OpenMarketOperation:
     
     # Update the coin budget. The coin budget indicates how many coins should
     # be added to / removed from the total coin supply; i.e., the amount of JLC
-    # to be purchased / sold by the open market operation. The ACB calls the
+    # to be sold / purchased by the open market operation. The ACB calls the
     # method at the beginning of each epoch.
     #
     # Parameters
@@ -1358,7 +1373,8 @@ class OpenMarketOperation:
 # The EthPool contract stores ETH for the open market operation.
 #-------------------------------------------------------------------------------
 class EthPool:
-    # Constructor.
+    
+    # Initializer.
     def __init__(self):
         self.eth_balance = 0
 
@@ -1394,12 +1410,12 @@ class EthPool:
 # account) is privileged to influence the monetary policies of the ACB. The ACB
 # is fully decentralized and there is truly no gatekeeper. The only exceptions
 # are a few methods the genesis account may use to upgrade the smart contracts
-# and fix bugs in a development phase.
+# to fix bugs during a development phase.
 #------------------------------------------------------------------------------
 class ACB:
     NULL_HASH = 0
 
-    # Constructor.
+    # Initializer.
     #
     # Parameters
     # ----------------
@@ -1418,19 +1434,19 @@ class ACB:
         # The following table shows the mapping from the oracle level to the
         # exchange rate. Voters can vote for one of the oracle levels.
         #
-        # -----------------------------------
-        # | oracle level | exchange rate    |
-        # -----------------------------------
-        # |             0| 1 coin = 0.6 USD |
-        # |             1| 1 coin = 0.7 USD |
-        # |             2| 1 coin = 0.8 USD |
-        # |             3| 1 coin = 0.9 USD |
-        # |             4| 1 coin = 1.0 USD |
-        # |             5| 1 coin = 1.1 USD |
-        # |             6| 1 coin = 1.2 USD |
-        # |             7| 1 coin = 1.3 USD |
-        # |             8| 1 coin = 1.4 USD |
-        # -----------------------------------
+        # ----------------------------------
+        # | oracle level | exchange rate   |
+        # ----------------------------------
+        # |            0 | 1 JLC = 0.6 USD |
+        # |            1 | 1 JLC = 0.7 USD |
+        # |            2 | 1 JLC = 0.8 USD |
+        # |            3 | 1 JLC = 0.9 USD |
+        # |            4 | 1 JLC = 1.0 USD |
+        # |            5 | 1 JLC = 1.1 USD |
+        # |            6 | 1 JLC = 1.2 USD |
+        # |            7 | 1 JLC = 1.3 USD |
+        # |            8 | 1 JLC = 1.4 USD |
+        # ----------------------------------
         #
         # Voters are expected to look up the current exchange rate using
         # real-world currency exchangers and vote for the oracle level that
@@ -1440,7 +1456,7 @@ class ACB:
         #
         # In the bootstrap phase where no currency exchanger supports JLC <->
         # USD conversion, voters are expected to vote for the oracle level 5
-        # (i.e., 1 coin = 1.1 USD). This helps increase the total coin supply
+        # (i.e., 1 JLC = 1.1 USD). This helps increase the total coin supply
         # gradually and incentivize early adopters in the bootstrap phase. Once
         # a currency exchanger supports the conversion, voters are expected to
         # vote for the oracle level that is closest to the real-world exchange
@@ -1589,7 +1605,8 @@ class ACB:
             # Update the bond budget.
             epoch_id = self.oracle.epoch_id
             mint = self.bond_operation.update_bond_budget(delta, epoch_id)
-            
+
+            # Update the coin budget.
             if self.oracle_level == 0 and delta < 0:
                 assert(mint == 0)
                 self.open_market_operation.update_coin_budget(delta)
@@ -1641,8 +1658,7 @@ class ACB:
     #
     # Returns
     # ----------------
-    # The redemption epoch of the purchased bonds if it succeeds.
-    # 0 otherwise.
+    # The redemption epoch of the purchased bonds.
     def purchase_bonds(self, sender, count):
         redemption_epoch = self.bond_operation.increase_bond_supply(
             sender, count, self.oracle.epoch_id, self.coin)
@@ -1654,7 +1670,7 @@ class ACB:
     # Parameters
     # ----------------
     # |sender|: The sender account.
-    # |redemption_epochs|: An array of bonds to be redeemed. Bonds are
+    # |redemption_epochs|: An array of bonds to be redeemed. The bonds are
     # identified by their redemption epochs.
     #
     # Returns
@@ -1677,7 +1693,7 @@ class ACB:
     # Returns
     # ----------------
     # A tuple of two values:
-    # - The amount of ETH the sender paied. This value can be smaller than
+    # - The amount of ETH the sender paid. This value can be smaller than
     # |requested_eth_amount| when the open market operation does not have enough
     # coin budget. The remaining ETH is returned to the sender's wallet.
     # - The amount of JLC the sender purchased.
@@ -1713,7 +1729,7 @@ class ACB:
     # ----------------
     # A tuple of two values:
     # - The amount of ETH the sender purchased.
-    # - The amount of JLC the sender paied. This value can be smaller than
+    # - The amount of JLC the sender paid. This value can be smaller than
     # |requested_coin_amount| when the open market operation does not have
     # enough ETH in the pool.
     def sell_coins(self, sender, requested_coin_amount):
