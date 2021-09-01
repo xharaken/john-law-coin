@@ -37,7 +37,7 @@ function parameterized_test(accounts,
       " iteration=" + _iteration;
   console.log(test_name);
   assert.isTrue(_voter_count <= accounts.length - 1);
-
+  
   it(test_name, async function () {
     let _prev_tax = 0;
     let _coin = await deployProxy(JohnLawCoin, []);
@@ -45,9 +45,9 @@ function parameterized_test(accounts,
     await _oracle.overrideConstants(_level_max, _reclaim_threshold,
                                     _proportional_reward_rate);
     common.print_contract_size(_oracle, "OracleForTesting");
-
+    
     let initial_coin_supply = (await _coin.totalSupply()).toNumber();
-
+    
     for (let iter = 0; iter < _iteration; iter++) {
       console.log(iter);
       let voters = [];
@@ -67,7 +67,7 @@ function parameterized_test(accounts,
         };
         voters.push(voter);
       }
-
+      
       for (let i = 0; i < voters.length; i++) {
         assert.equal(voters[i].address, accounts[i + 1]);
         voters[i].committed = (randint(0, 99) < 95);
@@ -77,15 +77,15 @@ function parameterized_test(accounts,
           voters[i].committed_salt = randint(0, 10);
           await _coin.mint(voters[i].address, voters[i].deposit);
           await check_commit(
-              voters[i].address,
-              await _oracle.encrypt(voters[i].address,
-                                 voters[i].committed_level,
-                                 voters[i].committed_salt),
-              voters[i].deposit);
-
+            voters[i].address,
+            await _oracle.encrypt(voters[i].address,
+                                  voters[i].committed_level,
+                                  voters[i].committed_salt),
+            voters[i].deposit);
+          
           assert.equal(await _coin.balanceOf(voters[i].address), 0);
           voters[i].committed_correctly = true;
-
+          
           assert.equal(await _oracle.commit.call(
             voters[i].address,
             await _oracle.encrypt(voters[i].address,
@@ -94,12 +94,12 @@ function parameterized_test(accounts,
             0, _coin.address), false);
         }
       }
-
+      
       let tax = randint(0, 200);
       await _coin.mint(await _coin.tax_account_(), tax);
       await check_advance(tax, _prev_tax);
       _prev_tax = tax;
-
+      
       for (let i = 0; i < voters.length; i++) {
         assert.equal(voters[i].address, accounts[i + 1]);
         voters[i].revealed = (randint(0, 99) < 95);
@@ -115,22 +115,22 @@ function parameterized_test(accounts,
             voters[i].salt = randint(0, 10);
           }
           voters[i].revealed_correctly = (
-              voters[i].committed_correctly &&
-                voters[i].oracle_level == voters[i].committed_level &&
-                0 <= voters[i].oracle_level &&
-                voters[i].oracle_level < _level_max &&
-                voters[i].salt == voters[i].committed_salt);
+            voters[i].committed_correctly &&
+              voters[i].oracle_level == voters[i].committed_level &&
+              0 <= voters[i].oracle_level &&
+              voters[i].oracle_level < _level_max &&
+              voters[i].salt == voters[i].committed_salt);
           if (voters[i].revealed_correctly) {
             await check_reveal(voters[i].address,
                                voters[i].oracle_level,
                                voters[i].salt);
           }
           assert.equal(await _oracle.reveal.call(
-              voters[i].address, voters[i].oracle_level,
-              voters[i].salt), false);
+            voters[i].address, voters[i].oracle_level,
+            voters[i].salt), false);
         }
       }
-
+      
       let deposits = [];
       let counts = [];
       for (let level = 0; level < _level_max; level++) {
@@ -147,7 +147,7 @@ function parameterized_test(accounts,
           counts[voters[i].oracle_level] += 1;
         }
       }
-
+      
       let max_deposit = 0;
       let max_count = 0;
       let mode_level = _level_max;
@@ -162,7 +162,7 @@ function parameterized_test(accounts,
           mode_level = level;
         }
       }
-
+      
       tax = randint(0, 200);
       let deposit_to_reclaim = 0;
       if (mode_level == _level_max) {
@@ -178,12 +178,12 @@ function parameterized_test(accounts,
       }
       assert.equal(deposit_to_reclaim + reward_total,
                    deposit_total + tax);
-
+      
       await _coin.mint(await _coin.tax_account_(), tax);
       await check_advance(tax, _prev_tax);
       assert.equal(await _oracle.getModeLevel(), mode_level);
       _prev_tax = tax;
-
+      
       let reclaim_total = 0;
       for (let i = 0; i < voters.length; i++) {
         assert.equal(voters[i].address, accounts[i + 1]);
@@ -198,12 +198,12 @@ function parameterized_test(accounts,
             assert.notEqual(mode_level, _level_max);
             if (deposits[mode_level] > 0) {
               reward += Math.trunc(
-                  (_proportional_reward_rate * reward_total *
-                   voters[i].deposit) / (100 * deposits[mode_level]));
+                (_proportional_reward_rate * reward_total *
+                 voters[i].deposit) / (100 * deposits[mode_level]));
             }
             reward += Math.trunc(
-                ((100 - _proportional_reward_rate) * reward_total) /
-                  (100 * counts[mode_level]));
+              ((100 - _proportional_reward_rate) * reward_total) /
+                (100 * counts[mode_level]));
             reclaimed = voters[i].deposit
             should_reclaim = true;
           } else if (voters[i].revealed_correctly &&
@@ -226,17 +226,17 @@ function parameterized_test(accounts,
           await _coin.burn(voters[i].address, reclaimed + reward);
         }
       }
-
+      
       assert.equal(deposit_to_reclaim + reward_total, deposit_total + tax);
       let burned = deposit_total + tax - reclaim_total;
       tax = randint(0, 200);
       await _coin.mint(await _coin.tax_account_(), tax);
       await check_advance(tax, burned);
       _prev_tax = tax;
-
+      
       assert.equal(await _coin.totalSupply(), _prev_tax + initial_coin_supply);
     }
-
+    
     async function check_commit(account, hash, deposit) {
       await _coin.transferOwnership(_oracle.address);
       let receipt =
@@ -247,7 +247,7 @@ function parameterized_test(accounts,
       assert.equal(args.hash, hash);
       assert.equal(args.deposited, deposit);
     }
-
+    
     async function check_reveal(account, level, salt) {
       let receipt = await _oracle.reveal(account, level, salt);
       let args = receipt.logs.filter(e => e.event == 'RevealEvent')[0].args;
@@ -255,7 +255,7 @@ function parameterized_test(accounts,
       assert.equal(args.oracle_level, level);
       assert.equal(args.salt, salt);
     }
-
+    
     async function check_reclaim(account, reclaimed, reward) {
       await _coin.transferOwnership(_oracle.address);
       let receipt = await _oracle.reclaim(account, _coin.address);
@@ -265,18 +265,18 @@ function parameterized_test(accounts,
       assert.equal(args.reclaimed, reclaimed);
       assert.equal(args.rewarded, reward);
     }
-
+    
     async function check_advance(tax, burned) {
       await _coin.transferOwnership(_oracle.address);
       let receipt = await _oracle.advance(_coin.address);
       await _oracle.revokeOwnership(_coin.address);
       let args = receipt.logs.filter(
-          e => e.event == 'AdvancePhaseEvent')[0].args;
+        e => e.event == 'AdvancePhaseEvent')[0].args;
       assert.isTrue(args.epoch_id >= 3);
       assert.equal(args.tax, tax);
       assert.equal(args.burned, burned);
     }
-
+    
   });
-
+  
 }

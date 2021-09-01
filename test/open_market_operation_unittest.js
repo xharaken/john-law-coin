@@ -30,7 +30,7 @@ function parameterized_test(accounts,
       " price_change_percentage=" + _price_change_percentage +
       " start_price_multiplier=" + _start_price_multiplier;
   console.log(test_name);
-
+  
   it(test_name, async function () {
     _operation = await deployProxy(OpenMarketOperationForTesting, []);
     await _operation.overrideConstants(_price_change_interval,
@@ -39,9 +39,9 @@ function parameterized_test(accounts,
     common.print_contract_size(_operation, "OpenMarketOperationForTesting");
     _eth_pool = await deployProxy(EthPool, []);
     common.print_contract_size(_operation, "EthPool");
-
+    
     let latest_price = (await _operation.latest_price_()).toNumber();
-        
+    
     await should_throw(async () => {
       await _operation.increaseCoinSupply(-1, 0);
     }, "bounds");
@@ -53,7 +53,7 @@ function parameterized_test(accounts,
     assert.equal(await _operation.latest_price_(), latest_price);
     assert.equal(await _operation.coin_budget_(), 0);
     assert.equal(await _operation.eth_balance_(), 0);
-
+    
     await should_throw(async () => {
       await _operation.increaseCoinSupply.call(0, 0);
     }, "OpenMarketOperation");
@@ -66,13 +66,13 @@ function parameterized_test(accounts,
     await should_throw(async () => {
       await _operation.decreaseCoinSupply.call(10, 10);
     }, "OpenMarketOperation");
-
+    
     await _operation.updateCoinBudget(0);
     assert.equal(await _operation.start_price_(), 0);
     assert.equal(await _operation.latest_price_(), latest_price);
     assert.equal(await _operation.coin_budget_(), 0);
     assert.equal(await _operation.eth_balance_(), 0);
-        
+    
     await should_throw(async () => {
       await _operation.increaseCoinSupply.call(0, 0);
     }, "OpenMarketOperation");
@@ -85,7 +85,7 @@ function parameterized_test(accounts,
     await should_throw(async () => {
       await _operation.decreaseCoinSupply.call(10, 10);
     }, "OpenMarketOperation");
-
+    
     let eth_balance = 0;
     for (let updated_coin_budget of [
       1000, 2000, -1000, -2000, 0, 10000, 0, -10000, -100000000]) {
@@ -100,7 +100,7 @@ function parameterized_test(accounts,
       assert.equal(await _operation.latest_price_(), latest_price);
       assert.equal(await _operation.coin_budget_(), updated_coin_budget);
       assert.equal(await _operation.eth_balance_(), eth_balance);
-
+      
       if (updated_coin_budget >= 0) {
         await should_throw(async () => {
           await _operation.decreaseCoinSupply.call(0, 0);
@@ -117,7 +117,7 @@ function parameterized_test(accounts,
           await _operation.increaseCoinSupply.call(10, 10);
         }, "OpenMarketOperation");
       }
-
+      
       let coin_budget = updated_coin_budget;
       if (updated_coin_budget > 0) {
         for (let elapsed_time of [
@@ -138,7 +138,7 @@ function parameterized_test(accounts,
               }, "OpenMarketOperation");
               continue;
             }
-
+            
             let price = start_price;
             for (let i = 0;
                  i < Math.trunc(elapsed_time / _price_change_interval); i++) {
@@ -221,7 +221,7 @@ function parameterized_test(accounts,
             eth_amount = Math.trunc(coin_amount * price);
             if (eth_amount >= eth_balance) {
               eth_amount = eth_balance;
-              }
+            }
             coin_amount = Math.trunc(eth_amount / price);
             if (coin_amount > 0) {
               latest_price = price;
@@ -238,7 +238,7 @@ function parameterized_test(accounts,
         }
       }
     }
-
+    
     assert.equal(await web3.eth.getBalance(_eth_pool.address), 0);
     await _eth_pool.increaseEth({value: 10});
     assert.equal(await web3.eth.getBalance(_eth_pool.address), 10);
@@ -260,7 +260,7 @@ function parameterized_test(accounts,
     await should_throw(async () => {
       await _eth_pool.sendTransaction({value: 1});
     }, "revert");
-
+    
     async function check_increase_coin_supply(
       requested_eth_amount, elapsed_time, eth_amount, coin_amount) {
       let receipt = await _operation.increaseCoinSupply(
@@ -272,7 +272,7 @@ function parameterized_test(accounts,
       assert.equal(args.eth_amount, eth_amount);
       assert.equal(args.coin_amount, coin_amount);
     }
-
+    
     async function check_decrease_coin_supply(
       requested_coin_amount, elapsed_time, eth_amount, coin_amount) {
       let receipt = await _operation.decreaseCoinSupply(
@@ -285,7 +285,7 @@ function parameterized_test(accounts,
       assert.equal(args.coin_amount, coin_amount);
     }     
   });
-
+  
   it("Ownable", async function () {
     await should_throw(async () => {
       await _operation.initialize({from: accounts[1]});

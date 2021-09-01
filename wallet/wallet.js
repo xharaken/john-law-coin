@@ -60,7 +60,7 @@ window.onload = async () => {
     _selected_address = accounts[0];
     console.log("accounts:", accounts);
     console.log("_selected_address:", _selected_address);
-  
+    
     _chain_id = await ethereum.request({ method: 'eth_chainId' });
     console.log("_chain_id: ", _chain_id);
     if (_chain_id == 1) {
@@ -88,11 +88,11 @@ window.onload = async () => {
       "Couldn't connect to Ethereum.", error);
     return;
   }
-    
+  
   try {
     _web3 = new Web3(window.ethereum);
     console.log("_web3: ", _web3);
-
+    
     _acb_contract = await new _web3.eth.Contract(ACB_ABI, getACBAddress());
     console.log("ACB contract: ", _acb_contract);
     const bond_operation =
@@ -514,7 +514,7 @@ async function vote() {
     }
     console.log("previous_salt: ", previous_salt);
     console.log("previous_level: ", previous_level);
-
+    
     const hash = current_level == LEVEL_MAX ? null_hash :
           await _acb_contract.methods.encrypt(current_level, current_salt).call(
             {from: _selected_address});
@@ -636,7 +636,7 @@ async function reloadInfo() {
       await _bond_operation_contract.methods.bond_budget_().call());
     html += "<tr><td>Bond budget</td><td class='right'>" +
       bond_budget + "</td></tr>";
-
+    
     const oracle_level =
           parseInt(await _acb_contract.methods.oracle_level_().call());
     html += "<tr><td>Current exchange rate</td><td class='right'>" +
@@ -658,7 +658,7 @@ async function reloadInfo() {
     html += "<tr><td>Current time</td><td class='right'>" +
       getDateString(Date.now()) + "</td></tr>";
     showMessage($("acb_info"), html);
-
+    
     const coin_budget = parseInt(
       await _open_market_operation_contract.methods.coin_budget_().call());
     const current_state =
@@ -710,7 +710,7 @@ async function reloadInfo() {
         "is negative. The current coin budget is " +
         coin_budget + ".]";
     }
-
+    
     if (bond_budget > 0) {
       $("purchase_bonds_button").disabled = false;
       $("purchase_bonds_button_disabled").innerText = "";
@@ -721,7 +721,7 @@ async function reloadInfo() {
         "is positive. The current bond budget is " +
         bond_budget + ".]";
     }
-
+    
     const next_epoch_id =
           next_epoch_start_ms < Date.now() ?
           epoch_id + 1 : epoch_id;
@@ -1026,7 +1026,7 @@ async function showHistoryChart() {
       table.addColumn("number", "tax");
       table.addRows(logs["delta_minted_burned_tax"]);
       const options = {
-      title: "ACB: internal statistics",
+        title: "ACB: internal statistics",
         legend: {position: "bottom"}};
       const chart = new google.visualization.LineChart(
         $("chart_delta_minted_burned_tax"));
@@ -1145,7 +1145,7 @@ async function showPriceChart() {
   }
   
   let prices = [];
-
+  
   const price_change_interval = parseInt(
     await _open_market_operation_contract.methods.
       PRICE_CHANGE_INTERVAL().call());
@@ -1176,23 +1176,23 @@ async function showPriceChart() {
         price = Math.trunc(price * (100 + price_change_percentage) / 100);
       }
     }
-
+    
     if (now < end &&
         new Date((current_epoch_start + epoch_duration) * 1000) < end) {
       break;
     }
   }
-
+  
   let max_price = Math.max(start_price, price);
   let min_price = Math.min(start_price, price);
   max_price = Math.trunc(max_price * 1.1);
   min_price = Math.trunc(min_price * 0.9);
   prices.push([new Date(), NaN, min_price]);
   prices.push([new Date(), NaN, max_price]);
-
+  
   google.charts.load("current", {packages: ["corechart"]});
   google.charts.setOnLoadCallback(drawPriceChart);
-
+  
   function drawPriceChart() {
     const table = new google.visualization.DataTable();
     table.addColumn("datetime", "");
@@ -1259,7 +1259,7 @@ async function showTransactionSuccessMessage(message, receipt) {
   showMessage(div, html);
   div.className = "success";
   document.body.scrollIntoView({behavior: "smooth", block: "start"});
-
+  
   setTimeout(async () => {
     await reloadInfo();
   }, 3000);

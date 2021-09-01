@@ -1107,11 +1107,6 @@ const ORACLE_ABI = [
     {
       "inputs": [
         {
-          "internalType": "contract JohnLawCoin",
-          "name": "coin",
-          "type": "address"
-        },
-        {
           "internalType": "address",
           "name": "sender",
           "type": "address"
@@ -1125,6 +1120,11 @@ const ORACLE_ABI = [
           "internalType": "uint256",
           "name": "deposit",
           "type": "uint256"
+        },
+        {
+          "internalType": "contract JohnLawCoin",
+          "name": "coin",
+          "type": "address"
         }
       ],
       "name": "commit",
@@ -1170,13 +1170,13 @@ const ORACLE_ABI = [
     {
       "inputs": [
         {
-          "internalType": "contract JohnLawCoin",
-          "name": "coin",
+          "internalType": "address",
+          "name": "sender",
           "type": "address"
         },
         {
-          "internalType": "address",
-          "name": "sender",
+          "internalType": "contract JohnLawCoin",
+          "name": "coin",
           "type": "address"
         }
       ],
@@ -1239,19 +1239,6 @@ const ORACLE_ABI = [
       "name": "revokeOwnership",
       "outputs": [],
       "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "getLevelMax",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
       "type": "function"
     },
     {
