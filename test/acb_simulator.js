@@ -391,6 +391,7 @@ function parameterized_test(accounts,
                     " decreased_supply=" + _metrics.decreased_coin_supply +
                     " increased_eth=" + _metrics.increased_eth +
                     " decreased_eth=" + _metrics.decreased_eth +
+                    " eth_balance=" + eth_balance +
                     " delta=" + _metrics.delta +
                     " mint=" + _metrics.mint +
                     " lost=" + _metrics.lost +

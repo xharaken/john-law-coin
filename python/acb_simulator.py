@@ -301,7 +301,7 @@ class ACBSimulator(unittest.TestCase):
                       'redeem_hit=%d/%d=%d%% '
                       'redemptions=%d/%d=%d%% fast_redeem=%d/%d=%d%% '
                       'expired=%d increased_supply=%d decreased_supply=%d '
-                      'increased_eth=%d decreased_eth=%d '
+                      'increased_eth=%d decreased_eth=%d eth_balance=%d '
                       'delta=%d mint=%d lost=%d coin_supply=%d->%d->%d=%d '
                       'bond_supply=%d->%d valid_bond_supply=%d->%d '
                       'bond_budget=%d->%d coin_budget=%d->%d tax=%d' %
@@ -342,6 +342,7 @@ class ACBSimulator(unittest.TestCase):
                        self.metrics.decreased_coin_supply,
                        self.metrics.increased_eth,
                        self.metrics.decreased_eth,
+                       self._open_market_operation.eth_balance,
                        self.metrics.delta,
                        self.metrics.mint,
                        self.metrics.lost,
