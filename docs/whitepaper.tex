@@ -119,15 +119,15 @@ JohnLawCoin consists of the five components:
 \item{\textbf{Coins}}: The coins are the core tokens intended to be used as a medium of exchange. The symbol is ``JLC''. The goal of JohnLawCoin is to stabilize the currency price of the coins to 1 JLC = 1 USD.
 \item{\textbf{Bonds}}: The bonds are used to expand and contract the total coin supply and thus adjust the currency price of the coins. The bonds are designed as zero-coupon bonds where the annual interest rate is set to $R$. Let $T$ be the redemption period (measured in days), $B_{\mathrm{issue}}$ be the bond issue price and $B_{\mathrm{redemp}}$ be the redemption price. $R$, $T$, $B_{\mathrm{redemp}}$ and $B_{\mathrm{issue}}$ meet $R=(B_{\mathrm{redemp}}/B_{\mathrm{issue}})^{365/T}-1$. The bond is expired $T_{\mathrm{expire}}$ days after the redemption date.\footnote{Bonds are never expired before their redemption dates. Bondholders do not need to worry that they may not have a chance to redeem the bonds they own.}
 \item{\textbf{Open market operation}}: The open market operation is another mechanism to expand and contract the total coin supply. To expand the total coin supply, the open market operation purchases ETH and sells JohnLawCoin. To contract the total coin supply, the open market operation purchases JohnLawCoin and sells ETH.
-\item{\textbf{Oracle}}: The oracle is a mechanism to determine the JLC / USD exchange rate in a fully decentralized manner.
-\item{\textbf{Algorithmic Central Bank (ACB)}}: The ACB obtains the JLC / USD exchange rate from the oracle. The ACB expands and contracts the total coin supply using the bonds and the open market operation so that the exchange rate becomes 1.0.
+\item{\textbf{Oracle}}: The oracle is a mechanism to determine the USD / JLC exchange rate in a fully decentralized manner.
+\item{\textbf{Algorithmic Central Bank (ACB)}}: The ACB obtains the USD / JLC exchange rate from the oracle. The ACB expands and contracts the total coin supply using the bonds and the open market operation so that the exchange rate becomes 1.0.
 \end{description}
 
 The following sections describe how the mechanisms work together.
 
 \subsection{Oracle}
 
-Since the information about the JLC / USD exchange rate is external to the blockchain on which the ACB runs, the system needs a fully decentralized mechanism to feed the external information to the blockchain. This mechanism is known as an oracle and multiple solutions have been proposed~\cite{chainlink,adler2018astraea}. JohnLawCoin uses a combination of the commit-reveal scheme~\cite{wohrer2018design} and Schelling Point~\cite{shellingpoint}. Table \ref{table0} overviews how it works.
+Since the information about the USD / JLC exchange rate is external to the blockchain on which the ACB runs, the system needs a fully decentralized mechanism to feed the external information to the blockchain. This mechanism is known as an oracle and multiple solutions have been proposed~\cite{chainlink,adler2018astraea}. JohnLawCoin uses a combination of the commit-reveal scheme~\cite{wohrer2018design} and Schelling Point~\cite{shellingpoint}. Table \ref{table0} overviews how it works.
 
 \begin{table}[htb]
 \begin{center}
@@ -149,7 +149,7 @@ Category-1 and Category-2 voters can reclaim the coins they deposited in the com
 
 \subsubsection{Commit phase}
 
-In the commit phase, anyone can vote for what they think the JLC / USD exchange rate is. The voter is expected to obtain the information from real-world currency exchangers. Since the oracle accepts only discrete values (e.g., 0.6, 0.7, ..., 1.3, 1.4), the voter needs to quantize the exchange rate to the closest discrete value accepted by the oracle. The voter submits hash(\textit{quantized exchange rate}, \textit{salt}) to the oracle. The hash function is public and shared among all the voters. The \textit{quantized exchange rate} and the \textit{salt} must be kept secret to each voter. The voter deposits $D$\% of their coin balance to the oracle.
+In the commit phase, anyone can vote for what they think the USD / JLC exchange rate is. The voter is expected to obtain the information from real-world currency exchangers. Since the oracle accepts only discrete values (e.g., 0.6, 0.7, ..., 1.3, 1.4), the voter needs to quantize the exchange rate to the closest discrete value accepted by the oracle. The voter submits hash(\textit{quantized exchange rate}, \textit{salt}) to the oracle. The hash function is public and shared among all the voters. The \textit{quantized exchange rate} and the \textit{salt} must be kept secret to each voter. The voter deposits $D$\% of their coin balance to the oracle.
 
 \subsubsection{Reveal phase}
 
@@ -319,7 +319,7 @@ For the described algorithm to work, the following conditions must be met:
 \item{Condition 2}: The ACB does not exhaust the ETH balance in the open market operation pool.
 \end{description}
 
-If the Conditions are met, the algorithm works and the JLC / USD exchange rate is adjusted toward 1 JLC = 1.0 USD. Otherwise, the algorithm does not work because the ACB cannot contract the total coin supply. This section analyzes when the Conditions are met or not met.
+If the Conditions are met, the algorithm works and the USD / JLC exchange rate is adjusted toward 1 JLC = 1.0 USD. Otherwise, the algorithm does not work because the ACB cannot contract the total coin supply. This section analyzes when the Conditions are met or not met.
 
 Let $R$ be the annual interest rate of the bond. Let $G$ be the annual growth rate of the total coin supply that achieves 1 JLC = 1.0 USD.
 

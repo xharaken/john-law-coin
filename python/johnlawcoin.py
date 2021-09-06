@@ -844,7 +844,7 @@ class Logging:
     # |epoch_id|: The epoch ID.
     # |coin_budget|: The coin budget.
     # |eth_balance|: The ETH balance in the EthPool.
-    # |latest_price|: The latest JLC / ETH price.
+    # |latest_price|: The latest ETH / JLC price.
     #
     # Returns
     # ----------------
@@ -1178,7 +1178,7 @@ class OpenMarketOperation:
         # The price auction is implemented as a Dutch auction as follows:
         #
         # Let P be the latest price at which the open market operation exchanged
-        # JLC with ETH. The price is measured by JLC / ETH wei. When the price
+        # JLC with ETH. The price is measured by ETH wei / JLC. When the price
         # is P, it means 1 JLC is exchanged with P ETH wei.
         #
         # At the beginning of each epoch, the ACB sets the coin budget; i.e.,
@@ -1332,6 +1332,8 @@ class OpenMarketOperation:
                         OpenMarketOperation.PRICE_CHANGE_INTERVAL), 100)):
                 price = int(price * (
                     100 + OpenMarketOperation.PRICE_CHANGE_PERCENTAGE) / 100)
+            if price == self.start_price:
+                price += 1
             assert(price > 0)
             return price
         return 0
@@ -1391,7 +1393,7 @@ class EthPool:
 #------------------------------------------------------------------------------
 # [ACB contract]
 #
-# The ACB stabilizes the JLC / USD exchange rate to 1.0 with algorithmically
+# The ACB stabilizes the USD / JLC exchange rate to 1.0 with algorithmically
 # defined monetary policies:
 #
 # 1. The ACB obtains the exchange rate from the oracle.

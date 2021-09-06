@@ -505,10 +505,13 @@ class ACBSimulator(unittest.TestCase):
             original_timestamp = self._acb.get_timestamp()
             self._acb.set_timestamp(
                 original_timestamp + self._price_change_interval * intervals)
-            price = self._open_market_operation.start_price
+            start_price = self._open_market_operation.start_price
+            price = start_price
             for i in range(intervals):
                 price = int(price * (
                     100 + self._price_change_percentage) / 100)
+            if price == start_price:
+                price += 1
             
             voter = self._voters[(start_index + index) % self._voter_count]
             requested_coin_amount = min(

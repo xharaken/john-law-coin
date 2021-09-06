@@ -785,7 +785,7 @@ contract OpenMarketOperation_v5 is OwnableUpgradeable {
     // The price auction is implemented as a Dutch auction as follows:
     //
     // Let P be the latest price at which the open market operation exchanged
-    // JLC with ETH. The price is measured by JLC / ETH wei. When the price is
+    // JLC with ETH. The price is measured by ETH wei / JLC. When the price is
     // P, it means 1 JLC is exchanged with P ETH wei.
     //
     // At the beginning of each epoch, the ACB sets the coin budget; i.e., the
@@ -944,6 +944,9 @@ contract OpenMarketOperation_v5 is OwnableUpgradeable {
            i < elapsed_time / PRICE_CHANGE_INTERVAL && i < 100; i++) {
         price = price * (100 + PRICE_CHANGE_PERCENTAGE) / 100;
       }
+      if (price == start_price_) {
+          price += 1;
+      }
       require(price > 0, "gc1");
       return price;
     }
@@ -985,7 +988,7 @@ contract OpenMarketOperation_v5 is OwnableUpgradeable {
 //------------------------------------------------------------------------------
 // [ACB contract]
 //
-// The ACB stabilizes the JLC / USD exchange rate to 1.0 with algorithmically
+// The ACB stabilizes the USD / JLC exchange rate to 1.0 with algorithmically
 // defined monetary policies:
 //
 // 1. The ACB obtains the exchange rate from the oracle.

@@ -12,7 +12,7 @@ import "./JohnLawCoin_v3.sol";
 //------------------------------------------------------------------------------
 // [ACB contract]
 //
-// The ACB stabilizes the JLC / USD exchange rate to 1.0 with algorithmically
+// The ACB stabilizes the USD / JLC exchange rate to 1.0 with algorithmically
 // defined monetary policies:
 //
 // 1. The ACB obtains the exchange rate from the oracle.

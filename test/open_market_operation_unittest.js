@@ -203,6 +203,9 @@ function parameterized_test(accounts,
               price = Math.trunc(
                 price * (100 + _price_change_percentage) / 100);
             }
+            if (price == start_price) {
+              price += 1;
+            }
             assert.equal(await _operation.getCurrentPrice(elapsed_time), price);
             
             let eth_amount = 0;

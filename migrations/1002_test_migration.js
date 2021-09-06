@@ -19,9 +19,11 @@ const ACB_v4 = artifacts.require("ACB_v4");
 const ACB_ADDRESS = ACB_v3.address; // Update the value before testing.
 
 module.exports = async function (deployer) {
+  console.log("a");
   const old_acb = await ACB_v3.at(ACB_ADDRESS);
   await old_acb.pause();
   
+  console.log("b");
   const coin = await JohnLawCoin_v2.at(await old_acb.coin_v2_());
   const oracle = await Oracle_v3.at(await old_acb.oracle_v3_());
   const bond_operation = await BondOperation_v2.at(
@@ -30,12 +32,15 @@ module.exports = async function (deployer) {
     await old_acb.open_market_operation_v2_());
   const eth_pool = await EthPool_v2.at(await old_acb.eth_pool_v2_());
   const logging = await Logging_v2.at(await old_acb.logging_v2_());
+  console.log("c");
   const acb = await deployProxy(
     ACB_v4, [coin.address, oracle.address, bond_operation.address,
              open_market_operation.address, eth_pool.address,
              logging.address, await old_acb.oracle_level_(),
              await old_acb.current_epoch_start_()]);
+  console.log("d");
   await old_acb.deprecate();
+  console.log("e");
 
   await coin.transferOwnership(acb.address);
   await oracle.transferOwnership(acb.address);

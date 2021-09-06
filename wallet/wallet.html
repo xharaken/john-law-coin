@@ -29,6 +29,7 @@
         <span class="bold">Account address</span>: Your account address.<br>
         <span class="bold">Coin balance</span>: Your coin balance.<br>
         <span class="bold">Bond balance</span>: Your bond balance.<br>
+        <span class="bold">ETH balance</span>: Your ETH balance.<br>
         <span class="bold">Voted in the current epoch</span>: Whether you have voted in the current epoch. You can vote only once per epoch.
   </span></span></h2>
   <div id="account_info"></div>
@@ -89,7 +90,7 @@
   
   <h2>Purchase coins
     <span class="tooltip">?<span class="tooltip-text">
-        You can sell ETH and purchase JLC as long as the coin budget is positive. The current JLC / ETH price is displayed in the Open Market Operation info.<br><br>
+        You can sell ETH and purchase JLC as long as the coin budget is positive. The current ETH / JLC price is displayed in the Open Market Operation info.<br><br>
         <span class="italic">[This operation consumes some ETH as transaction fee.]</span>
   </span></span></h2>
   <p>Amount of coins: <input type="number" min="1" id="purchase_coins_amount"></input></p>
@@ -97,7 +98,7 @@
   
   <h2>Sell coins
     <span class="tooltip">?<span class="tooltip-text">
-        You can sell JLC and purchase ETH as long as the coin budget is negative. The current JLC / ETH price is displayed in the Open Market Operation info.<br><br>
+        You can sell JLC and purchase ETH as long as the coin budget is negative. The current ETH / JLC price is displayed in the Open Market Operation info.<br><br>
         <span class="italic">[This operation consumes some ETH as transaction fee.]</span>
   </span></span></h2>
   <p>Amount of coins: <input type="number" min="1" id="sell_coins_amount"></input></p>
@@ -113,7 +114,7 @@
   
   <h2>Redeem bonds
     <span class="tooltip">?<span class="tooltip-text">
-        You can redeem bonds after the redemption dates. You can also redeem bonds (regardless of the redemption dates) when the bond budget is nevative. Expired bonds are not redeemable.<br><br>
+        You can redeem bonds after the redemption dates. You can also redeem bonds regardless of the redemption dates when the bond budget is nevative. Expired bonds are not redeemable.<br><br>
         <span class="italic">[This operation consumes some ETH as transaction fee.]</span>
   </span></span></h2>
   <div id="bond_list"></div>

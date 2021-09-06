@@ -163,6 +163,8 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
                                 elapsed_time / self.price_change_interval)):
                             price = int(price * (
                                 100 + self.price_change_percentage) / 100)
+                        if price == start_price:
+                            price += 1
                         self.assertEqual(
                             operation.get_current_price(elapsed_time), price)
                             

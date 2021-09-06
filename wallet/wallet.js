@@ -135,6 +135,7 @@ window.onload = async () => {
     return;
   }
   
+  $("send_coins_button").addEventListener("click", sendCoins);
   $("vote_button").addEventListener("click", vote);
   $("purchase_coins_button").addEventListener("click", purchaseCoins);
   $("sell_coins_button").addEventListener("click", sellCoins);
@@ -227,6 +228,10 @@ async function purchaseCoins() {
           await _open_market_operation_contract.methods.getCurrentPrice(
             Math.trunc(Date.now() / 1000) - current_epoch_start).call();
     const eth_amount = coin_amount * current_price;
+    const your_eth_balance = await _web3.eth.getBalance(_selected_address);
+    if (eth_amount > your_eth_balance) {
+      throw("You don't have enough ETH balance to purchase the coins.");
+    }
     
     const promise = _acb_contract.methods.purchaseCoins().send(
       {from: _selected_address, value: eth_amount});
@@ -269,6 +274,12 @@ async function sellCoins() {
     if (coin_amount <= 0) {
       throw("You need to sell at least one coin.");
     }
+    const coin_balance =
+          parseInt(await _coin_contract.methods.balanceOf(
+            _selected_address).call());
+    if (coin_amount > coin_balance) {
+      throw("You don't have enough coin balance to send the coins.")
+    }
     const coin_budget = parseInt(
       await _open_market_operation_contract.methods.coin_budget_().call());
     if (coin_budget >= 0) {
@@ -288,7 +299,7 @@ async function sellCoins() {
       await _open_market_operation_contract.methods.eth_balance_().call());
     if (eth_amount > eth_balance) {
       throw("The Open Market Operation does not have enough ETH to purchase " +
-            "the JLC coins you specified. Check the current JLC / ETH price " +
+            "the JLC coins you specified. Check the current ETH / JLC price " +
             "and specify a lower value.");
     }
     
@@ -405,13 +416,13 @@ async function redeemBonds() {
       redemption_epochs.push(redemption_epoch);
     }
     redemption_epochs =
-      redemption_epochs.sort((a, b) => { return a - b; });
+      redemption_epochs.sort((a, b) => { return b - a; });
     console.log("redemption_epochs: ", redemption_epochs);
     
     let redeemable_epochs = [];
     let bond_count = 0;
     for (let redemption_epoch of redemption_epochs) {
-      if (parseInt(redemption_epoch) < epoch_id) {
+      if (parseInt(redemption_epoch) <= epoch_id) {
         redeemable_epochs.push(redemption_epoch);
       } else if (bond_count < bond_budget) {
         redeemable_epochs.push(redemption_epoch);
@@ -616,6 +627,9 @@ async function reloadInfo() {
             _selected_address).call());
     html += "<tr><td>Bond balance</td><td class='right'>" +
       bond_balance + "</td></tr>";
+    const your_eth_balance = await _web3.eth.getBalance(_selected_address);
+    html += "<tr><td>ETH balance</td><td class='right'>" +
+      _web3.utils.fromWei(your_eth_balance) + " ETH</td></tr>";
     const epoch_id =
           parseInt(await _oracle_contract.methods.epoch_id_().call());
     const current_commit = await getCommit(epoch_id);
@@ -1127,7 +1141,7 @@ async function showHistoryChart() {
       table.addColumn("number", "latest_price");
       table.addRows(logs["latest_price"]);
       const options = {
-        title: "OpenMarketOperation: JLC / ETH exchanged price",
+        title: "OpenMarketOperation: ETH / JLC exchanged price",
         legend: {position: "bottom"}};
       const chart = new google.visualization.LineChart(
         $("chart_latest_price"));
@@ -1185,8 +1199,8 @@ async function showPriceChart() {
   
   let max_price = Math.max(start_price, price);
   let min_price = Math.min(start_price, price);
-  max_price = Math.trunc(max_price * 1.1);
-  min_price = Math.trunc(min_price * 0.9);
+  max_price = Math.ceil(max_price * 1.1);
+  min_price = Math.floor(min_price * 0.9);
   prices.push([new Date(), NaN, min_price]);
   prices.push([new Date(), NaN, max_price]);
   
@@ -1200,7 +1214,7 @@ async function showPriceChart() {
     table.addColumn("number", "current time");
     table.addRows(prices);
     const options = {
-      title: "Price chart (JLC / ETH wei)",
+      title: "Price chart (ETH wei / JLC)",
       legend: {position: "bottom"},
       vAxis: {
         gridlines: {count: 16},

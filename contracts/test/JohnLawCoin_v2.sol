@@ -1098,7 +1098,7 @@ contract Logging_v2 is OwnableUpgradeable {
   // |epoch_id|: The epoch ID.
   // |coin_budget|: The coin budget.
   // |eth_balance|: The ETH balance in the EthPool.
-  // |latest_price|: The latest JLC / ETH price.
+  // |latest_price|: The latest ETH / JLC price.
   //
   // Returns
   // ----------------
@@ -1705,6 +1705,9 @@ contract OpenMarketOperation_v2 is OwnableUpgradeable {
            i < elapsed_time / PRICE_CHANGE_INTERVAL && i < 100; i++) {
         price = price * (100 + PRICE_CHANGE_PERCENTAGE) / 100;
       }
+      if (price == start_price_) {
+          price += 1;
+      }
       require(price > 0, "gc1");
       return price;
     }
@@ -1793,7 +1796,7 @@ contract EthPool_v2 is OwnableUpgradeable {
 //------------------------------------------------------------------------------
 // [ACB contract]
 //
-// The ACB stabilizes the JLC / USD exchange rate to 1.0 with algorithmically
+// The ACB stabilizes the USD / JLC exchange rate to 1.0 with algorithmically
 // defined monetary policies:
 //
 // 1. The ACB obtains the exchange rate from the oracle.
