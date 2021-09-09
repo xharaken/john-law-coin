@@ -134,36 +134,36 @@ class CoinBondUnitTest(unittest.TestCase):
         self.assertEqual(coin.balance_of(accounts[5]), 1)
 
         # tax
-        coin.set_tax_rate(0)
-        coin.transfer(accounts[1], accounts[2], 10)
-        self.assertEqual(coin.balance_of(accounts[1]), 280)
-        self.assertEqual(coin.balance_of(accounts[2]), 18)
-        self.assertEqual(coin.balance_of(coin.tax_account), 0)
-        coin.set_tax_rate(10)
-        coin.transfer(accounts[1], accounts[2], 10)
-        self.assertEqual(coin.balance_of(accounts[1]), 270)
-        self.assertEqual(coin.balance_of(accounts[2]), 27)
-        self.assertEqual(coin.balance_of(coin.tax_account), 1)
-        coin.transfer(accounts[1], accounts[2], 1)
-        self.assertEqual(coin.balance_of(accounts[1]), 269)
-        self.assertEqual(coin.balance_of(accounts[2]), 28)
-        self.assertEqual(coin.balance_of(coin.tax_account), 1)
-        coin.transfer(accounts[1], accounts[2], 19)
-        self.assertEqual(coin.balance_of(accounts[1]), 250)
-        self.assertEqual(coin.balance_of(accounts[2]), 46)
-        self.assertEqual(coin.balance_of(coin.tax_account), 2)
-        coin.transfer(accounts[1], accounts[1], 20)
-        self.assertEqual(coin.balance_of(accounts[1]), 248)
-        self.assertEqual(coin.balance_of(accounts[2]), 46)
-        self.assertEqual(coin.balance_of(coin.tax_account), 4)
+        coin.mint(accounts[1], 10000)
+        account1_balance = coin.balance_of(accounts[1])
+        account2_balance = coin.balance_of(accounts[2])
+        tax_balance = coin.balance_of(coin.tax_account)
+        for amount in [0, 1, 99, 100, 101, 999, 1000, 1001]:
+            tax = int(amount * JohnLawCoin.TAX_RATE / 100)
+            coin.reset_tax_account()
+            coin.transfer(accounts[1], accounts[2], amount)
+            self.assertEqual(coin.balance_of(accounts[1]),
+                             account1_balance - amount)
+            self.assertEqual(coin.balance_of(accounts[2]),
+                             account2_balance + amount - tax)
+            self.assertEqual(coin.balance_of(coin.tax_account),
+                             tax_balance + tax)
+            account1_balance = coin.balance_of(accounts[1])
+            account2_balance = coin.balance_of(accounts[2])
+            tax_balance = coin.balance_of(coin.tax_account)
+            
+        coin.transfer(accounts[1], accounts[1], 1000)
+        self.assertEqual(coin.balance_of(accounts[1]), account1_balance - 10)
+        self.assertEqual(coin.balance_of(accounts[2]), account2_balance)
+        self.assertEqual(coin.balance_of(coin.tax_account), tax_balance + 10)
         old_tax_account = coin.tax_account
-        coin.set_tax_rate(20)
+        coin.reset_tax_account()
         self.assertEqual(coin.balance_of(old_tax_account), 0)
-        self.assertEqual(coin.balance_of(coin.tax_account), 4)
+        self.assertEqual(coin.balance_of(coin.tax_account), tax_balance + 10)
         old_tax_account = coin.tax_account
-        coin.set_tax_rate(0)
+        coin.reset_tax_account()
         self.assertEqual(coin.balance_of(old_tax_account), 0)
-        self.assertEqual(coin.balance_of(coin.tax_account), 4)
+        self.assertEqual(coin.balance_of(coin.tax_account), tax_balance + 10)
 
         # JohnLawBond
         bond = JohnLawBond()
@@ -172,30 +172,30 @@ class CoinBondUnitTest(unittest.TestCase):
         # balance_of
         self.assertEqual(bond.balance_of(accounts[1], 1111), 0)
         self.assertEqual(bond.number_of_bonds_owned_by(accounts[1]), 0)
-        self.check_redemption_timestamps(bond, accounts[1], [])
+        self.check_redemption_epochs(bond, accounts[1], [])
 
         # mint
         bond.mint(accounts[1], 1111, 1)
         self.assertEqual(bond.total_supply, 1)
         self.assertEqual(bond.balance_of(accounts[1], 1111), 1)
         self.assertEqual(bond.number_of_bonds_owned_by(accounts[1]), 1)
-        self.check_redemption_timestamps(bond, accounts[1], [1111])
+        self.check_redemption_epochs(bond, accounts[1], [1111])
 
         with self.assertRaises(Exception):
-            bond.get_redemption_timestamp_owned_by(account, 1)
+            bond.get_redemption_epoch_owned_by(account, 1)
 
         bond.mint(accounts[1], 1111, 2)
         self.assertEqual(bond.total_supply, 3)
         self.assertEqual(bond.balance_of(accounts[1], 1111), 3)
         self.assertEqual(bond.number_of_bonds_owned_by(accounts[1]), 3)
-        self.check_redemption_timestamps(bond, accounts[1], [1111])
+        self.check_redemption_epochs(bond, accounts[1], [1111])
 
         bond.mint(accounts[1], 2222, 2)
         self.assertEqual(bond.total_supply, 5)
         self.assertEqual(bond.balance_of(accounts[1], 1111), 3)
         self.assertEqual(bond.balance_of(accounts[1], 2222), 2)
         self.assertEqual(bond.number_of_bonds_owned_by(accounts[1]), 5)
-        self.check_redemption_timestamps(bond, accounts[1], [1111, 2222])
+        self.check_redemption_epochs(bond, accounts[1], [1111, 2222])
 
         bond.mint(accounts[2], 2222, 5)
         self.assertEqual(bond.total_supply, 10)
@@ -204,8 +204,8 @@ class CoinBondUnitTest(unittest.TestCase):
         self.assertEqual(bond.balance_of(accounts[2], 2222), 5)
         self.assertEqual(bond.number_of_bonds_owned_by(accounts[1]), 5)
         self.assertEqual(bond.number_of_bonds_owned_by(accounts[2]), 5)
-        self.check_redemption_timestamps(bond, accounts[1], [1111, 2222])
-        self.check_redemption_timestamps(bond, accounts[2], [2222])
+        self.check_redemption_epochs(bond, accounts[1], [1111, 2222])
+        self.check_redemption_epochs(bond, accounts[2], [2222])
 
         bond.burn(accounts[3], 1111, 0)
         self.assertEqual(bond.total_supply, 10)
@@ -214,8 +214,8 @@ class CoinBondUnitTest(unittest.TestCase):
         self.assertEqual(bond.balance_of(accounts[2], 2222), 5)
         self.assertEqual(bond.number_of_bonds_owned_by(accounts[1]), 5)
         self.assertEqual(bond.number_of_bonds_owned_by(accounts[2]), 5)
-        self.check_redemption_timestamps(bond, accounts[1], [1111, 2222])
-        self.check_redemption_timestamps(bond, accounts[2], [2222])
+        self.check_redemption_epochs(bond, accounts[1], [1111, 2222])
+        self.check_redemption_epochs(bond, accounts[2], [2222])
 
         bond.burn(accounts[2], 1111, 0)
         self.assertEqual(bond.total_supply, 10)
@@ -224,8 +224,8 @@ class CoinBondUnitTest(unittest.TestCase):
         self.assertEqual(bond.balance_of(accounts[2], 2222), 5)
         self.assertEqual(bond.number_of_bonds_owned_by(accounts[1]), 5)
         self.assertEqual(bond.number_of_bonds_owned_by(accounts[2]), 5)
-        self.check_redemption_timestamps(bond, accounts[1], [1111, 2222])
-        self.check_redemption_timestamps(bond, accounts[2], [2222])
+        self.check_redemption_epochs(bond, accounts[1], [1111, 2222])
+        self.check_redemption_epochs(bond, accounts[2], [2222])
 
         # burn
         with self.assertRaises(Exception):
@@ -247,8 +247,8 @@ class CoinBondUnitTest(unittest.TestCase):
         self.assertEqual(bond.balance_of(accounts[2], 2222), 0)
         self.assertEqual(bond.number_of_bonds_owned_by(accounts[1]), 5)
         self.assertEqual(bond.number_of_bonds_owned_by(accounts[2]), 0)
-        self.check_redemption_timestamps(bond, accounts[1], [1111, 2222])
-        self.check_redemption_timestamps(bond, accounts[2], [])
+        self.check_redemption_epochs(bond, accounts[1], [1111, 2222])
+        self.check_redemption_epochs(bond, accounts[2], [])
 
         bond.burn(accounts[1], 2222, 1)
         self.assertEqual(bond.total_supply, 4)
@@ -257,8 +257,8 @@ class CoinBondUnitTest(unittest.TestCase):
         self.assertEqual(bond.balance_of(accounts[2], 2222), 0)
         self.assertEqual(bond.number_of_bonds_owned_by(accounts[1]), 4)
         self.assertEqual(bond.number_of_bonds_owned_by(accounts[2]), 0)
-        self.check_redemption_timestamps(bond, accounts[1], [1111, 2222])
-        self.check_redemption_timestamps(bond, accounts[2], [])
+        self.check_redemption_epochs(bond, accounts[1], [1111, 2222])
+        self.check_redemption_epochs(bond, accounts[2], [])
 
         bond.burn(accounts[1], 2222, 1)
         self.assertEqual(bond.total_supply, 3)
@@ -267,8 +267,8 @@ class CoinBondUnitTest(unittest.TestCase):
         self.assertEqual(bond.balance_of(accounts[2], 2222), 0)
         self.assertEqual(bond.number_of_bonds_owned_by(accounts[1]), 3)
         self.assertEqual(bond.number_of_bonds_owned_by(accounts[2]), 0)
-        self.check_redemption_timestamps(bond, accounts[1], [1111])
-        self.check_redemption_timestamps(bond, accounts[2], [])
+        self.check_redemption_epochs(bond, accounts[1], [1111])
+        self.check_redemption_epochs(bond, accounts[2], [])
 
         bond.burn(accounts[1], 1111, 3)
         self.assertEqual(bond.total_supply, 0)
@@ -277,8 +277,8 @@ class CoinBondUnitTest(unittest.TestCase):
         self.assertEqual(bond.balance_of(accounts[2], 2222), 0)
         self.assertEqual(bond.number_of_bonds_owned_by(accounts[1]), 0)
         self.assertEqual(bond.number_of_bonds_owned_by(accounts[2]), 0)
-        self.check_redemption_timestamps(bond, accounts[1], [])
-        self.check_redemption_timestamps(bond, accounts[2], [])
+        self.check_redemption_epochs(bond, accounts[1], [])
+        self.check_redemption_epochs(bond, accounts[2], [])
 
         bond.burn(accounts[1], 1111, 0)
         self.assertEqual(bond.total_supply, 0)
@@ -287,19 +287,40 @@ class CoinBondUnitTest(unittest.TestCase):
         self.assertEqual(bond.balance_of(accounts[2], 2222), 0)
         self.assertEqual(bond.number_of_bonds_owned_by(accounts[1]), 0)
         self.assertEqual(bond.number_of_bonds_owned_by(accounts[2]), 0)
-        self.check_redemption_timestamps(bond, accounts[1], [])
-        self.check_redemption_timestamps(bond, accounts[2], [])
+        self.check_redemption_epochs(bond, accounts[1], [])
+        self.check_redemption_epochs(bond, accounts[2], [])
 
-    def check_redemption_timestamps(self, bond, account, expected):
-        count = bond.number_of_redemption_timestamps_owned_by(account)
+        # bond_supply_at
+        bond.mint(accounts[1], 1, 1)
+        bond.mint(accounts[2], 1, 2)
+        bond.mint(accounts[1], 2, 10)
+        bond.mint(accounts[2], 2, 20)
+        self.assertEqual(bond.bond_supply_at(0), 0)
+        self.assertEqual(bond.bond_supply_at(1), 3)
+        self.assertEqual(bond.bond_supply_at(2), 30)
+        bond.burn(accounts[1], 1, 1)
+        bond.burn(accounts[2], 1, 1)
+        bond.burn(accounts[1], 2, 10)
+        bond.burn(accounts[2], 2, 10)
+        self.assertEqual(bond.bond_supply_at(0), 0)
+        self.assertEqual(bond.bond_supply_at(1), 1)
+        self.assertEqual(bond.bond_supply_at(2), 10)
+        bond.burn(accounts[2], 1, 1)
+        bond.burn(accounts[2], 2, 10)
+        self.assertEqual(bond.bond_supply_at(0), 0)
+        self.assertEqual(bond.bond_supply_at(1), 0)
+        self.assertEqual(bond.bond_supply_at(2), 0)
+
+    def check_redemption_epochs(self, bond, account, expected):
+        count = bond.number_of_redemption_epochs_owned_by(account)
         self.assertEqual(count, len(expected))
 
         with self.assertRaises(Exception):
-            bond.get_redemption_timestamp_owned_by(account, count)
+            bond.get_redemption_epoch_owned_by(account, count)
 
         for index in range(count):
             self.assertTrue(
-                bond.get_redemption_timestamp_owned_by(account, index)
+                bond.get_redemption_epoch_owned_by(account, index)
                 in expected)
 
 

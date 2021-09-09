@@ -7,59 +7,59 @@
 
 import common
 
-# Need 10 parameters:
+# Need 14 parameters:
+# - bond_price
 # - bond_redemption_price
 # - bond_redemption_period
-# - phase_duration
+# - bond_redeemable_period
+# - epoch_duration
 # - proportional_reward_rate
 # - deposit_rate
 # - damping_factor
-# - reclaim_threshold
 # - level_to_exchange_rate
-# - level_to_bond_price
-# - level_to_tax_rate
+# - reclaim_threshold
+# - tax
+# - price_change_interval
+# - price_change_percentage
+# - start_price_multiplier
 
 common.reset_network(8)
-command = ("truffle test acb_unittest.js " +
-           "'1000 10 2 90 10 10 [1, 11, 20] [990, 997, 997] [20, 10, 0] 1'")
+command = ("truffle test test/acb_unittest.js " +
+           "'996 1000 12 2 604800 90 10 10 [1, 11, 20] 1 12345 28800 20 3'")
 common.run_test(command)
 
-for bond_redemption_price in [1000]:
-    for bond_redemption_period in [1, 84 * 24 * 60 * 60]:
-        for phase_duration in [1, 7 * 24 * 60 * 60]:
-            for proportional_reward_rate in [0, 90, 100]:
-                for deposit_rate in [0, 10, 100]:
-                    for damping_factor in [10, 100]:
-                        p = bond_redemption_price
-                        for (level_to_exchange_rate,
-                             level_to_bond_price,
-                             level_to_tax_rate) in [
-                                 ([9, 11, 12],
-                                  [max(1, p - 20), max(1, p - 10), p],
-                                  [20, 10, 0]),
-                                 ([0, 1, 10, 11, 12],
-                                  [max(1, p - 20), max(1, p - 10),
-                                   p, p, p],
-                                  [20, 10, 10, 0, 0]),
-                                 ([6, 7, 8, 9, 10, 11, 12, 13, 14],
-                                  [max(1, p - 30),
-                                   max(1, p - 20), max(1, p - 20),
-                                   max(1, p - 10), max(1, p - 10),
-                                   p, p, p, p],
-                                  [30, 20, 12, 5, 0, 0, 0, 0, 0])]:
-                            for reclaim_threshold in [1, len(
-                                level_to_exchange_rate) - 1]:
-                                command = (
-                                    "truffle test acb_unittest.js '" +
-                                    str(bond_redemption_price) + " " +
-                                    str(bond_redemption_period) + " " +
-                                    str(phase_duration) + " " +
-                                    str(proportional_reward_rate) + " " +
-                                    str(deposit_rate) + " " +
-                                    str(damping_factor) + " " +
-                                    str(level_to_exchange_rate) + " " +
-                                    str(level_to_bond_price) + " " +
-                                    str(level_to_tax_rate) + " " +
-                                    str(reclaim_threshold) + "'")
-                                common.reset_network(8)
-                                common.run_test(command)
+for (bond_price, bond_redemption_price) in [(996, 1000)]:
+    for bond_redemption_period in [1, 12]:
+        for bond_redeemable_period in [1, 12]:
+            for epoch_duration in [7 * 24 * 60 * 60]:
+                for proportional_reward_rate in [0, 90, 100]:
+                    for deposit_rate in [0, 10, 100]:
+                        for damping_factor in [10, 100]:
+                            for level_to_exchange_rate in [
+                                    [0, 1, 10, 11, 12],
+                                    [6, 7, 8, 9, 10, 11, 12, 13, 14]]:
+                                for reclaim_threshold in [1, len(
+                                        level_to_exchange_rate) - 1]:
+                                    tax = 12345
+                                    price_change_interval = int(
+                                        epoch_duration / 21) + 1
+                                    price_change_percentage = 20
+                                    start_price_multiplier = 3
+                                    command = (
+                                        "truffle test test/acb_unittest.js '" +
+                                        str(bond_price) + " " +
+                                        str(bond_redemption_price) + " " +
+                                        str(bond_redemption_period) + " " +
+                                        str(bond_redeemable_period) + " " +
+                                        str(epoch_duration) + " " +
+                                        str(proportional_reward_rate) + " " +
+                                        str(deposit_rate) + " " +
+                                        str(damping_factor) + " " +
+                                        str(level_to_exchange_rate) + " " +
+                                        str(reclaim_threshold) + " " +
+                                        str(tax) + " " +
+                                        str(price_change_interval) + " " +
+                                        str(price_change_percentage) + " " +
+                                        str(start_price_multiplier) + "'")
+                                    common.reset_network(8)
+                                    common.run_test(command)

@@ -16,13 +16,12 @@ import "./JohnLawCoin_v2.sol";
 // from 0, 1, 2, ..., LEVEL_MAX - 1. The oracle uses the commit-reveal-reclaim
 // voting scheme.
 //
-// Permission: Except public getters, only the ACB can call the methods of the
-// oracle.
+// Permission: Except public getters, only the ACB can call the methods.
 //------------------------------------------------------------------------------
 contract Oracle_v3 is OwnableUpgradeable {
-  // Constants. The values are defined in initialize(). The values never
-  // change during the contract execution but use 'public' (instead of
-  // 'constant') because tests want to override the values.
+  // Constants. The values are defined in initialize(). The values never change
+  // during the contract execution but use 'public' (instead of 'constant')
+  // because tests want to override the values.
   uint public LEVEL_MAX;
   uint public RECLAIM_THRESHOLD;
   uint public PROPORTIONAL_REWARD_RATE;
@@ -36,20 +35,20 @@ contract Oracle_v3 is OwnableUpgradeable {
   // scheme.
   struct Commit {
     // The committed hash (filled in the commit phase).
-    bytes32 committed_hash;
+    bytes32 hash;
     // The amount of deposited coins (filled in the commit phase).
     uint deposit;
-    // The revealed level (filled in the reveal phase).
-    uint revealed_level;
+    // The oracle level (filled in the reveal phase).
+    uint oracle_level;
     // The phase of this commit entry.
     Phase phase;
-    // The phase ID when this commit entry is created.
-    uint phase_id;
+    // The epoch ID when this commit entry is created.
+    uint epoch_id;
 
-    bytes32 committed_hash_v2;
+    bytes32 hash_v2;
     uint deposit_v2;
-    uint revealed_level_v2;
-    uint phase_id_v2;
+    uint oracle_level_v2;
+    uint epoch_id_v2;
   }
 
   // Vote is a struct to count votes for each oracle level.
@@ -106,22 +105,22 @@ contract Oracle_v3 is OwnableUpgradeable {
   // This can be an array of Epochs but is intentionally using a mapping to
   // make the Epoch struct upgradeable.
   mapping (uint => Epoch) public epochs_;
-  uint public phase_id_;
+  uint public epoch_id_;
 
-  uint public phase_id_v2_;
+  uint public epoch_id_v2_;
   
   // Events.
-  event CommitEvent(address indexed sender,
-                    bytes32 committed_hash, uint deposited);
-  event RevealEvent(address indexed sender,
-                    uint revealed_level, uint revealed_salt);
-  event ReclaimEvent(address indexed sender, uint deposited, uint rewarded);
-  event AdvancePhaseEvent(uint indexed phase_id,
-                          uint minted, uint burned);
+  event CommitEvent(address indexed sender, uint indexed epoch_id,
+                    bytes32 hash, uint deposited);
+  event RevealEvent(address indexed sender, uint indexed epoch_id,
+                    uint oracle_level, uint salt);
+  event ReclaimEvent(address indexed sender, uint indexed epoch_id,
+                     uint deposited, uint rewarded);
+  event AdvancePhaseEvent(uint indexed epoch_id, uint tax, uint burned);
 
   function upgrade()
       public onlyOwner {
-    phase_id_ = phase_id_v2_;
+    epoch_id_ = epoch_id_v2_;
     for (uint epoch_index = 0; epoch_index < 3; epoch_index++) {
       epochs_[epoch_index].deposit_account =
           epochs_[epoch_index].deposit_account_v2;
@@ -131,7 +130,7 @@ contract Oracle_v3 is OwnableUpgradeable {
           epochs_[epoch_index].reward_total_v2;
       epochs_[epoch_index].phase =
           epochs_[epoch_index].phase_v2;
-      for (uint level = 0; level < getLevelMax(); level++) {
+      for (uint level = 0; level < LEVEL_MAX; level++) {
         Vote storage vote = epochs_[epoch_index].votes[level];
         vote.should_reclaim = vote.should_reclaim_v2;
         vote.should_reward = vote.should_reward_v2;
@@ -145,36 +144,37 @@ contract Oracle_v3 is OwnableUpgradeable {
   //
   // Parameters
   // ----------------
-  // |coin|: The JohnLawCoin contract.
+  // |coin|: The JohnLawCoin contract. The ownership needs to be transferred to
+  // this contract.
   // |sender|: The voter's account.
-  // |committed_hash|: The committed hash.
+  // |hash|: The committed hash.
   // |deposit|: The amount of the deposited coins.
   //
   // Returns
   // ----------------
   // True if the commit succeeded. False otherwise.
-  function commit(JohnLawCoin_v2 coin, address sender,
-                  bytes32 committed_hash, uint deposit)
+  function commit(address sender, bytes32 hash, uint deposit,
+                  JohnLawCoin_v2 coin)
       public onlyOwner returns (bool) {
-    Epoch storage epoch = epochs_[phase_id_ % 3];
+    Epoch storage epoch = epochs_[epoch_id_ % 3];
     require(epoch.phase == Phase.COMMIT, "co1");
     if (coin.balanceOf(sender) < deposit) {
       return false;
     }
     // One voter can commit only once per phase.
-    if (epoch.commits[sender].phase_id == phase_id_) {
+    if (epoch.commits[sender].epoch_id == epoch_id_) {
       return false;
     }
 
     // Create a commit entry.
     epoch.commits[sender] = Commit(
-        committed_hash, deposit, LEVEL_MAX, Phase.COMMIT, phase_id_,
-        committed_hash, deposit, LEVEL_MAX, phase_id_);
+        hash, deposit, LEVEL_MAX, Phase.COMMIT, epoch_id_,
+        hash, deposit, LEVEL_MAX, epoch_id_);
     require(epoch.commits[sender].phase == Phase.COMMIT, "co2");
 
     // Move the deposited coins to the deposit account.
     coin.move(sender, epoch.deposit_account, deposit);
-    emit CommitEvent(sender, committed_hash, deposit);
+    emit CommitEvent(sender, epoch_id_, hash, deposit);
     return true;
   }
 
@@ -183,20 +183,20 @@ contract Oracle_v3 is OwnableUpgradeable {
   // Parameters
   // ----------------
   // |sender|: The voter's account.
-  // |revealed_level|: The oracle level revealed by the voter.
-  // |revealed_salt|: The salt revealed by the voter.
+  // |oracle_level|: The oracle level revealed by the voter.
+  // |salt|: The salt revealed by the voter.
   //
   // Returns
   // ----------------
   // True if the reveal succeeded. False otherwise.
-  function reveal(address sender, uint revealed_level, uint revealed_salt)
+  function reveal(address sender, uint oracle_level, uint salt)
       public onlyOwner returns (bool) {
-    Epoch storage epoch = epochs_[(phase_id_ - 1) % 3];
+    Epoch storage epoch = epochs_[(epoch_id_ - 1) % 3];
     require(epoch.phase == Phase.REVEAL, "rv1");
-    if (LEVEL_MAX <= revealed_level) {
+    if (LEVEL_MAX <= oracle_level) {
       return false;
     }
-    if (epoch.commits[sender].phase_id != phase_id_ - 1) {
+    if (epoch.commits[sender].epoch_id != epoch_id_ - 1) {
       // The corresponding commit was not found.
       return false;
     }
@@ -207,20 +207,20 @@ contract Oracle_v3 is OwnableUpgradeable {
     epoch.commits[sender].phase = Phase.REVEAL;
 
     // Check if the committed hash matches the revealed level and the salt.
-    bytes32 reveal_hash = hash(
-        sender, revealed_level, revealed_salt);
-    bytes32 committed_hash = epoch.commits[sender].committed_hash;
-    if (committed_hash != reveal_hash) {
+    bytes32 reveal_hash = encrypt(
+        sender, oracle_level, salt);
+    bytes32 hash = epoch.commits[sender].hash;
+    if (hash != reveal_hash) {
       return false;
     }
 
     // Update the commit entry with the revealed level.
-    epoch.commits[sender].revealed_level = revealed_level;
+    epoch.commits[sender].oracle_level = oracle_level;
 
     // Count up the vote.
-    epoch.votes[revealed_level].deposit += epoch.commits[sender].deposit;
-    epoch.votes[revealed_level].count += 1;
-    emit RevealEvent(sender, revealed_level, revealed_salt);
+    epoch.votes[oracle_level].deposit += epoch.commits[sender].deposit;
+    epoch.votes[oracle_level].count += 1;
+    emit RevealEvent(sender, epoch_id_, oracle_level, salt);
     return true;
   }
 
@@ -228,7 +228,8 @@ contract Oracle_v3 is OwnableUpgradeable {
   //
   // Parameters
   // ----------------
-  // |coin|: The JohnLawCoin contract.
+  // |coin|: The JohnLawCoin contract. The ownership needs to be transferred to
+  // this contract.
   // |sender|: The voter's account.
   //
   // Returns
@@ -238,11 +239,11 @@ contract Oracle_v3 is OwnableUpgradeable {
   //    when the voter is eligible to reclaim their deposited coins.
   //  - uint: The amount of the reward. This becomes a positive value when the
   //    voter voted for the "truth" oracle level.
-  function reclaim(JohnLawCoin_v2 coin, address sender)
+  function reclaim(address sender, JohnLawCoin_v2 coin)
       public onlyOwner returns (uint, uint) {
-    Epoch storage epoch = epochs_[(phase_id_ - 2) % 3];
+    Epoch storage epoch = epochs_[(epoch_id_ - 2) % 3];
     require(epoch.phase == Phase.RECLAIM, "rc1");
-    if (epoch.commits[sender].phase_id != phase_id_ - 2){
+    if (epoch.commits[sender].epoch_id != epoch_id_ - 2){
       // The corresponding commit was not found.
       return (0, 0);
     }
@@ -253,22 +254,22 @@ contract Oracle_v3 is OwnableUpgradeable {
 
     epoch.commits[sender].phase = Phase.RECLAIM;
     uint deposit = epoch.commits[sender].deposit;
-    uint revealed_level = epoch.commits[sender].revealed_level;
-    if (revealed_level == LEVEL_MAX) {
+    uint oracle_level = epoch.commits[sender].oracle_level;
+    if (oracle_level == LEVEL_MAX) {
       return (0, 0);
     }
-    require(0 <= revealed_level && revealed_level < LEVEL_MAX, "rc2");
+    require(0 <= oracle_level && oracle_level < LEVEL_MAX, "rc2");
 
-    if (!epoch.votes[revealed_level].should_reclaim) {
+    if (!epoch.votes[oracle_level].should_reclaim) {
       return (0, 0);
     }
 
-    require(epoch.votes[revealed_level].count > 0, "rc3");
+    require(epoch.votes[oracle_level].count > 0, "rc3");
     // Reclaim the deposited coins.
     coin.move(epoch.deposit_account, sender, deposit);
 
     uint reward = 0;
-    if (epoch.votes[revealed_level].should_reward) {
+    if (epoch.votes[oracle_level].should_reward) {
       // The voter who voted for the "truth" level can receive the reward.
       //
       // The PROPORTIONAL_REWARD_RATE of the reward is distributed to the
@@ -278,15 +279,15 @@ contract Oracle_v3 is OwnableUpgradeable {
       //
       // The rest of the reward is distributed to the voters evenly. This
       // incentivizes more voters (including new voters) to join the oracle.
-      if (epoch.votes[revealed_level].deposit > 0) {
+      if (epoch.votes[oracle_level].deposit > 0) {
         reward += (uint(PROPORTIONAL_REWARD_RATE) * epoch.reward_total *
-                   deposit) / (uint(100) * epoch.votes[revealed_level].deposit);
+                   deposit) / (uint(100) * epoch.votes[oracle_level].deposit);
       }
       reward += ((uint(100) - PROPORTIONAL_REWARD_RATE) * epoch.reward_total) /
-                (uint(100) * epoch.votes[revealed_level].count);
+                (uint(100) * epoch.votes[oracle_level].count);
       coin.move(epoch.reward_account, sender, reward);
     }
-    emit ReclaimEvent(sender, deposit, reward);
+    emit ReclaimEvent(sender, epoch_id_, deposit, reward);
     return (deposit, reward);
   }
 
@@ -295,32 +296,36 @@ contract Oracle_v3 is OwnableUpgradeable {
   //
   // Parameters
   // ----------------
-  // |coin|: The JohnLawCoin contract.
-  // |mint|: The amount of the coins minted for the reward.
+  // |coin|: The JohnLawCoin contract. The ownership needs to be transferred to
+  // this contract.
   //
   // Returns
   // ----------------
   // None.
-  function advance(JohnLawCoin_v2 coin, uint mint)
+  function advance(JohnLawCoin_v2 coin)
       public onlyOwner returns (uint) {
+    // Advance the phase.
+    epoch_id_ += 1;
+
     // Step 1: Move the commit phase to the reveal phase.
-    Epoch storage epoch = epochs_[phase_id_ % 3];
+    Epoch storage epoch = epochs_[(epoch_id_ - 1) % 3];
     require(epoch.phase == Phase.COMMIT, "ad1");
     epoch.phase = Phase.REVEAL;
 
     // Step 2: Move the reveal phase to the reclaim phase.
-    epoch = epochs_[(phase_id_ - 1) % 3];
+    epoch = epochs_[(epoch_id_ - 2) % 3];
     require(epoch.phase == Phase.REVEAL, "ad2");
+    epoch.phase = Phase.RECLAIM;
 
     // The "truth" level is set to the mode of the weighted majority votes.
     uint mode_level = getModeLevel();
     if (0 <= mode_level && mode_level < LEVEL_MAX) {
-      uint deposit_voted = 0;
+      uint deposit_revealed = 0;
       uint deposit_to_reclaim = 0;
       for (uint level = 0; level < LEVEL_MAX; level++) {
         require(epoch.votes[level].should_reclaim == false, "ad3");
         require(epoch.votes[level].should_reward == false, "ad4");
-        deposit_voted = deposit_voted + epoch.votes[level].deposit;
+        deposit_revealed = deposit_revealed + epoch.votes[level].deposit;
         if ((mode_level < RECLAIM_THRESHOLD ||
              mode_level - RECLAIM_THRESHOLD <= level) &&
             level <= mode_level + RECLAIM_THRESHOLD) {
@@ -337,12 +342,12 @@ contract Oracle_v3 is OwnableUpgradeable {
       // reward.
       epoch.votes[mode_level].should_reward = true;
 
-      // Note: |deposit_voted| is equal to |balanceOf(epoch.deposit_account)|
+      // Note: |deposit_revealed| is equal to |balanceOf(epoch.deposit_account)|
       // only when all the voters who voted in the commit phase revealed
       // their votes correctly in the reveal phase.
-      require(deposit_voted <= coin.balanceOf(epoch.deposit_account),"ad5");
+      require(deposit_revealed <= coin.balanceOf(epoch.deposit_account), "ad5");
       require(
-          deposit_to_reclaim <= coin.balanceOf(epoch.deposit_account),"ad6");
+          deposit_to_reclaim <= coin.balanceOf(epoch.deposit_account), "ad6");
 
       // The lost coins are moved to the reward account.
       coin.move(
@@ -351,15 +356,16 @@ contract Oracle_v3 is OwnableUpgradeable {
           coin.balanceOf(epoch.deposit_account) - deposit_to_reclaim);
     }
 
-    // Mint |mint| coins to the reward account.
-    coin.mint(epoch.reward_account, mint);
+    // Move the collected tax to the reward account.
+    address tax_account = coin.tax_account_();
+    uint tax = coin.balanceOf(tax_account);
+    coin.move(tax_account, epoch.reward_account, tax);
 
     // Set the total amount of the reward.
     epoch.reward_total = coin.balanceOf(epoch.reward_account);
-    epoch.phase = Phase.RECLAIM;
 
     // Step 3: Move the reclaim phase to the commit phase.
-    uint epoch_index = (phase_id_ - 2) % 3;
+    uint epoch_index = epoch_id_ % 3;
     epoch = epochs_[epoch_index];
     require(epoch.phase == Phase.RECLAIM, "ad7");
 
@@ -374,7 +380,7 @@ contract Oracle_v3 is OwnableUpgradeable {
     // Initialize the Epoch object for the next commit phase.
     //
     // |epoch.commits_| cannot be cleared due to the restriction of Solidity.
-    // |phase_id_| ensures the stale commit entries are not misused.
+    // |epoch_id_| ensures the stale commit entries are not misused.
     for (uint level = 0; level < LEVEL_MAX; level++) {
       epoch.votes[level] =
           Vote(0, 0, false, false, false, false, 0, 0);
@@ -390,10 +396,7 @@ contract Oracle_v3 is OwnableUpgradeable {
     epoch.reward_total = 0;
     epoch.phase = Phase.COMMIT;
 
-    // Advance the phase.
-    phase_id_ += 1;
-
-    emit AdvancePhaseEvent(phase_id_, mint, burned);
+    emit AdvancePhaseEvent(epoch_id_, tax, burned);
     return burned;
   }
 
@@ -412,8 +415,8 @@ contract Oracle_v3 is OwnableUpgradeable {
   // smallest mode. If there are no votes, return LEVEL_MAX.
   function getModeLevel()
       public onlyOwner view returns (uint) {
-    Epoch storage epoch = epochs_[(phase_id_ - 1) % 3];
-    require(epoch.phase == Phase.REVEAL, "gm1");
+    Epoch storage epoch = epochs_[(epoch_id_ - 2) % 3];
+    require(epoch.phase == Phase.RECLAIM, "gm1");
     uint mode_level = LEVEL_MAX;
     uint max_deposit = 0;
     uint max_count = 0;
@@ -445,17 +448,11 @@ contract Oracle_v3 is OwnableUpgradeable {
     coin.transferOwnership(msg.sender);
   }
 
-  // Public getter: Return LEVEL_MAX.
-  function getLevelMax()
-      public view returns (uint) {
-    return LEVEL_MAX;
-  }
-
   // Public getter: Return the Vote object at |epoch_index| and |level|.
   function getVote(uint epoch_index, uint level)
       public view returns (uint, uint, bool, bool) {
     require(0 <= epoch_index && epoch_index <= 2, "gv1");
-    require(0 <= level && level < getLevelMax(), "gv2");
+    require(0 <= level && level < LEVEL_MAX, "gv2");
     Vote memory vote = epochs_[epoch_index].votes[level];
     return (vote.deposit, vote.count, vote.should_reclaim,
             vote.should_reward);
@@ -466,8 +463,8 @@ contract Oracle_v3 is OwnableUpgradeable {
       public view returns (bytes32, uint, uint, Phase, uint) {
     require(0 <= epoch_index && epoch_index <= 2, "gc1");
     Commit memory entry = epochs_[epoch_index].commits[account];
-    return (entry.committed_hash, entry.deposit, entry.revealed_level,
-            entry.phase, entry.phase_id);
+    return (entry.hash, entry.deposit, entry.oracle_level,
+            entry.phase, entry.epoch_id);
   }
 
   // Public getter: Return the Epoch object at |epoch_index|.
@@ -492,7 +489,7 @@ contract Oracle_v3 is OwnableUpgradeable {
   // Returns
   // ----------------
   // The calculated hash value.
-  function hash(address sender, uint level, uint salt)
+  function encrypt(address sender, uint level, uint salt)
       public pure returns (bytes32) {
     return keccak256(abi.encode(sender, level, salt));
   }
@@ -501,41 +498,38 @@ contract Oracle_v3 is OwnableUpgradeable {
 //------------------------------------------------------------------------------
 // [ACB contract]
 //
-// The ACB stabilizes the coin price with algorithmically defined monetary
-// policies without holding any collateral. The ACB stabilizes the JLC / USD
-// exchange rate to 1.0 as follows:
+// The ACB stabilizes the USD / JLC exchange rate to 1.0 with algorithmically
+// defined monetary policies:
 //
 // 1. The ACB obtains the exchange rate from the oracle.
 // 2. If the exchange rate is 1.0, the ACB does nothing.
-// 3. If the exchange rate is larger than 1.0, the ACB increases the total coin
+// 3. If the exchange rate is higher than 1.0, the ACB increases the total coin
 //    supply by redeeming issued bonds (regardless of their redemption dates).
-//    If that is not enough to supply sufficient coins, the ACB mints new coins
-//    and provides the coins to the oracle as a reward.
-// 4. If the exchange rate is smaller than 1.0, the ACB decreases the total coin
-//    supply by issuing new bonds and imposing tax on coin transfers.
+//    If that is not enough to supply sufficient coins, the ACB performs an open
+//    market operation to sell JLC and purchase ETH to increase the total coin
+//    supply.
+// 4. If the exchange rate is lower than 1.0, the ACB decreases the total coin
+//    supply by issuing new bonds. If the exchange rate drops down to 0.6, the
+//    ACB performs an open market operation to sell ETH and purchase JLC to
+//    decrease the total coin supply.
 //
-// Permission: All methods are public. No one (including the genesis account)
-// is privileged to influence the monetary policies of the ACB. The ACB
+// Permission: All the methods are public. No one (including the genesis
+// account) is privileged to influence the monetary policies of the ACB. The ACB
 // is fully decentralized and there is truly no gatekeeper. The only exceptions
-// are a few methods that can be called only by the genesis account. They are
-// needed for the genesis account to upgrade the smart contract and fix bugs
-// in a development phase.
+// are a few methods the genesis account may use to upgrade the smart contracts
+// to fix bugs during a development phase.
 //------------------------------------------------------------------------------
 contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
   using SafeCast for uint;
   using SafeCast for int;
   bytes32 public constant NULL_HASH = 0;
 
-  // Constants. The values are defined in initialize(). The values never
-  // change during the contract execution but use 'public' (instead of
-  // 'constant') because tests want to override the values.
-  uint public BOND_REDEMPTION_PRICE;
-  uint public BOND_REDEMPTION_PERIOD;
+  // Constants. The values are defined in initialize(). The values never change
+  // during the contract execution but use 'public' (instead of 'constant')
+  // because tests want to override the values.
   uint[] public LEVEL_TO_EXCHANGE_RATE;
   uint public EXCHANGE_RATE_DIVISOR;
-  uint[] public LEVEL_TO_BOND_PRICE;
-  uint[] public LEVEL_TO_TAX_RATE;
-  uint public PHASE_DURATION;
+  uint public EPOCH_DURATION;
   uint public DEPOSIT_RATE;
   uint public DAMPING_FACTOR;
 
@@ -545,55 +539,66 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
 
   // Attributes. See the comment in initialize().
   JohnLawCoin public coin_;
-  JohnLawBond public bond_;
   Oracle public oracle_;
+  BondOperation public bond_operation_;
+  OpenMarketOperation public open_market_operation_;
+  EthPool public eth_pool_;
   Logging public logging_;
-  int public bond_budget_;
   uint public oracle_level_;
-  uint public current_phase_start_;
+  uint public current_epoch_start_;
 
   JohnLawCoin_v2 public coin_v2_;
-  JohnLawBond_v2 public bond_v2_;
   Oracle_v2 public oracle_v2_;
+  BondOperation_v2 public bond_operation_v2_;
+  OpenMarketOperation_v2 public open_market_operation_v2_;
+  EthPool_v2 public eth_pool_v2_;
   Logging_v2 public logging_v2_;
-  int public bond_budget_v2_;
   uint public oracle_level_v2_;
-  uint public current_phase_start_v2_;
+  uint public current_epoch_start_v2_;
 
   Oracle_v3 public oracle_v3_;
   
   // Events.
   event PayableEvent(address indexed sender, uint value);
-  event VoteEvent(address indexed sender, bytes32 committed_hash,
-                  uint revealed_level, uint revealed_salt,
+  event UpdateEpochEvent(uint epoch_id, uint current_epoch_start, uint tax,
+                         uint burned, int delta, uint mint);
+  event VoteEvent(address indexed sender, uint indexed epoch_id,
+                  bytes32 hash, uint oracle_level, uint salt,
                   bool commit_result, bool reveal_result,
                   uint deposited, uint reclaimed, uint rewarded,
-                  bool phase_updated);
-  event PurchaseBondsEvent(address indexed sender, uint count,
-                           uint redemption_timestamp);
-  event RedeemBondsEvent(address indexed sender, uint count);
-  event ControlSupplyEvent(int delta, int bond_budget, uint mint);
+                  bool epoch_updated);
+  event PurchaseBondsEvent(address indexed sender, uint indexed epoch_id,
+                           uint purchased_bonds, uint redemption_epoch);
+  event RedeemBondsEvent(address indexed sender, uint indexed epoch_id,
+                         uint redeemed_bonds, uint expired_bonds);
+  event PurchaseCoinsEvent(address indexed sender, uint requested_eth_amount,
+                           uint eth_amount, uint coin_amount);
+  event SellCoinsEvent(address indexed sender, uint requested_coin_amount,
+                       uint eth_amount, uint coin_amount);
 
   function upgrade(Oracle_v3 oracle)
       public onlyOwner {
     // bond_budget_ = bond_budget_v2_;
     oracle_v3_ = oracle;
     // oracle_level_ = oracle_level_v2_;
-    current_phase_start_ = current_phase_start_v2_;
+    current_epoch_start_ = current_epoch_start_v2_;
 
     oracle_v3_.upgrade();
   }
 
-  // Deprecate the ACB. Only the owner can call this method.
+  // Deprecate the ACB. Only the genesis account can call this method.
   function deprecate()
       public onlyOwner {
     coin_v2_.transferOwnership(msg.sender);
-    bond_v2_.transferOwnership(msg.sender);
     oracle_v3_.transferOwnership(msg.sender);
+    bond_operation_v2_.transferOwnership(msg.sender);
+    open_market_operation_v2_.transferOwnership(msg.sender);
+    eth_pool_v2_.transferOwnership(msg.sender);
     logging_v2_.transferOwnership(msg.sender);
   }
 
-  // Pause the ACB in emergency cases. Only the owner can call this method.
+  // Pause the ACB in emergency cases. Only the genesis account can call this
+  // method.
   function pause()
       public onlyOwner {
     if (!paused()) {
@@ -602,7 +607,7 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
     coin_v2_.pause();
   }
 
-  // Unpause the ACB. Only the owner can call this method.
+  // Unpause the ACB. Only the genesis account can call this method.
   function unpause()
       public onlyOwner {
     if (paused()) {
@@ -611,7 +616,7 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
     coin_v2_.unpause();
   }
 
-  // Payable fallback to receive and store ETH. Give us a tip :)
+  // Payable fallback to receive and store ETH. Give us tips :)
   fallback() external payable {
     require(msg.data.length == 0, "fb1");
     emit PayableEvent(msg.sender, msg.value);
@@ -620,7 +625,7 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
     emit PayableEvent(msg.sender, msg.value);
   }
 
-  // Withdraw the tips. Only the owner can call this method.
+  // Withdraw the tips. Only the genesis account can call this method.
   function withdrawTips()
       public whenNotPaused onlyOwner {
     (bool success,) =
@@ -629,9 +634,10 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
   }
 
   // A struct to pack local variables. This is needed to avoid a stack-too-deep
-  // error of Solidity.
+  // error in Solidity.
   struct VoteResult {
-    bool phase_updated;
+    uint epoch_id;
+    bool epoch_updated;
     bool reveal_result;
     bool commit_result;
     uint deposited;
@@ -640,17 +646,16 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
   }
 
   // Vote for the exchange rate. The voter can commit a vote to the current
-  // phase, reveal their vote in the previous phase, and reclaim the deposited
-  // coins and get a reward for their vote in the phase before the previous
-  // phase at the same time.
+  // epoch N, reveal their vote in the epoch N-1, and reclaim the deposited
+  // coins and get a reward for their vote in the epoch N-2 at the same time.
   //
   // Parameters
   // ----------------
-  // |committed_hash|: The hash to be committed in the current phase. Specify
+  // |hash|: The hash to be committed in the current epoch N. Specify
   // ACB.NULL_HASH if you do not want to commit and only want to reveal and
   // reclaim previous votes.
-  // |revealed_level|: The oracle level you voted for in the previous phase.
-  // |revealed_salt|: The salt you used in the previous phase.
+  // |oracle_level|: The oracle level you voted for in the epoch N-1.
+  // |salt|: The salt you used in the epoch N-1.
   //
   // Returns
   // ----------------
@@ -660,25 +665,37 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
   //  - uint: The amount of the deposited coins.
   //  - uint: The amount of the reclaimed coins.
   //  - uint: The amount of the reward.
-  //  - boolean: Whether this vote resulted in a phase update.
-  function vote(bytes32 committed_hash, uint revealed_level,
-                uint revealed_salt)
+  //  - boolean: Whether this vote updated the epoch.
+  function vote(bytes32 hash, uint oracle_level,
+                uint salt)
       public whenNotPaused returns (bool, bool, uint, uint, uint, bool) {
     
     VoteResult memory result;
-    
-    result.phase_updated = false;
-    if (getTimestamp() >= current_phase_start_ + PHASE_DURATION) {
-      // Start a new phase.
-      result.phase_updated = true;
-      current_phase_start_ = getTimestamp();
+
+    result.epoch_id = oracle_v3_.epoch_id_();
+    result.epoch_updated = false;
+    if (getTimestamp() >= current_epoch_start_ + EPOCH_DURATION) {
+      // Start a new epoch.
+      result.epoch_updated = true;
+      result.epoch_id += 1;
+      current_epoch_start_ = getTimestamp();
+      
+      // Advance to the next epoch. Provide the |tax| coins to the oracle
+      // as a reward.
+      uint tax = coin_v2_.balanceOf(coin_v2_.tax_account_());
+      coin_v2_.transferOwnership(address(oracle_v3_));
+      uint burned = oracle_v3_.advance(coin_v2_);
+      oracle_v3_.revokeOwnership(coin_v2_);
+      
+      // Reset the tax account address just in case.
+      coin_v2_.resetTaxAccount();
+      require(coin_v2_.balanceOf(coin_v2_.tax_account_()) == 0, "vo1");
       
       int delta = 0;
-      uint tax_rate = 0;
       oracle_level_ = oracle_v3_.getModeLevel();
-      if (oracle_level_ != oracle_v3_.getLevelMax()) {
-        require(0 <= oracle_level_ && oracle_level_ < oracle_v3_.getLevelMax(),
-                "vo1");
+      if (oracle_level_ != oracle_v3_.LEVEL_MAX()) {
+        require(0 <= oracle_level_ && oracle_level_ < oracle_v3_.LEVEL_MAX(),
+                "vo2");
         // Translate the oracle level to the exchange rate.
         uint exchange_rate = LEVEL_TO_EXCHANGE_RATE[oracle_level_];
 
@@ -691,33 +708,36 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
                 (int(exchange_rate) - int(EXCHANGE_RATE_DIVISOR)) /
                 int(EXCHANGE_RATE_DIVISOR);
 
-        // To avoid increasing or decreasing too many coins in one phase,
+        // To avoid increasing or decreasing too many coins in one epoch,
         // multiply the damping factor.
         delta = delta * int(DAMPING_FACTOR) / 100;
-
-        // Translate the oracle level to the tax rate.
-        tax_rate = LEVEL_TO_TAX_RATE[oracle_level_];
       }
 
-      // Increase or decrease the total coin supply.
-      uint mint = _controlSupply(delta);
+      // Update the bond budget.
+      uint mint =
+          bond_operation_v2_.updateBondBudget(delta, result.epoch_id);
 
-      // Burn the tax. This is fine because the purpose of the tax is to
-      // decrease the total coin supply.
-      address tax_account = coin_v2_.tax_account_();
-      uint burned_tax = coin_v2_.balanceOf(tax_account);
-      coin_v2_.burn(tax_account, burned_tax);
-      coin_v2_.setTaxRate(tax_rate);
+      // Update the coin budget.
+      if (oracle_level_ == 0 && delta < 0) {
+        require(mint == 0, "vo3");
+        open_market_operation_v2_.updateCoinBudget(delta);
+      } else {
+        open_market_operation_v2_.updateCoinBudget(mint.toInt256());
+      }
 
-      // Advance to the next phase. Provide the |mint| coins to the oracle
-      // as a reward.
-      coin_v2_.transferOwnership(address(oracle_v3_));
-      uint burned = oracle_v3_.advance(coin_v2_, mint);
-      oracle_v3_.revokeOwnership(coin_v2_);
-      
-      logging_v2_.phaseUpdated(mint, burned, delta, bond_budget_,
-                               coin_v2_.totalSupply(), bond_v2_.totalSupply(),
-                               oracle_level_, current_phase_start_, burned_tax);
+      logging_v2_.updateEpoch(
+          result.epoch_id, mint, burned, delta, coin_v2_.totalSupply(),
+          oracle_level_, current_epoch_start_, tax);
+      logging_v2_.updateBondBudget(
+          result.epoch_id, bond_operation_v2_.bond_budget_v2_(),
+          bond_operation_v2_.bond_v2_().totalSupply(),
+          bond_operation_v2_.validBondSupply(result.epoch_id));
+      logging_v2_.updateCoinBudget(
+          result.epoch_id, open_market_operation_v2_.coin_budget_v2_(),
+          address(eth_pool_v2_).balance,
+          open_market_operation_v2_.latest_price_());
+      emit UpdateEpochEvent(result.epoch_id, current_epoch_start_,
+                            tax, burned, delta, mint);
     }
 
     coin_v2_.transferOwnership(address(oracle_v3_));
@@ -727,33 +747,33 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
     // The voter needs to deposit the DEPOSIT_RATE percentage of their coin
     // balance.
     result.deposited = coin_v2_.balanceOf(msg.sender) * DEPOSIT_RATE / 100;
-    if (committed_hash == 0) {
+    if (hash == 0) {
       result.deposited = 0;
     }
     result.commit_result = oracle_v3_.commit(
-        coin_v2_, msg.sender, committed_hash, result.deposited);
+        msg.sender, hash, result.deposited, coin_v2_);
     if (!result.commit_result) {
       result.deposited = 0;
     }
     
     // Reveal.
-    result.reveal_result = oracle_v3_.reveal(
-        msg.sender, revealed_level, revealed_salt);
+    result.reveal_result = oracle_v3_.reveal(msg.sender, oracle_level, salt);
     
     // Reclaim.
     (result.reclaimed, result.rewarded) =
-        oracle_v3_.reclaim(coin_v2_, msg.sender);
+        oracle_v3_.reclaim(msg.sender, coin_v2_);
 
     oracle_v3_.revokeOwnership(coin_v2_);
     
-    logging_v2_.voted(result.commit_result, result.reveal_result,
-                      result.deposited, result.reclaimed, result.rewarded);
+    logging_v2_.vote(result.epoch_id, result.commit_result,
+                     result.reveal_result, result.deposited,
+                     result.reclaimed, result.rewarded);
     emit VoteEvent(
-        msg.sender, committed_hash, revealed_level, revealed_salt,
+        msg.sender, result.epoch_id, hash, oracle_level, salt,
         result.commit_result, result.reveal_result, result.deposited,
-        result.reclaimed, result.rewarded, result.phase_updated);
+        result.reclaimed, result.rewarded, result.epoch_updated);
     return (result.commit_result, result.reveal_result, result.deposited,
-            result.reclaimed, result.rewarded, result.phase_updated);
+            result.reclaimed, result.rewarded, result.epoch_updated);
   }
 
   // Purchase bonds.
@@ -764,131 +784,146 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
   //
   // Returns
   // ----------------
-  // The redemption timestamp of the purchased bonds if it succeeds. 0
-  // otherwise.
+  // The redemption epoch of the purchased bonds.
   function purchaseBonds(uint count)
       public whenNotPaused returns (uint) {
-    address sender = msg.sender;
+    uint epoch_id = oracle_v3_.epoch_id_();
     
-    require(count > 0, "PurchaseBonds: You must purchase at least one bond.");
-    require(bond_budget_ >= count.toInt256(),
-            "PurchaseBonds: The ACB's bond budget is not enough.");
-
-    uint bond_price = LEVEL_TO_BOND_PRICE[oracle_v3_.getLevelMax() - 1];
-    if (0 <= oracle_level_ && oracle_level_ < oracle_v3_.getLevelMax()) {
-      bond_price = LEVEL_TO_BOND_PRICE[oracle_level_];
-    }
-    uint amount = bond_price * count;
-    require(coin_v2_.balanceOf(sender) >= amount,
-            "PurchaseBonds: Your coin balance is not enough.");
-
-    // Set the redemption timestamp of the bonds.
-    uint redemption = getTimestamp() + BOND_REDEMPTION_PERIOD;
-
-    // Issue new bonds.
-    bond_v2_.mint(sender, redemption, count);
-    bond_budget_ -= count.toInt256();
-    require(bond_budget_ >= 0, "pb1");
-    require(bond_v2_.totalSupply().toInt256() + bond_budget_ >= 0, "pb2");
-    require(bond_v2_.balanceOf(sender, redemption) > 0, "pb3");
-
-    // Burn the corresponding coins.
-    coin_v2_.burn(sender, amount);
-
-    logging_v2_.purchasedBonds(count);
-    emit PurchaseBondsEvent(sender, count, redemption);
-    return redemption;
+    coin_v2_.transferOwnership(address(bond_operation_v2_));
+    uint redemption_epoch =
+        bond_operation_v2_.increaseBondSupply(address(msg.sender), count,
+                                              epoch_id, coin_v2_);
+    bond_operation_v2_.revokeOwnership(coin_v2_);
+    
+    logging_v2_.purchaseBonds(epoch_id, count);
+    emit PurchaseBondsEvent(address(msg.sender), epoch_id,
+                            count, redemption_epoch);
+    return redemption_epoch;
   }
   
   // Redeem bonds.
   //
   // Parameters
   // ----------------
-  // |redemption_timestamps|: An array of bonds to be redeemed. Bonds are
-  // identified by their redemption timestamps.
+  // |redemption_epochs|: An array of bonds to be redeemed. The bonds are
+  // identified by their redemption epochs.
   //
   // Returns
   // ----------------
   // The number of successfully redeemed bonds.
-  function redeemBonds(uint[] memory redemption_timestamps)
+  function redeemBonds(uint[] memory redemption_epochs)
       public whenNotPaused returns (uint) {
-    address sender = msg.sender;
+    uint epoch_id = oracle_v3_.epoch_id_();
     
-    uint count_total = 0;
-    for (uint i = 0; i < redemption_timestamps.length; i++) {
-      uint redemption = redemption_timestamps[i];
-      uint count = bond_v2_.balanceOf(sender, redemption);
-      if (redemption > getTimestamp()) {
-        // If the bonds have not yet hit their redemption timestamp, the ACB
-        // accepts the redemption as long as |bond_budget_| is negative.
-        if (bond_budget_ >= 0) {
-          continue;
-        }
-        if (count > (-bond_budget_).toUint256()) {
-          count = (-bond_budget_).toUint256();
-        }
-      }
-
-      // Mint the corresponding coins to the user account.
-      uint amount = count * BOND_REDEMPTION_PRICE;
-      coin_v2_.mint(sender, amount);
-
-      // Burn the redeemed bonds.
-      bond_budget_ += count.toInt256();
-      bond_v2_.burn(sender, redemption, count);
-      count_total += count;
-    }
-    require(bond_v2_.totalSupply().toInt256() + bond_budget_ >= 0, "rb1");
+    coin_v2_.transferOwnership(address(bond_operation_v2_));
+    (uint redeemed_bonds, uint expired_bonds) =
+        bond_operation_v2_.decreaseBondSupply(
+            address(msg.sender), redemption_epochs, epoch_id, coin_v2_);
+    bond_operation_v2_.revokeOwnership(coin_v2_);
     
-    logging_v2_.redeemedBonds(count_total);
-    emit RedeemBondsEvent(sender, count_total);
-    return count_total;
+    logging_v2_.redeemBonds(epoch_id, redeemed_bonds, expired_bonds);
+    emit RedeemBondsEvent(address(msg.sender), epoch_id,
+                          redeemed_bonds, expired_bonds);
+    return redeemed_bonds;
   }
 
-  // Increase or decrease the total coin supply.
+  // Pay ETH and purchase JLC from the open market operation.
   //
   // Parameters
   // ----------------
-  // |delta|: The target increase or decrease to the total coin supply.
+  // The sender needs to pay |requested_eth_amount| ETH.
   //
   // Returns
   // ----------------
-  // The amount of coins that need to be newly minted by the ACB.
-  function _controlSupply(int delta)
-      internal whenNotPaused returns (uint) {
-    uint mint = 0;
-    if (delta == 0) {
-      // No change in the total coin supply.
-      bond_budget_ = 0;
-    } else if (delta > 0) {
-      // Increase the total coin supply.
-      uint count = delta.toUint256() / BOND_REDEMPTION_PRICE;
-      if (count <= bond_v2_.totalSupply()) {
-        // If there are sufficient bonds to redeem, increase the total coin
-        // supply by redeeming the bonds.
-        bond_budget_ = -count.toInt256();
-      } else {
-        // Otherwise, redeem all the issued bonds.
-        bond_budget_ = -bond_v2_.totalSupply().toInt256();
-        // The ACB needs to mint the remaining coins.
-        mint = (count - bond_v2_.totalSupply()) * BOND_REDEMPTION_PRICE;
-      }
-      require(bond_budget_ <= 0, "cs1");
-    } else {
-      require(0 <= oracle_level_ && oracle_level_ < oracle_v3_.getLevelMax(),
-              "cs2");
-      // Issue new bonds to decrease the total coin supply.
-      bond_budget_ = -delta / LEVEL_TO_BOND_PRICE[oracle_level_].toInt256();
-      require(bond_budget_ >= 0, "cs3");
-    }
+  // A tuple of two values:
+  // - The amount of ETH the sender paid. This value can be smaller than
+  // |requested_eth_amount| when the open market operation does not have enough
+  // coin budget. The remaining ETH is returned to the sender's wallet.
+  // - The amount of JLC the sender purchased.
+  function purchaseCoins()
+      public whenNotPaused payable returns (uint, uint) {
+    uint requested_eth_amount = msg.value;
+    uint elapsed_time = getTimestamp() - current_epoch_start_;
+    
+    require(open_market_operation_v2_.eth_balance_() <=
+            address(eth_pool_v2_).balance, "pc1");
+    
+    // Calculate the amount of ETH and JLC to be exchanged.
+    (uint eth_amount, uint coin_amount) =
+        open_market_operation_v2_.increaseCoinSupply(
+            requested_eth_amount, elapsed_time);
+    
+    coin_v2_.mint(msg.sender, coin_amount);
+    
+    require(address(this).balance >= requested_eth_amount, "pc2");
+    bool success;
+    (success,) =
+        payable(address(eth_pool_v2_)).call{value: eth_amount}(
+            abi.encodeWithSignature("increaseEth()"));
+    require(success, "pc3");
+    
+    logging_.purchaseCoins(oracle_.epoch_id_(), eth_amount, coin_amount);
+    
+    // Pay back the remaining ETH to the sender. This may trigger any arbitrary
+    // operations in an external smart contract. This must be called at the very
+    // end of purchaseCoins().
+    (success,) =
+        payable(msg.sender).call{value: requested_eth_amount - eth_amount}("");
+    require(success, "pc4");
+    require(open_market_operation_v2_.eth_balance_() <=
+            address(eth_pool_v2_).balance, "pc5");
 
-    require(bond_v2_.totalSupply().toInt256() + bond_budget_ >= 0, "cs4");
-    emit ControlSupplyEvent(delta, bond_budget_, mint);
-    return mint;
+    emit PurchaseCoinsEvent(msg.sender, requested_eth_amount,
+                            eth_amount, coin_amount);
+    return (eth_amount, coin_amount);
+  }
+  
+  // Pay JLC and purchase ETH from the open market operation.
+  //
+  // Parameters
+  // ----------------
+  // |requested_coin_amount|: The amount of JLC the sender is willing to pay.
+  //
+  // Returns
+  // ----------------
+  // A tuple of two values:
+  // - The amount of ETH the sender purchased.
+  // - The amount of JLC the sender paid. This value can be smaller than
+  // |requested_coin_amount| when the open market operation does not have
+  // enough ETH in the pool.
+  function sellCoins(uint requested_coin_amount)
+      public whenNotPaused returns (uint, uint) {
+    // The sender does not have enough coins.
+    require(coin_v2_.balanceOf(msg.sender) >= requested_coin_amount,
+            "OpenMarketOperation: Your coin balance is not enough.");
+        
+    require(open_market_operation_v2_.eth_balance_() <=
+            address(eth_pool_v2_).balance, "sc1");
+    
+    // Calculate the amount of ETH and JLC to be exchanged.
+    uint elapsed_time = getTimestamp() - current_epoch_start_;
+    (uint eth_amount, uint coin_amount) =
+        open_market_operation_v2_.decreaseCoinSupply(
+            requested_coin_amount, elapsed_time);
+
+    coin_v2_.burn(msg.sender, coin_amount);
+    
+    logging_.sellCoins(oracle_.epoch_id_(), eth_amount, coin_amount);
+    
+    // Send ETH to the sender. This may trigger any arbitrary operations in an
+    // external smart contract. This must be called at the very end of
+    // sellCoins().
+    eth_pool_v2_.decreaseEth(msg.sender, eth_amount);
+    require(open_market_operation_v2_.eth_balance_() <=
+            address(eth_pool_v2_).balance, "sc2");
+    
+    emit SellCoinsEvent(msg.sender, requested_coin_amount,
+                        eth_amount, coin_amount);
+    return (eth_amount, coin_amount);
   }
 
-  // Calculate a hash to be committed to the oracle. Voters are expected to
-  // call this function to create the hash.
+  // Calculate a hash to be committed to the oracle. Voters are expected to call
+  // this function to create the hash.
   //
   // Parameters
   // ----------------
@@ -898,17 +933,17 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
   // Returns
   // ----------------
   // The calculated hash value.
-  function hash(uint level, uint salt)
+  function encrypt(uint level, uint salt)
       public view returns (bytes32) {
     address sender = msg.sender;
-    return oracle_v3_.hash(sender, level, salt);
+    return oracle_v3_.encrypt(sender, level, salt);
   }
   
-  // Return the current timestamp in seconds.
+  // Public getter: Return the current timestamp in seconds.
   function getTimestamp()
       public virtual view returns (uint) {
     // block.timestamp is better than block.number because the granularity of
-    // the phase update is PHASE_DURATION (1 week).
+    // the epoch update is EPOCH_DURATION (1 week).
     return block.timestamp;
   }
 

@@ -12,41 +12,38 @@ import "./JohnLawCoin_v3.sol";
 //------------------------------------------------------------------------------
 // [ACB contract]
 //
-// The ACB stabilizes the coin price with algorithmically defined monetary
-// policies without holding any collateral. The ACB stabilizes the JLC / USD
-// exchange rate to 1.0 as follows:
+// The ACB stabilizes the USD / JLC exchange rate to 1.0 with algorithmically
+// defined monetary policies:
 //
 // 1. The ACB obtains the exchange rate from the oracle.
 // 2. If the exchange rate is 1.0, the ACB does nothing.
-// 3. If the exchange rate is larger than 1.0, the ACB increases the total coin
+// 3. If the exchange rate is higher than 1.0, the ACB increases the total coin
 //    supply by redeeming issued bonds (regardless of their redemption dates).
-//    If that is not enough to supply sufficient coins, the ACB mints new coins
-//    and provides the coins to the oracle as a reward.
-// 4. If the exchange rate is smaller than 1.0, the ACB decreases the total coin
-//    supply by issuing new bonds and imposing tax on coin transfers.
+//    If that is not enough to supply sufficient coins, the ACB performs an open
+//    market operation to sell JLC and purchase ETH to increase the total coin
+//    supply.
+// 4. If the exchange rate is lower than 1.0, the ACB decreases the total coin
+//    supply by issuing new bonds. If the exchange rate drops down to 0.6, the
+//    ACB performs an open market operation to sell ETH and purchase JLC to
+//    decrease the total coin supply.
 //
-// Permission: All methods are public. No one (including the genesis account)
-// is privileged to influence the monetary policies of the ACB. The ACB
+// Permission: All the methods are public. No one (including the genesis
+// account) is privileged to influence the monetary policies of the ACB. The ACB
 // is fully decentralized and there is truly no gatekeeper. The only exceptions
-// are a few methods that can be called only by the genesis account. They are
-// needed for the genesis account to upgrade the smart contract and fix bugs
-// in a development phase.
+// are a few methods the genesis account may use to upgrade the smart contracts
+// to fix bugs during a development phase.
 //------------------------------------------------------------------------------
 contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
   using SafeCast for uint;
   using SafeCast for int;
   bytes32 public constant NULL_HASH = 0;
 
-  // Constants. The values are defined in initialize(). The values never
-  // change during the contract execution but use 'public' (instead of
-  // 'constant') because tests want to override the values.
-  uint public BOND_REDEMPTION_PRICE;
-  uint public BOND_REDEMPTION_PERIOD;
+  // Constants. The values are defined in initialize(). The values never change
+  // during the contract execution but use 'public' (instead of 'constant')
+  // because tests want to override the values.
   uint[] public LEVEL_TO_EXCHANGE_RATE;
   uint public EXCHANGE_RATE_DIVISOR;
-  uint[] public LEVEL_TO_BOND_PRICE;
-  uint[] public LEVEL_TO_TAX_RATE;
-  uint public PHASE_DURATION;
+  uint public EPOCH_DURATION;
   uint public DEPOSIT_RATE;
   uint public DAMPING_FACTOR;
 
@@ -56,24 +53,31 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
 
   // Attributes. See the comment in initialize().
   JohnLawCoin_v2 public coin_;
-  JohnLawBond_v2 public bond_;
   Oracle_v3 public oracle_;
+  BondOperation_v2 public bond_operation_;
+  OpenMarketOperation_v2 public open_market_operation_;
+  EthPool_v2 public eth_pool_;
   Logging_v2 public logging_;
-  int public bond_budget_;
   uint public oracle_level_;
-  uint public current_phase_start_;
+  uint public current_epoch_start_;
 
   // Events.
   event PayableEvent(address indexed sender, uint value);
-  event VoteEvent(address indexed sender, bytes32 committed_hash,
-                  uint revealed_level, uint revealed_salt,
+  event UpdateEpochEvent(uint epoch_id, uint current_epoch_start, uint tax,
+                         uint burned, int delta, uint mint);
+  event VoteEvent(address indexed sender, uint indexed epoch_id,
+                  bytes32 hash, uint oracle_level, uint salt,
                   bool commit_result, bool reveal_result,
                   uint deposited, uint reclaimed, uint rewarded,
-                  bool phase_updated);
-  event PurchaseBondsEvent(address indexed sender, uint count,
-                           uint redemption_timestamp);
-  event RedeemBondsEvent(address indexed sender, uint count);
-  event ControlSupplyEvent(int delta, int bond_budget, uint mint);
+                  bool epoch_updated);
+  event PurchaseBondsEvent(address indexed sender, uint indexed epoch_id,
+                           uint purchased_bonds, uint redemption_epoch);
+  event RedeemBondsEvent(address indexed sender, uint indexed epoch_id,
+                         uint redeemed_bonds, uint expired_bonds);
+  event PurchaseCoinsEvent(address indexed sender, uint requested_eth_amount,
+                           uint eth_amount, uint coin_amount);
+  event SellCoinsEvent(address indexed sender, uint requested_coin_amount,
+                       uint eth_amount, uint coin_amount);
 
   // Initializer. The ownership of the contracts needs to be transferred to the
   // ACB just after the initializer is invoked.
@@ -81,13 +85,17 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
   // Parameters
   // ----------------
   // |coin|: The JohnLawCoin contract.
-  // |bond|: The JohnLawBond contract.
   // |oracle|: The Oracle contract.
+  // |bond_operation|: The BondOperation contract.
+  // |open_market_operation|: The OpenMarketOperation contract.
+  // |eth_pool|: The EthPool contract.
   // |logging|: The Logging contract.
-  function initialize(JohnLawCoin_v2 coin, JohnLawBond_v2 bond,
-                      Oracle_v3 oracle, Logging_v2 logging,
-                      int bond_budget, uint oracle_level,
-                      uint current_phase_start)
+  function initialize(JohnLawCoin_v2 coin, Oracle_v3 oracle,
+                      BondOperation_v2 bond_operation,
+                      OpenMarketOperation_v2 open_market_operation,
+                      EthPool_v2 eth_pool,
+                      Logging_v2 logging,
+                      uint oracle_level, uint current_epoch_start)
       public initializer {
     __Ownable_init();
     __Pausable_init();
@@ -95,37 +103,46 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
     // Constants.
 
     // The following table shows the mapping from the oracle level to the
-    // exchange rate, the bond issue price and the tax rate. Voters can vote for
-    // one of the oracle levels.
+    // exchange rate. Voters can vote for one of the oracle levels.
     //
-    // -----------------------------------------------------------------------
-    // | oracle level | exchange rate    | bond issue price       | tax rate |
-    // |              |                  | (annual interest rate) |          |
-    // -----------------------------------------------------------------------
-    // |             0| 1 coin = 0.6 USD |       970 coins (14.1%)|       30%|
-    // |             1| 1 coin = 0.7 USD |       978 coins (10.1%)|       20%|
-    // |             2| 1 coin = 0.8 USD |       986 coins (6.32%)|       12%|
-    // |             3| 1 coin = 0.9 USD |       992 coins (3.55%)|        5%|
-    // |             4| 1 coin = 1.0 USD |       997 coins (1.31%)|        0%|
-    // |             5| 1 coin = 1.1 USD |       997 coins (1.31%)|        0%|
-    // |             6| 1 coin = 1.2 USD |       997 coins (1.31%)|        0%|
-    // |             7| 1 coin = 1.3 USD |       997 coins (1.31%)|        0%|
-    // |             8| 1 coin = 1.4 USD |       997 coins (1.31%)|        0%|
-    // -----------------------------------------------------------------------
+    // ----------------------------------
+    // | oracle level | exchange rate   |
+    // ----------------------------------
+    // |            0 | 1 JLC = 0.6 USD |
+    // |            1 | 1 JLC = 0.7 USD |
+    // |            2 | 1 JLC = 0.8 USD |
+    // |            3 | 1 JLC = 0.9 USD |
+    // |            4 | 1 JLC = 1.0 USD |
+    // |            5 | 1 JLC = 1.1 USD |
+    // |            6 | 1 JLC = 1.2 USD |
+    // |            7 | 1 JLC = 1.3 USD |
+    // |            8 | 1 JLC = 1.4 USD |
+    // ----------------------------------
     //
     // Voters are expected to look up the current exchange rate using
-    // real-world currency exchangers and vote for the oracle level that
-    // corresponds to the exchange rate. Strictly speaking, the current
+    // real-world currency exchangers and vote for the oracle level that is
+    // closest to the current exchange rate. Strictly speaking, the current
     // exchange rate is defined as the exchange rate at the point when the
-    // current phase started (i.e., current_phase_start_).
+    // current epoch started (i.e., current_epoch_start_).
     //
-    // In the bootstrap phase in which no currency exchanger supports JLC <=>
-    // USD conversions, voters are expected to vote for the oracle level 5
-    // (i.e., 1 coin = 1.1 USD). This helps increase the total coin supply
-    // gradually in the bootstrap phase and incentivize early adopters. Once
-    // currency exchangers support the conversions, voters are expected to vote
-    // for the oracle level that corresponds to the real-world exchange rate.
+    // In the bootstrap phase where no currency exchanger supports JLC <->
+    // USD conversion, voters are expected to vote for the oracle level 5
+    // (i.e., 1 JLC = 1.1 USD). This helps increase the total coin supply
+    // gradually and incentivize early adopters in the bootstrap phase. Once
+    // a currency exchanger supports the conversion, voters are expected to
+    // vote for the oracle level that is closest to the real-world exchange
+    // rate.
     //
+    // Note that 10000000 coins (corresponding to 10 M USD) are given to the
+    // genesis account initially. This is important to make sure that the
+    // genesis account has power to determine the exchange rate until the
+    // ecosystem stabilizes. Once a real-world currency exchanger supports
+    // the conversion and the oracle gets a sufficient number of honest voters
+    // to agree on the real-world exchange rate consistently, the genesis
+    // account can lose its power by decreasing its coin balance, moving the
+    // oracle to a fully decentralized system. This mechanism is mandatory
+    // to stabilize the exchange rate and bootstrap the ecosystem successfully.
+
     // LEVEL_TO_EXCHANGE_RATE is the mapping from the oracle levels to the
     // exchange rates. The real exchange rate is obtained by dividing the values
     // by EXCHANGE_RATE_DIVISOR. For example, 11 corresponds to the exchange
@@ -134,89 +151,60 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
     LEVEL_TO_EXCHANGE_RATE = [6, 7, 8, 9, 10, 11, 12, 13, 14];
     EXCHANGE_RATE_DIVISOR = 10;
 
-    // LEVEL_TO_BOND_PRICE is the mapping from the oracle levels to the
-    // bond prices.
-    LEVEL_TO_BOND_PRICE = [970, 978, 986, 992, 997, 997, 997, 997, 997];
-
-    // The bond redemption price and the redemption period.
-    BOND_REDEMPTION_PRICE = 1000; // One bond is redeemed for 1000 coins.
-    BOND_REDEMPTION_PERIOD = 84 * 24 * 60 * 60; // 12 weeks.
-
-    // LEVEL_TO_TAX_RATE is the mapping from the oracle levels to the tax rate.
-    LEVEL_TO_TAX_RATE = [30, 20, 12, 5, 0, 0, 0, 0, 0];
-
-    // The duration of the oracle phase. The ACB adjusts the total coin supply
-    // once per phase. Voters can vote once per phase.
-    PHASE_DURATION = 60; // 1 week.
+    // The duration of the epoch. The ACB adjusts the total coin supply once
+    // per epoch. Voters can vote once per epoch.
+    EPOCH_DURATION = 60; // 1 week.
 
     // The percentage of the coin balance voters need to deposit.
     DEPOSIT_RATE = 10; // 10%.
 
-    // A damping factor to avoid minting or burning too many coins in one
-    // phase.
+    // A damping factor to avoid minting or burning too many coins in one epoch.
     DAMPING_FACTOR = 10; // 10%.
 
     // Attributes.
 
     // The JohnLawCoin contract.
-    //
-    // Note that 10000000 coins (corresponding to 10 M USD) are given to the
-    // genesis account initially. This is important to make sure that the
-    // genesis account can have power to determine the exchange rate until
-    // the ecosystem stabilizes. Once real-world currency exchangers start
-    // converting JLC with USD and the oracle gets a sufficient number of
-    // honest voters to agree on the real-world exchange rate consistently,
-    // the genesis account can lose its power by decreasing its coin balance.
-    // This mechanism is mandatory to stabilize the exchange rate and
-    // bootstrap the ecosystem successfully.
-    //
-    // Specifically, the genesis account votes for the oracle level 5 until
-    // real-world currency exchangers appear. When real-world currency
-    // exchangers appear, the genesis account votes for the oracle level
-    // corresponding to the real-world exchange rate. Other voters are
-    // expected to follow the genesis account. When the oracle gets enough
-    // honest voters, the genesis account decreases its coin balance and loses
-    // its power, moving the oracle to a fully decentralized system.
     coin_ = coin;
-    
-    // The JohnLawBond contract.
-    bond_ = bond;
     
     // The Oracle contract.
     oracle_ = oracle;
 
+    // The BondOperation contract.
+    bond_operation_ = bond_operation;
+
+    // The OpenMarketOperation contract.
+    open_market_operation_ = open_market_operation;
+
+    // The EthPool contract.
+    eth_pool_ = eth_pool;
+
     // The Logging contract.
     logging_ = logging;
 
-    // If |bond_budget_| is positive, it indicates the number of bonds the ACB
-    // can issue to decrease the total coin supply. If |bond_budget_| is
-    // negative, it indicates the number of bonds the ACB can redeem to
-    // increase the total coin supply.
-    bond_budget_ = bond_budget;
-    
     // The current oracle level.
     oracle_level_ = oracle_level;
 
-    // The timestamp when the current phase started.
-    current_phase_start_ = current_phase_start;
+    // The timestamp when the current epoch started.
+    current_epoch_start_ = current_epoch_start;
 
     /*
-    require(LEVEL_TO_EXCHANGE_RATE.length == oracle.getLevelMax(), "AC1");
-    require(LEVEL_TO_BOND_PRICE.length == oracle.getLevelMax(), "AC2");
-    require(LEVEL_TO_TAX_RATE.length == oracle.getLevelMax(), "AC3");
+    require(LEVEL_TO_EXCHANGE_RATE.length == oracle.LEVEL_MAX(), "AC1");
     */
   }
 
-  // Deprecate the ACB. Only the owner can call this method.
+  // Deprecate the ACB. Only the genesis account can call this method.
   function deprecate()
       public onlyOwner {
     coin_.transferOwnership(msg.sender);
-    bond_.transferOwnership(msg.sender);
     oracle_.transferOwnership(msg.sender);
+    bond_operation_.transferOwnership(msg.sender);
+    open_market_operation_.transferOwnership(msg.sender);
+    eth_pool_.transferOwnership(msg.sender);
     logging_.transferOwnership(msg.sender);
   }
 
-  // Pause the ACB in emergency cases. Only the owner can call this method.
+  // Pause the ACB in emergency cases. Only the genesis account can call this
+  // method.
   function pause()
       public onlyOwner {
     if (!paused()) {
@@ -225,7 +213,7 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
     coin_.pause();
   }
 
-  // Unpause the ACB. Only the owner can call this method.
+  // Unpause the ACB. Only the genesis account can call this method.
   function unpause()
       public onlyOwner {
     if (paused()) {
@@ -234,7 +222,7 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
     coin_.unpause();
   }
 
-  // Payable fallback to receive and store ETH. Give us a tip :)
+  // Payable fallback to receive and store ETH. Give us tips :)
   fallback() external payable {
     require(msg.data.length == 0, "fb1");
     emit PayableEvent(msg.sender, msg.value);
@@ -243,7 +231,7 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
     emit PayableEvent(msg.sender, msg.value);
   }
 
-  // Withdraw the tips. Only the owner can call this method.
+  // Withdraw the tips. Only the genesis account can call this method.
   function withdrawTips()
       public whenNotPaused onlyOwner {
     (bool success,) =
@@ -252,9 +240,10 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
   }
 
   // A struct to pack local variables. This is needed to avoid a stack-too-deep
-  // error of Solidity.
+  // error in Solidity.
   struct VoteResult {
-    bool phase_updated;
+    uint epoch_id;
+    bool epoch_updated;
     bool reveal_result;
     bool commit_result;
     uint deposited;
@@ -263,17 +252,16 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
   }
 
   // Vote for the exchange rate. The voter can commit a vote to the current
-  // phase, reveal their vote in the previous phase, and reclaim the deposited
-  // coins and get a reward for their vote in the phase before the previous
-  // phase at the same time.
+  // epoch N, reveal their vote in the epoch N-1, and reclaim the deposited
+  // coins and get a reward for their vote in the epoch N-2 at the same time.
   //
   // Parameters
   // ----------------
-  // |committed_hash|: The hash to be committed in the current phase. Specify
+  // |hash|: The hash to be committed in the current epoch N. Specify
   // ACB.NULL_HASH if you do not want to commit and only want to reveal and
   // reclaim previous votes.
-  // |revealed_level|: The oracle level you voted for in the previous phase.
-  // |revealed_salt|: The salt you used in the previous phase.
+  // |oracle_level|: The oracle level you voted for in the epoch N-1.
+  // |salt|: The salt you used in the epoch N-1.
   //
   // Returns
   // ----------------
@@ -283,23 +271,35 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
   //  - uint: The amount of the deposited coins.
   //  - uint: The amount of the reclaimed coins.
   //  - uint: The amount of the reward.
-  //  - boolean: Whether this vote resulted in a phase update.
-  function vote(bytes32 committed_hash, uint revealed_level, uint revealed_salt)
+  //  - boolean: Whether this vote updated the epoch.
+  function vote(bytes32 hash, uint oracle_level, uint salt)
       public whenNotPaused returns (bool, bool, uint, uint, uint, bool) {
     VoteResult memory result;
-    
-    result.phase_updated = false;
-    if (getTimestamp() >= current_phase_start_ + PHASE_DURATION) {
-      // Start a new phase.
-      result.phase_updated = true;
-      current_phase_start_ = getTimestamp();
+
+    result.epoch_id = oracle_.epoch_id_();
+    result.epoch_updated = false;
+    if (getTimestamp() >= current_epoch_start_ + EPOCH_DURATION) {
+      // Start a new epoch.
+      result.epoch_updated = true;
+      result.epoch_id += 1;
+      current_epoch_start_ = getTimestamp();
+      
+      // Advance to the next epoch. Provide the |tax| coins to the oracle
+      // as a reward.
+      uint tax = coin_.balanceOf(coin_.tax_account_());
+      coin_.transferOwnership(address(oracle_));
+      uint burned = oracle_.advance(coin_);
+      oracle_.revokeOwnership(coin_);
+      
+      // Reset the tax account address just in case.
+      coin_.resetTaxAccount();
+      require(coin_.balanceOf(coin_.tax_account_()) == 0, "vo1");
       
       int delta = 0;
-      uint tax_rate = 0;
       oracle_level_ = oracle_.getModeLevel();
-      if (oracle_level_ != oracle_.getLevelMax()) {
-        require(0 <= oracle_level_ && oracle_level_ < oracle_.getLevelMax(),
-                "vo1");
+      if (oracle_level_ != oracle_.LEVEL_MAX()) {
+        require(0 <= oracle_level_ && oracle_level_ < oracle_.LEVEL_MAX(),
+                "vo2");
         // Translate the oracle level to the exchange rate.
         uint exchange_rate = LEVEL_TO_EXCHANGE_RATE[oracle_level_];
 
@@ -312,33 +312,35 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
                 (int(exchange_rate) - int(EXCHANGE_RATE_DIVISOR)) /
                 int(EXCHANGE_RATE_DIVISOR);
 
-        // To avoid increasing or decreasing too many coins in one phase,
+        // To avoid increasing or decreasing too many coins in one epoch,
         // multiply the damping factor.
         delta = delta * int(DAMPING_FACTOR) / 100;
-
-        // Translate the oracle level to the tax rate.
-        tax_rate = LEVEL_TO_TAX_RATE[oracle_level_];
       }
 
-      // Increase or decrease the total coin supply.
-      uint mint = _controlSupply(delta);
+      // Update the bond budget.
+      uint mint = bond_operation_.updateBondBudget(delta, result.epoch_id);
 
-      // Burn the tax. This is fine because the purpose of the tax is to
-      // decrease the total coin supply.
-      address tax_account = coin_.tax_account_();
-      uint burned_tax = coin_.balanceOf(tax_account);
-      coin_.burn(tax_account, burned_tax);
-      coin_.setTaxRate(tax_rate);
+      // Update the coin budget.
+      if (oracle_level_ == 0 && delta < 0) {
+        require(mint == 0, "vo3");
+        open_market_operation_.updateCoinBudget(delta);
+      } else {
+        open_market_operation_.updateCoinBudget(mint.toInt256());
+      }
 
-      // Advance to the next phase. Provide the |mint| coins to the oracle
-      // as a reward.
-      coin_.transferOwnership(address(oracle_));
-      uint burned = oracle_.advance(coin_, mint);
-      oracle_.revokeOwnership(coin_);
-
-      logging_.phaseUpdated(mint, burned, delta, bond_budget_,
-                            coin_.totalSupply(), bond_.totalSupply(),
-                            oracle_level_, current_phase_start_, burned_tax);
+      logging_.updateEpoch(
+          result.epoch_id, mint, burned, delta, coin_.totalSupply(),
+          oracle_level_, current_epoch_start_, tax);
+      logging_.updateBondBudget(
+          result.epoch_id, bond_operation_.bond_budget_v2_(),
+          bond_operation_.bond_v2_().totalSupply(),
+          bond_operation_.validBondSupply(result.epoch_id));
+      logging_.updateCoinBudget(
+          result.epoch_id, open_market_operation_.coin_budget_v2_(),
+          address(eth_pool_).balance,
+          open_market_operation_.latest_price_());
+      emit UpdateEpochEvent(result.epoch_id, current_epoch_start_,
+                            tax, burned, delta, mint);
     }
 
     coin_.transferOwnership(address(oracle_));
@@ -348,32 +350,32 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
     // The voter needs to deposit the DEPOSIT_RATE percentage of their coin
     // balance.
     result.deposited = coin_.balanceOf(msg.sender) * DEPOSIT_RATE / 100;
-    if (committed_hash == NULL_HASH) {
+    if (hash == NULL_HASH) {
       result.deposited = 0;
     }
     result.commit_result = oracle_.commit(
-        coin_, msg.sender, committed_hash, result.deposited);
+        msg.sender, hash, result.deposited, coin_);
     if (!result.commit_result) {
       result.deposited = 0;
     }
 
     // Reveal.
-    result.reveal_result = oracle_.reveal(
-        msg.sender, revealed_level, revealed_salt);
+    result.reveal_result = oracle_.reveal(msg.sender, oracle_level, salt);
     
     // Reclaim.
-    (result.reclaimed, result.rewarded) = oracle_.reclaim(coin_, msg.sender);
+    (result.reclaimed, result.rewarded) = oracle_.reclaim(msg.sender, coin_);
 
     oracle_.revokeOwnership(coin_);
 
-    logging_.voted(result.commit_result, result.reveal_result,
-                   result.deposited, result.reclaimed, result.rewarded);
+    logging_.vote(result.epoch_id, result.commit_result,
+                  result.reveal_result, result.deposited,
+                  result.reclaimed, result.rewarded);
     emit VoteEvent(
-        msg.sender, committed_hash, revealed_level, revealed_salt,
+        msg.sender, result.epoch_id, hash, oracle_level, salt,
         result.commit_result, result.reveal_result, result.deposited,
-        result.reclaimed, result.rewarded, result.phase_updated);
+        result.reclaimed, result.rewarded, result.epoch_updated);
     return (result.commit_result, result.reveal_result, result.deposited,
-            result.reclaimed, result.rewarded, result.phase_updated);
+            result.reclaimed, result.rewarded, result.epoch_updated);
   }
 
   // Purchase bonds.
@@ -384,131 +386,146 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
   //
   // Returns
   // ----------------
-  // The redemption timestamp of the purchased bonds if it succeeds. 0
-  // otherwise.
+  // The redemption epoch of the purchased bonds.
   function purchaseBonds(uint count)
       public whenNotPaused returns (uint) {
-    address sender = msg.sender;
+    uint epoch_id = oracle_.epoch_id_();
     
-    require(count > 0, "PurchaseBonds: You must purchase at least one bond.");
-    require(bond_budget_ >= count.toInt256(),
-            "PurchaseBonds: The ACB's bond budget is not enough.");
-
-    uint bond_price = LEVEL_TO_BOND_PRICE[oracle_.getLevelMax() - 1];
-    if (0 <= oracle_level_ && oracle_level_ < oracle_.getLevelMax()) {
-      bond_price = LEVEL_TO_BOND_PRICE[oracle_level_];
-    }
-    uint amount = bond_price * count;
-    require(coin_.balanceOf(sender) >= amount,
-            "PurchaseBonds: Your coin balance is not enough.");
-
-    // Set the redemption timestamp of the bonds.
-    uint redemption_timestamp = getTimestamp() + BOND_REDEMPTION_PERIOD;
-
-    // Issue new bonds.
-    bond_.mint(sender, redemption_timestamp, count);
-    bond_budget_ -= count.toInt256();
-    require(bond_budget_ >= 0, "pb1");
-    require((bond_.totalSupply().toInt256()) + bond_budget_ >= 0, "pb2");
-    require(bond_.balanceOf(sender, redemption_timestamp) > 0, "pb3");
-
-    // Burn the corresponding coins.
-    coin_.burn(sender, amount);
-
-    logging_.purchasedBonds(count);
-    emit PurchaseBondsEvent(sender, count, redemption_timestamp);
-    return redemption_timestamp;
+    coin_.transferOwnership(address(bond_operation_));
+    uint redemption_epoch =
+        bond_operation_.increaseBondSupply(address(msg.sender), count,
+                                           epoch_id, coin_);
+    bond_operation_.revokeOwnership(coin_);
+    
+    logging_.purchaseBonds(epoch_id, count);
+    emit PurchaseBondsEvent(address(msg.sender), epoch_id,
+                            count, redemption_epoch);
+    return redemption_epoch;
   }
   
   // Redeem bonds.
   //
   // Parameters
   // ----------------
-  // |redemption_timestamps|: An array of bonds to be redeemed. Bonds are
-  // identified by their redemption timestamps.
+  // |redemption_epochs|: An array of bonds to be redeemed. The bonds are
+  // identified by their redemption epochs.
   //
   // Returns
   // ----------------
   // The number of successfully redeemed bonds.
-  function redeemBonds(uint[] memory redemption_timestamps)
+  function redeemBonds(uint[] memory redemption_epochs)
       public whenNotPaused returns (uint) {
-    address sender = msg.sender;
-
-    uint count_total = 0;
-    for (uint i = 0; i < redemption_timestamps.length; i++) {
-      uint redemption_timestamp = redemption_timestamps[i];
-      uint count = bond_.balanceOf(sender, redemption_timestamp);
-      if (redemption_timestamp > getTimestamp()) {
-        // If the bonds have not yet hit their redemption timestamp, the ACB
-        // accepts the redemption as long as |bond_budget_| is negative.
-        if (bond_budget_ >= 0) {
-          continue;
-        }
-        if (count > (-bond_budget_).toUint256()) {
-          count = (-bond_budget_).toUint256();
-        }
-      }
-
-      // Mint the corresponding coins to the user account.
-      uint amount = count * BOND_REDEMPTION_PRICE;
-      coin_.mint(sender, amount);
-
-      // Burn the redeemed bonds.
-      bond_budget_ += count.toInt256();
-      bond_.burn(sender, redemption_timestamp, count);
-      count_total += count;
-    }
-    require(bond_.totalSupply().toInt256() + bond_budget_ >= 0, "rb1");
+    uint epoch_id = oracle_.epoch_id_();
     
-    logging_.redeemedBonds(count_total);
-    emit RedeemBondsEvent(sender, count_total);
-    return count_total;
+    coin_.transferOwnership(address(bond_operation_));
+    (uint redeemed_bonds, uint expired_bonds) =
+        bond_operation_.decreaseBondSupply(
+            address(msg.sender), redemption_epochs, epoch_id, coin_);
+    bond_operation_.revokeOwnership(coin_);
+    
+    logging_.redeemBonds(epoch_id, redeemed_bonds, expired_bonds);
+    emit RedeemBondsEvent(address(msg.sender), epoch_id,
+                          redeemed_bonds, expired_bonds);
+    return redeemed_bonds;
   }
 
-  // Increase or decrease the total coin supply.
+  // Pay ETH and purchase JLC from the open market operation.
   //
   // Parameters
   // ----------------
-  // |delta|: The target increase or decrease to the total coin supply.
+  // The sender needs to pay |requested_eth_amount| ETH.
   //
   // Returns
   // ----------------
-  // The amount of coins that need to be newly minted by the ACB.
-  function _controlSupply(int delta)
-      internal whenNotPaused returns (uint) {
-    uint mint = 0;
-    if (delta == 0) {
-      // No change in the total coin supply.
-      bond_budget_ = 0;
-    } else if (delta > 0) {
-      // Increase the total coin supply.
-      uint count = delta.toUint256() / BOND_REDEMPTION_PRICE;
-      if (count <= bond_.totalSupply()) {
-        // If there are sufficient bonds to redeem, increase the total coin
-        // supply by redeeming the bonds.
-        bond_budget_ = -count.toInt256();
-      } else {
-        // Otherwise, redeem all the issued bonds.
-        bond_budget_ = -bond_.totalSupply().toInt256();
-        // The ACB needs to mint the remaining coins.
-        mint = (count - bond_.totalSupply()) * BOND_REDEMPTION_PRICE;
-      }
-      require(bond_budget_ <= 0, "cs1");
-    } else {
-      require(0 <= oracle_level_ && oracle_level_ < oracle_.getLevelMax(),
-              "cs2");
-      // Issue new bonds to decrease the total coin supply.
-      bond_budget_ = -delta / LEVEL_TO_BOND_PRICE[oracle_level_].toInt256();
-      require(bond_budget_ >= 0, "cs3");
-    }
+  // A tuple of two values:
+  // - The amount of ETH the sender paid. This value can be smaller than
+  // |requested_eth_amount| when the open market operation does not have enough
+  // coin budget. The remaining ETH is returned to the sender's wallet.
+  // - The amount of JLC the sender purchased.
+  function purchaseCoins()
+      public whenNotPaused payable returns (uint, uint) {
+    uint requested_eth_amount = msg.value;
+    uint elapsed_time = getTimestamp() - current_epoch_start_;
+    
+    require(open_market_operation_.eth_balance_() <=
+            address(eth_pool_).balance, "pc1");
+    
+    // Calculate the amount of ETH and JLC to be exchanged.
+    (uint eth_amount, uint coin_amount) =
+        open_market_operation_.increaseCoinSupply(
+            requested_eth_amount, elapsed_time);
+    
+    coin_.mint(msg.sender, coin_amount);
+    
+    require(address(this).balance >= requested_eth_amount, "pc2");
+    bool success;
+    (success,) =
+        payable(address(eth_pool_)).call{value: eth_amount}(
+            abi.encodeWithSignature("increaseEth()"));
+    require(success, "pc3");
+    require(open_market_operation_.eth_balance_() <=
+            address(eth_pool_).balance, "pc4");
+    
+    logging_.purchaseCoins(oracle_.epoch_id_(), eth_amount, coin_amount);
+    
+    // Pay back the remaining ETH to the sender. This may trigger any arbitrary
+    // operations in an external smart contract. This must be called at the very
+    // end of purchaseCoins().
+    (success,) =
+        payable(msg.sender).call{value: requested_eth_amount - eth_amount}("");
+    require(success, "pc5");
 
-    require(bond_.totalSupply().toInt256() + bond_budget_ >= 0, "cs4");
-    emit ControlSupplyEvent(delta, bond_budget_, mint);
-    return mint;
+    emit PurchaseCoinsEvent(msg.sender, requested_eth_amount,
+                            eth_amount, coin_amount);
+    return (eth_amount, coin_amount);
+  }
+  
+  // Pay JLC and purchase ETH from the open market operation.
+  //
+  // Parameters
+  // ----------------
+  // |requested_coin_amount|: The amount of JLC the sender is willing to pay.
+  //
+  // Returns
+  // ----------------
+  // A tuple of two values:
+  // - The amount of ETH the sender purchased.
+  // - The amount of JLC the sender paid. This value can be smaller than
+  // |requested_coin_amount| when the open market operation does not have
+  // enough ETH in the pool.
+  function sellCoins(uint requested_coin_amount)
+      public whenNotPaused returns (uint, uint) {
+    // The sender does not have enough coins.
+    require(coin_.balanceOf(msg.sender) >= requested_coin_amount,
+            "OpenMarketOperation: Your coin balance is not enough.");
+        
+    require(open_market_operation_.eth_balance_() <=
+            address(eth_pool_).balance, "sc1");
+    
+    // Calculate the amount of ETH and JLC to be exchanged.
+    uint elapsed_time = getTimestamp() - current_epoch_start_;
+    (uint eth_amount, uint coin_amount) =
+        open_market_operation_.decreaseCoinSupply(
+            requested_coin_amount, elapsed_time);
+
+    coin_.burn(msg.sender, coin_amount);
+    
+    logging_.sellCoins(oracle_.epoch_id_(), eth_amount, coin_amount);
+    
+    // Send ETH to the sender. This may trigger any arbitrary operations in an
+    // external smart contract. This must be called at the very end of
+    // sellCoins().
+    eth_pool_.decreaseEth(msg.sender, eth_amount);
+    require(open_market_operation_.eth_balance_() <=
+            address(eth_pool_).balance, "sc2");
+    
+    emit SellCoinsEvent(msg.sender, requested_coin_amount,
+                        eth_amount, coin_amount);
+    return (eth_amount, coin_amount);
   }
 
-  // Calculate a hash to be committed to the oracle. Voters are expected to
-  // call this function to create the hash.
+  // Calculate a hash to be committed to the oracle. Voters are expected to call
+  // this function to create the hash.
   //
   // Parameters
   // ----------------
@@ -518,17 +535,17 @@ contract ACB_v4 is OwnableUpgradeable, PausableUpgradeable {
   // Returns
   // ----------------
   // The calculated hash value.
-  function hash(uint level, uint salt)
+  function encrypt(uint level, uint salt)
       public view returns (bytes32) {
     address sender = msg.sender;
-    return oracle_.hash(sender, level, salt);
+    return oracle_.encrypt(sender, level, salt);
   }
 
   // Public getter: Return the current timestamp in seconds.
   function getTimestamp()
       public virtual view returns (uint) {
     // block.timestamp is better than block.number because the granularity of
-    // the phase update is PHASE_DURATION (1 week).
+    // the epoch update is EPOCH_DURATION (1 week).
     return block.timestamp;
   }
 

@@ -11,6 +11,8 @@ mkdir -p ../log
 ./logging_unittest.py > ../log/python_logging_unittest.log
 ./oracle_unittest.py > ../log/python_oracle_unittest.log
 ./oracle_simulator.py > ../log/python_oracle_simulator.log
+./bond_operation_unittest.py > ../log/python_bond_operation_unittest.log
+./open_market_operation_unittest.py > ../log/python_open_market_operation_unittest.log
 ./acb_unittest.py > ../log/python_acb_unittest.log
 ./acb_simulator.py > ../log/python_acb_simulator.log
 

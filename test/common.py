@@ -9,7 +9,7 @@ import glob, os, subprocess, sys, time
 
 def kill_ganache():
     kill_command = [
-        "ps axf | grep ganache | grep -v grep |" +
+        "ps axf | grep ganache | grep -v grep | grep -v 8546 |" +
         "awk '{ print $1 }' | xargs kill -9"]
     kill_proc = subprocess.Popen(
         kill_command, shell=True, stdin=subprocess.DEVNULL,
@@ -28,7 +28,7 @@ def kill_ganache():
         subprocess.run(command, shell=True)
 
 def reset_network(voters):
-    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    # os.chdir(os.path.dirname(os.path.abspath(__file__)))
     kill_ganache()
     time.sleep(6)
     network = subprocess.Popen(
