@@ -28,4 +28,4 @@ If it's marked as "Not connected", click it and then connect your account.
 
 You need to deposit some ETH to your account to use JohnLawCoin because JohnLawCoin is implemented on the Ethereum blockchain and thus you need to pay the transaction fee in ETH. Please buy some ETH from a cryptocurrency exchanger and deposit it to your account.
 
-*[Note for advanced readers: If you are testing JohnLawCoin on the Ropsten Testnet, you can get some ETH from [the faucet](https://faucet.metamask.io/).]*
+*[Note for advanced readers: If you are testing JohnLawCoin on the Ropsten Testnet, you can get some ETH from [the faucet](https://faucet.ropsten.be/).]*

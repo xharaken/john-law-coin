@@ -55,7 +55,7 @@ module.exports = async function (deployer) {
   await logging.transferOwnership(acb.address);
   await acb.unpause();
   
-  console.log("Oracle_v4 address: ", old_oracle.address);
+  console.log("Oracle_v3 address: ", old_oracle.address);
   console.log("Oracle_v5 address: ", oracle.address);
   console.log("ACB_v5 address: ", acb.address);
 };

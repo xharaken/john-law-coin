@@ -4,7 +4,7 @@
 // http://opensource.org/licenses/mit-license.php
 
 const ACB_ADDRESS_ON_LOCAL = "0xf25A5724f8562C5B71857171Ec6c74f5FB26e9b1";
-const ACB_ADDRESS_ON_ROPSTEN = "0xaA8B9b52C440Bc564DCCc856bE22A75D5F7C9E01";
+const ACB_ADDRESS_ON_ROPSTEN = "0x117D1b19Ec8C9caa8c3DBE09b9fcC2bD3E239ebc";
 const ACB_ADDRESS_ON_MAINNET = "";
 
 const ETHERSCAN_ADDRESS_ON_ROPSTEN = "https://ropsten.etherscan.io/";

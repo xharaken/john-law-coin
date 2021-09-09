@@ -1430,7 +1430,7 @@ contract OpenMarketOperation is OwnableUpgradeable {
 
     // The latest price at which the open market operation exchanged JLC with
     // ETH.
-    latest_price_ = 1000;
+    latest_price_ = 1000000000000;
     
     // The start price is updated at the beginning of each epoch.
     start_price_ = 0;

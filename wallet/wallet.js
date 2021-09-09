@@ -70,8 +70,8 @@ window.onload = async () => {
     } else if (_chain_id == 3) {
       $("network").innerHTML =
         "<span class='warning'>Note: You are connected to " +
-        "the Ropsten Testnet. The duration of one epoch is " +
-        "set to 1 min (instead of 1 week) for testing purposes. " +
+        "the Ropsten Testnet. For testing purpose, the duration of one epoch " +
+        "and the price auction interval are set to 1 min. " +
         "Please test whatever you want and give us feedback!</span>";
     } else if (_chain_id == 1337 || __chain_id == 1338) {
       $("network").innerHTML =
@@ -278,7 +278,7 @@ async function sellCoins() {
           parseInt(await _coin_contract.methods.balanceOf(
             _selected_address).call());
     if (coin_amount > coin_balance) {
-      throw("You don't have enough coin balance to send the coins.")
+      throw("You don't have enough coin balance to sell the coins.")
     }
     const coin_budget = parseInt(
       await _open_market_operation_contract.methods.coin_budget_().call());
