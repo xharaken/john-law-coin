@@ -140,8 +140,11 @@ function parameterized_test(accounts,
             }
             
             let price = start_price;
+            let finish_price = Math.trunc(start_price / (
+              _start_price_multiplier * _start_price_multiplier));
             for (let i = 0;
-                 i < Math.trunc(elapsed_time / _price_change_interval); i++) {
+                 i < Math.trunc(elapsed_time / _price_change_interval) &&
+                 price >= finish_price; i++) {
               price = Math.trunc(
                 price * (100 - _price_change_percentage) / 100);
             }
@@ -198,13 +201,13 @@ function parameterized_test(accounts,
             }
             
             let price = start_price;
+            let finish_price = start_price * (
+              _start_price_multiplier * _start_price_multiplier);
             for (let i = 0;
-                 i < Math.trunc(elapsed_time / _price_change_interval); i++) {
+                 i < Math.trunc(elapsed_time / _price_change_interval) &&
+                 price <= finish_price; i++) {
               price = Math.trunc(
                 price * (100 + _price_change_percentage) / 100);
-            }
-            if (price == start_price) {
-              price += 1;
             }
             assert.equal(await _operation.getCurrentPrice(elapsed_time), price);
             

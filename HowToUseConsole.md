@@ -128,7 +128,7 @@ truffle> (await open_market_operation.coin_budget_()).toNumber()
 275000  # The OpenMarketOperation can sell 275000 JLC coins.
 ```
 
-If the coin budget is positive, it indicates the amount of JLC the OpenMarketOperation can sell. The price (JLC / ETH) is lowered until the coin budget goes down to zero. You can query the current price as follows:
+If the coin budget is positive, it indicates the amount of JLC the OpenMarketOperation can sell. The price (ETH / JLC) is lowered until the coin budget goes down to zero. You can query the current price as follows:
 
 ```
 truffle> current_epoch_start = (await acb.current_epoch_start_()).toNumber()
@@ -168,7 +168,7 @@ truffle> (await coin.balanceOf(<<your address>>)).toNumber()
 
 You need to call `purchaseCoins()` with some ETH. The OpenMarketOperation purchases the ETH and sells JLC at the current price. If the OpenMarketOperation does not have enough JLC to sell, the remaining ETH is returned to your wallet.
 
-If the coin budget is negative, it indicates the amount of JLC the OpenMarketOperation can purchase. The price (JLC / ETH) is raised until the coin budget goes up to zero. You can sell JLC as follows:
+If the coin budget is negative, it indicates the amount of JLC the OpenMarketOperation can purchase. The price (ETH / JLC) is raised until the coin budget goes up to zero. You can sell JLC as follows:
 
 ```
 truffle> (await open_market_operation.coin_budget_()).toNumber()

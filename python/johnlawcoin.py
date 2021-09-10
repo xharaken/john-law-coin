@@ -1207,7 +1207,7 @@ class OpenMarketOperation:
 
         # The latest price at which the open market operation exchanged JLC
         # with ETH.
-        self.latest_price = 1000
+        self.latest_price = 1000000000000
         
         # The start price is updated at the beginning of each epoch.
         self.start_price = 0
@@ -1317,9 +1317,14 @@ class OpenMarketOperation:
     def get_current_price(self, elapsed_time):
         if self.coin_budget > 0:
             price = self.start_price
-            for i in range(min(
-                    int(elapsed_time /
-                        OpenMarketOperation.PRICE_CHANGE_INTERVAL), 100)):
+            finish_price = int(
+                self.start_price / (
+                    OpenMarketOperation.START_PRICE_MULTIPILER *
+                    OpenMarketOperation.START_PRICE_MULTIPILER))
+            for i in range(int(elapsed_time /
+                               OpenMarketOperation.PRICE_CHANGE_INTERVAL)):
+                if price < finish_price:
+                    break
                 price = int(price * (
                     100 - OpenMarketOperation.PRICE_CHANGE_PERCENTAGE) / 100)
             if price == 0:
@@ -1327,14 +1332,15 @@ class OpenMarketOperation:
             return price
         if self.coin_budget < 0:
             price = self.start_price
-            for i in range(min(
-                    int(elapsed_time /
-                        OpenMarketOperation.PRICE_CHANGE_INTERVAL), 100)):
+            finish_price = self.start_price * (
+                    OpenMarketOperation.START_PRICE_MULTIPILER *
+                    OpenMarketOperation.START_PRICE_MULTIPILER)
+            for i in range(int(elapsed_time /
+                               OpenMarketOperation.PRICE_CHANGE_INTERVAL)):
+                if price > finish_price:
+                    break
                 price = int(price * (
                     100 + OpenMarketOperation.PRICE_CHANGE_PERCENTAGE) / 100)
-            if price == self.start_price:
-                price += 1
-            assert(price > 0)
             return price
         return 0
     
