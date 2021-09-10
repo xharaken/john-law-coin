@@ -109,8 +109,14 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
                                     requested_eth_amount, elapsed_time)
                             continue
                         price = start_price
+                        finish_price = int(
+                            start_price / (
+                                self.start_price_multiplier *
+                                self.start_price_multiplier))
                         for i in range(int(
                                 elapsed_time / self.price_change_interval)):
+                            if price < finish_price:
+                                break
                             price = int(price * (
                                 100 - self.price_change_percentage) / 100)
                         if price == 0:
@@ -159,12 +165,15 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
                             continue
                         
                         price = start_price
+                        finish_price = start_price * (
+                                self.start_price_multiplier *
+                                self.start_price_multiplier)
                         for i in range(int(
                                 elapsed_time / self.price_change_interval)):
+                            if price > finish_price:
+                                break
                             price = int(price * (
                                 100 + self.price_change_percentage) / 100)
-                        if price == start_price:
-                            price += 1
                         self.assertEqual(
                             operation.get_current_price(elapsed_time), price)
                             

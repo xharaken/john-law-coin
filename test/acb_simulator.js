@@ -524,8 +524,11 @@ function parameterized_test(accounts,
         let original_timestamp = (await _acb.getTimestamp()).toNumber();
         await _acb.setTimestamp(original_timestamp +
                                 _price_change_interval * intervals);
-        let price = await _open_market_operation.start_price_();
-        for (let i = 0; i < intervals; i++) {
+        let start_price = await _open_market_operation.start_price_();
+        let price = start_price;
+        let finish_price = Math.trunc(start_price / (
+          _start_price_multiplier * _start_price_multiplier));
+        for (let i = 0; i < intervals && price >= finish_price; i++) {
           price = Math.trunc(price * (100 - _price_change_percentage) / 100);
         }
         if (price == 0) {
@@ -566,11 +569,10 @@ function parameterized_test(accounts,
                                 _price_change_interval * intervals);
         let start_price = await _open_market_operation.start_price_();
         let price = start_price;
-        for (let i = 0; i < intervals; i++) {
+        let finish_price = Math.trunc(start_price / (
+          _start_price_multiplier * _start_price_multiplier));
+        for (let i = 0; i < intervals && price <= finish_price; i++) {
           price = Math.trunc(price * (100 + _price_change_percentage) / 100);
-        }
-        if (price == start_price) {
-          price += 1;
         }
         
         let voter = _voters[(start_index + index) % _voter_count];

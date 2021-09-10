@@ -42,7 +42,7 @@ The ACB implements an *open market operation* to increase / decrease the total c
 
 You can sell ETH and purchase JLC when the coin budget is positive. You can sell JLC and purchase ETH when the coin budget is negative.
 
-The open market operation is implemented as a Dutch auction. When the coin budget is positive, the price (JLC / ETH) is lowered until the coin budget goes down to zero. When the coin budget is negative, the price (JLC / ETH) is raised until the coin budget goes up to zero.
+The open market operation is implemented as a Dutch auction. When the coin budget is positive, the price (ETH / JLC) is lowered until the coin budget goes down to zero. When the coin budget is negative, the price (ETH / JLC) is raised until the coin budget goes up to zero.
 
 ## Purchase and redeem bonds
 
