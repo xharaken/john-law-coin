@@ -1323,7 +1323,7 @@ class OpenMarketOperation:
                     OpenMarketOperation.START_PRICE_MULTIPILER))
             for i in range(int(elapsed_time /
                                OpenMarketOperation.PRICE_CHANGE_INTERVAL)):
-                if price < finish_price:
+                if i > 100 or price < finish_price:
                     break
                 price = int(price * (
                     100 - OpenMarketOperation.PRICE_CHANGE_PERCENTAGE) / 100)
@@ -1337,7 +1337,7 @@ class OpenMarketOperation:
                     OpenMarketOperation.START_PRICE_MULTIPILER)
             for i in range(int(elapsed_time /
                                OpenMarketOperation.PRICE_CHANGE_INTERVAL)):
-                if price > finish_price:
+                if i > 100 or price > finish_price:
                     break
                 price = int(price * (
                     100 + OpenMarketOperation.PRICE_CHANGE_PERCENTAGE) / 100)

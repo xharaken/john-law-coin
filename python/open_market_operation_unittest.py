@@ -115,7 +115,7 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
                                 self.start_price_multiplier))
                         for i in range(int(
                                 elapsed_time / self.price_change_interval)):
-                            if price < finish_price:
+                            if i > 100 or price < finish_price:
                                 break
                             price = int(price * (
                                 100 - self.price_change_percentage) / 100)
@@ -170,7 +170,7 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
                                 self.start_price_multiplier)
                         for i in range(int(
                                 elapsed_time / self.price_change_interval)):
-                            if price > finish_price:
+                            if i > 100 or price > finish_price:
                                 break
                             price = int(price * (
                                 100 + self.price_change_percentage) / 100)

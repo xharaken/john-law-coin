@@ -933,7 +933,8 @@ contract OpenMarketOperation_v5 is OwnableUpgradeable {
       uint finish_price =
           start_price_ / (START_PRICE_MULTIPLIER * START_PRICE_MULTIPLIER);
       for (uint i = 0;
-           i < elapsed_time / PRICE_CHANGE_INTERVAL && price >= finish_price;
+           i < elapsed_time / PRICE_CHANGE_INTERVAL && i < 100 &&
+               price >= finish_price;
            i++) {
         price = price * (100 - PRICE_CHANGE_PERCENTAGE) / 100;
       }
@@ -946,7 +947,8 @@ contract OpenMarketOperation_v5 is OwnableUpgradeable {
       uint finish_price =
           start_price_ * (START_PRICE_MULTIPLIER * START_PRICE_MULTIPLIER);
       for (uint i = 0;
-           i < elapsed_time / PRICE_CHANGE_INTERVAL && price <= finish_price;
+           i < elapsed_time / PRICE_CHANGE_INTERVAL && i < 100 &&
+               price <= finish_price;
            i++) {
         price = price * (100 + PRICE_CHANGE_PERCENTAGE) / 100;
       }
