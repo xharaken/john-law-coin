@@ -27,7 +27,7 @@
 
 require('dotenv').config();
 const HDWalletProvider = require('@truffle/hdwallet-provider');
-const { API_URL, MNEMONIC } = process.env;
+const { API_URL, MNEMONIC, ETHERSCAN_API_KEY } = process.env;
 
 module.exports = {
   /**
@@ -100,5 +100,12 @@ module.exports = {
          //  evmVersion: "byzantium"
        }
     }
+  },
+
+  plugins: [
+    'truffle-plugin-verify'
+  ],
+  api_keys: {
+    etherscan: ETHERSCAN_API_KEY
   },
 };

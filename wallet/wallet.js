@@ -14,6 +14,7 @@ var _acb_contract = null;
 var _web3 = null;
 var _chain_id = null;
 var _selected_address = null;
+var BN = null;
 
 // Functions to set up the wallet.
 
@@ -92,6 +93,7 @@ window.onload = async () => {
   try {
     _web3 = new Web3(window.ethereum);
     console.log("_web3: ", _web3);
+    BN = _web3.utils.BN;
     
     _acb_contract = await new _web3.eth.Contract(ACB_ABI, getACBAddress());
     console.log("ACB contract: ", _acb_contract);
@@ -225,16 +227,17 @@ async function purchaseCoins() {
     const current_epoch_start =
           parseInt(await _acb_contract.methods.current_epoch_start_().call());
     const current_price =
-          await _open_market_operation_contract.methods.getCurrentPrice(
-            Math.trunc(Date.now() / 1000) - current_epoch_start).call();
-    const eth_amount = coin_amount * current_price;
-    const your_eth_balance = await _web3.eth.getBalance(_selected_address);
-    if (eth_amount > your_eth_balance) {
+          new BN(await _open_market_operation_contract.methods.getCurrentPrice(
+            Math.trunc(Date.now() / 1000) - current_epoch_start).call());
+    const eth_amount = current_price.mul(new BN(coin_amount));
+    const your_eth_balance =
+          new BN(await _web3.eth.getBalance(_selected_address));
+    if (eth_amount.gt(your_eth_balance)) {
       throw("You don't have enough ETH balance to purchase the coins.");
     }
     
     const promise = _acb_contract.methods.purchaseCoins().send(
-      {from: _selected_address, value: eth_amount});
+      {from: _selected_address, value: eth_amount.toString()});
     showProcessingMessage();
     const receipt = await promise;
     console.log("receipt: ", receipt);
@@ -292,12 +295,12 @@ async function sellCoins() {
     const current_epoch_start =
           parseInt(await _acb_contract.methods.current_epoch_start_().call());
     const current_price =
-          await _open_market_operation_contract.methods.getCurrentPrice(
-            Math.trunc(Date.now() / 1000) - current_epoch_start).call();
-    const eth_amount = coin_amount * current_price;
-    const eth_balance = parseInt(
+          new BN(await _open_market_operation_contract.methods.getCurrentPrice(
+            Math.trunc(Date.now() / 1000) - current_epoch_start).call());
+    const eth_amount = current_price.mul(new BN(coin_amount));
+    const eth_balance = new BN(
       await _open_market_operation_contract.methods.eth_balance_().call());
-    if (eth_amount > eth_balance) {
+    if (eth_amount.gt(eth_balance)) {
       throw("The Open Market Operation does not have enough ETH to purchase " +
             "the JLC coins you specified. Check the current ETH / JLC price " +
             "and specify a lower value.");
@@ -374,7 +377,7 @@ async function purchaseBonds() {
           " bonds. The bonds can be redeemed from epoch " +
           ret.redemption_epoch +
           " to epoch " +
-          (parseInt(ret.redemption_epoch) + bond_redeemable_period) + ".";
+          (parseInt(ret.redemption_epoch) + bond_redeemable_period - 1) + ".";
     await showTransactionSuccessMessage(message, receipt);
   } catch (error) {
     const transactionHash = extractTransactionHash(error);
@@ -628,7 +631,6 @@ async function reloadInfo() {
     html += "<tr><td>Bond balance</td><td class='right'>" +
       bond_balance + "</td></tr>";
     const your_eth_balance = await _web3.eth.getBalance(_selected_address);
-    console.log(typeof(your_eth_balance));
     html += "<tr><td>ETH balance</td><td class='right'>" +
       _web3.utils.fromWei(your_eth_balance) + " ETH</td></tr>";
     const epoch_id =
@@ -1167,7 +1169,7 @@ async function showPriceChart() {
   const price_change_percentage = parseInt(
     await _open_market_operation_contract.methods.
       PRICE_CHANGE_PERCENTAGE().call());
-  const start_price = parseInt(
+  const start_price = new BN(
     await _open_market_operation_contract.methods.start_price_().call());
   const epoch_duration =
         parseInt(await _acb_contract.methods.EPOCH_DURATION().call());
@@ -1182,13 +1184,17 @@ async function showPriceChart() {
                           (interval + 1) * price_change_interval) * 1000);
     const now = new Date();
     
-    prices.push([begin, price, NaN]);
-    prices.push([end, price, NaN]);
+    prices.push([begin,
+                 parseFloat(_web3.utils.fromWei(price.toString())), NaN]);
+    prices.push([end,
+                 parseFloat(_web3.utils.fromWei(price.toString())), NaN]);
     if (interval < 30) {
       if (coin_budget > 0) {
-        price = Math.trunc(price * (100 - price_change_percentage) / 100);
+        price = price.mul(new BN(100 - price_change_percentage)).
+          div(new BN(100));
       } else if (coin_budget < 0) {
-        price = Math.trunc(price * (100 + price_change_percentage) / 100);
+        price = price.mul(new BN(100 + price_change_percentage)).
+          div(new BN(100));
       }
     }
     
@@ -1198,10 +1204,12 @@ async function showPriceChart() {
     }
   }
   
-  let max_price = Math.max(start_price, price);
-  let min_price = Math.min(start_price, price);
-  max_price = Math.ceil(max_price * 1.1);
-  min_price = Math.floor(min_price * 0.9);
+  let max_price =
+      parseFloat(_web3.utils.fromWei(BN.max(start_price, price).toString()));
+  let min_price =
+      parseFloat(_web3.utils.fromWei(BN.min(start_price, price).toString()));
+  max_price = max_price * 1.1;
+  min_price = min_price * 0.9;
   prices.push([new Date(), NaN, min_price]);
   prices.push([new Date(), NaN, max_price]);
   
@@ -1215,7 +1223,7 @@ async function showPriceChart() {
     table.addColumn("number", "current time");
     table.addRows(prices);
     const options = {
-      title: "Price chart (ETH wei / JLC)",
+      title: "Price chart (ETH / JLC)",
       legend: {position: "bottom"},
       vAxis: {
         gridlines: {count: 16},

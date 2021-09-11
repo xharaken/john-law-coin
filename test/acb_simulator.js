@@ -39,6 +39,7 @@ const common = require("./common.js");
 const should_throw = common.should_throw;
 const mod = common.mod;
 const randint = common.randint;
+const BN = web3.utils.BN;
 
 contract("ACBSimulator", function (accounts) {
   let args = common.custom_arguments();
@@ -191,8 +192,8 @@ function parameterized_test(accounts,
         this.purchase_count = 0;
         this.increased_coin_supply = 0;
         this.decreased_coin_supply = 0;
-        this.increased_eth = 0;
-        this.decreased_eth = 0;
+        this.increased_eth = new BN(0);
+        this.decreased_eth = new BN(0);
         this.delta = 0;
         this.mint = 0;
         this.lost = 0;
@@ -252,8 +253,10 @@ function parameterized_test(accounts,
         this.total_purchase_count += this.purchase_count;
         this.total_increased_coin_supply += this.increased_coin_supply;
         this.total_decreased_coin_supply += this.decreased_coin_supply;
-        this.total_increased_eth += this.increased_eth;
-        this.total_decreased_eth += this.decreased_eth;
+        this.total_increased_eth +=
+          web3.utils.fromWei(this.increased_eth.toString());
+        this.total_decreased_eth +=
+          web3.utils.fromWei(this.decreased_eth.toString());
         this.total_mint += this.mint;
         this.total_lost += this.lost;
         this.total_tax += this.tax;
@@ -301,10 +304,8 @@ function parameterized_test(accounts,
       let bond_budget = (await _bond_operation.bond_budget_()).toNumber();
       let coin_budget = (
         await _open_market_operation.coin_budget_()).toNumber();
-      let eth_balance = (
-        await _open_market_operation.eth_balance_()).toNumber();
-      let latest_price = (
-        await _open_market_operation.latest_price_()).toNumber();
+      let eth_balance = await _open_market_operation.eth_balance_();
+      let latest_price = await _open_market_operation.latest_price_();
       
       await purchase_coins();
       await sell_coins();
@@ -345,16 +346,20 @@ function parameterized_test(accounts,
       assert.equal(open_market_operation_log.exchanged_coins,
                    _metrics.increased_coin_supply -
                    _metrics.decreased_coin_supply);
-      assert.equal(open_market_operation_log.exchanged_eth,
-                   _metrics.increased_eth - _metrics.decreased_eth);
-      assert.equal(open_market_operation_log.eth_balance, eth_balance);
-      assert.equal(open_market_operation_log.latest_price, latest_price);
+      assert.equal(open_market_operation_log.exchanged_eth.toString(),
+                   _metrics.increased_eth.sub(_metrics.decreased_eth).
+                   toString());
+      assert.equal(open_market_operation_log.eth_balance,
+                   eth_balance.toString());
+      assert.equal(open_market_operation_log.latest_price,
+                   latest_price.toString());
       
       tax = await transfer_coins();
       
       if (true) {
         let coin_supply3 = await get_coin_supply();
         console.log("epoch=" + (await _oracle.epoch_id_()).toNumber() +
+                    " oracle_level=" + _metrics.oracle_level +
                     " reveal_hit=" + _metrics.reveal_hit +
                     "/" + (_metrics.reveal_hit + _metrics.reveal_miss) +
                     "=" + divide_or_zero(100 * _metrics.reveal_hit,
@@ -389,9 +394,12 @@ function parameterized_test(accounts,
                     "% expired=" + _metrics.expired_bonds +
                     " increased_supply=" + _metrics.increased_coin_supply +
                     " decreased_supply=" + _metrics.decreased_coin_supply +
-                    " increased_eth=" + _metrics.increased_eth +
-                    " decreased_eth=" + _metrics.decreased_eth +
-                    " eth_balance=" + eth_balance +
+                    " increased_eth=" + web3.utils.fromWei(
+                      _metrics.increased_eth.toString()) +
+                    " decreased_eth=" + web3.utils.fromWei(
+                      _metrics.decreased_eth.toString()) +
+                    " eth_balance=" + web3.utils.fromWei(
+                      eth_balance.toString()) +
                     " delta=" + _metrics.delta +
                     " mint=" + _metrics.mint +
                     " lost=" + _metrics.lost +
@@ -464,8 +472,8 @@ function parameterized_test(accounts,
                 "/" + _metrics.supply_nochange +
                 "/" + _metrics.supply_decreased +
                 " coin_supply=" +
-                divide_or_zero((await get_coin_supply()) /
-                               initial_coin_supply * 100) +
+                divide_or_zero(100 * (await get_coin_supply()),
+                               initial_coin_supply) +
                 "% mint=" + _metrics.total_mint +
                 " lost=" + _metrics.total_lost +
                 " bond_supply=" + (await get_bond_supply()) +
@@ -524,13 +532,14 @@ function parameterized_test(accounts,
         let original_timestamp = (await _acb.getTimestamp()).toNumber();
         await _acb.setTimestamp(original_timestamp +
                                 _price_change_interval * intervals);
-        let start_price = await _open_market_operation.start_price_();
+        let start_price = new BN(await _open_market_operation.start_price_());
         let price = start_price;
         for (let i = 0; i < intervals; i++) {
-          price = Math.trunc(price * (100 - _price_change_percentage) / 100);
+          price = price.mul(new BN(100 - _price_change_percentage)).
+            div(new BN(100));
         }
-        if (price == 0) {
-          price = 1;
+        if (price.eq(new BN(0))) {
+          price = new BN(1);
         }
         
         let voter = _voters[(start_index + index) % _voter_count];
@@ -539,15 +548,18 @@ function parameterized_test(accounts,
         let coin_supply = await get_coin_supply();
         voter.balance += requested_coin_amount;
         await check_purchase_coins(
-          {value: requested_coin_amount * price, from: voter.address},
-          requested_coin_amount * price, requested_coin_amount);
+          {value: price.mul(new BN(requested_coin_amount)).toString(),
+           from: voter.address},
+          price.mul(new BN(requested_coin_amount)).toString(),
+          requested_coin_amount);
         await _acb.setTimestamp(original_timestamp);
         
         assert.equal(await _coin.balanceOf(voter.address), voter.balance);
         assert.equal(await get_coin_supply(),
                      coin_supply + requested_coin_amount);
         
-        _metrics.increased_eth += requested_coin_amount * price;
+        _metrics.increased_eth = _metrics.increased_eth.add(
+          price.mul(new BN(requested_coin_amount)));
         _metrics.increased_coin_supply += requested_coin_amount;
       }
     }
@@ -565,31 +577,34 @@ function parameterized_test(accounts,
         let original_timestamp = (await _acb.getTimestamp()).toNumber();
         await _acb.setTimestamp(original_timestamp +
                                 _price_change_interval * intervals);
-        let start_price = await _open_market_operation.start_price_();
+        let start_price = new BN(await _open_market_operation.start_price_());
         let price = start_price;
         for (let i = 0; i < intervals; i++) {
-          price = Math.trunc(price * (100 + _price_change_percentage) / 100);
+          price = price.mul(new BN(100 + _price_change_percentage)).
+            div(new BN(100));
         }
         
         let voter = _voters[(start_index + index) % _voter_count];
         let requested_coin_amount =
             Math.min(Math.trunc(-coin_budget / _voter_count), voter.balance);
-        let eth_balance = await web3.eth.getBalance(_eth_pool.address);
+        let eth_balance = new BN(await web3.eth.getBalance(_eth_pool.address));
         requested_coin_amount =
-          Math.min(requested_coin_amount, Math.trunc(eth_balance / price));
+          Math.min(requested_coin_amount, eth_balance.div(price).toNumber());
         
         let coin_supply = await get_coin_supply();
         voter.balance -= requested_coin_amount;
         await check_sell_coins(
           requested_coin_amount, {from: voter.address},
-          requested_coin_amount * price, requested_coin_amount);
+          price.mul(new BN(requested_coin_amount)).toString(),
+          requested_coin_amount);
         await _acb.setTimestamp(original_timestamp);
         
         assert.equal(await _coin.balanceOf(voter.address), voter.balance);
         assert.equal(await get_coin_supply(),
                      coin_supply - requested_coin_amount);
         
-        _metrics.decreased_eth += requested_coin_amount * price;
+        _metrics.decreased_eth = _metrics.decreased_eth.add(
+          price.mul(new BN(requested_coin_amount)));
         _metrics.decreased_coin_supply += requested_coin_amount;
       }
     }
@@ -995,7 +1010,7 @@ function parameterized_test(accounts,
       }
       
       let epoch_offset = (await _oracle.epoch_id_()).toNumber() - 3;
-      let repeat = 1;
+      let repeat = 4;
       if (epoch_offset == repeat * 1) {
         _tmp_bond_price = _bond_price;
         _tmp_bond_redemption_price = _bond_redemption_price;
@@ -1276,28 +1291,34 @@ function parameterized_test(accounts,
     }
     
     async function check_purchase_coins(option, eth_amount, coin_amount) {
-      let old_eth_balance = await web3.eth.getBalance(_eth_pool.address);
+      assert.equal(typeof(eth_amount), "string");
+      let old_eth_balance =
+          new BN(await web3.eth.getBalance(_eth_pool.address));
       let receipt = await _acb.purchaseCoins(option);
       let args =
           receipt.logs.filter(e => e.event == 'PurchaseCoinsEvent')[0].args;
       assert.equal(args.sender, option.from);
       assert.equal(args.eth_amount, eth_amount);
       assert.equal(args.coin_amount, coin_amount);
-      let eth_balance = await web3.eth.getBalance(_eth_pool.address);
-      assert.equal(eth_balance - old_eth_balance, eth_amount);
+      let eth_balance = new BN(await web3.eth.getBalance(_eth_pool.address));
+      assert.equal(eth_balance.sub(old_eth_balance).toString(),
+                   eth_amount);
     }
     
     async function check_sell_coins(
       requested_coin_amount, option, eth_amount, coin_amount) {
-      let old_eth_balance = await web3.eth.getBalance(_eth_pool.address);
+      assert.equal(typeof(eth_amount), "string");
+      let old_eth_balance =
+          new BN(await web3.eth.getBalance(_eth_pool.address));
       let receipt = await _acb.sellCoins(requested_coin_amount, option);
       let args =
           receipt.logs.filter(e => e.event == 'SellCoinsEvent')[0].args;
       assert.equal(args.sender, option.from);
       assert.equal(args.eth_amount, eth_amount);
       assert.equal(args.coin_amount, coin_amount);
-      let eth_balance = await web3.eth.getBalance(_eth_pool.address);
-      assert.equal(old_eth_balance - eth_balance, eth_amount);
+      let eth_balance = new BN(await web3.eth.getBalance(_eth_pool.address));
+      assert.equal(old_eth_balance.sub(eth_balance).toString(),
+                   eth_amount);
     }
     
     async function check_purchase_bonds(purchased_bonds, option, redemption) {

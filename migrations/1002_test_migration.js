@@ -48,6 +48,8 @@ module.exports = async function (deployer) {
   await open_market_operation.transferOwnership(acb.address);
   await eth_pool.transferOwnership(acb.address);
   await logging.transferOwnership(acb.address);
+  console.log("f");
+  
   await acb.unpause();
   
   console.log("ACB_v4 address: ", acb.address);

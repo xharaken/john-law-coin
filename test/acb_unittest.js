@@ -15,6 +15,7 @@ const ACBForTesting = artifacts.require("ACBForTesting");
 const common = require("./common.js");
 const should_throw = common.should_throw;
 const mod = common.mod;
+const BN = web3.utils.BN;
 
 contract("ACBUnittest", function (accounts) {
   let args = common.custom_arguments();
@@ -2699,82 +2700,88 @@ function parameterized_test(accounts,
       let price, balance, contract_eth_balance;
       
       await _acb.updateCoinBudget(100, {from: accounts[1]});
-      price = (await _open_market_operation.start_price_()).toNumber();
+      price = new BN(await _open_market_operation.start_price_());
       await should_throw(async () => {
         await _acb.sellCoins.call(0, {from: accounts[1]});
       }, "OpenMarketOperation");
       balance = (await _coin.balanceOf(accounts[1])).toNumber();
       contract_eth_balance =
-        Math.trunc(await web3.eth.getBalance(_eth_pool.address));
+        new BN(await web3.eth.getBalance(_eth_pool.address));
       await check_purchase_coins(
-        {value: 100 * price, from: accounts[1]}, 100 * price, 100);
+        {value: price.mul(new BN(100)).toString(), from: accounts[1]},
+        price.mul(new BN(100)).toString(), 100);
       assert.equal(await _coin.balanceOf(accounts[1]), balance + 100);
       assert.equal(await web3.eth.getBalance(_eth_pool.address),
-                   contract_eth_balance + 100 * price);
+                   contract_eth_balance.add(price.mul(new BN(100))).toString());
       assert.equal(await web3.eth.getBalance(_eth_pool.address),
-                   (await _open_market_operation.eth_balance_()).toNumber());
+                   (await _open_market_operation.eth_balance_()).toString());
       
       await _acb.updateCoinBudget(100, {from: accounts[1]});
-      price = (await _open_market_operation.start_price_()).toNumber();
+      price = new BN(await _open_market_operation.start_price_());
       await should_throw(async () => {
         await _acb.sellCoins.call(0, {from: accounts[1]});
       }, "OpenMarketOperation");
       balance = (await _coin.balanceOf(accounts[1])).toNumber();
       contract_eth_balance =
-        Math.trunc(await web3.eth.getBalance(_eth_pool.address));
+        new BN(await web3.eth.getBalance(_eth_pool.address));
       await check_purchase_coins(
-        {value: 40 * price, from: accounts[1]}, 40 * price, 40);
+        {value: price.mul(new BN(40)).toString(), from: accounts[1]},
+        price.mul(new BN(40)).toString(), 40);
       assert.equal(await _coin.balanceOf(accounts[1]), balance + 40);
       assert.equal(await web3.eth.getBalance(_eth_pool.address),
-                   contract_eth_balance + 40 * price);
+                   contract_eth_balance.add(price.mul(new BN(40))));
       assert.equal(await web3.eth.getBalance(_eth_pool.address),
-                   (await _open_market_operation.eth_balance_()).toNumber());
+                   (await _open_market_operation.eth_balance_()).toString());
       await check_purchase_coins(
-        {value: 70 * price, from: accounts[1]}, 60 * price, 60);
+        {value: price.mul(new BN(70)).toString(), from: accounts[1]},
+        price.mul(new BN(60)).toString(), 60);
       assert.equal(await _coin.balanceOf(accounts[1]), balance + 100);
       assert.equal(await web3.eth.getBalance(_eth_pool.address),
-                   contract_eth_balance + 100 * price);
+                   contract_eth_balance.add(price.mul(new BN(100))).toString());
       assert.equal(await web3.eth.getBalance(_eth_pool.address),
-                   (await _open_market_operation.eth_balance_()).toNumber());
+                   (await _open_market_operation.eth_balance_()).toString());
       await should_throw(async () => {
         await _acb.purchaseCoins.call({value: 10, from: accounts[1]});
       }, "OpenMarketOperation");
       
       await _acb.updateCoinBudget(-100, {from: accounts[1]});
-      price = (await _open_market_operation.start_price_()).toNumber();
+      price = new BN(await _open_market_operation.start_price_());
       await should_throw(async () => {
         await _acb.purchaseCoins.call({value: 0, from: accounts[1]});
       }, "OpenMarketOperation");
       balance = (await _coin.balanceOf(accounts[1])).toNumber();
       contract_eth_balance =
-        Math.trunc(await web3.eth.getBalance(_eth_pool.address));
-      await check_sell_coins(100, {from: accounts[1]}, 100 * price, 100);
+        new BN(await web3.eth.getBalance(_eth_pool.address));
+      await check_sell_coins(100, {from: accounts[1]},
+                             price.mul(new BN(100)).toString(), 100);
       assert.equal(await _coin.balanceOf(accounts[1]), balance - 100);
       assert.equal(await web3.eth.getBalance(_eth_pool.address),
-                   contract_eth_balance - 100 * price);
+                   contract_eth_balance.sub(price.mul(new BN(100))).toString());
       assert.equal(await web3.eth.getBalance(_eth_pool.address),
-                   (await _open_market_operation.eth_balance_()).toNumber());
+                   (await _open_market_operation.eth_balance_()).toString());
       
       await _acb.updateCoinBudget(-100, {from: accounts[1]});
-      price = (await _open_market_operation.start_price_()).toNumber();
+      price = new BN(await _open_market_operation.start_price_());
       await should_throw(async () => {
         await _acb.purchaseCoins.call({value: 0, from: accounts[1]});
       }, "OpenMarketOperation");
       balance = (await _coin.balanceOf(accounts[1])).toNumber();
       contract_eth_balance =
-        Math.trunc(await web3.eth.getBalance(_eth_pool.address));
-      await check_sell_coins(40, {from: accounts[1]}, 40 * price, 40);
+        new BN(await web3.eth.getBalance(_eth_pool.address));
+      await check_sell_coins(40, {from: accounts[1]},
+                             price.mul(new BN(40)).toString(), 40);
       assert.equal(await _coin.balanceOf(accounts[1]), balance - 40);
       assert.equal(await web3.eth.getBalance(_eth_pool.address),
-                   contract_eth_balance - 40 * price);
+                   contract_eth_balance.sub(price.mul(new BN(40))).toString());
       assert.equal(await web3.eth.getBalance(_eth_pool.address),
-                   (await _open_market_operation.eth_balance_()).toNumber());
-      await check_sell_coins(70, {from: accounts[1]}, 60 * price, 60);
+                   (await _open_market_operation.eth_balance_()).toString());
+      await check_sell_coins(70, {from: accounts[1]},
+                             price.mul(new BN(60)).toString(), 60);
       assert.equal(await _coin.balanceOf(accounts[1]), balance - 100);
       assert.equal(await web3.eth.getBalance(_eth_pool.address),
-                   contract_eth_balance - 100 * price);
+                   contract_eth_balance.sub(price.mul(new BN(100))).toString());
       assert.equal(await web3.eth.getBalance(_eth_pool.address),
-                   (await _open_market_operation.eth_balance_()).toNumber());
+                   (await _open_market_operation.eth_balance_()).toString());
       await should_throw(async () => {
         await _acb.sellCoins.call(10, {from: accounts[1]});
       }, "OpenMarketOperation");
@@ -3145,6 +3152,7 @@ function parameterized_test(accounts,
     }
     
     async function check_purchase_coins(option, eth_amount, coin_amount) {
+      assert.equal(typeof(eth_amount), "string")
       let old_eth_balance = await web3.eth.getBalance(_eth_pool.address);
       let receipt = await _acb.purchaseCoins(option);
       let args =
@@ -3158,6 +3166,7 @@ function parameterized_test(accounts,
     
     async function check_sell_coins(
       requested_coin_amount, option, eth_amount, coin_amount) {
+      assert.equal(typeof(eth_amount), "string")
       let old_eth_balance = await web3.eth.getBalance(_eth_pool.address);
       let receipt = await _acb.sellCoins(requested_coin_amount, option);
       let args =

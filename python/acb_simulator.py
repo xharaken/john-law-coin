@@ -296,9 +296,9 @@ class ACBSimulator(unittest.TestCase):
             tax = self.transfer_coins()
 
             if False:
-                print('epoch=%d reveal_hit=%d/%d=%d%% reclaim_hit=%d/%d=%d%% '
-                      'reward_hit=%d/%d=%d%% purchase_hit=%d/%d=%d%% '
-                      'redeem_hit=%d/%d=%d%% '
+                print('epoch=%d oracle_level=%d reveal_hit=%d/%d=%d%% '
+                      'reclaim_hit=%d/%d=%d%% reward_hit=%d/%d=%d%% '
+                      'purchase_hit=%d/%d=%d%% redeem_hit=%d/%d=%d%% '
                       'redemptions=%d/%d=%d%% fast_redeem=%d/%d=%d%% '
                       'expired=%d increased_supply=%d decreased_supply=%d '
                       'increased_eth=%d decreased_eth=%d eth_balance=%d '
@@ -306,6 +306,7 @@ class ACBSimulator(unittest.TestCase):
                       'bond_supply=%d->%d valid_bond_supply=%d->%d '
                       'bond_budget=%d->%d coin_budget=%d->%d tax=%d' %
                       (self._oracle.epoch_id,
+                       self.metrics.oracle_level,
                        self.metrics.reveal_hit,
                        self.metrics.reveal_hit + self.metrics.reveal_miss,
                        divide_or_zero(100 * self.metrics.reveal_hit,

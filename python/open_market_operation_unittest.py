@@ -121,13 +121,6 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
                         self.assertEqual(
                             operation.get_current_price(elapsed_time), price)
                             
-                        eth_amount = 0
-                        coin_amount = 0
-                        if price == 0:
-                            with self.assertRaises(Exception):
-                                operation.increase_coin_supply(
-                                    requested_eth_amount, elapsed_time)
-                            continue
                         coin_amount = int(requested_eth_amount / price)
                         if coin_amount > coin_budget:
                             coin_amount = coin_budget
@@ -171,13 +164,6 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
                         self.assertEqual(
                             operation.get_current_price(elapsed_time), price)
                             
-                        eth_amount = 0
-                        coin_amount = 0
-                        if price == 0:
-                            with self.assertRaises(Exception):
-                                operation.decrease_coin_supply(
-                                    requested_eth_amount, elapsed_time)
-                            continue
                         coin_amount = requested_coin_amount
                         if coin_amount >= -coin_budget:
                             coin_amount = -coin_budget

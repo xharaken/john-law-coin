@@ -4,7 +4,7 @@
 // http://opensource.org/licenses/mit-license.php
 
 const ACB_ADDRESS_ON_LOCAL = "0xf25A5724f8562C5B71857171Ec6c74f5FB26e9b1";
-const ACB_ADDRESS_ON_ROPSTEN = "0x117D1b19Ec8C9caa8c3DBE09b9fcC2bD3E239ebc";
+const ACB_ADDRESS_ON_ROPSTEN = "0x2799fB16781DC50d517Ca0a362C63260CeD684B2";
 const ACB_ADDRESS_ON_MAINNET = "";
 
 const ETHERSCAN_ADDRESS_ON_ROPSTEN = "https://ropsten.etherscan.io/";
@@ -2535,6 +2535,19 @@ const OPEN_MARKET_OPERATION_ABI = [
     {
       "inputs": [],
       "name": "PRICE_CHANGE_INTERVAL",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "PRICE_CHANGE_MAX",
       "outputs": [
         {
           "internalType": "uint256",

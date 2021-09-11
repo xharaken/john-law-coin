@@ -759,6 +759,7 @@ contract OpenMarketOperation_v5 is OwnableUpgradeable {
   // because tests want to override the values.
   uint public PRICE_CHANGE_INTERVAL;
   uint public PRICE_CHANGE_PERCENTAGE;
+  uint public PRICE_CHANGE_MAX;
   uint public START_PRICE_MULTIPLIER;
 
   // Attributes. See the comment in initialize().
