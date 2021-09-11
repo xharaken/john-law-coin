@@ -1539,6 +1539,7 @@ contract OpenMarketOperation_v2 is OwnableUpgradeable {
   // because tests want to override the values.
   uint public PRICE_CHANGE_INTERVAL;
   uint public PRICE_CHANGE_PERCENTAGE;
+  uint public PRICE_CHANGE_MAX;
   uint public START_PRICE_MULTIPLIER;
 
   // Attributes. See the comment in initialize().
@@ -1691,11 +1692,8 @@ contract OpenMarketOperation_v2 is OwnableUpgradeable {
       public view returns (uint) {
     if (coin_budget_v2_ > 0) {
       uint price = start_price_v2_;
-      uint finish_price =
-          start_price_ / (START_PRICE_MULTIPLIER * START_PRICE_MULTIPLIER);
       for (uint i = 0;
-           i < elapsed_time / PRICE_CHANGE_INTERVAL && i < 100 &&
-               price >= finish_price;
+           i < elapsed_time / PRICE_CHANGE_INTERVAL && i < PRICE_CHANGE_MAX;
            i++) {
         price = price * (100 - PRICE_CHANGE_PERCENTAGE) / 100;
       }
@@ -1705,11 +1703,8 @@ contract OpenMarketOperation_v2 is OwnableUpgradeable {
       return price;
     } else if (coin_budget_v2_ < 0) {
       uint price = start_price_v2_;
-      uint finish_price =
-          start_price_ * (START_PRICE_MULTIPLIER * START_PRICE_MULTIPLIER);
       for (uint i = 0;
-           i < elapsed_time / PRICE_CHANGE_INTERVAL && i < 100 &&
-               price <= finish_price;
+           i < elapsed_time / PRICE_CHANGE_INTERVAL && i < PRICE_CHANGE_MAX;
            i++) {
         price = price * (100 + PRICE_CHANGE_PERCENTAGE) / 100;
       }

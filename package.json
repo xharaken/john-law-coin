@@ -21,12 +21,12 @@
     "dotenv": "^10.0.0",
     "openzeppelin-solidity": "3.3.0",
     "truffle-contract-size": "^2.0.1",
+    "truffle-flattener": "^1.5.0",
     "truffle-hdwallet-provider": "^1.0.6",
     "web3": "^1.2.9"
   },
   "devDependencies": {
-    "@openzeppelin/truffle-upgrades": "^1.5.0",
-    "truffle-flattener": "^1.5.0"
+    "@openzeppelin/truffle-upgrades": "^1.5.0"
   },
   "repository": {
     "type": "git",

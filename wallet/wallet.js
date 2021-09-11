@@ -628,6 +628,7 @@ async function reloadInfo() {
     html += "<tr><td>Bond balance</td><td class='right'>" +
       bond_balance + "</td></tr>";
     const your_eth_balance = await _web3.eth.getBalance(_selected_address);
+    console.log(typeof(your_eth_balance));
     html += "<tr><td>ETH balance</td><td class='right'>" +
       _web3.utils.fromWei(your_eth_balance) + " ETH</td></tr>";
     const epoch_id =

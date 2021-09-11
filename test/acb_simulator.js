@@ -526,9 +526,7 @@ function parameterized_test(accounts,
                                 _price_change_interval * intervals);
         let start_price = await _open_market_operation.start_price_();
         let price = start_price;
-        let finish_price = Math.trunc(start_price / (
-          _start_price_multiplier * _start_price_multiplier));
-        for (let i = 0; i < intervals && price >= finish_price; i++) {
+        for (let i = 0; i < intervals; i++) {
           price = Math.trunc(price * (100 - _price_change_percentage) / 100);
         }
         if (price == 0) {
@@ -569,9 +567,7 @@ function parameterized_test(accounts,
                                 _price_change_interval * intervals);
         let start_price = await _open_market_operation.start_price_();
         let price = start_price;
-        let finish_price = start_price * (
-          _start_price_multiplier * _start_price_multiplier);
-        for (let i = 0; i < intervals && price <= finish_price; i++) {
+        for (let i = 0; i < intervals; i++) {
           price = Math.trunc(price * (100 + _price_change_percentage) / 100);
         }
         
@@ -1191,23 +1187,23 @@ function parameterized_test(accounts,
         _bond_operation = await deployProxy(
           BondOperationForTesting_v5,
           [_bond.address,
-           (await old_bond_operation.bond_budget_()).toNumber()]);
+           await old_bond_operation.bond_budget_()]);
         common.print_contract_size(_bond_operation, "BondOperation_v5");
         
         let old_open_market_operation = _open_market_operation;
         _open_market_operation = await deployProxy(
           OpenMarketOperationForTesting_v5,
-          [(await old_open_market_operation.latest_price_()).toNumber(),
-           (await old_open_market_operation.start_price_()).toNumber(),
-           (await old_open_market_operation.eth_balance_()).toNumber(),
-           (await old_open_market_operation.coin_budget_()).toNumber()]);
+          [await old_open_market_operation.latest_price_(),
+           await old_open_market_operation.start_price_(),
+           await old_open_market_operation.eth_balance_(),
+           await old_open_market_operation.coin_budget_()]);
         common.print_contract_size(_open_market_operation,
                                    "OpenMarketOperation_v5");
         
         let old_oracle = _oracle;
         _oracle = await deployProxy(
           OracleForTesting_v5,
-          [(await old_oracle.epoch_id_()).toNumber()]);
+          [await old_oracle.epoch_id_()]);
         common.print_contract_size(_oracle, "OracleForTesting_v5");
         
         let old_acb = _acb;

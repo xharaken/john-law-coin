@@ -17,14 +17,15 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
               (price_change_interval, price_change_percentage,
                start_price_multiplier))
 
-        self.open_market_operation = OpenMarketOperation()
-        self.open_market_operation.override_constants_for_testing(
+        self._open_market_operation = OpenMarketOperation()
+        self._open_market_operation.override_constants_for_testing(
             price_change_interval, price_change_percentage,
             start_price_multiplier)
-        self.eth_pool = EthPool()
-        self.price_change_interval = price_change_interval
-        self.price_change_percentage = price_change_percentage
-        self.start_price_multiplier = start_price_multiplier
+        self._eth_pool = EthPool()
+        self._price_change_interval = price_change_interval
+        self._price_change_percentage = price_change_percentage
+        self._price_change_max = OpenMarketOperation.PRICE_CHANGE_MAX
+        self._start_price_multiplier = start_price_multiplier
 
     def teardown(self):
         pass
@@ -32,7 +33,7 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
     def run(self):
         accounts = ['0x0000', '0x1000', '0x2000', '0x3000', '0x4000',
                     '0x5000', '0x6000', '0x7000']
-        operation = self.open_market_operation
+        operation = self._open_market_operation
         latest_price = operation.latest_price
         
         self.assertEqual(operation.start_price, 0)
@@ -71,9 +72,9 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
             operation.update_coin_budget(updated_coin_budget)
             start_price = 0
             if updated_coin_budget > 0:
-                start_price = latest_price * self.start_price_multiplier
+                start_price = latest_price * self._start_price_multiplier
             elif updated_coin_budget < 0:
-                start_price = int(latest_price / self.start_price_multiplier)
+                start_price = int(latest_price / self._start_price_multiplier)
             self.assertEqual(operation.start_price, start_price)
             self.assertEqual(operation.latest_price, latest_price)
             self.assertEqual(operation.coin_budget, updated_coin_budget)
@@ -93,12 +94,12 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
             coin_budget = updated_coin_budget
             if updated_coin_budget > 0:
                 for elapsed_time in [
-                        0, 1, self.price_change_interval + 1,
-                        self.price_change_interval,
-                        self.price_change_interval - 1,
-                        self.price_change_interval * 2,
-                        self.price_change_interval * 2 - 1,
-                        self.price_change_interval * 22]:
+                        0, 1, self._price_change_interval + 1,
+                        self._price_change_interval,
+                        self._price_change_interval - 1,
+                        self._price_change_interval * 2,
+                        self._price_change_interval * 2 - 1,
+                        self._price_change_interval * 22]:
                     for requested_eth_amount in [
                             0, 1, int(updated_coin_budget * start_price / 4),
                             int(updated_coin_budget * start_price / 8),
@@ -109,16 +110,12 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
                                     requested_eth_amount, elapsed_time)
                             continue
                         price = start_price
-                        finish_price = int(
-                            start_price / (
-                                self.start_price_multiplier *
-                                self.start_price_multiplier))
-                        for i in range(int(
-                                elapsed_time / self.price_change_interval)):
-                            if i > 100 or price < finish_price:
-                                break
+                        for i in range(
+                                min(int(elapsed_time /
+                                        self._price_change_interval),
+                                    self._price_change_max)):
                             price = int(price * (
-                                100 - self.price_change_percentage) / 100)
+                                100 - self._price_change_percentage) / 100)
                         if price == 0:
                             price = 1
                         self.assertEqual(
@@ -148,12 +145,12 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
                         self.assertEqual(operation.eth_balance, eth_balance)
             elif updated_coin_budget < 0:
                 for elapsed_time in [
-                        0, 1, self.price_change_interval + 1,
-                        self.price_change_interval,
-                        self.price_change_interval - 1,
-                        self.price_change_interval * 2,
-                        self.price_change_interval * 2 - 1,
-                        self.price_change_interval * 22]:
+                        0, 1, self._price_change_interval + 1,
+                        self._price_change_interval,
+                        self._price_change_interval - 1,
+                        self._price_change_interval * 2,
+                        self._price_change_interval * 2 - 1,
+                        self._price_change_interval * 22]:
                     for requested_coin_amount in [
                             0, 1, int(-updated_coin_budget / 4),
                             int(-updated_coin_budget / 8),
@@ -165,15 +162,12 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
                             continue
                         
                         price = start_price
-                        finish_price = start_price * (
-                                self.start_price_multiplier *
-                                self.start_price_multiplier)
-                        for i in range(int(
-                                elapsed_time / self.price_change_interval)):
-                            if i > 100 or price > finish_price:
-                                break
+                        for i in range(
+                                min(int(elapsed_time /
+                                        self._price_change_interval),
+                                    self._price_change_max)):
                             price = int(price * (
-                                100 + self.price_change_percentage) / 100)
+                                100 + self._price_change_percentage) / 100)
                         self.assertEqual(
                             operation.get_current_price(elapsed_time), price)
                             
@@ -203,19 +197,19 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
                         self.assertEqual(operation.coin_budget, coin_budget)
                         self.assertEqual(operation.eth_balance, eth_balance)
 
-        self.assertEqual(self.eth_pool.eth_balance, 0)
-        self.eth_pool.increase_eth(10)
-        self.assertEqual(self.eth_pool.eth_balance, 10)
-        self.eth_pool.increase_eth(100)
-        self.assertEqual(self.eth_pool.eth_balance, 110)
-        self.eth_pool.decrease_eth(accounts[0], 20)
-        self.assertEqual(self.eth_pool.eth_balance, 90)
+        self.assertEqual(self._eth_pool.eth_balance, 0)
+        self._eth_pool.increase_eth(10)
+        self.assertEqual(self._eth_pool.eth_balance, 10)
+        self._eth_pool.increase_eth(100)
+        self.assertEqual(self._eth_pool.eth_balance, 110)
+        self._eth_pool.decrease_eth(accounts[0], 20)
+        self.assertEqual(self._eth_pool.eth_balance, 90)
         with self.assertRaises(Exception):
-            self.eth_pool.decrease_eth(accounts[0], 91)
-        self.eth_pool.decrease_eth(accounts[0], 90)
-        self.assertEqual(self.eth_pool.eth_balance, 0)
-        self.eth_pool.decrease_eth(accounts[0], 0)
-        self.assertEqual(self.eth_pool.eth_balance, 0)
+            self._eth_pool.decrease_eth(accounts[0], 91)
+        self._eth_pool.decrease_eth(accounts[0], 90)
+        self.assertEqual(self._eth_pool.eth_balance, 0)
+        self._eth_pool.decrease_eth(accounts[0], 0)
+        self.assertEqual(self._eth_pool.eth_balance, 0)
         
 
 def main():

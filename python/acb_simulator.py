@@ -469,12 +469,7 @@ class ACBSimulator(unittest.TestCase):
                 original_timestamp + self._price_change_interval * intervals)
             start_price = self._open_market_operation.start_price
             price = start_price
-            finish_price = int(start_price / (
-                    self._start_price_multiplier *
-                    self._start_price_multiplier))
             for i in range(intervals):
-                if price < finish_price:
-                    break
                 price = int(price * (
                     100 - self._price_change_percentage) / 100)
             if price == 0:
@@ -513,12 +508,7 @@ class ACBSimulator(unittest.TestCase):
                 original_timestamp + self._price_change_interval * intervals)
             start_price = self._open_market_operation.start_price
             price = start_price
-            finish_price = start_price * (
-                    self._start_price_multiplier *
-                    self._start_price_multiplier)
             for i in range(intervals):
-                if price > finish_price:
-                    break
                 price = int(price * (
                     100 + self._price_change_percentage) / 100)
             

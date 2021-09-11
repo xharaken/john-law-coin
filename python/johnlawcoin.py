@@ -1199,8 +1199,12 @@ class OpenMarketOperation:
         # given price (the open market operation sells ETH and purchases JLC).
         # The auction stops when the open market operation finished purchasing
         # JLC in the coin budget.
+        #
+        # To avoid the price from increasing / decreasing too much, the price
+        # is allowed to increase / decrease up to PRICE_CHANGE_MAX times.
         OpenMarketOperation.PRICE_CHANGE_INTERVAL = 8 * 60 * 60 # 8 hours
         OpenMarketOperation.PRICE_CHANGE_PERCENTAGE = 15 # 15%
+        OpenMarketOperation.PRICE_CHANGE_MAX = 25
         OpenMarketOperation.START_PRICE_MULTIPILER = 3
 
         # Attributes.
@@ -1317,14 +1321,10 @@ class OpenMarketOperation:
     def get_current_price(self, elapsed_time):
         if self.coin_budget > 0:
             price = self.start_price
-            finish_price = int(
-                self.start_price / (
-                    OpenMarketOperation.START_PRICE_MULTIPILER *
-                    OpenMarketOperation.START_PRICE_MULTIPILER))
-            for i in range(int(elapsed_time /
-                               OpenMarketOperation.PRICE_CHANGE_INTERVAL)):
-                if i > 100 or price < finish_price:
-                    break
+            for i in range(
+                    min(int(elapsed_time /
+                            OpenMarketOperation.PRICE_CHANGE_INTERVAL),
+                        OpenMarketOperation.PRICE_CHANGE_MAX)):
                 price = int(price * (
                     100 - OpenMarketOperation.PRICE_CHANGE_PERCENTAGE) / 100)
             if price == 0:
@@ -1332,13 +1332,10 @@ class OpenMarketOperation:
             return price
         if self.coin_budget < 0:
             price = self.start_price
-            finish_price = self.start_price * (
-                    OpenMarketOperation.START_PRICE_MULTIPILER *
-                    OpenMarketOperation.START_PRICE_MULTIPILER)
-            for i in range(int(elapsed_time /
-                               OpenMarketOperation.PRICE_CHANGE_INTERVAL)):
-                if i > 100 or price > finish_price:
-                    break
+            for i in range(
+                    min(int(elapsed_time /
+                            OpenMarketOperation.PRICE_CHANGE_INTERVAL),
+                        OpenMarketOperation.PRICE_CHANGE_MAX)):
                 price = int(price * (
                     100 + OpenMarketOperation.PRICE_CHANGE_PERCENTAGE) / 100)
             return price

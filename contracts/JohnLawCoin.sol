@@ -1420,10 +1420,14 @@ contract OpenMarketOperation is OwnableUpgradeable {
     // The auction stops when the open market operation finished purchasing JLC
     // in the coin budget.
     //
+    // To avoid the price from increasing / decreasing too much, the price
+    // is allowed to increase / decrease up to PRICE_CHANGE_MAX times.
+    //
     // TODO: Change PRICE_CHANGE_INTERVAL to 8 * 60 * 60 before launching to the
     // mainnet. It's set to 60 seconds for the Ropsten Testnet.
     PRICE_CHANGE_INTERVAL = 60; // 8 hours
     PRICE_CHANGE_PERCENTAGE = 15; // 15%
+    PRICE_CHANGE_MAX = 25;
     START_PRICE_MULTIPLIER = 3;
     
     // Attributes.
@@ -1543,11 +1547,8 @@ contract OpenMarketOperation is OwnableUpgradeable {
       public view returns (uint) {
     if (coin_budget_ > 0) {
       uint price = start_price_;
-      uint finish_price =
-          start_price_ / (START_PRICE_MULTIPLIER * START_PRICE_MULTIPLIER);
       for (uint i = 0;
-           i < elapsed_time / PRICE_CHANGE_INTERVAL && i < 100 &&
-               price >= finish_price;
+           i < elapsed_time / PRICE_CHANGE_INTERVAL && i < PRICE_CHANGE_MAX;
            i++) {
         price = price * (100 - PRICE_CHANGE_PERCENTAGE) / 100;
       }
@@ -1557,11 +1558,8 @@ contract OpenMarketOperation is OwnableUpgradeable {
       return price;
     } else if (coin_budget_ < 0) {
       uint price = start_price_;
-      uint finish_price =
-          start_price_ * (START_PRICE_MULTIPLIER * START_PRICE_MULTIPLIER);
       for (uint i = 0;
-           i < elapsed_time / PRICE_CHANGE_INTERVAL && i < 100 &&
-               price <= finish_price;
+           i < elapsed_time / PRICE_CHANGE_INTERVAL && i < PRICE_CHANGE_MAX;
            i++) {
         price = price * (100 + PRICE_CHANGE_PERCENTAGE) / 100;
       }

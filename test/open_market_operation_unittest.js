@@ -39,7 +39,8 @@ function parameterized_test(accounts,
     common.print_contract_size(_operation, "OpenMarketOperationForTesting");
     _eth_pool = await deployProxy(EthPool, []);
     common.print_contract_size(_operation, "EthPool");
-    
+
+    _price_change_max = (await _operation.PRICE_CHANGE_MAX()).toNumber();
     let latest_price = (await _operation.latest_price_()).toNumber();
     
     await should_throw(async () => {
@@ -140,11 +141,9 @@ function parameterized_test(accounts,
             }
             
             let price = start_price;
-            let finish_price = Math.trunc(start_price / (
-              _start_price_multiplier * _start_price_multiplier));
             for (let i = 0;
                  i < Math.trunc(elapsed_time / _price_change_interval) &&
-                 i < 100 && price >= finish_price; i++) {
+                 i < _price_change_max; i++) {
               price = Math.trunc(
                 price * (100 - _price_change_percentage) / 100);
             }
@@ -195,17 +194,15 @@ function parameterized_test(accounts,
             if (coin_budget == 0) {
               await should_throw(async () => {
                 await _operation.decreaseCoinSupply.call(
-                  String(requested_coin_amount), elapsed_time);
+                  requested_coin_amount, elapsed_time);
               }, "OpenMarketOperation");
               continue;
             }
             
             let price = start_price;
-            let finish_price = start_price * (
-              _start_price_multiplier * _start_price_multiplier);
             for (let i = 0;
                  i < Math.trunc(elapsed_time / _price_change_interval) &&
-                 i < 100 && price <= finish_price; i++) {
+                 i < _price_change_max; i++) {
               price = Math.trunc(
                 price * (100 + _price_change_percentage) / 100);
             }
@@ -216,7 +213,7 @@ function parameterized_test(accounts,
             if (price == 0) {
               await should_throw(async () => {
                 await _operation.decreaseCoinSupply.call(
-                  String(requested_coin_amount), elapsed_time);
+                  requested_coin_amount, elapsed_time);
               }, "OpenMarketOperation");
               continue;
             }
@@ -282,7 +279,7 @@ function parameterized_test(accounts,
     async function check_decrease_coin_supply(
       requested_coin_amount, elapsed_time, eth_amount, coin_amount) {
       let receipt = await _operation.decreaseCoinSupply(
-        String(requested_coin_amount), elapsed_time);
+        requested_coin_amount, elapsed_time);
       let args = receipt.logs.filter(
         e => e.event == 'DecreaseCoinSupplyEvent')[0].args;
       assert.equal(args.requested_coin_amount, requested_coin_amount);
