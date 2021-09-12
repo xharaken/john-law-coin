@@ -36,14 +36,6 @@ module.exports = async function (deployer) {
           open_market_operation.address, eth_pool.address, logging.address]);
   console.log("i");
   
-  await bond.transferOwnership(bond_operation.address);
-  await coin.transferOwnership(acb.address);
-  await oracle.transferOwnership(acb.address);
-  await bond_operation.transferOwnership(acb.address);
-  await open_market_operation.transferOwnership(acb.address);
-  await eth_pool.transferOwnership(acb.address);
-  await logging.transferOwnership(acb.address);
-  
   console.log("JohnLawCoin address: ", coin.address);
   console.log("JohnLawBond address: ", bond.address);
   console.log("Oracle address: ", oracle.address);
@@ -52,4 +44,13 @@ module.exports = async function (deployer) {
   console.log("EthPool address: ", eth_pool.address);
   console.log("Logging address: ", logging.address);
   console.log("ACB address: ", acb.address);
+  
+  await bond.transferOwnership(bond_operation.address);
+  await coin.transferOwnership(acb.address);
+  await oracle.transferOwnership(acb.address);
+  await bond_operation.transferOwnership(acb.address);
+  await open_market_operation.transferOwnership(acb.address);
+  await eth_pool.transferOwnership(acb.address);
+  await logging.transferOwnership(acb.address);
+  console.log("j");
 };

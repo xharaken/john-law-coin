@@ -42,6 +42,15 @@ module.exports = async function (deployer) {
   await old_acb.deprecate();
   console.log("e");
 
+  console.log("JohnLawCoin_v2 address: ", coin.address);
+  console.log("Oracle_v3 address: ", oracle.address);
+  console.log("BondOperation_v2 address: ", bond_operation.address);
+  console.log("OpenMarketOperation_v2 address: ",
+              open_market_operation.address);
+  console.log("EthPool_v2 address: ", eth_pool.address);
+  console.log("Logging_v2 address: ", logging.address);
+  console.log("ACB_v4 address: ", acb.address);
+  
   await coin.transferOwnership(acb.address);
   await oracle.transferOwnership(acb.address);
   await bond_operation.transferOwnership(acb.address);
@@ -51,6 +60,5 @@ module.exports = async function (deployer) {
   console.log("f");
   
   await acb.unpause();
-  
-  console.log("ACB_v4 address: ", acb.address);
+  console.log("g");
 };

@@ -544,11 +544,17 @@ function parameterized_test(accounts,
         
         let voter = _voters[(start_index + index) % _voter_count];
         let requested_coin_amount = Math.trunc(coin_budget / _voter_count);
+        let eth_amount = price.mul(new BN(requested_coin_amount));
+        let voter_eth_balance =
+            new BN(await web3.eth.getBalance(voter.address));
+        if (eth_amount.div(new BN(2)).gte(voter_eth_balance)) {
+          continue;
+        }
         
         let coin_supply = await get_coin_supply();
         voter.balance += requested_coin_amount;
         await check_purchase_coins(
-          {value: price.mul(new BN(requested_coin_amount)).toString(),
+          {value: eth_amount.toString(),
            from: voter.address},
           price.mul(new BN(requested_coin_amount)).toString(),
           requested_coin_amount);
