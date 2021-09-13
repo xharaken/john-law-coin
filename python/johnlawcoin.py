@@ -1705,7 +1705,7 @@ class ACB:
     def purchase_coins(self, sender, requested_eth_amount):
         elapsed_time = self.get_timestamp() - self.current_epoch_start
 
-        assert(self.open_market_operation.eth_balance <=
+        assert(self.open_market_operation.eth_balance ==
                self.eth_pool.eth_balance)
         
         # Calculate the amount of ETH and JLC to be exchanged.
@@ -1719,7 +1719,7 @@ class ACB:
             self.oracle.epoch_id, eth_amount, coin_amount)
         
         self.eth_pool.increase_eth(eth_amount)
-        assert(self.open_market_operation.eth_balance <=
+        assert(self.open_market_operation.eth_balance ==
                self.eth_pool.eth_balance)
 
         return (eth_amount, coin_amount)
@@ -1743,7 +1743,7 @@ class ACB:
         
         elapsed_time = self.get_timestamp() - self.current_epoch_start
         
-        assert(self.open_market_operation.eth_balance <=
+        assert(self.open_market_operation.eth_balance ==
                self.eth_pool.eth_balance)
         
         # Calculate the amount of ETH and JLC to be exchanged.
@@ -1757,7 +1757,7 @@ class ACB:
             self.oracle.epoch_id, eth_amount, coin_amount)
         
         self.eth_pool.decrease_eth(sender, eth_amount)
-        assert(self.open_market_operation.eth_balance <=
+        assert(self.open_market_operation.eth_balance ==
                self.eth_pool.eth_balance)
 
         return (eth_amount, coin_amount)

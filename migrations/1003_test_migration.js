@@ -6,6 +6,9 @@
 // http://opensource.org/licenses/mit-license.php
 
 const { deployProxy, upgradeProxy } = require('@openzeppelin/truffle-upgrades');
+const common = require("./common.js");
+const sleep = common.sleep;
+
 const JohnLawCoin_v2 = artifacts.require("JohnLawCoin_v2");
 const JohnLawBond_v2 = artifacts.require("JohnLawBond_v2");
 const Oracle_v3 = artifacts.require("Oracle_v3");
@@ -22,10 +25,9 @@ const ACB_v5 = artifacts.require("ACB_v5");
 const ACB_ADDRESS = ACB_v4.address; // Update the value before testing.
 
 module.exports = async function (deployer) {
-  console.log("a");
   const old_acb = await ACB_v4.at(ACB_ADDRESS);
   await old_acb.pause();
-  
+  await sleep(10000); console.log("a");
   const coin = await JohnLawCoin_v2.at(await old_acb.coin_());
   const old_bond_operation = await BondOperation_v2.at(
     await old_acb.bond_operation_());
@@ -35,32 +37,32 @@ module.exports = async function (deployer) {
   const eth_pool = await EthPool_v2.at(await old_acb.eth_pool_());
   const old_oracle = await Oracle_v3.at(await old_acb.oracle_());
   const logging = await Logging_v2.at(await old_acb.logging_());
-  console.log("b");
+  await sleep(10000); console.log("b");
   const bond_operation = await deployProxy(
     BondOperation_v5,
     [bond.address,
      await old_bond_operation.bond_budget_()]);
-  console.log("c");
+  await sleep(10000); console.log("c");
   const open_market_operation = await deployProxy(
     OpenMarketOperation_v5,
     [await old_open_market_operation.latest_price_(),
      await old_open_market_operation.start_price_(),
      await old_open_market_operation.eth_balance_(),
      await old_open_market_operation.coin_budget_()]);
-  console.log("d");
+  await sleep(10000); console.log("d");
   const oracle = await deployProxy(
     Oracle_v5, [await old_oracle.epoch_id_()]);
-  console.log("e");
+  await sleep(10000); console.log("e");
   const acb = await deployProxy(
     ACB_v5, [coin.address, old_oracle.address, oracle.address,
              bond_operation.address, open_market_operation.address,
              eth_pool.address, logging.address,
              await old_acb.oracle_level_(),
              await old_acb.current_epoch_start_()]);
-  console.log("f");
+  await sleep(10000); console.log("f");
   await old_acb.deprecate();
   await old_bond_operation.deprecate();
-  console.log("g");
+  await sleep(10000); console.log("g");
   
   console.log("JohnLawCoin_v2 address: ", coin.address);
   console.log("JohnLawBond_v2 address: ", bond.address);
@@ -82,7 +84,7 @@ module.exports = async function (deployer) {
   await open_market_operation.transferOwnership(acb.address);
   await eth_pool.transferOwnership(acb.address);
   await logging.transferOwnership(acb.address);
-  console.log("h");
+  await sleep(10000); console.log("h");
   
   await acb.unpause();
   console.log("i");

@@ -6,6 +6,9 @@
 // http://opensource.org/licenses/mit-license.php
 
 const { deployProxy, upgradeProxy } = require('@openzeppelin/truffle-upgrades');
+const common = require("./common.js");
+const sleep = common.sleep;
+
 const JohnLawCoin_v2 = artifacts.require("JohnLawCoin_v2");
 const JohnLawBond_v2 = artifacts.require("JohnLawBond_v2");
 const Oracle_v3 = artifacts.require("Oracle_v3");
@@ -19,11 +22,10 @@ const ACB_v4 = artifacts.require("ACB_v4");
 const ACB_ADDRESS = ACB_v3.address; // Update the value before testing.
 
 module.exports = async function (deployer) {
-  console.log("a");
   const old_acb = await ACB_v3.at(ACB_ADDRESS);
   await old_acb.pause();
   
-  console.log("b");
+  await sleep(10000); console.log("a");
   const coin = await JohnLawCoin_v2.at(await old_acb.coin_v2_());
   const oracle = await Oracle_v3.at(await old_acb.oracle_v3_());
   const bond_operation = await BondOperation_v2.at(
@@ -32,15 +34,15 @@ module.exports = async function (deployer) {
     await old_acb.open_market_operation_v2_());
   const eth_pool = await EthPool_v2.at(await old_acb.eth_pool_v2_());
   const logging = await Logging_v2.at(await old_acb.logging_v2_());
-  console.log("c");
+  await sleep(10000); console.log("b");
   const acb = await deployProxy(
     ACB_v4, [coin.address, oracle.address, bond_operation.address,
              open_market_operation.address, eth_pool.address,
              logging.address, await old_acb.oracle_level_(),
              await old_acb.current_epoch_start_()]);
-  console.log("d");
+  await sleep(10000); console.log("c");
   await old_acb.deprecate();
-  console.log("e");
+  await sleep(10000); console.log("d");
 
   console.log("JohnLawCoin_v2 address: ", coin.address);
   console.log("Oracle_v3 address: ", oracle.address);
@@ -57,8 +59,8 @@ module.exports = async function (deployer) {
   await open_market_operation.transferOwnership(acb.address);
   await eth_pool.transferOwnership(acb.address);
   await logging.transferOwnership(acb.address);
-  console.log("f");
+  await sleep(10000); console.log("e");
   
   await acb.unpause();
-  console.log("g");
+  console.log("f");
 };

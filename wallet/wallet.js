@@ -631,6 +631,7 @@ async function reloadInfo() {
             _selected_address).call());
     html += "<tr><td>Coin balance</td><td class='right'>" +
       coin_balance + "</td></tr>";
+
     const bond_balance =
           parseInt(await _bond_contract.methods.numberOfBondsOwnedBy(
             _selected_address).call());
@@ -641,6 +642,7 @@ async function reloadInfo() {
       _web3.utils.fromWei(your_eth_balance) + " ETH</td></tr>";
     const epoch_id =
           parseInt(await _oracle_contract.methods.epoch_id_().call());
+
     const current_commit = await getCommit(epoch_id);
     html += "<tr><td>Voted in the current epoch</td><td class='right'>" +
       (current_commit.voted ? "Done" : "Not yet") +
@@ -659,7 +661,7 @@ async function reloadInfo() {
       await _bond_operation_contract.methods.bond_budget_().call());
     html += "<tr><td>Bond budget</td><td class='right'>" +
       bond_budget + "</td></tr>";
-    
+
     const oracle_level =
           parseInt(await _acb_contract.methods.oracle_level_().call());
     html += "<tr><td>Current exchange rate</td><td class='right'>" +

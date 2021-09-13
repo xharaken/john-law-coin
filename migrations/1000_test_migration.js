@@ -6,6 +6,9 @@
 // http://opensource.org/licenses/mit-license.php
 
 const { deployProxy, upgradeProxy } = require('@openzeppelin/truffle-upgrades');
+const common = require("./common.js");
+const sleep = common.sleep;
+
 const Oracle_v2 = artifacts.require("Oracle_v2");
 const BondOperation = artifacts.require("BondOperation");
 const BondOperation_v2 = artifacts.require("BondOperation_v2");
@@ -22,7 +25,6 @@ const JohnLawBond_v2 = artifacts.require("JohnLawBond_v2");
 const ACB_ADDRESS = ACB.address; // Update the value before testing.
 
 module.exports = async function (deployer) {
-  console.log("a");
   const old_acb = await ACB.at(ACB_ADDRESS);
   await old_acb.pause();
   const old_bond_operation = await BondOperation.at(
@@ -31,31 +33,31 @@ module.exports = async function (deployer) {
     await old_acb.open_market_operation_());
   const old_eth_pool = await EthPool.at(await old_acb.eth_pool_());
 
-  console.log("b");
+  await sleep(10000); console.log("a");
   const coin = await upgradeProxy(await old_acb.coin_(), JohnLawCoin_v2);
-  console.log("c");
+  await sleep(10000); console.log("b");
   const bond = await upgradeProxy(
     await old_bond_operation.bond_(), JohnLawBond_v2);
-  console.log("d");
+  await sleep(10000); console.log("c");
   const oracle = await upgradeProxy(await old_acb.oracle_(), Oracle_v2);
-  console.log("e");
+  await sleep(10000); console.log("d");
   const bond_operation = await upgradeProxy(
     old_bond_operation.address, BondOperation_v2);
-  console.log("f");
+  await sleep(10000); console.log("e");
   const open_market_operation = await upgradeProxy(
     old_open_market_operation.address, OpenMarketOperation_v2);
-  console.log("g");
+  await sleep(10000); console.log("f");
   const eth_pool = await upgradeProxy(old_eth_pool.address, EthPool_v2);
-  console.log("h");
+  await sleep(10000); console.log("g");
   const logging = await upgradeProxy(await old_acb.logging_(), Logging_v2);
-  console.log("i");
+  await sleep(10000); console.log("h");
   const acb = await upgradeProxy(old_acb.address, ACB_v2);
-  console.log("j");
+  await sleep(10000); console.log("i");
   await acb.upgrade(
     coin.address, bond.address, oracle.address,
     bond_operation.address, open_market_operation.address,
     eth_pool.address, logging.address);
-  console.log("k");
+  await sleep(10000); console.log("j");
   await acb.unpause();
   
   console.log("JohnLawCoin_v2 address: ", coin.address);

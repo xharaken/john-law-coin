@@ -3,8 +3,8 @@
 // This software is released under the MIT License.
 // http://opensource.org/licenses/mit-license.php
 
-const ACB_ADDRESS_ON_LOCAL = "0xf25A5724f8562C5B71857171Ec6c74f5FB26e9b1";
-const ACB_ADDRESS_ON_ROPSTEN = "";
+const ACB_ADDRESS_ON_LOCAL = "0xD12ab97677dFa1FaBf83Ee1cE1fb947641281F40";
+const ACB_ADDRESS_ON_ROPSTEN = "0xD6E01bB6Ed5dF77AD7E366591BCCd9187067F65f";
 const ACB_ADDRESS_ON_MAINNET = "";
 
 const ETHERSCAN_ADDRESS_ON_ROPSTEN = "https://ropsten.etherscan.io/";
