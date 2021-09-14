@@ -69,4 +69,5 @@ module.exports = async function (deployer) {
   console.log("EthPool_v2 address: ", eth_pool.address);
   console.log("Logging_v2 address: ", logging.address);
   console.log("ACB_v2 address: ", acb.address);
+  await sleep(10000); console.log("k");
 };

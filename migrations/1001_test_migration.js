@@ -30,4 +30,5 @@ module.exports = async function (deployer) {
   
   console.log("Oracle_v3 address: ", oracle.address);
   console.log("ACB_v3 address: ", acb.address);
+  await sleep(10000); console.log("e");
 };

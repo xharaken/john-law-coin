@@ -267,7 +267,7 @@ async function purchaseCoins() {
           "ordered and when the transaction was processed " +
           "(e.g., the coin budget was enough when you ordered " +
           "but was not enough when the transaction was processed.) " +
-          "Please try again.");
+          "This may also happen due to out of gas. Please try again.");
     } else {
       await showErrorMessage("Couldn't purchase coins.", error);
     }
@@ -337,7 +337,7 @@ async function sellCoins() {
           "ordered and when the transaction was processed " +
           "(e.g., the coin budget was enough when you ordered " +
           "but was not enough when the transaction was processed.) " +
-          "Please try again.");
+          "This may also happen due to out of gas. Please try again.");
     } else {
       await showErrorMessage("Couldn't sell coins.", error);
     }
@@ -397,7 +397,7 @@ async function purchaseBonds() {
           "ordered and when the transaction was processed " +
           "(e.g., the bond budget was enough when you ordered " +
           "but was not enough when the transaction was processed.) " +
-          "Please try again.");
+          "This may also happen due to out of gas. Please try again.");
     } else {
       await showErrorMessage("Couldn't purchase bonds.", error);
     }
@@ -466,7 +466,7 @@ async function redeemBonds() {
           "ordered and when the transaction was processed " +
           "(e.g., the bond budget was enough when you ordered " +
           "but was not enough when the transaction was processed.) " +
-          "Please try again.");
+          "This may also happen due to out of gas. Please try again.");
     } else {
       await showErrorMessage("Couldn't redeem bonds.", error);
     }

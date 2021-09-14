@@ -62,5 +62,5 @@ module.exports = async function (deployer) {
   await sleep(10000); console.log("e");
   
   await acb.unpause();
-  console.log("f");
+  await sleep(10000); console.log("f");
 };

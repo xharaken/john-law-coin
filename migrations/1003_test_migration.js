@@ -66,8 +66,8 @@ module.exports = async function (deployer) {
   
   console.log("JohnLawCoin_v2 address: ", coin.address);
   console.log("JohnLawBond_v2 address: ", bond.address);
-  console.log("BondOperation_v2 address: ", bond_operation.address);
-  console.log("OpenMarketOperation_v2 address: ",
+  console.log("BondOperation_v5 address: ", bond_operation.address);
+  console.log("OpenMarketOperation_v5 address: ",
               open_market_operation.address);
   console.log("EthPool_v2 address: ", eth_pool.address);
   console.log("Logging_v2 address: ", logging.address);
@@ -87,5 +87,5 @@ module.exports = async function (deployer) {
   await sleep(10000); console.log("h");
   
   await acb.unpause();
-  console.log("i");
+  await sleep(10000); console.log("i");
 };
