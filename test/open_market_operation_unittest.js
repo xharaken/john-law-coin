@@ -54,7 +54,6 @@ function parameterized_test(accounts,
     assert.equal(await _operation.start_price_(), 0);
     assert.equal(await _operation.latest_price_(), latest_price.toString());
     assert.equal(await _operation.coin_budget_(), 0);
-    assert.equal(await _operation.eth_balance_(), 0);
     
     await should_throw(async () => {
       await _operation.increaseCoinSupply.call(0, 0);
@@ -63,17 +62,16 @@ function parameterized_test(accounts,
       await _operation.increaseCoinSupply.call(10, 10);
     }, "OpenMarketOperation");
     await should_throw(async () => {
-      await _operation.decreaseCoinSupply.call(0, 0);
+      await _operation.decreaseCoinSupply.call(0, 0, 0);
     }, "OpenMarketOperation");
     await should_throw(async () => {
-      await _operation.decreaseCoinSupply.call(10, 10);
+      await _operation.decreaseCoinSupply.call(10, 10, 0);
     }, "OpenMarketOperation");
     
     await _operation.updateCoinBudget(0);
     assert.equal(await _operation.start_price_(), 0);
     assert.equal(await _operation.latest_price_(), latest_price.toString());
     assert.equal(await _operation.coin_budget_(), 0);
-    assert.equal(await _operation.eth_balance_(), 0);
     
     await should_throw(async () => {
       await _operation.increaseCoinSupply.call(0, 0);
@@ -82,10 +80,10 @@ function parameterized_test(accounts,
       await _operation.increaseCoinSupply.call(10, 10);
     }, "OpenMarketOperation");
     await should_throw(async () => {
-      await _operation.decreaseCoinSupply.call(0, 0);
+      await _operation.decreaseCoinSupply.call(0, 0, 0);
     }, "OpenMarketOperation");
     await should_throw(async () => {
-      await _operation.decreaseCoinSupply.call(10, 10);
+      await _operation.decreaseCoinSupply.call(10, 10, 0);
     }, "OpenMarketOperation");
     
     let eth_balance = new BN(0);
@@ -101,14 +99,13 @@ function parameterized_test(accounts,
       assert.equal(await _operation.start_price_(), start_price.toString());
       assert.equal(await _operation.latest_price_(), latest_price.toString());
       assert.equal(await _operation.coin_budget_(), updated_coin_budget);
-      assert.equal(await _operation.eth_balance_(), eth_balance.toString());
       
       if (updated_coin_budget >= 0) {
         await should_throw(async () => {
-          await _operation.decreaseCoinSupply.call(0, 0);
+          await _operation.decreaseCoinSupply.call(0, 0, 0);
         }, "OpenMarketOperation");
         await should_throw(async () => {
-          await _operation.decreaseCoinSupply.call(10, 10);
+          await _operation.decreaseCoinSupply.call(10, 10, 0);
         }, "OpenMarketOperation");
       }
       if (updated_coin_budget <= 0) {
@@ -176,8 +173,6 @@ function parameterized_test(accounts,
             assert.equal(await _operation.latest_price_(),
                          latest_price.toString());
             assert.equal(await _operation.coin_budget_(), coin_budget);
-            assert.equal(await _operation.eth_balance_(),
-                         eth_balance.toString());
           }
         }
       } else if (updated_coin_budget < 0) {
@@ -195,7 +190,7 @@ function parameterized_test(accounts,
             if (coin_budget == 0) {
               await should_throw(async () => {
                 await _operation.decreaseCoinSupply.call(
-                  requested_coin_amount, elapsed_time);
+                  requested_coin_amount, elapsed_time, eth_balance.toString());
               }, "OpenMarketOperation");
               continue;
             }
@@ -223,17 +218,16 @@ function parameterized_test(accounts,
               latest_price = price;
             }
             coin_budget += coin_amount;
+            old_eth_balance = eth_balance;
             eth_balance = eth_balance.sub(eth_amount);
             await check_decrease_coin_supply(
-              requested_coin_amount, elapsed_time,
+              requested_coin_amount, elapsed_time, old_eth_balance.toString(),
               eth_amount.toString(), coin_amount);
             assert.equal(await _operation.start_price_(),
                          start_price.toString());
             assert.equal(await _operation.latest_price_(),
                          latest_price.toString());
             assert.equal(await _operation.coin_budget_(), coin_budget);
-            assert.equal(await _operation.eth_balance_(),
-                         eth_balance.toString());
           }
         }
       }
@@ -276,14 +270,16 @@ function parameterized_test(accounts,
     }
     
     async function check_decrease_coin_supply(
-      requested_coin_amount, elapsed_time, eth_amount, coin_amount) {
+      requested_coin_amount, elapsed_time, eth_balance,
+      eth_amount, coin_amount) {
       assert.equal(typeof(eth_amount), "string")
       let receipt = await _operation.decreaseCoinSupply(
-        requested_coin_amount, elapsed_time);
+        requested_coin_amount, elapsed_time, eth_balance);
       let args = receipt.logs.filter(
         e => e.event == 'DecreaseCoinSupplyEvent')[0].args;
       assert.equal(args.requested_coin_amount, requested_coin_amount);
       assert.equal(args.elapsed_time, elapsed_time);
+      assert.equal(args.eth_balance, eth_balance);
       assert.equal(args.eth_amount, eth_amount);
       assert.equal(args.coin_amount, coin_amount);
     }     
@@ -297,7 +293,7 @@ function parameterized_test(accounts,
       await _operation.increaseCoinSupply(1, 1, {from: accounts[1]});
     }, "Ownable");
     await should_throw(async () => {
-      await _operation.decreaseCoinSupply(1, 1, {from: accounts[1]});
+      await _operation.decreaseCoinSupply(1, 1, 0, {from: accounts[1]});
     }, "Ownable");
     await should_throw(async () => {
       await _operation.updateCoinBudget(1, {from: accounts[1]});

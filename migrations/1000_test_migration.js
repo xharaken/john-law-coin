@@ -33,31 +33,31 @@ module.exports = async function (deployer) {
     await old_acb.open_market_operation_());
   const old_eth_pool = await EthPool.at(await old_acb.eth_pool_());
 
-  await sleep(10000); console.log("a");
+  console.log("a");
   const coin = await upgradeProxy(await old_acb.coin_(), JohnLawCoin_v2);
-  await sleep(10000); console.log("b");
+  console.log("b");
   const bond = await upgradeProxy(
     await old_bond_operation.bond_(), JohnLawBond_v2);
-  await sleep(10000); console.log("c");
+  console.log("c");
   const oracle = await upgradeProxy(await old_acb.oracle_(), Oracle_v2);
-  await sleep(10000); console.log("d");
+  console.log("d");
   const bond_operation = await upgradeProxy(
     old_bond_operation.address, BondOperation_v2);
-  await sleep(10000); console.log("e");
+  console.log("e");
   const open_market_operation = await upgradeProxy(
     old_open_market_operation.address, OpenMarketOperation_v2);
-  await sleep(10000); console.log("f");
+  console.log("f");
   const eth_pool = await upgradeProxy(old_eth_pool.address, EthPool_v2);
-  await sleep(10000); console.log("g");
+  console.log("g");
   const logging = await upgradeProxy(await old_acb.logging_(), Logging_v2);
-  await sleep(10000); console.log("h");
+  console.log("h");
   const acb = await upgradeProxy(old_acb.address, ACB_v2);
-  await sleep(10000); console.log("i");
+  console.log("i");
   await acb.upgrade(
     coin.address, bond.address, oracle.address,
     bond_operation.address, open_market_operation.address,
     eth_pool.address, logging.address);
-  await sleep(10000); console.log("j");
+  console.log("j");
   await acb.unpause();
   
   console.log("JohnLawCoin_v2 address: ", coin.address);
@@ -69,5 +69,5 @@ module.exports = async function (deployer) {
   console.log("EthPool_v2 address: ", eth_pool.address);
   console.log("Logging_v2 address: ", logging.address);
   console.log("ACB_v2 address: ", acb.address);
-  await sleep(10000); console.log("k");
+  console.log("k");
 };

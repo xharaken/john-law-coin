@@ -20,23 +20,23 @@ const JohnLawBond = artifacts.require("JohnLawBond");
 
 module.exports = async function (deployer) {
   const coin = await deployProxy(JohnLawCoin, []);
-  await sleep(10000); console.log("a");
+  console.log("a");
   const bond = await deployProxy(JohnLawBond, []);
-  await sleep(10000); console.log("b");
+  console.log("b");
   const oracle = await deployProxy(Oracle, []);
-  await sleep(10000); console.log("c");
+  console.log("c");
   const bond_operation = await deployProxy(BondOperation, [bond.address]);
-  await sleep(10000); console.log("d");
+  console.log("d");
   const open_market_operation = await deployProxy(OpenMarketOperation, []);
-  await sleep(10000); console.log("e");
+  console.log("e");
   const eth_pool = await deployProxy(EthPool, []);
-  await sleep(10000); console.log("f");
+  console.log("f");
   const logging = await deployProxy(Logging, []);
-  await sleep(10000); console.log("g");
+  console.log("g");
   const acb = await deployProxy(
     ACB, [coin.address, oracle.address, bond_operation.address,
           open_market_operation.address, eth_pool.address, logging.address]);
-  await sleep(10000); console.log("h");
+  console.log("h");
   
   console.log("JohnLawCoin address: ", coin.address);
   console.log("JohnLawBond address: ", bond.address);
@@ -54,5 +54,5 @@ module.exports = async function (deployer) {
   await open_market_operation.transferOwnership(acb.address);
   await eth_pool.transferOwnership(acb.address);
   await logging.transferOwnership(acb.address);
-  await sleep(10000); console.log("i");
+  console.log("i");
 };

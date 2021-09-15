@@ -1,6 +1,6 @@
 # What is JohnLawCoin?
 
-***[Note: Currently JohnLawCoin is being tested on the Ropsten Testnet. Your feedback is critical to improve the system before it's launched to the Ethereum Mainnet (planned in 2021).]***
+***[Note: Currently JohnLawCoin is being tested on the Testnet. Your feedback is critical to improve the system before it's launched to the Ethereum Mainnet (planned in 2021).]***
 
 <img src="./docs/logo.png" width=120px>
 
@@ -34,7 +34,7 @@ If you want to contribute to grow the ecosystem of JohnLawCoin (thanks!), please
 
 * Socialize JohnLawCoin with your friends using SNS, blog posts and media.
 * Use JohnLawCoin. Vote on the oracle every week (then you can get some coins as a reward). Purchase coins issued by the Open Market Operation if any. Purchase bonds issued by the ACB if any (then you can get an interest rate when redeeming the bonds).
-* Test JohnLawCoin on the Ropsten Testnet and give us feedback.
+* Test JohnLawCoin on the Testnet and give us feedback.
 
 If you have any feedback, create a GitHub issue, talk to [@johnlawcoin on Twitter](https://twitter.com/johnlawcoin) or email to johnlawcoin [at] gmail.com.
 

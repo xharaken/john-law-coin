@@ -19,16 +19,16 @@ module.exports = async function (deployer) {
   const old_acb = await ACB_v2.at(ACB_ADDRESS);
   await old_acb.pause();
   
-  await sleep(10000); console.log("a");
+  console.log("a");
   const oracle = await upgradeProxy(await old_acb.oracle_v2_(), Oracle_v3);
-  await sleep(10000); console.log("b");
+  console.log("b");
   const acb = await upgradeProxy(old_acb.address, ACB_v3);
-  await sleep(10000); console.log("c");
+  console.log("c");
   await acb.upgrade(oracle.address);
-  await sleep(10000); console.log("d");
+  console.log("d");
   await acb.unpause();
   
   console.log("Oracle_v3 address: ", oracle.address);
   console.log("ACB_v3 address: ", acb.address);
-  await sleep(10000); console.log("e");
+  console.log("e");
 };

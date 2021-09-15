@@ -238,7 +238,7 @@ class ACBSimulator(unittest.TestCase):
             valid_bond_supply = self._bond_operation.valid_bond_supply(epoch_id)
             bond_budget = self._bond_operation.bond_budget
             coin_budget = self._open_market_operation.coin_budget
-            eth_balance = self._open_market_operation.eth_balance
+            eth_balance = self._eth_pool.eth_balance
             latest_price = self._open_market_operation.latest_price
 
             self.purchase_coins()
@@ -343,7 +343,7 @@ class ACBSimulator(unittest.TestCase):
                        self.metrics.decreased_coin_supply,
                        self.metrics.increased_eth,
                        self.metrics.decreased_eth,
-                       self._open_market_operation.eth_balance,
+                       self._eth_pool.eth_balance,
                        self.metrics.delta,
                        self.metrics.mint,
                        self.metrics.lost,
@@ -518,7 +518,7 @@ class ACBSimulator(unittest.TestCase):
                 int(-coin_budget / self._voter_count), voter.balance)
             requested_coin_amount = min(
                 requested_coin_amount,
-                int(self._open_market_operation.eth_balance / price))
+                int(self._eth_pool.eth_balance / price))
             
             coin_supply = self._coin.total_supply
             voter.balance -= requested_coin_amount

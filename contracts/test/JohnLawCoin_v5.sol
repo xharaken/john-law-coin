@@ -765,19 +765,18 @@ contract OpenMarketOperation_v5 is OwnableUpgradeable {
   // Attributes. See the comment in initialize().
   uint public latest_price_;
   uint public start_price_;
-  uint public eth_balance_;
   int public coin_budget_;
 
   // Events.
   event IncreaseCoinSupplyEvent(uint requested_eth_amount, uint elapsed_time,
                                 uint eth_amount, uint coin_amount);
   event DecreaseCoinSupplyEvent(uint requested_coin_amount, uint elapsed_time,
-                                uint eth_amount, uint coin_amount);
+                                uint eth_balance, uint eth_amount,
+                                uint coin_amount);
   event UpdateCoinBudgetEvent(int coin_budget);
   
   // Initializer.
-  function initialize(uint latest_price, uint start_price, uint eth_balance,
-                      int coin_budget)
+  function initialize(uint latest_price, uint start_price, int coin_budget)
       public initializer {
     __Ownable_init();
     
@@ -827,9 +826,6 @@ contract OpenMarketOperation_v5 is OwnableUpgradeable {
     // The start price is updated at the beginning of each epoch.
     start_price_ = start_price;
     
-    // The current ETH balance.
-    eth_balance_ = eth_balance;
-    
     // The current coin budget.
     coin_budget_ = coin_budget;
   }
@@ -867,7 +863,6 @@ contract OpenMarketOperation_v5 is OwnableUpgradeable {
       latest_price_ = price;
     }
     coin_budget_ -= coin_amount.toInt256();
-    eth_balance_ += eth_amount;
     require(coin_budget_ >= 0, "ic1");
     require(eth_amount <= requested_eth_amount, "ic2");
 
@@ -884,6 +879,7 @@ contract OpenMarketOperation_v5 is OwnableUpgradeable {
   // ----------------
   // |requested_coin_amount|: The amount of JLC the sender is willing to pay.
   // |elapsed_time|: The elapsed seconds from the current epoch start.
+  // |eth_balance|: The ETH balance in the EthPool.
   //
   // Returns
   // ----------------
@@ -892,7 +888,8 @@ contract OpenMarketOperation_v5 is OwnableUpgradeable {
   // - The amount of JLC to be exchanged. This can be smaller than
   // |requested_coin_amount| when the open market operation does not have
   // enough ETH in the pool.
-  function decreaseCoinSupply(uint requested_coin_amount, uint elapsed_time)
+  function decreaseCoinSupply(uint requested_coin_amount, uint elapsed_time,
+                              uint eth_balance)
       public onlyOwner returns (uint, uint) {
     require(coin_budget_ < 0,
             "OpenMarketOperation: The coin budget must be negative.");
@@ -904,8 +901,8 @@ contract OpenMarketOperation_v5 is OwnableUpgradeable {
       coin_amount = (-coin_budget_).toUint256();
     }
     uint eth_amount = coin_amount * price;
-    if (eth_amount >= eth_balance_) {
-      eth_amount = eth_balance_;
+    if (eth_amount >= eth_balance) {
+      eth_amount = eth_balance;
     }
     coin_amount = eth_amount / price;
         
@@ -913,12 +910,11 @@ contract OpenMarketOperation_v5 is OwnableUpgradeable {
       latest_price_ = price;
     }
     coin_budget_ += coin_amount.toInt256();
-    eth_balance_ -= eth_amount;
     require(coin_budget_ <= 0, "dc1");
     require(coin_amount <= requested_coin_amount, "dc2");
 
     emit DecreaseCoinSupplyEvent(requested_coin_amount, elapsed_time,
-                                 eth_amount, coin_amount);
+                                 eth_balance, eth_amount, coin_amount);
     return (eth_amount, coin_amount);
   }
   
@@ -1497,9 +1493,6 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
     uint requested_eth_amount = msg.value;
     uint elapsed_time = getTimestamp() - current_epoch_start_;
     
-    require(open_market_operation_.eth_balance_() <=
-            address(eth_pool_).balance, "pc1");
-    
     // Calculate the amount of ETH and JLC to be exchanged.
     (uint eth_amount, uint coin_amount) =
         open_market_operation_.increaseCoinSupply(
@@ -1507,14 +1500,12 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
     
     coin_.mint(msg.sender, coin_amount);
     
-    require(address(this).balance >= requested_eth_amount, "pc2");
+    require(address(this).balance >= requested_eth_amount, "pc1");
     bool success;
     (success,) =
         payable(address(eth_pool_)).call{value: eth_amount}(
             abi.encodeWithSignature("increaseEth()"));
-    require(success, "pc3");
-    require(open_market_operation_.eth_balance_() <=
-            address(eth_pool_).balance, "pc4");
+    require(success, "pc2");
     
     logging_.purchaseCoins(oracle_.epoch_id_(), eth_amount, coin_amount);
     
@@ -1523,7 +1514,7 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
     // end of purchaseCoins().
     (success,) =
         payable(msg.sender).call{value: requested_eth_amount - eth_amount}("");
-    require(success, "pc5");
+    require(success, "pc3");
 
     emit PurchaseCoinsEvent(msg.sender, requested_eth_amount,
                             eth_amount, coin_amount);
@@ -1549,14 +1540,11 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
     require(coin_.balanceOf(msg.sender) >= requested_coin_amount,
             "OpenMarketOperation: Your coin balance is not enough.");
         
-    require(open_market_operation_.eth_balance_() <=
-            address(eth_pool_).balance, "sc1");
-    
     // Calculate the amount of ETH and JLC to be exchanged.
     uint elapsed_time = getTimestamp() - current_epoch_start_;
     (uint eth_amount, uint coin_amount) =
         open_market_operation_.decreaseCoinSupply(
-            requested_coin_amount, elapsed_time);
+            requested_coin_amount, elapsed_time, address(eth_pool_).balance);
 
     coin_.burn(msg.sender, coin_amount);
     
@@ -1566,8 +1554,6 @@ contract ACB_v5 is OwnableUpgradeable, PausableUpgradeable {
     // external smart contract. This must be called at the very end of
     // sellCoins().
     eth_pool_.decreaseEth(msg.sender, eth_amount);
-    require(open_market_operation_.eth_balance_() <=
-            address(eth_pool_).balance, "sc2");
     
     emit SellCoinsEvent(msg.sender, requested_coin_amount,
                         eth_amount, coin_amount);

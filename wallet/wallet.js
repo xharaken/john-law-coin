@@ -67,11 +67,11 @@ window.onload = async () => {
     if (_chain_id == 1) {
       throw(
         "JohnLawCoin is not yet launched to the Ethereum Mainnet. " +
-          "Click the Metamask extension and choose the Ropsten Testnet.");
-    } else if (_chain_id == 3) {
+          "Click the Metamask extension and choose the Rinkeby Testnet.");
+    } else if (_chain_id == 3 || _chain_id == 4) {
       $("network").innerHTML =
         "<span class='warning'>Note: You are connected to " +
-        "the Ropsten Testnet. For testing purpose, the duration of one epoch " +
+        "the Testnet. For testing purpose, the duration of one epoch " +
         "and the price auction interval are set to 1 min. " +
         "Please test whatever you want and give us feedback!</span>";
     } else if (_chain_id == 1337 || __chain_id == 1338) {
@@ -698,11 +698,6 @@ async function reloadInfo() {
     html += "<tr><td>ETH balance</td><td class='right'>" +
       _web3.utils.fromWei(eth_balance) + " ETH<br>" +
       "(" + eth_balance + " wei)</td></tr>";
-    const eth_balance_2 =
-      await _open_market_operation_contract.methods.eth_balance_().call();
-    html += "<tr><td>ETH balance 2</td><td class='right'>" +
-      _web3.utils.fromWei(eth_balance_2) + " ETH<br>" +
-      "(" + eth_balance_2 + " wei)</td></tr>";
     const current_price =
           await _open_market_operation_contract.methods.getCurrentPrice(
             Math.trunc((Date.now() - current_epoch_start_ms) / 1000)).call();
@@ -773,7 +768,7 @@ async function reloadInfo() {
           $("vote_button").disabled = false;
           $("vote_button_disabled").innerText = "";
         }
-      }, next_epoch_start_ms - Date.now() + 10000);
+      }, next_epoch_start_ms - Date.now() + 2000);
     }
     
     let has_redeemable = false;
@@ -1368,6 +1363,8 @@ function getEtherScanURL() {
     etherscan_address = ETHERSCAN_ADDRESS_ON_MAINNET;
   } else if (_chain_id == 3) {
     etherscan_address = ETHERSCAN_ADDRESS_ON_ROPSTEN;
+  } else if (_chain_id == 4) {
+    etherscan_address = ETHERSCAN_ADDRESS_ON_RINKEBY;
   }
   return etherscan_address;
 }
@@ -1378,6 +1375,8 @@ function getACBAddress() {
     acb_address = ACB_ADDRESS_ON_MAINNET;
   } else if (_chain_id == 3) {
     acb_address = ACB_ADDRESS_ON_ROPSTEN;
+  } else if (_chain_id == 4) {
+    acb_address = ACB_ADDRESS_ON_RINKEBY;
   }
   return acb_address;
 }

@@ -304,7 +304,7 @@ function parameterized_test(accounts,
       let bond_budget = (await _bond_operation.bond_budget_()).toNumber();
       let coin_budget = (
         await _open_market_operation.coin_budget_()).toNumber();
-      let eth_balance = await _open_market_operation.eth_balance_();
+      let eth_balance = await web3.eth.getBalance(_eth_pool.address);
       let latest_price = await _open_market_operation.latest_price_();
       
       await purchase_coins();
@@ -349,8 +349,6 @@ function parameterized_test(accounts,
       assert.equal(open_market_operation_log.exchanged_eth.toString(),
                    _metrics.increased_eth.sub(_metrics.decreased_eth).
                    toString());
-      assert.equal(open_market_operation_log.eth_balance,
-                   eth_balance.toString());
       assert.equal(open_market_operation_log.latest_price,
                    latest_price.toString());
       
@@ -398,8 +396,7 @@ function parameterized_test(accounts,
                       _metrics.increased_eth.toString()) +
                     " decreased_eth=" + web3.utils.fromWei(
                       _metrics.decreased_eth.toString()) +
-                    " eth_balance=" + web3.utils.fromWei(
-                      eth_balance.toString()) +
+                    " eth_balance=" + web3.utils.fromWei(eth_balance) +
                     " delta=" + _metrics.delta +
                     " mint=" + _metrics.mint +
                     " lost=" + _metrics.lost +
@@ -1216,7 +1213,6 @@ function parameterized_test(accounts,
           OpenMarketOperationForTesting_v5,
           [await old_open_market_operation.latest_price_(),
            await old_open_market_operation.start_price_(),
-           await old_open_market_operation.eth_balance_(),
            await old_open_market_operation.coin_budget_()]);
         common.print_contract_size(_open_market_operation,
                                    "OpenMarketOperation_v5");

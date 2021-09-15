@@ -39,31 +39,29 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
         self.assertEqual(operation.start_price, 0)
         self.assertEqual(operation.latest_price, latest_price)
         self.assertEqual(operation.coin_budget, 0)
-        self.assertEqual(operation.eth_balance, 0)
 
         with self.assertRaises(Exception):
             operation.increase_coin_supply(0, 0)
         with self.assertRaises(Exception):
             operation.increase_coin_supply(10, 10)
         with self.assertRaises(Exception):
-            operation.decrease_coin_supply(0, 0)
+            operation.decrease_coin_supply(0, 0, 0)
         with self.assertRaises(Exception):
-            operation.decrease_coin_supply(10, 10)
+            operation.decrease_coin_supply(10, 10, 0)
 
         operation.update_coin_budget(0)
         self.assertEqual(operation.start_price, 0)
         self.assertEqual(operation.latest_price, latest_price)
         self.assertEqual(operation.coin_budget, 0)
-        self.assertEqual(operation.eth_balance, 0)
         
         with self.assertRaises(Exception):
             operation.increase_coin_supply(0, 0)
         with self.assertRaises(Exception):
             operation.increase_coin_supply(10, 10)
         with self.assertRaises(Exception):
-            operation.decrease_coin_supply(0, 0)
+            operation.decrease_coin_supply(0, 0, 0)
         with self.assertRaises(Exception):
-            operation.decrease_coin_supply(10, 10)
+            operation.decrease_coin_supply(10, 10, 0)
 
         eth_balance = 0
         for updated_coin_budget in [
@@ -78,13 +76,12 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
             self.assertEqual(operation.start_price, start_price)
             self.assertEqual(operation.latest_price, latest_price)
             self.assertEqual(operation.coin_budget, updated_coin_budget)
-            self.assertEqual(operation.eth_balance, eth_balance)
 
             if updated_coin_budget >= 0:
                 with self.assertRaises(Exception):
-                    operation.decrease_coin_supply(0, 0)
+                    operation.decrease_coin_supply(0, 0, 0)
                 with self.assertRaises(Exception):
-                    operation.decrease_coin_supply(10, 10)
+                    operation.decrease_coin_supply(10, 10, 0)
             if updated_coin_budget <= 0:
                 with self.assertRaises(Exception):
                     operation.increase_coin_supply(0, 0)
@@ -135,7 +132,6 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
                         self.assertEqual(operation.start_price, start_price)
                         self.assertEqual(operation.latest_price, latest_price)
                         self.assertEqual(operation.coin_budget, coin_budget)
-                        self.assertEqual(operation.eth_balance, eth_balance)
             elif updated_coin_budget < 0:
                 for elapsed_time in [
                         0, 1, self._price_change_interval + 1,
@@ -151,7 +147,8 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
                         if coin_budget == 0:
                             with self.assertRaises(Exception):
                                 operation.decrease_coin_supply(
-                                    requested_eth_amount, elapsed_time)
+                                    requested_eth_amount, elapsed_time,
+                                    eth_balance)
                             continue
                         
                         price = start_price
@@ -174,14 +171,15 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
                         if coin_amount > 0:
                             latest_price = price
                         coin_budget += coin_amount
+                        old_eth_balance = eth_balance
                         eth_balance -= eth_amount
                         self.assertEqual(operation.decrease_coin_supply(
-                            requested_coin_amount, elapsed_time),
+                            requested_coin_amount, elapsed_time,
+                            old_eth_balance),
                                          (eth_amount, coin_amount))
                         self.assertEqual(operation.start_price, start_price)
                         self.assertEqual(operation.latest_price, latest_price)
                         self.assertEqual(operation.coin_budget, coin_budget)
-                        self.assertEqual(operation.eth_balance, eth_balance)
 
         self.assertEqual(self._eth_pool.eth_balance, 0)
         self._eth_pool.increase_eth(10)

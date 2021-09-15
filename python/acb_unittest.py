@@ -2385,8 +2385,6 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(self._coin.balance_of(accounts[1]), balance + 100)
         self.assertEqual(self._eth_pool.eth_balance,
                          eth_balance + 100 * price)
-        self.assertEqual(self._eth_pool.eth_balance,
-                         self._open_market_operation.eth_balance)
         
         self._open_market_operation.update_coin_budget(100)
         price = self._open_market_operation.start_price
@@ -2399,15 +2397,11 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(self._coin.balance_of(accounts[1]), balance + 40)
         self.assertEqual(self._eth_pool.eth_balance,
                          eth_balance + 40 * price)
-        self.assertEqual(self._eth_pool.eth_balance,
-                         self._open_market_operation.eth_balance)
         self.assertEqual(
             acb.purchase_coins(accounts[1], 200 * price), (60 * price, 60))
         self.assertEqual(self._coin.balance_of(accounts[1]), balance + 100)
         self.assertEqual(self._eth_pool.eth_balance,
                          eth_balance + 100 * price)
-        self.assertEqual(self._eth_pool.eth_balance,
-                         self._open_market_operation.eth_balance)
         with self.assertRaises(Exception):
             acb.purchase_coins(accounts[1], 10)
         
@@ -2424,8 +2418,6 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(self._coin.balance_of(accounts[1]), balance - 100)
         self.assertEqual(self._eth_pool.eth_balance,
                          eth_balance - 100 * price)
-        self.assertEqual(self._eth_pool.eth_balance,
-                         self._open_market_operation.eth_balance)
         
         self._open_market_operation.update_coin_budget(-100)
         price = self._open_market_operation.start_price
@@ -2438,15 +2430,11 @@ class ACBUnitTest(unittest.TestCase):
         self.assertEqual(self._coin.balance_of(accounts[1]), balance - 40)
         self.assertEqual(self._eth_pool.eth_balance,
                          eth_balance - 40 * price)
-        self.assertEqual(self._eth_pool.eth_balance,
-                         self._open_market_operation.eth_balance)
         self.assertEqual(
             acb.sell_coins(accounts[1], 200), (60 * price, 60))
         self.assertEqual(self._coin.balance_of(accounts[1]), balance - 100)
         self.assertEqual(self._eth_pool.eth_balance,
                          eth_balance - 100 * price)
-        self.assertEqual(self._eth_pool.eth_balance,
-                         self._open_market_operation.eth_balance)
         with self.assertRaises(Exception):
             acb.sell_coins(accounts[1], 10)
         

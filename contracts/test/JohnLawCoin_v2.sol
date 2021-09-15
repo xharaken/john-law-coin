@@ -1545,26 +1545,24 @@ contract OpenMarketOperation_v2 is OwnableUpgradeable {
   // Attributes. See the comment in initialize().
   uint public latest_price_;
   uint public start_price_;
-  uint public eth_balance_;
   int public coin_budget_;
 
   uint public latest_price_v2_;
   uint public start_price_v2_;
-  uint public eth_balance_v2_;
   int public coin_budget_v2_;
 
   // Events.
   event IncreaseCoinSupplyEvent(uint requested_eth_amount, uint elapsed_time,
                                 uint eth_amount, uint coin_amount);
   event DecreaseCoinSupplyEvent(uint requested_coin_amount, uint elapsed_time,
-                                uint eth_amount, uint coin_amount);
+                                uint eth_balance, uint eth_amount,
+                                uint coin_amount);
   event UpdateCoinBudgetEvent(int coin_budget);
   
   function upgrade()
       public onlyOwner {
     latest_price_v2_ = latest_price_;
     start_price_v2_ = start_price_;
-    eth_balance_v2_ = eth_balance_;
     coin_budget_v2_ = coin_budget_;
   }
 
@@ -1606,7 +1604,6 @@ contract OpenMarketOperation_v2 is OwnableUpgradeable {
       latest_price_v2_ = price;
     }
     coin_budget_v2_ -= coin_amount.toInt256();
-    eth_balance_v2_ += eth_amount;
     require(coin_budget_v2_ >= 0, "ic1");
     require(eth_amount <= requested_eth_amount, "ic2");
 
@@ -1614,7 +1611,6 @@ contract OpenMarketOperation_v2 is OwnableUpgradeable {
                                  eth_amount, coin_amount);
     latest_price_ = latest_price_v2_;
     start_price_ = start_price_v2_;
-    eth_balance_ = eth_balance_v2_;
     coin_budget_ = coin_budget_v2_;
     return (eth_amount, coin_amount);
   }
@@ -1627,6 +1623,7 @@ contract OpenMarketOperation_v2 is OwnableUpgradeable {
   // ----------------
   // |requested_coin_amount|: The amount of JLC the sender is willing to pay.
   // |elapsed_time|: The elapsed seconds from the current epoch start.
+  // |eth_balance|: The ETH balance in the EthPool.
   //
   // Returns
   // ----------------
@@ -1635,12 +1632,15 @@ contract OpenMarketOperation_v2 is OwnableUpgradeable {
   // - The amount of JLC to be exchanged. This can be smaller than
   // |requested_coin_amount| when the open market operation does not have
   // enough ETH in the pool.
-  function decreaseCoinSupply(uint requested_coin_amount, uint elapsed_time)
+  function decreaseCoinSupply(uint requested_coin_amount, uint elapsed_time,
+                              uint eth_balance)
       public onlyOwner returns (uint, uint) {
-    return decreaseCoinSupply_v2(requested_coin_amount, elapsed_time);
+    return decreaseCoinSupply_v2(requested_coin_amount, elapsed_time,
+                                 eth_balance);
   }
   
-  function decreaseCoinSupply_v2(uint requested_coin_amount, uint elapsed_time)
+  function decreaseCoinSupply_v2(uint requested_coin_amount, uint elapsed_time,
+                                 uint eth_balance)
       public onlyOwner returns (uint, uint) {
     require(coin_budget_v2_ < 0,
             "OpenMarketOperation: The coin budget must be negative.");
@@ -1652,8 +1652,8 @@ contract OpenMarketOperation_v2 is OwnableUpgradeable {
       coin_amount = (-coin_budget_v2_).toUint256();
     }
     uint eth_amount = coin_amount * price;
-    if (eth_amount >= eth_balance_v2_) {
-      eth_amount = eth_balance_v2_;
+    if (eth_amount >= eth_balance) {
+      eth_amount = eth_balance;
     }
     coin_amount = eth_amount / price;
         
@@ -1661,15 +1661,13 @@ contract OpenMarketOperation_v2 is OwnableUpgradeable {
       latest_price_v2_ = price;
     }
     coin_budget_v2_ += coin_amount.toInt256();
-    eth_balance_v2_ -= eth_amount;
     require(coin_budget_v2_ <= 0, "dc1");
     require(coin_amount <= requested_coin_amount, "dc2");
 
     emit DecreaseCoinSupplyEvent(requested_coin_amount, elapsed_time,
-                                 eth_amount, coin_amount);
+                                 eth_balance, eth_amount, coin_amount);
     latest_price_ = latest_price_v2_;
     start_price_ = start_price_v2_;
-    eth_balance_ = eth_balance_v2_;
     coin_budget_ = coin_budget_v2_;
     return (eth_amount, coin_amount);
   }
@@ -1749,7 +1747,6 @@ contract OpenMarketOperation_v2 is OwnableUpgradeable {
     emit UpdateCoinBudgetEvent(coin_budget_v2_);
     latest_price_ = latest_price_v2_;
     start_price_ = start_price_v2_;
-    eth_balance_ = eth_balance_v2_;
     coin_budget_ = coin_budget_v2_;
   }
 }
@@ -2169,9 +2166,6 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
     uint requested_eth_amount = msg.value;
     uint elapsed_time = getTimestamp() - current_epoch_start_v2_;
     
-    require(open_market_operation_v2_.eth_balance_() <=
-            address(eth_pool_v2_).balance, "pc1");
-    
     // Calculate the amount of ETH and JLC to be exchanged.
     (uint eth_amount, uint coin_amount) =
         open_market_operation_v2_.increaseCoinSupply(
@@ -2179,14 +2173,12 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
     
     coin_v2_.mint(msg.sender, coin_amount);
     
-    require(address(this).balance >= requested_eth_amount, "pc2");
+    require(address(this).balance >= requested_eth_amount, "pc1");
     bool success;
     (success,) =
         payable(address(eth_pool_v2_)).call{value: eth_amount}(
             abi.encodeWithSignature("increaseEth()"));
-    require(success, "pc3");
-    require(open_market_operation_v2_.eth_balance_() <=
-            address(eth_pool_v2_).balance, "pc4");
+    require(success, "pc2");
     
     logging_.purchaseCoins(oracle_.epoch_id_(), eth_amount, coin_amount);
     
@@ -2195,7 +2187,7 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
     // end of purchaseCoins().
     (success,) =
         payable(msg.sender).call{value: requested_eth_amount - eth_amount}("");
-    require(success, "pc5");
+    require(success, "pc3");
 
     emit PurchaseCoinsEvent(msg.sender, requested_eth_amount,
                             eth_amount, coin_amount);
@@ -2226,14 +2218,11 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
     require(coin_v2_.balanceOf(msg.sender) >= requested_coin_amount,
             "OpenMarketOperation: Your coin balance is not enough.");
         
-    require(open_market_operation_v2_.eth_balance_() <=
-            address(eth_pool_v2_).balance, "sc1");
-    
     // Calculate the amount of ETH and JLC to be exchanged.
     uint elapsed_time = getTimestamp() - current_epoch_start_v2_;
     (uint eth_amount, uint coin_amount) =
         open_market_operation_v2_.decreaseCoinSupply(
-            requested_coin_amount, elapsed_time);
+            requested_coin_amount, elapsed_time, address(eth_pool_v2_).balance);
 
     coin_v2_.burn(msg.sender, coin_amount);
     
@@ -2243,8 +2232,6 @@ contract ACB_v2 is OwnableUpgradeable, PausableUpgradeable {
     // external smart contract. This must be called at the very end of
     // sellCoins().
     eth_pool_v2_.decreaseEth(msg.sender, eth_amount);
-    require(open_market_operation_v2_.eth_balance_() <=
-            address(eth_pool_v2_).balance, "sc2");
     
     emit SellCoinsEvent(msg.sender, requested_coin_amount,
                         eth_amount, coin_amount);

@@ -1216,14 +1216,8 @@ class OpenMarketOperation:
         # The start price is updated at the beginning of each epoch.
         self.start_price = 0
         
-        # The current ETH balance.
-        self.eth_balance = 0
-        
         # The current coin budget.
         self.coin_budget = 0
-
-        # Python only: The actual ETH balance in the pool.
-        self.actual_eth_balance = 0
 
     # Test only.
     def override_constants_for_testing(
@@ -1267,7 +1261,6 @@ class OpenMarketOperation:
         if coin_amount > 0:
             self.latest_price = price
         self.coin_budget -= coin_amount
-        self.eth_balance += eth_amount
         assert(self.coin_budget >= 0)
         assert(eth_amount <= requested_eth_amount)
         return (eth_amount, coin_amount)
@@ -1280,6 +1273,7 @@ class OpenMarketOperation:
     # ----------------
     # |requested_coin_amount|: The amount of JLC the sender is willing to pay.
     # |elapsed_time|: The elapsed seconds from the current epoch start.
+    # |eth_balance|: The ETH balance in the EthPool.
     #
     # Returns
     # ----------------
@@ -1288,7 +1282,8 @@ class OpenMarketOperation:
     # - The amount of JLC to be exchanged. This can be smaller than
     # |requested_coin_amount| when the open market operation does not have
     # enough ETH in the pool.
-    def decrease_coin_supply(self, requested_coin_amount, elapsed_time):
+    def decrease_coin_supply(self, requested_coin_amount, elapsed_time,
+                             eth_balance):
         assert(self.coin_budget < 0)
         
         # Calculate the amount of JLC and ETH to be exchanged.
@@ -1297,14 +1292,13 @@ class OpenMarketOperation:
         if coin_amount >= -self.coin_budget:
             coin_amount = -self.coin_budget
         eth_amount = int(coin_amount * price)
-        if eth_amount >= self.eth_balance:
-            eth_amount = self.eth_balance
+        if eth_amount >= eth_balance:
+            eth_amount = eth_balance
         coin_amount = int(eth_amount / price)
         
         if coin_amount > 0:
             self.latest_price = price
         self.coin_budget += coin_amount
-        self.eth_balance -= eth_amount
         assert(self.coin_budget <= 0)
         assert(coin_amount <= requested_coin_amount)
         return (eth_amount, coin_amount)
@@ -1627,7 +1621,7 @@ class ACB:
                 self.bond_operation.valid_bond_supply(epoch_id))
             self.logging.update_coin_budget(
                 epoch_id, self.open_market_operation.coin_budget,
-                self.open_market_operation.eth_balance,
+                self.eth_pool.eth_balance,
                 self.open_market_operation.latest_price)
 
         # Commit.
@@ -1705,9 +1699,6 @@ class ACB:
     def purchase_coins(self, sender, requested_eth_amount):
         elapsed_time = self.get_timestamp() - self.current_epoch_start
 
-        assert(self.open_market_operation.eth_balance ==
-               self.eth_pool.eth_balance)
-        
         # Calculate the amount of ETH and JLC to be exchanged.
         (eth_amount, coin_amount) = (
             self.open_market_operation.increase_coin_supply(
@@ -1719,8 +1710,6 @@ class ACB:
             self.oracle.epoch_id, eth_amount, coin_amount)
         
         self.eth_pool.increase_eth(eth_amount)
-        assert(self.open_market_operation.eth_balance ==
-               self.eth_pool.eth_balance)
 
         return (eth_amount, coin_amount)
 
@@ -1743,13 +1732,11 @@ class ACB:
         
         elapsed_time = self.get_timestamp() - self.current_epoch_start
         
-        assert(self.open_market_operation.eth_balance ==
-               self.eth_pool.eth_balance)
-        
         # Calculate the amount of ETH and JLC to be exchanged.
         (eth_amount, coin_amount) = (
             self.open_market_operation.decrease_coin_supply(
-                requested_coin_amount, elapsed_time))
+                requested_coin_amount, elapsed_time,
+                self.eth_pool.eth_balance))
         
         self.coin.burn(sender, coin_amount)
 
@@ -1757,8 +1744,6 @@ class ACB:
             self.oracle.epoch_id, eth_amount, coin_amount)
         
         self.eth_pool.decrease_eth(sender, eth_amount)
-        assert(self.open_market_operation.eth_balance ==
-               self.eth_pool.eth_balance)
 
         return (eth_amount, coin_amount)
 

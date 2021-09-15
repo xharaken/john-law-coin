@@ -845,9 +845,6 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
     uint requested_eth_amount = msg.value;
     uint elapsed_time = getTimestamp() - current_epoch_start_;
     
-    require(open_market_operation_v2_.eth_balance_() <=
-            address(eth_pool_v2_).balance, "pc1");
-    
     // Calculate the amount of ETH and JLC to be exchanged.
     (uint eth_amount, uint coin_amount) =
         open_market_operation_v2_.increaseCoinSupply(
@@ -855,12 +852,12 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
     
     coin_v2_.mint(msg.sender, coin_amount);
     
-    require(address(this).balance >= requested_eth_amount, "pc2");
+    require(address(this).balance >= requested_eth_amount, "pc1");
     bool success;
     (success,) =
         payable(address(eth_pool_v2_)).call{value: eth_amount}(
             abi.encodeWithSignature("increaseEth()"));
-    require(success, "pc3");
+    require(success, "pc2");
     
     logging_.purchaseCoins(oracle_.epoch_id_(), eth_amount, coin_amount);
     
@@ -869,9 +866,7 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
     // end of purchaseCoins().
     (success,) =
         payable(msg.sender).call{value: requested_eth_amount - eth_amount}("");
-    require(success, "pc4");
-    require(open_market_operation_v2_.eth_balance_() <=
-            address(eth_pool_v2_).balance, "pc5");
+    require(success, "pc3");
 
     emit PurchaseCoinsEvent(msg.sender, requested_eth_amount,
                             eth_amount, coin_amount);
@@ -897,14 +892,11 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
     require(coin_v2_.balanceOf(msg.sender) >= requested_coin_amount,
             "OpenMarketOperation: Your coin balance is not enough.");
         
-    require(open_market_operation_v2_.eth_balance_() <=
-            address(eth_pool_v2_).balance, "sc1");
-    
     // Calculate the amount of ETH and JLC to be exchanged.
     uint elapsed_time = getTimestamp() - current_epoch_start_;
     (uint eth_amount, uint coin_amount) =
         open_market_operation_v2_.decreaseCoinSupply(
-            requested_coin_amount, elapsed_time);
+        requested_coin_amount, elapsed_time, address(eth_pool_v2_).balance);
 
     coin_v2_.burn(msg.sender, coin_amount);
     
@@ -914,8 +906,6 @@ contract ACB_v3 is OwnableUpgradeable, PausableUpgradeable {
     // external smart contract. This must be called at the very end of
     // sellCoins().
     eth_pool_v2_.decreaseEth(msg.sender, eth_amount);
-    require(open_market_operation_v2_.eth_balance_() <=
-            address(eth_pool_v2_).balance, "sc2");
     
     emit SellCoinsEvent(msg.sender, requested_coin_amount,
                         eth_amount, coin_amount);
