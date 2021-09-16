@@ -1378,6 +1378,7 @@ contract OpenMarketOperation is OwnableUpgradeable {
 
   // Attributes. See the comment in initialize().
   uint public latest_price_;
+  bool public latest_price_updated_;
   uint public start_price_;
   int public coin_budget_;
 
@@ -1436,6 +1437,9 @@ contract OpenMarketOperation is OwnableUpgradeable {
     // The latest price at which the open market operation exchanged JLC with
     // ETH.
     latest_price_ = 1000000000000;
+
+    // Whether the latest price was updated in the current epoch.
+    latest_price_updated_ = false;
     
     // The start price is updated at the beginning of each epoch.
     start_price_ = 0;
@@ -1475,6 +1479,7 @@ contract OpenMarketOperation is OwnableUpgradeable {
         
     if (coin_amount > 0) {
       latest_price_ = price;
+      latest_price_updated_ = true;
     }
     coin_budget_ -= coin_amount.toInt256();
     require(coin_budget_ >= 0, "ic1");
@@ -1522,6 +1527,7 @@ contract OpenMarketOperation is OwnableUpgradeable {
         
     if (coin_amount > 0) {
       latest_price_ = price;
+      latest_price_updated_ = true;
     }
     coin_budget_ += coin_amount.toInt256();
     require(coin_budget_ <= 0, "dc1");
@@ -1580,19 +1586,28 @@ contract OpenMarketOperation is OwnableUpgradeable {
   // None.
   function updateCoinBudget(int coin_budget)
       public onlyOwner {
+    if (latest_price_updated_ == false) {
+      if (coin_budget_ > 0) {
+        // If no exchange was observed in the previous epoch, the price setting
+        // was too high. Lower the price.
+        latest_price_ = latest_price_ / START_PRICE_MULTIPLIER + 1;
+      } else if (coin_budget_ < 0) {
+        // If no exchange was observed in the previous epoch, the price setting
+        // was too low. Raise the price.
+        latest_price_ = latest_price_ * START_PRICE_MULTIPLIER;
+      }
+    }
+    
     coin_budget_ = coin_budget;
+    latest_price_updated_ = false;
     require(latest_price_ > 0, "uc1");
+    
     if (coin_budget_ > 0) {
       start_price_ = latest_price_ * START_PRICE_MULTIPLIER;
-      require(start_price_ > 0, "uc2");
     } else if (coin_budget_ == 0) {
       start_price_ = 0;
     } else {
-      start_price_ = latest_price_ / START_PRICE_MULTIPLIER;
-      if (start_price_ == 0) {
-        start_price_ = 1;
-      }
-      require(start_price_ > 0, "uc3");
+      start_price_ = latest_price_ / START_PRICE_MULTIPLIER + 1;
     }
     emit UpdateCoinBudgetEvent(coin_budget_);
   }

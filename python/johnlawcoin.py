@@ -1374,14 +1374,12 @@ class OpenMarketOperation:
             self.start_price = (
                 self.latest_price *
                 OpenMarketOperation.START_PRICE_MULTIPILER)
-            assert(self.start_price > 0)
         elif self.coin_budget == 0:
             self.start_price = 0
         else:
             self.start_price = int(
                 self.latest_price /
                 OpenMarketOperation.START_PRICE_MULTIPILER) + 1
-            assert(self.start_price > 0)
 
         
 #-------------------------------------------------------------------------------

@@ -14,9 +14,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@openzeppelin/contracts": "^4.2.0",
-    "@openzeppelin/contracts-upgradeable": "^4.1.0",
-    "@truffle/hdwallet-provider": "^1.5.0",
+    "@openzeppelin/contracts": "^4.3.2",
+    "@openzeppelin/contracts-upgradeable": "^4.3.2",
+    "@truffle/hdwallet-provider": "^1.0.37",
     "bn.js": "^5.2.0",
     "dotenv": "^10.0.0",
     "openzeppelin-solidity": "3.3.0",

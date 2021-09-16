@@ -112,6 +112,7 @@ class ACBSimulator(unittest.TestCase):
 
         self._start_price = 0
         self._latest_price = self._open_market_operation.latest_price
+        self._latest_price_updated = False
         self._tax_rate = JohnLawCoin.TAX_RATE
         self._burned = [0] * 3
 
@@ -242,6 +243,7 @@ class ACBSimulator(unittest.TestCase):
                     self._latest_price / self._start_price_multiplier) + 1
             else:
                 self._start_price = 0
+            self._latest_price_updated = False
             self.assertEqual(self._open_market_operation.start_price,
                              self._start_price)
                 
@@ -306,7 +308,7 @@ class ACBSimulator(unittest.TestCase):
             self.assertEqual(open_market_operation_log.latest_price,
                              latest_price)
 
-            if not self._open_market_operation.latest_price_updated:
+            if self._latest_price_updated == False:
                 if self._open_market_operation.coin_budget > 0:
                     self._latest_price = int(
                         self._latest_price / self._start_price_multiplier) + 1
@@ -507,6 +509,7 @@ class ACBSimulator(unittest.TestCase):
                 (requested_coin_amount * price, requested_coin_amount))
             if requested_coin_amount:
                 self._latest_price = price
+                self._latest_price_updated = True
             self._acb.set_timestamp(original_timestamp)
 
             self.assertEqual(self._coin.balance_of(voter.address),
@@ -549,6 +552,7 @@ class ACBSimulator(unittest.TestCase):
                 (requested_coin_amount * price, requested_coin_amount))
             if requested_coin_amount:
                 self._latest_price = price
+                self._latest_price_updated = True
             self._acb.set_timestamp(original_timestamp)
 
             self.assertEqual(self._coin.balance_of(voter.address),

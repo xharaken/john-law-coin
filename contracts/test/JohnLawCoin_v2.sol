@@ -1544,10 +1544,12 @@ contract OpenMarketOperation_v2 is OwnableUpgradeable {
 
   // Attributes. See the comment in initialize().
   uint public latest_price_;
+  bool public latest_price_updated_;
   uint public start_price_;
   int public coin_budget_;
 
   uint public latest_price_v2_;
+  bool public latest_price_updated_v2_;
   uint public start_price_v2_;
   int public coin_budget_v2_;
 
@@ -1562,6 +1564,7 @@ contract OpenMarketOperation_v2 is OwnableUpgradeable {
   function upgrade()
       public onlyOwner {
     latest_price_v2_ = latest_price_;
+    latest_price_updated_v2_ = latest_price_updated_;
     start_price_v2_ = start_price_;
     coin_budget_v2_ = coin_budget_;
   }
@@ -1602,6 +1605,7 @@ contract OpenMarketOperation_v2 is OwnableUpgradeable {
         
     if (coin_amount > 0) {
       latest_price_v2_ = price;
+      latest_price_updated_v2_ = true;
     }
     coin_budget_v2_ -= coin_amount.toInt256();
     require(coin_budget_v2_ >= 0, "ic1");
@@ -1610,6 +1614,7 @@ contract OpenMarketOperation_v2 is OwnableUpgradeable {
     emit IncreaseCoinSupplyEvent(requested_eth_amount, elapsed_time,
                                  eth_amount, coin_amount);
     latest_price_ = latest_price_v2_;
+    latest_price_updated_ = latest_price_updated_v2_;
     start_price_ = start_price_v2_;
     coin_budget_ = coin_budget_v2_;
     return (eth_amount, coin_amount);
@@ -1659,6 +1664,7 @@ contract OpenMarketOperation_v2 is OwnableUpgradeable {
         
     if (coin_amount > 0) {
       latest_price_v2_ = price;
+      latest_price_updated_v2_ = true;
     }
     coin_budget_v2_ += coin_amount.toInt256();
     require(coin_budget_v2_ <= 0, "dc1");
@@ -1667,6 +1673,7 @@ contract OpenMarketOperation_v2 is OwnableUpgradeable {
     emit DecreaseCoinSupplyEvent(requested_coin_amount, elapsed_time,
                                  eth_balance, eth_amount, coin_amount);
     latest_price_ = latest_price_v2_;
+    latest_price_updated_ = latest_price_updated_v2_;
     start_price_ = start_price_v2_;
     coin_budget_ = coin_budget_v2_;
     return (eth_amount, coin_amount);
@@ -1730,22 +1737,32 @@ contract OpenMarketOperation_v2 is OwnableUpgradeable {
   
   function updateCoinBudget_v2(int coin_budget)
       public onlyOwner {
+    if (latest_price_updated_v2_ == false) {
+      if (coin_budget_v2_ > 0) {
+        // If no exchange was observed in the previous epoch, the price setting
+        // was too high. Lower the price.
+        latest_price_v2_ = latest_price_v2_ / START_PRICE_MULTIPLIER + 1;
+      } else if (coin_budget_v2_ < 0) {
+        // If no exchange was observed in the previous epoch, the price setting
+        // was too low. Raise the price.
+        latest_price_v2_ = latest_price_v2_ * START_PRICE_MULTIPLIER;
+      }
+    }
+    
     coin_budget_v2_ = coin_budget;
+    latest_price_updated_v2_ = false;
     require(latest_price_v2_ > 0, "uc1");
+    
     if (coin_budget_v2_ > 0) {
       start_price_v2_ = latest_price_v2_ * START_PRICE_MULTIPLIER;
-      require(start_price_v2_ > 0, "uc2");
     } else if (coin_budget_v2_ == 0) {
       start_price_v2_ = 0;
     } else {
-      start_price_v2_ = latest_price_v2_ / START_PRICE_MULTIPLIER;
-      if (start_price_v2_ == 0) {
-        start_price_v2_ = 1;
-      }
-      require(start_price_v2_ > 0, "uc3");
+      start_price_v2_ = latest_price_v2_ / START_PRICE_MULTIPLIER + 1;
     }
     emit UpdateCoinBudgetEvent(coin_budget_v2_);
     latest_price_ = latest_price_v2_;
+    latest_price_updated_ = latest_price_updated_v2_;
     start_price_ = start_price_v2_;
     coin_budget_ = coin_budget_v2_;
   }

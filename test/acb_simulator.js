@@ -149,7 +149,10 @@ function parameterized_test(accounts,
     await _eth_pool.transferOwnership(_acb.address);
     await _oracle.transferOwnership(_acb.address);
     await _logging.transferOwnership(_acb.address);
-    
+
+    let _start_price = new BN(0);
+    let _latest_price = await _open_market_operation.latest_price_();
+    let _latest_price_updated = false;
     let _tax_rate = await _coin.TAX_RATE();
     let _burned = [0, 0, 0];
     
@@ -295,6 +298,17 @@ function parameterized_test(accounts,
       if (commit_observed == false) {
         continue;
       }
+
+      if ((await _open_market_operation.coin_budget_()) > 0) {
+        _start_price = _latest_price.mul(new BN(_start_price_multiplier));
+      } else if ((await _open_market_operation.coin_budget_()) < 0) {
+        _start_price = _latest_price.div(
+          new BN(_start_price_multiplier)).add(new BN(1));
+      } else {
+        _start_price = new BN(0);
+      }
+      _latest_price_updated = false;
+      assert.equal(await _open_market_operation.start_price_(), start_price);
       
       let epoch_id = (await _oracle.epoch_id_()).toNumber();
       let coin_supply2 = await get_coin_supply();
@@ -305,7 +319,7 @@ function parameterized_test(accounts,
       let coin_budget = (
         await _open_market_operation.coin_budget_()).toNumber();
       let eth_balance = await web3.eth.getBalance(_eth_pool.address);
-      let latest_price = await _open_market_operation.latest_price_();
+      let latest_price = _latest_price;
       
       await purchase_coins();
       await sell_coins();
@@ -351,6 +365,15 @@ function parameterized_test(accounts,
                    toString());
       assert.equal(open_market_operation_log.latest_price,
                    latest_price.toString());
+
+      if (_latest_price_updated == false) {
+        if ((await _open_market_operation.coin_budget_()) > 0) {
+          _latest_price = _latest_price.div(
+            new BN(_start_price_multiplier)).add(new BN(1));
+        } else if ((await _open_market_operation.coin_budget_()) < 0) {
+          _latest_price = _latest_price.mul(_start_price_multiplier);
+        }
+      }
       
       tax = await transfer_coins();
       
@@ -529,8 +552,7 @@ function parameterized_test(accounts,
         let original_timestamp = (await _acb.getTimestamp()).toNumber();
         await _acb.setTimestamp(original_timestamp +
                                 _price_change_interval * intervals);
-        let start_price = new BN(await _open_market_operation.start_price_());
-        let price = start_price;
+        let price = _start_price;
         for (let i = 0; i < intervals; i++) {
           price = price.mul(new BN(100 - _price_change_percentage)).
             div(new BN(100));
@@ -555,6 +577,10 @@ function parameterized_test(accounts,
            from: voter.address},
           price.mul(new BN(requested_coin_amount)).toString(),
           requested_coin_amount);
+        if (requested_coin_amount) {
+          _latest_price = price;
+          _latest_price_updated = true;
+        }
         await _acb.setTimestamp(original_timestamp);
         
         assert.equal(await _coin.balanceOf(voter.address), voter.balance);
@@ -580,8 +606,7 @@ function parameterized_test(accounts,
         let original_timestamp = (await _acb.getTimestamp()).toNumber();
         await _acb.setTimestamp(original_timestamp +
                                 _price_change_interval * intervals);
-        let start_price = new BN(await _open_market_operation.start_price_());
-        let price = start_price;
+        let price = _start_price;
         for (let i = 0; i < intervals; i++) {
           price = price.mul(new BN(100 + _price_change_percentage)).
             div(new BN(100));
@@ -600,6 +625,10 @@ function parameterized_test(accounts,
           requested_coin_amount, {from: voter.address},
           price.mul(new BN(requested_coin_amount)).toString(),
           requested_coin_amount);
+        if (requested_coin_amount) {
+          _latest_price = price;
+          _latest_price_updated = true;
+        }
         await _acb.setTimestamp(original_timestamp);
         
         assert.equal(await _coin.balanceOf(voter.address), voter.balance);

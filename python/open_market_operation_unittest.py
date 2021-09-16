@@ -33,118 +33,121 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
     def run(self):
         accounts = ['0x0000', '0x1000', '0x2000', '0x3000', '0x4000',
                     '0x5000', '0x6000', '0x7000']
-        operation = self._open_market_operation
-        latest_price = operation.latest_price
+        _operation = self._open_market_operation
+        latest_price = _operation.latest_price
         
-        self.assertEqual(operation.start_price, 0)
-        self.assertEqual(operation.latest_price, latest_price)
-        self.assertEqual(operation.coin_budget, 0)
+        self.assertEqual(_operation.start_price, 0)
+        self.assertEqual(_operation.latest_price, latest_price)
+        self.assertEqual(_operation.coin_budget, 0)
 
         with self.assertRaises(Exception):
-            operation.increase_coin_supply(0, 0)
+            _operation.increase_coin_supply(0, 0)
         with self.assertRaises(Exception):
-            operation.increase_coin_supply(10, 10)
+            _operation.increase_coin_supply(10, 10)
         with self.assertRaises(Exception):
-            operation.decrease_coin_supply(0, 0, 0)
+            _operation.decrease_coin_supply(0, 0, 0)
         with self.assertRaises(Exception):
-            operation.decrease_coin_supply(10, 10, 0)
+            _operation.decrease_coin_supply(10, 10, 0)
 
-        operation.update_coin_budget(0)
-        self.assertEqual(operation.start_price, 0)
-        self.assertEqual(operation.latest_price, latest_price)
-        self.assertEqual(operation.coin_budget, 0)
+        _operation.update_coin_budget(0)
+        self.assertEqual(_operation.start_price, 0)
+        self.assertEqual(_operation.latest_price, latest_price)
+        self.assertEqual(_operation.coin_budget, 0)
         
         with self.assertRaises(Exception):
-            operation.increase_coin_supply(0, 0)
+            _operation.increase_coin_supply(0, 0)
         with self.assertRaises(Exception):
-            operation.increase_coin_supply(10, 10)
+            _operation.increase_coin_supply(10, 10)
         with self.assertRaises(Exception):
-            operation.decrease_coin_supply(0, 0, 0)
+            _operation.decrease_coin_supply(0, 0, 0)
         with self.assertRaises(Exception):
-            operation.decrease_coin_supply(10, 10, 0)
+            _operation.decrease_coin_supply(10, 10, 0)
 
-        self.assertEqual(operation.latest_price_updated, False)
-        operation.update_coin_budget(100)
-        self.assertEqual(operation.latest_price_updated, False)
-        self.assertEqual(operation.latest_price, latest_price)
-        self.assertEqual(operation.start_price,
+        self.assertEqual(_operation.latest_price_updated, False)
+        _operation.update_coin_budget(100)
+        self.assertEqual(_operation.latest_price_updated, False)
+        self.assertEqual(_operation.latest_price, latest_price)
+        self.assertEqual(_operation.start_price,
                          latest_price * self._start_price_multiplier)
-        self.assertEqual(operation.latest_price_updated, False)
-        operation.update_coin_budget(100)
-        self.assertEqual(operation.latest_price_updated, False)
+        self.assertEqual(_operation.latest_price_updated, False)
+        _operation.update_coin_budget(100)
+        self.assertEqual(_operation.latest_price_updated, False)
         latest_price = int(latest_price / self._start_price_multiplier) + 1
-        self.assertEqual(operation.latest_price, latest_price)
-        self.assertEqual(operation.start_price,
+        self.assertEqual(_operation.latest_price, latest_price)
+        self.assertEqual(_operation.start_price,
                          latest_price * self._start_price_multiplier)
-        self.assertEqual(operation.latest_price_updated, False)
-        operation.update_coin_budget(0)
-        self.assertEqual(operation.latest_price_updated, False)
+        self.assertEqual(_operation.latest_price_updated, False)
+        _operation.update_coin_budget(0)
+        self.assertEqual(_operation.latest_price_updated, False)
         latest_price = int(latest_price / self._start_price_multiplier) + 1
-        self.assertEqual(operation.latest_price, latest_price)
-        self.assertEqual(operation.start_price, 0)
-        self.assertEqual(operation.latest_price_updated, False)
-        operation.update_coin_budget(0)
-        self.assertEqual(operation.latest_price_updated, False)
-        self.assertEqual(operation.latest_price, latest_price)
-        self.assertEqual(operation.start_price, 0)
-        self.assertEqual(operation.latest_price_updated, False)
-        operation.update_coin_budget(-100)
-        self.assertEqual(operation.latest_price_updated, False)
-        self.assertEqual(operation.latest_price, latest_price)
-        self.assertEqual(operation.start_price,
+        self.assertEqual(_operation.latest_price, latest_price)
+        self.assertEqual(_operation.start_price, 0)
+        self.assertEqual(_operation.latest_price_updated, False)
+        _operation.update_coin_budget(0)
+        self.assertEqual(_operation.latest_price_updated, False)
+        self.assertEqual(_operation.latest_price, latest_price)
+        self.assertEqual(_operation.start_price, 0)
+        self.assertEqual(_operation.latest_price_updated, False)
+        _operation.update_coin_budget(-100)
+        self.assertEqual(_operation.latest_price_updated, False)
+        self.assertEqual(_operation.latest_price, latest_price)
+        self.assertEqual(_operation.start_price,
                          int(latest_price / self._start_price_multiplier) + 1)
-        self.assertEqual(operation.latest_price_updated, False)
-        operation.update_coin_budget(-100)
-        self.assertEqual(operation.latest_price_updated, False)
+        self.assertEqual(_operation.latest_price_updated, False)
+        _operation.update_coin_budget(-100)
+        self.assertEqual(_operation.latest_price_updated, False)
         latest_price = latest_price * self._start_price_multiplier
-        self.assertEqual(operation.latest_price, latest_price)
-        self.assertEqual(operation.start_price,
+        self.assertEqual(_operation.latest_price, latest_price)
+        self.assertEqual(_operation.start_price,
                          int(latest_price / self._start_price_multiplier) + 1)
-        self.assertEqual(operation.latest_price_updated, False)
-        operation.update_coin_budget(100)
-        self.assertEqual(operation.latest_price_updated, False)
+        self.assertEqual(_operation.latest_price_updated, False)
+        _operation.update_coin_budget(100)
+        self.assertEqual(_operation.latest_price_updated, False)
         latest_price = latest_price * self._start_price_multiplier
-        self.assertEqual(operation.latest_price, latest_price)
-        self.assertEqual(operation.start_price,
+        self.assertEqual(_operation.latest_price, latest_price)
+        self.assertEqual(_operation.start_price,
                          latest_price * self._start_price_multiplier)
-        self.assertEqual(operation.latest_price_updated, False)
-        operation.update_coin_budget(0)
+        self.assertEqual(_operation.latest_price_updated, False)
+        _operation.update_coin_budget(0)
         latest_price = int(latest_price / self._start_price_multiplier) + 1
-        self.assertEqual(operation.latest_price, latest_price)
-        self.assertEqual(operation.start_price, 0)
+        self.assertEqual(_operation.latest_price, latest_price)
+        self.assertEqual(_operation.start_price, 0)
 
         eth_balance = 0
+        latest_price_updated = False
         for updated_coin_budget in [
                 1000, 2000, -1000, -2000, 0, 10000, 0, -10000,
                 -100000000, -100, -100000000]:
-            if not operation.latest_price_updated:
-                if operation.coin_budget > 0:
+            if not latest_price_updated:
+                if _operation.coin_budget > 0:
                     latest_price = int(
                         latest_price / self._start_price_multiplier) + 1
-                elif operation.coin_budget < 0:
+                elif _operation.coin_budget < 0:
                     latest_price = latest_price * self._start_price_multiplier
-            operation.update_coin_budget(updated_coin_budget)
+            _operation.update_coin_budget(updated_coin_budget)
+            
+            latest_price_updated = False
             start_price = 0
             if updated_coin_budget > 0:
                 start_price = latest_price * self._start_price_multiplier
             elif updated_coin_budget < 0:
                 start_price = int(
                     latest_price / self._start_price_multiplier) + 1
-            self.assertEqual(operation.latest_price_updated, False)
-            self.assertEqual(operation.start_price, start_price)
-            self.assertEqual(operation.latest_price, latest_price)
-            self.assertEqual(operation.coin_budget, updated_coin_budget)
+            self.assertEqual(_operation.latest_price_updated, False)
+            self.assertEqual(_operation.start_price, start_price)
+            self.assertEqual(_operation.latest_price, latest_price)
+            self.assertEqual(_operation.coin_budget, updated_coin_budget)
 
             if updated_coin_budget >= 0:
                 with self.assertRaises(Exception):
-                    operation.decrease_coin_supply(0, 0, 0)
+                    _operation.decrease_coin_supply(0, 0, 0)
                 with self.assertRaises(Exception):
-                    operation.decrease_coin_supply(10, 10, 0)
+                    _operation.decrease_coin_supply(10, 10, 0)
             if updated_coin_budget <= 0:
                 with self.assertRaises(Exception):
-                    operation.increase_coin_supply(0, 0)
+                    _operation.increase_coin_supply(0, 0)
                 with self.assertRaises(Exception):
-                    operation.increase_coin_supply(10, 10)
+                    _operation.increase_coin_supply(10, 10)
 
             coin_budget = updated_coin_budget
             if updated_coin_budget > 0:
@@ -161,7 +164,7 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
                             updated_coin_budget * start_price + 1]:
                         if coin_budget == 0:
                             with self.assertRaises(Exception):
-                                operation.increase_coin_supply(
+                                _operation.increase_coin_supply(
                                     requested_eth_amount, elapsed_time)
                             continue
                         price = start_price
@@ -174,7 +177,7 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
                         if price == 0:
                             price = 1
                         self.assertEqual(
-                            operation.get_current_price(elapsed_time), price)
+                            _operation.get_current_price(elapsed_time), price)
                             
                         coin_amount = int(requested_eth_amount / price)
                         if coin_amount > coin_budget:
@@ -182,14 +185,15 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
                         eth_amount = coin_amount * price
                         if coin_amount > 0:
                             latest_price = price
+                            latest_price_updated = True
                         coin_budget -= coin_amount
                         eth_balance += eth_amount
-                        self.assertEqual(operation.increase_coin_supply(
+                        self.assertEqual(_operation.increase_coin_supply(
                             requested_eth_amount, elapsed_time),
                                          (eth_amount, coin_amount))
-                        self.assertEqual(operation.start_price, start_price)
-                        self.assertEqual(operation.latest_price, latest_price)
-                        self.assertEqual(operation.coin_budget, coin_budget)
+                        self.assertEqual(_operation.start_price, start_price)
+                        self.assertEqual(_operation.latest_price, latest_price)
+                        self.assertEqual(_operation.coin_budget, coin_budget)
             elif updated_coin_budget < 0:
                 for elapsed_time in [
                         0, 1, self._price_change_interval + 1,
@@ -204,7 +208,7 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
                             -updated_coin_budget + 1]:
                         if coin_budget == 0:
                             with self.assertRaises(Exception):
-                                operation.decrease_coin_supply(
+                                _operation.decrease_coin_supply(
                                     requested_eth_amount, elapsed_time,
                                     eth_balance)
                             continue
@@ -217,7 +221,7 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
                             price = int(price * (
                                 100 + self._price_change_percentage) / 100)
                         self.assertEqual(
-                            operation.get_current_price(elapsed_time), price)
+                            _operation.get_current_price(elapsed_time), price)
                             
                         coin_amount = requested_coin_amount
                         if coin_amount >= -coin_budget:
@@ -228,16 +232,17 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
                         coin_amount = int(eth_amount / price)
                         if coin_amount > 0:
                             latest_price = price
+                            latest_price_updated = True
                         coin_budget += coin_amount
                         old_eth_balance = eth_balance
                         eth_balance -= eth_amount
-                        self.assertEqual(operation.decrease_coin_supply(
+                        self.assertEqual(_operation.decrease_coin_supply(
                             requested_coin_amount, elapsed_time,
                             old_eth_balance),
                                          (eth_amount, coin_amount))
-                        self.assertEqual(operation.start_price, start_price)
-                        self.assertEqual(operation.latest_price, latest_price)
-                        self.assertEqual(operation.coin_budget, coin_budget)
+                        self.assertEqual(_operation.start_price, start_price)
+                        self.assertEqual(_operation.latest_price, latest_price)
+                        self.assertEqual(_operation.coin_budget, coin_budget)
 
         self.assertEqual(self._eth_pool.eth_balance, 0)
         self._eth_pool.increase_eth(10)

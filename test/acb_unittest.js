@@ -2713,6 +2713,7 @@ function parameterized_test(accounts,
       assert.equal(await _coin.balanceOf(accounts[1]), balance + 100);
       assert.equal(await web3.eth.getBalance(_eth_pool.address),
                    contract_eth_balance.add(price.mul(new BN(100))).toString());
+      assert.equal(await _open_market_operation.latest_price_updated_(), true);
       
       await _acb.updateCoinBudget(100, {from: accounts[1]});
       price = new BN(await _open_market_operation.start_price_());
@@ -2734,6 +2735,7 @@ function parameterized_test(accounts,
       assert.equal(await _coin.balanceOf(accounts[1]), balance + 100);
       assert.equal(await web3.eth.getBalance(_eth_pool.address),
                    contract_eth_balance.add(price.mul(new BN(100))).toString());
+      assert.equal(await _open_market_operation.latest_price_updated_(), true);
       await should_throw(async () => {
         await _acb.purchaseCoins.call({value: 10, from: accounts[1]});
       }, "OpenMarketOperation");
@@ -2751,6 +2753,7 @@ function parameterized_test(accounts,
       assert.equal(await _coin.balanceOf(accounts[1]), balance - 100);
       assert.equal(await web3.eth.getBalance(_eth_pool.address),
                    contract_eth_balance.sub(price.mul(new BN(100))).toString());
+      assert.equal(await _open_market_operation.latest_price_updated_(), true);
       
       await _acb.updateCoinBudget(-100, {from: accounts[1]});
       price = new BN(await _open_market_operation.start_price_());
@@ -2770,6 +2773,7 @@ function parameterized_test(accounts,
       assert.equal(await _coin.balanceOf(accounts[1]), balance - 100);
       assert.equal(await web3.eth.getBalance(_eth_pool.address),
                    contract_eth_balance.sub(price.mul(new BN(100))).toString());
+      assert.equal(await _open_market_operation.latest_price_updated_(), true);
       await should_throw(async () => {
         await _acb.sellCoins.call(10, {from: accounts[1]});
       }, "OpenMarketOperation");
