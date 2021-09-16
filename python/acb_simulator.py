@@ -110,6 +110,8 @@ class ACBSimulator(unittest.TestCase):
             self._epoch_duration, self._deposit_rate,
             self._damping_factor, self._level_to_exchange_rate)
 
+        self._start_price = 0
+        self._latest_price = self._open_market_operation.latest_price
         self._tax_rate = JohnLawCoin.TAX_RATE
         self._burned = [0] * 3
 
@@ -232,6 +234,17 @@ class ACBSimulator(unittest.TestCase):
             if not commit_observed:
                 continue
 
+            if self._open_market_operation.coin_budget > 0:
+                self._start_price = (
+                    self._latest_price * self._start_price_multiplier)
+            elif self._open_market_operation.coin_budget < 0:
+                self._start_price = int(
+                    self._latest_price / self._start_price_multiplier) + 1
+            else:
+                self._start_price = 0
+            self.assertEqual(self._open_market_operation.start_price,
+                             self._start_price)
+                
             epoch_id = self._oracle.epoch_id
             coin_supply2 = self._coin.total_supply
             bond_supply = self._bond.total_supply
@@ -239,7 +252,7 @@ class ACBSimulator(unittest.TestCase):
             bond_budget = self._bond_operation.bond_budget
             coin_budget = self._open_market_operation.coin_budget
             eth_balance = self._eth_pool.eth_balance
-            latest_price = self._open_market_operation.latest_price
+            latest_price = self._latest_price
 
             self.purchase_coins()
             self.sell_coins()
@@ -292,6 +305,14 @@ class ACBSimulator(unittest.TestCase):
             self.assertEqual(open_market_operation_log.eth_balance, eth_balance)
             self.assertEqual(open_market_operation_log.latest_price,
                              latest_price)
+
+            if not self._open_market_operation.latest_price_updated:
+                if self._open_market_operation.coin_budget > 0:
+                    self._latest_price = int(
+                        self._latest_price / self._start_price_multiplier) + 1
+                elif self._open_market_operation.coin_budget < 0:
+                    self._latest_price = (
+                        self._latest_price * self._start_price_multiplier)
             
             tax = self.transfer_coins()
 
@@ -468,8 +489,7 @@ class ACBSimulator(unittest.TestCase):
             original_timestamp = self._acb.get_timestamp()
             self._acb.set_timestamp(
                 original_timestamp + self._price_change_interval * intervals)
-            start_price = self._open_market_operation.start_price
-            price = start_price
+            price = self._start_price
             for i in range(intervals):
                 price = int(price * (
                     100 - self._price_change_percentage) / 100)
@@ -485,6 +505,8 @@ class ACBSimulator(unittest.TestCase):
                 self._acb.purchase_coins(
                     voter.address, requested_coin_amount * price),
                 (requested_coin_amount * price, requested_coin_amount))
+            if requested_coin_amount:
+                self._latest_price = price
             self._acb.set_timestamp(original_timestamp)
 
             self.assertEqual(self._coin.balance_of(voter.address),
@@ -507,8 +529,7 @@ class ACBSimulator(unittest.TestCase):
             original_timestamp = self._acb.get_timestamp()
             self._acb.set_timestamp(
                 original_timestamp + self._price_change_interval * intervals)
-            start_price = self._open_market_operation.start_price
-            price = start_price
+            price = self._start_price
             for i in range(intervals):
                 price = int(price * (
                     100 + self._price_change_percentage) / 100)
@@ -526,6 +547,8 @@ class ACBSimulator(unittest.TestCase):
                 self._acb.sell_coins(
                     voter.address, requested_coin_amount),
                 (requested_coin_amount * price, requested_coin_amount))
+            if requested_coin_amount:
+                self._latest_price = price
             self._acb.set_timestamp(original_timestamp)
 
             self.assertEqual(self._coin.balance_of(voter.address),

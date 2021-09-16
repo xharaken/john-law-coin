@@ -13,8 +13,8 @@ const ETHERSCAN_ADDRESS_ON_RINKEBY = "https://rinkeby.etherscan.io/";
 const ETHERSCAN_ADDRESS_ON_MAINNET = "https://etherscan.io/";
 
 // The ABI of Oracle::getCommit() must not change.
-const EPOCH_ID_THAT_UPGRADED_ORACLE = 35;
-const OLD_ORACLE_ADDRESS = "0xEe8cb56BD34b3416C333D9AA5A1deCeB006033a9";
+const EPOCH_ID_THAT_UPGRADED_ORACLE = 0;
+const OLD_ORACLE_ADDRESS = "";
 
 const EXCHANGE_RATES = [0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4];
 const LEVEL_MAX = EXCHANGE_RATES.length;

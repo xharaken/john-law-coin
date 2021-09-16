@@ -1213,6 +1213,9 @@ class OpenMarketOperation:
         # with ETH.
         self.latest_price = 1000000000000
         
+        # Whether the latest price was updated in the current epoch.
+        self.latest_price_updated = False
+
         # The start price is updated at the beginning of each epoch.
         self.start_price = 0
         
@@ -1260,6 +1263,7 @@ class OpenMarketOperation:
         
         if coin_amount > 0:
             self.latest_price = price
+            self.latest_price_updated = True
         self.coin_budget -= coin_amount
         assert(self.coin_budget >= 0)
         assert(eth_amount <= requested_eth_amount)
@@ -1298,6 +1302,7 @@ class OpenMarketOperation:
         
         if coin_amount > 0:
             self.latest_price = price
+            self.latest_price_updated = True
         self.coin_budget += coin_amount
         assert(self.coin_budget <= 0)
         assert(coin_amount <= requested_coin_amount)
@@ -1348,7 +1353,22 @@ class OpenMarketOperation:
     # ----------------
     # None.
     def update_coin_budget(self, coin_budget):
+        if not self.latest_price_updated:
+            if self.coin_budget > 0:
+                # If no exchange was observed in the previous epoch,
+                # the price setting was too high. Lower the price.
+                self.latest_price = int(
+                    self.latest_price /
+                    OpenMarketOperation.START_PRICE_MULTIPILER) + 1
+            elif self.coin_budget < 0:
+                # If no exchange was observed in the previous epoch,
+                # the price setting was too low. Raise the price.
+                self.latest_price = (
+                    self.latest_price *
+                    OpenMarketOperation.START_PRICE_MULTIPILER)
+                
         self.coin_budget = coin_budget
+        self.latest_price_updated = False
         assert(self.latest_price > 0)
         if self.coin_budget > 0:
             self.start_price = (
@@ -1360,9 +1380,7 @@ class OpenMarketOperation:
         else:
             self.start_price = int(
                 self.latest_price /
-                OpenMarketOperation.START_PRICE_MULTIPILER)
-            if self.start_price == 0:
-                self.start_price = 1
+                OpenMarketOperation.START_PRICE_MULTIPILER) + 1
             assert(self.start_price > 0)
 
         
