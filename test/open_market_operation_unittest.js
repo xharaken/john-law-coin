@@ -89,56 +89,59 @@ function parameterized_test(accounts,
     assert.equal(await _operation.latest_price_updated_(), false);
     await _operation.updateCoinBudget(100);
     assert.equal(await _operation.latest_price_updated_(), false);
-    assert.equal(await _operation.latest_price_(), latest_price);
+    assert.equal(await _operation.latest_price_(), latest_price.toString());
     assert.equal(await _operation.start_price_(),
-                 latest_price.mul(new BN(_start_price_multiplier)));
+                 (latest_price.mul(new BN(_start_price_multiplier))).
+                 toString());
     assert.equal(await _operation.latest_price_updated_(), false);
     await _operation.updateCoinBudget(100);
     assert.equal(await _operation.latest_price_updated_(), false);
     latest_price = latest_price.div(new BN(_start_price_multiplier)).
       add(new BN(1));
-    assert.equal(await _operation.latest_price_(), latest_price);
+    assert.equal(await _operation.latest_price_(), latest_price.toString());
     assert.equal(await _operation.start_price_(),
-                 latest_price.mul(new BN(_start_price_multiplier)));
+                 (latest_price.mul(new BN(_start_price_multiplier))).
+                 toString());
     assert.equal(await _operation.latest_price_updated_(), false);
     await _operation.updateCoinBudget(0);
     assert.equal(await _operation.latest_price_updated_(), false);
     latest_price = latest_price.div(new BN(_start_price_multiplier)).
       add(new BN(1));
-    assert.equal(await _operation.latest_price_(), latest_price);
+    assert.equal(await _operation.latest_price_(), latest_price.toString());
     assert.equal(await _operation.start_price_(), 0);
     assert.equal(await _operation.latest_price_updated_(), false);
     await _operation.updateCoinBudget(0);
     assert.equal(await _operation.latest_price_updated_(), false);
-    assert.equal(await _operation.latest_price_(), latest_price);
+    assert.equal(await _operation.latest_price_(), latest_price.toString());
     assert.equal(await _operation.start_price_(), 0);
     assert.equal(await _operation.latest_price_updated_(), false);
     await _operation.updateCoinBudget(-100);
     assert.equal(await _operation.latest_price_updated_(), false);
-    assert.equal(await _operation.latest_price_(), latest_price);
+    assert.equal(await _operation.latest_price_(), latest_price.toString());
     assert.equal(await _operation.start_price_(),
-                 latest_price.div(new BN(_start_price_multiplier)).
-                 add(new BN(1)));
+                 (latest_price.div(new BN(_start_price_multiplier)).
+                  add(new BN(1))).toString());
     assert.equal(await _operation.latest_price_updated_(), false);
     await _operation.updateCoinBudget(-100);
     assert.equal(await _operation.latest_price_updated_(), false);
     latest_price = latest_price.mul(new BN(_start_price_multiplier));
-    assert.equal(await _operation.latest_price_(), latest_price);
+    assert.equal(await _operation.latest_price_(), latest_price.toString());
     assert.equal(await _operation.start_price_(),
-                 latest_price.div(new BN(_start_price_multiplier)).
-                 add(new BN(1)));
+                 (latest_price.div(new BN(_start_price_multiplier)).
+                  add(new BN(1))).toString());
     assert.equal(await _operation.latest_price_updated_(), false);
     await _operation.updateCoinBudget(100);
     assert.equal(await _operation.latest_price_updated_(), false);
     latest_price = latest_price.mul(new BN(_start_price_multiplier));
-    assert.equal(await _operation.latest_price_(), latest_price);
+    assert.equal(await _operation.latest_price_(), latest_price.toString());
     assert.equal(await _operation.start_price_(),
-                 latest_price.mul(new BN(_start_price_multiplier)));
+                 (latest_price.mul(new BN(_start_price_multiplier)).
+                  toString()));
     assert.equal(await _operation.latest_price_updated_(), false);
     await _operation.updateCoinBudget(0);
     latest_price = latest_price.div(new BN(_start_price_multiplier)).
-      add(new BN1);
-    assert.equal(await _operation.latest_price_(), latest_price);
+      add(new BN(1));
+    assert.equal(await _operation.latest_price_(), latest_price.toString());
     assert.equal(await _operation.start_price_(), 0);
 
     let eth_balance = new BN(0);
@@ -154,6 +157,8 @@ function parameterized_test(accounts,
           latest_price = latest_price.mul(new BN(_start_price_multiplier));
         }
       }
+      
+      latest_price_updated = false;
       await _operation.updateCoinBudget(updated_coin_budget);
       let start_price = new BN(0);
       if (updated_coin_budget > 0) {

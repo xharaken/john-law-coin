@@ -308,7 +308,8 @@ function parameterized_test(accounts,
         _start_price = new BN(0);
       }
       _latest_price_updated = false;
-      assert.equal(await _open_market_operation.start_price_(), start_price);
+      assert.equal(await _open_market_operation.start_price_(),
+                   _start_price.toString());
       
       let epoch_id = (await _oracle.epoch_id_()).toNumber();
       let coin_supply2 = await get_coin_supply();
