@@ -43,7 +43,7 @@ class ACBSimulator(unittest.TestCase):
                  reclaim_threshold,
                  price_change_interval,
                  price_change_percentage,
-                 start_price_multiplier,
+                 price_multiplier,
                  voter_count,
                  iteration):
         super().__init__()
@@ -64,7 +64,7 @@ class ACBSimulator(unittest.TestCase):
                reclaim_threshold,
                price_change_interval,
                price_change_percentage,
-               start_price_multiplier,
+               price_multiplier,
                voter_count,
                iteration))
         print('exchange_rate=', end='')
@@ -80,7 +80,7 @@ class ACBSimulator(unittest.TestCase):
         self._reclaim_threshold = reclaim_threshold
         self._price_change_interval = price_change_interval
         self._price_change_percentage = price_change_percentage
-        self._start_price_multiplier = start_price_multiplier
+        self._price_multiplier = price_multiplier
         self._voter_count = voter_count
         self._iteration = iteration
         self._level_to_exchange_rate = level_to_exchange_rate
@@ -105,7 +105,7 @@ class ACBSimulator(unittest.TestCase):
             self._bond_redeemable_period)
         self._open_market_operation.override_constants_for_testing(
             self._price_change_interval, self._price_change_percentage,
-            self._start_price_multiplier)
+            self._price_multiplier)
         self._acb.override_constants_for_testing(
             self._epoch_duration, self._deposit_rate,
             self._damping_factor, self._level_to_exchange_rate)
@@ -237,10 +237,10 @@ class ACBSimulator(unittest.TestCase):
 
             if self._open_market_operation.coin_budget > 0:
                 self._start_price = (
-                    self._latest_price * self._start_price_multiplier)
+                    self._latest_price * self._price_multiplier)
             elif self._open_market_operation.coin_budget < 0:
                 self._start_price = int(
-                    self._latest_price / self._start_price_multiplier) + 1
+                    self._latest_price / self._price_multiplier) + 1
             else:
                 self._start_price = 0
             self._latest_price_updated = False
@@ -311,10 +311,10 @@ class ACBSimulator(unittest.TestCase):
             if self._latest_price_updated == False:
                 if self._open_market_operation.coin_budget > 0:
                     self._latest_price = int(
-                        self._latest_price / self._start_price_multiplier) + 1
+                        self._latest_price / self._price_multiplier) + 1
                 elif self._open_market_operation.coin_budget < 0:
                     self._latest_price = (
-                        self._latest_price * self._start_price_multiplier)
+                        self._latest_price * self._price_multiplier)
             
             tax = self.transfer_coins()
 
@@ -966,7 +966,7 @@ def main():
                                         price_change_interval = int(
                                             epoch_duration / 21) + 1
                                         price_change_percentage = 20
-                                        start_price_multiplier = 3
+                                        price_multiplier = 3
                                         for voter_count in [1, 200]:
                                             test = ACBSimulator(
                                                 bond_price,
@@ -981,7 +981,7 @@ def main():
                                                 reclaim_threshold,
                                                 price_change_interval,
                                                 price_change_percentage,
-                                                start_price_multiplier,
+                                                price_multiplier,
                                                 voter_count,
                                                 iteration)
                                             test.run()

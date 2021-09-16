@@ -24,7 +24,7 @@ class ACBUnitTest(unittest.TestCase):
                  tax,
                  price_change_interval,
                  price_change_percentage,
-                 start_price_multiplier):
+                 price_multiplier):
         super().__init__()
 
         print('bond_price=%d redemp_price=%d redemp_period=%d '
@@ -43,7 +43,7 @@ class ACBUnitTest(unittest.TestCase):
                tax,
                price_change_interval,
                price_change_percentage,
-               start_price_multiplier))
+               price_multiplier))
         print('exchange_rate=', end='')
         print(level_to_exchange_rate)
         self._bond_price = bond_price
@@ -58,7 +58,7 @@ class ACBUnitTest(unittest.TestCase):
         self._tax = tax
         self._price_change_interval = price_change_interval
         self._price_change_percentage = price_change_percentage
-        self._start_price_multiplier = start_price_multiplier
+        self._price_multiplier = price_multiplier
         self._level_to_exchange_rate = level_to_exchange_rate
         self._level_max = len(level_to_exchange_rate)
 
@@ -84,7 +84,7 @@ class ACBUnitTest(unittest.TestCase):
             self._bond_redeemable_period)
         self._open_market_operation.override_constants_for_testing(
             self._price_change_interval, self._price_change_percentage,
-            self._start_price_multiplier)
+            self._price_multiplier)
         self._acb.override_constants_for_testing(
             self._epoch_duration, self._deposit_rate, self._damping_factor,
             self._level_to_exchange_rate)
@@ -2498,7 +2498,7 @@ def main():
     level_to_exchange_rate = [1, 11, 20]
     price_change_interval = int(epoch_duration / 21)
     price_change_percentage = 20
-    start_price_multiplier = 3
+    price_multiplier = 3
 
     test = ACBUnitTest(
         bond_price,
@@ -2514,7 +2514,7 @@ def main():
         tax,
         price_change_interval,
         price_change_percentage,
-        start_price_multiplier)
+        price_multiplier)
     test.run()
     test.teardown()
 
@@ -2536,7 +2536,7 @@ def main():
                                             price_change_interval = int(
                                                 epoch_duration / 21) + 1
                                             price_change_percentage = 20
-                                            start_price_multiplier = 3
+                                            price_multiplier = 3
                                             test = ACBUnitTest(
                                                 bond_price,
                                                 bond_redemption_price,
@@ -2551,7 +2551,7 @@ def main():
                                                 tax,
                                                 price_change_interval,
                                                 price_change_percentage,
-                                                start_price_multiplier)
+                                                price_multiplier)
                                             test.run()
                                             test.teardown()
 

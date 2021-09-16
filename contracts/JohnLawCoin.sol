@@ -1374,7 +1374,7 @@ contract OpenMarketOperation is OwnableUpgradeable {
   uint public PRICE_CHANGE_INTERVAL;
   uint public PRICE_CHANGE_PERCENTAGE;
   uint public PRICE_CHANGE_MAX;
-  uint public START_PRICE_MULTIPLIER;
+  uint public PRICE_MULTIPLIER;
 
   // Attributes. See the comment in initialize().
   uint public latest_price_;
@@ -1407,7 +1407,7 @@ contract OpenMarketOperation is OwnableUpgradeable {
     // amount of JLC to be purchased / sold by the open market operation.
     //
     // When the open market operation increases the total coin supply,
-    // the auction starts with the price of P * START_PRICE_MULTIPLIER.
+    // the auction starts with the price of P * PRICE_MULTIPLIER.
     // Then the price is decreased by PRICE_CHANGE_PERCENTAGE % every
     // PRICE_CHANGE_INTERVAL seconds. JLC and ETH are exchanged at the
     // given price (the open market operation sells JLC and purchases ETH).
@@ -1415,7 +1415,7 @@ contract OpenMarketOperation is OwnableUpgradeable {
     // in the coin budget.
     //
     // When the open market operation decreases the total coin supply,
-    // the auction starts with the price of P / START_PRICE_MULTIPLIER.
+    // the auction starts with the price of P / PRICE_MULTIPLIER.
     // Then the price is increased by PRICE_CHANGE_PERCENTAGE % every
     // PRICE_CHANGE_INTERVAL seconds. JLC and ETH are exchanged at the
     // given price (the open market operation sells ETH and purchases JLC).
@@ -1430,7 +1430,7 @@ contract OpenMarketOperation is OwnableUpgradeable {
     PRICE_CHANGE_INTERVAL = 60; // 8 hours
     PRICE_CHANGE_PERCENTAGE = 15; // 15%
     PRICE_CHANGE_MAX = 25;
-    START_PRICE_MULTIPLIER = 3;
+    PRICE_MULTIPLIER = 3;
     
     // Attributes.
 
@@ -1590,11 +1590,11 @@ contract OpenMarketOperation is OwnableUpgradeable {
       if (coin_budget_ > 0) {
         // If no exchange was observed in the previous epoch, the price setting
         // was too high. Lower the price.
-        latest_price_ = latest_price_ / START_PRICE_MULTIPLIER + 1;
+        latest_price_ = latest_price_ / PRICE_MULTIPLIER + 1;
       } else if (coin_budget_ < 0) {
         // If no exchange was observed in the previous epoch, the price setting
         // was too low. Raise the price.
-        latest_price_ = latest_price_ * START_PRICE_MULTIPLIER;
+        latest_price_ = latest_price_ * PRICE_MULTIPLIER;
       }
     }
     
@@ -1603,11 +1603,11 @@ contract OpenMarketOperation is OwnableUpgradeable {
     require(latest_price_ > 0, "uc1");
     
     if (coin_budget_ > 0) {
-      start_price_ = latest_price_ * START_PRICE_MULTIPLIER;
+      start_price_ = latest_price_ * PRICE_MULTIPLIER;
     } else if (coin_budget_ == 0) {
       start_price_ = 0;
     } else {
-      start_price_ = latest_price_ / START_PRICE_MULTIPLIER + 1;
+      start_price_ = latest_price_ / PRICE_MULTIPLIER + 1;
     }
     emit UpdateCoinBudgetEvent(coin_budget_);
   }

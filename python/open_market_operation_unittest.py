@@ -10,22 +10,22 @@ import unittest
 
 class OpenMarketOperationUnitTest(unittest.TestCase):
     def __init__(self, price_change_interval,
-                 price_change_percentage, start_price_multiplier):
+                 price_change_percentage, price_multiplier):
         super().__init__()
         print('price_change_interval=%d price_change_percentage=%d '
-              'start_price_multiplier=%d' %
+              'price_multiplier=%d' %
               (price_change_interval, price_change_percentage,
-               start_price_multiplier))
+               price_multiplier))
 
         self._open_market_operation = OpenMarketOperation()
         self._open_market_operation.override_constants_for_testing(
             price_change_interval, price_change_percentage,
-            start_price_multiplier)
+            price_multiplier)
         self._eth_pool = EthPool()
         self._price_change_interval = price_change_interval
         self._price_change_percentage = price_change_percentage
         self._price_change_max = OpenMarketOperation.PRICE_CHANGE_MAX
-        self._start_price_multiplier = start_price_multiplier
+        self._price_multiplier = price_multiplier
 
     def teardown(self):
         pass
@@ -68,18 +68,18 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
         self.assertEqual(_operation.latest_price_updated, False)
         self.assertEqual(_operation.latest_price, latest_price)
         self.assertEqual(_operation.start_price,
-                         latest_price * self._start_price_multiplier)
+                         latest_price * self._price_multiplier)
         self.assertEqual(_operation.latest_price_updated, False)
         _operation.update_coin_budget(100)
         self.assertEqual(_operation.latest_price_updated, False)
-        latest_price = int(latest_price / self._start_price_multiplier) + 1
+        latest_price = int(latest_price / self._price_multiplier) + 1
         self.assertEqual(_operation.latest_price, latest_price)
         self.assertEqual(_operation.start_price,
-                         latest_price * self._start_price_multiplier)
+                         latest_price * self._price_multiplier)
         self.assertEqual(_operation.latest_price_updated, False)
         _operation.update_coin_budget(0)
         self.assertEqual(_operation.latest_price_updated, False)
-        latest_price = int(latest_price / self._start_price_multiplier) + 1
+        latest_price = int(latest_price / self._price_multiplier) + 1
         self.assertEqual(_operation.latest_price, latest_price)
         self.assertEqual(_operation.start_price, 0)
         self.assertEqual(_operation.latest_price_updated, False)
@@ -92,24 +92,24 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
         self.assertEqual(_operation.latest_price_updated, False)
         self.assertEqual(_operation.latest_price, latest_price)
         self.assertEqual(_operation.start_price,
-                         int(latest_price / self._start_price_multiplier) + 1)
+                         int(latest_price / self._price_multiplier) + 1)
         self.assertEqual(_operation.latest_price_updated, False)
         _operation.update_coin_budget(-100)
         self.assertEqual(_operation.latest_price_updated, False)
-        latest_price = latest_price * self._start_price_multiplier
+        latest_price = latest_price * self._price_multiplier
         self.assertEqual(_operation.latest_price, latest_price)
         self.assertEqual(_operation.start_price,
-                         int(latest_price / self._start_price_multiplier) + 1)
+                         int(latest_price / self._price_multiplier) + 1)
         self.assertEqual(_operation.latest_price_updated, False)
         _operation.update_coin_budget(100)
         self.assertEqual(_operation.latest_price_updated, False)
-        latest_price = latest_price * self._start_price_multiplier
+        latest_price = latest_price * self._price_multiplier
         self.assertEqual(_operation.latest_price, latest_price)
         self.assertEqual(_operation.start_price,
-                         latest_price * self._start_price_multiplier)
+                         latest_price * self._price_multiplier)
         self.assertEqual(_operation.latest_price_updated, False)
         _operation.update_coin_budget(0)
-        latest_price = int(latest_price / self._start_price_multiplier) + 1
+        latest_price = int(latest_price / self._price_multiplier) + 1
         self.assertEqual(_operation.latest_price, latest_price)
         self.assertEqual(_operation.start_price, 0)
 
@@ -121,18 +121,18 @@ class OpenMarketOperationUnitTest(unittest.TestCase):
             if not latest_price_updated:
                 if _operation.coin_budget > 0:
                     latest_price = int(
-                        latest_price / self._start_price_multiplier) + 1
+                        latest_price / self._price_multiplier) + 1
                 elif _operation.coin_budget < 0:
-                    latest_price = latest_price * self._start_price_multiplier
+                    latest_price = latest_price * self._price_multiplier
             _operation.update_coin_budget(updated_coin_budget)
             
             latest_price_updated = False
             start_price = 0
             if updated_coin_budget > 0:
-                start_price = latest_price * self._start_price_multiplier
+                start_price = latest_price * self._price_multiplier
             elif updated_coin_budget < 0:
                 start_price = int(
-                    latest_price / self._start_price_multiplier) + 1
+                    latest_price / self._price_multiplier) + 1
             self.assertEqual(_operation.latest_price_updated, False)
             self.assertEqual(_operation.start_price, start_price)
             self.assertEqual(_operation.latest_price, latest_price)
@@ -266,10 +266,10 @@ def main():
 
     for price_change_interval in [1, 8 * 60 * 60]:
         for price_change_percentage in [0, 1, 15, 50, 99, 100]:
-            for start_price_multiplier in [1, 3, 100]:
+            for price_multiplier in [1, 3, 100]:
                 test = OpenMarketOperationUnitTest(
                     price_change_interval, price_change_percentage,
-                    start_price_multiplier)
+                    price_multiplier)
                 test.run()
                 test.teardown()
 

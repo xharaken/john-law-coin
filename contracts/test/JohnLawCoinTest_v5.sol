@@ -36,16 +36,16 @@ contract BondOperationForTesting_v5 is BondOperation_v5 {
 contract OpenMarketOperationForTesting_v5 is OpenMarketOperation_v5 {
   function overrideConstants(uint price_change_interval,
                              uint price_change_percentage,
-                             uint start_price_multiplier)
+                             uint price_multiplier)
       public onlyOwner {
     PRICE_CHANGE_INTERVAL = price_change_interval;
     PRICE_CHANGE_PERCENTAGE = price_change_percentage;
-    START_PRICE_MULTIPLIER = start_price_multiplier;
+    PRICE_MULTIPLIER = price_multiplier;
 
     require(1 <= PRICE_CHANGE_INTERVAL, "oc1");
     require(0 <= PRICE_CHANGE_PERCENTAGE && PRICE_CHANGE_PERCENTAGE <= 100,
             "oc2");
-    require(1 <= START_PRICE_MULTIPLIER, "oc3");
+    require(1 <= PRICE_MULTIPLIER, "oc3");
   }
 }
 

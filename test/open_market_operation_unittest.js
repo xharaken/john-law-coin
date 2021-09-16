@@ -25,18 +25,18 @@ contract("OpenMarketOperationUnittest", function (accounts) {
 function parameterized_test(accounts,
                             _price_change_interval,
                             _price_change_percentage,
-                            _start_price_multiplier) {
+                            _price_multiplier) {
   let test_name = "OpenMarketOperation parameters: " +
       "price_change_interval=" + _price_change_interval +
       " price_change_percentage=" + _price_change_percentage +
-      " start_price_multiplier=" + _start_price_multiplier;
+      " price_multiplier=" + _price_multiplier;
   console.log(test_name);
 
   it(test_name, async function () {
     _operation = await deployProxy(OpenMarketOperationForTesting, []);
     await _operation.overrideConstants(_price_change_interval,
                                        _price_change_percentage,
-                                       _start_price_multiplier);
+                                       _price_multiplier);
     common.print_contract_size(_operation, "OpenMarketOperationForTesting");
     _eth_pool = await deployProxy(EthPool, []);
     common.print_contract_size(_operation, "EthPool");
@@ -91,21 +91,21 @@ function parameterized_test(accounts,
     assert.equal(await _operation.latest_price_updated_(), false);
     assert.equal(await _operation.latest_price_(), latest_price.toString());
     assert.equal(await _operation.start_price_(),
-                 (latest_price.mul(new BN(_start_price_multiplier))).
+                 (latest_price.mul(new BN(_price_multiplier))).
                  toString());
     assert.equal(await _operation.latest_price_updated_(), false);
     await _operation.updateCoinBudget(100);
     assert.equal(await _operation.latest_price_updated_(), false);
-    latest_price = latest_price.div(new BN(_start_price_multiplier)).
+    latest_price = latest_price.div(new BN(_price_multiplier)).
       add(new BN(1));
     assert.equal(await _operation.latest_price_(), latest_price.toString());
     assert.equal(await _operation.start_price_(),
-                 (latest_price.mul(new BN(_start_price_multiplier))).
+                 (latest_price.mul(new BN(_price_multiplier))).
                  toString());
     assert.equal(await _operation.latest_price_updated_(), false);
     await _operation.updateCoinBudget(0);
     assert.equal(await _operation.latest_price_updated_(), false);
-    latest_price = latest_price.div(new BN(_start_price_multiplier)).
+    latest_price = latest_price.div(new BN(_price_multiplier)).
       add(new BN(1));
     assert.equal(await _operation.latest_price_(), latest_price.toString());
     assert.equal(await _operation.start_price_(), 0);
@@ -119,27 +119,27 @@ function parameterized_test(accounts,
     assert.equal(await _operation.latest_price_updated_(), false);
     assert.equal(await _operation.latest_price_(), latest_price.toString());
     assert.equal(await _operation.start_price_(),
-                 (latest_price.div(new BN(_start_price_multiplier)).
+                 (latest_price.div(new BN(_price_multiplier)).
                   add(new BN(1))).toString());
     assert.equal(await _operation.latest_price_updated_(), false);
     await _operation.updateCoinBudget(-100);
     assert.equal(await _operation.latest_price_updated_(), false);
-    latest_price = latest_price.mul(new BN(_start_price_multiplier));
+    latest_price = latest_price.mul(new BN(_price_multiplier));
     assert.equal(await _operation.latest_price_(), latest_price.toString());
     assert.equal(await _operation.start_price_(),
-                 (latest_price.div(new BN(_start_price_multiplier)).
+                 (latest_price.div(new BN(_price_multiplier)).
                   add(new BN(1))).toString());
     assert.equal(await _operation.latest_price_updated_(), false);
     await _operation.updateCoinBudget(100);
     assert.equal(await _operation.latest_price_updated_(), false);
-    latest_price = latest_price.mul(new BN(_start_price_multiplier));
+    latest_price = latest_price.mul(new BN(_price_multiplier));
     assert.equal(await _operation.latest_price_(), latest_price.toString());
     assert.equal(await _operation.start_price_(),
-                 (latest_price.mul(new BN(_start_price_multiplier)).
+                 (latest_price.mul(new BN(_price_multiplier)).
                   toString()));
     assert.equal(await _operation.latest_price_updated_(), false);
     await _operation.updateCoinBudget(0);
-    latest_price = latest_price.div(new BN(_start_price_multiplier)).
+    latest_price = latest_price.div(new BN(_price_multiplier)).
       add(new BN(1));
     assert.equal(await _operation.latest_price_(), latest_price.toString());
     assert.equal(await _operation.start_price_(), 0);
@@ -151,10 +151,10 @@ function parameterized_test(accounts,
       -10000, -100000000, -100, -100000000]) {
       if (latest_price_updated == false) {
         if ((await _operation.coin_budget_()) > 0) {
-          latest_price = latest_price.div(new BN(_start_price_multiplier)).
+          latest_price = latest_price.div(new BN(_price_multiplier)).
             add(new BN(1));
         } else if ((await _operation.coin_budget_()) < 0) {
-          latest_price = latest_price.mul(new BN(_start_price_multiplier));
+          latest_price = latest_price.mul(new BN(_price_multiplier));
         }
       }
       
@@ -162,9 +162,9 @@ function parameterized_test(accounts,
       await _operation.updateCoinBudget(updated_coin_budget);
       let start_price = new BN(0);
       if (updated_coin_budget > 0) {
-        start_price = latest_price.mul(new BN(_start_price_multiplier));
+        start_price = latest_price.mul(new BN(_price_multiplier));
       } else if (updated_coin_budget < 0) {
-        start_price = latest_price.div(new BN(_start_price_multiplier)).
+        start_price = latest_price.div(new BN(_price_multiplier)).
           add(new BN(1));
       }
       assert.equal(await _operation.latest_price_updated_(), false);

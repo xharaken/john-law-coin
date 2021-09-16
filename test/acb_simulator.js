@@ -76,7 +76,7 @@ function parameterized_test(accounts,
                             _reclaim_threshold,
                             _price_change_interval,
                             _price_change_percentage,
-                            _start_price_multiplier,
+                            _price_multiplier,
                             _voter_count,
                             _iteration,
                             _should_upgrade) {
@@ -93,7 +93,7 @@ function parameterized_test(accounts,
       " reclaim=" + _reclaim_threshold +
       " price_interval=" + _price_change_interval +
       " price_percent=" + _price_change_percentage +
-      " price_multiplier=" + _start_price_multiplier +
+      " price_multiplier=" + _price_multiplier +
       " voter=" + _voter_count +
       " iter=" + _iteration +
       " should_upgrade=" + _should_upgrade;
@@ -136,7 +136,7 @@ function parameterized_test(accounts,
                                             _bond_redeemable_period);
     await _open_market_operation.overrideConstants(_price_change_interval,
                                                    _price_change_percentage,
-                                                   _start_price_multiplier);
+                                                   _price_multiplier);
     await _acb.overrideConstants(_epoch_duration,
                                  _deposit_rate,
                                  _damping_factor,
@@ -300,10 +300,10 @@ function parameterized_test(accounts,
       }
 
       if ((await _open_market_operation.coin_budget_()) > 0) {
-        _start_price = _latest_price.mul(new BN(_start_price_multiplier));
+        _start_price = _latest_price.mul(new BN(_price_multiplier));
       } else if ((await _open_market_operation.coin_budget_()) < 0) {
         _start_price = _latest_price.div(
-          new BN(_start_price_multiplier)).add(new BN(1));
+          new BN(_price_multiplier)).add(new BN(1));
       } else {
         _start_price = new BN(0);
       }
@@ -370,9 +370,9 @@ function parameterized_test(accounts,
       if (_latest_price_updated == false) {
         if ((await _open_market_operation.coin_budget_()) > 0) {
           _latest_price = _latest_price.div(
-            new BN(_start_price_multiplier)).add(new BN(1));
+            new BN(_price_multiplier)).add(new BN(1));
         } else if ((await _open_market_operation.coin_budget_()) < 0) {
-          _latest_price = _latest_price.mul(_start_price_multiplier);
+          _latest_price = _latest_price.mul(_price_multiplier);
         }
       }
       
@@ -1057,7 +1057,7 @@ function parameterized_test(accounts,
         _tmp_reclaim_threshold = _reclaim_threshold;
         _tmp_price_change_interval = _price_change_interval;
         _tmp_price_change_percentage = _price_change_percentage;
-        _tmp_start_price_multiplier = _start_price_multiplier;
+        _tmp_price_multiplier = _price_multiplier;
         
         _bond_price += 100;
         _bond_redemption_price += 100;
@@ -1073,7 +1073,7 @@ function parameterized_test(accounts,
         _reclaim_threshold = 0;
         _price_change_interval = Math.trunc(_epoch_duration / 8) + 1;
         _price_change_percentage = 1;
-        _start_price_multiplier = 2;
+        _price_multiplier = 2;
         
         _coin = await upgradeProxy(_coin.address, JohnLawCoin_v2);
         common.print_contract_size(_coin, "JohnLawCoin_v2");
@@ -1105,7 +1105,7 @@ function parameterized_test(accounts,
                                                 _bond_redeemable_period);
         await _open_market_operation.overrideConstants(_price_change_interval,
                                                        _price_change_percentage,
-                                                       _start_price_multiplier);
+                                                       _price_multiplier);
         await _acb.overrideConstants(_epoch_duration,
                                      _deposit_rate,
                                      _damping_factor,
@@ -1129,7 +1129,7 @@ function parameterized_test(accounts,
         _reclaim_threshold = _tmp_reclaim_threshold;
         _price_change_interval = _tmp_price_change_interval;
         _price_change_percentage = _tmp_price_change_percentage;
-        _start_price_multiplier = _tmp_start_price_multiplier;
+        _price_multiplier = _tmp_price_multiplier;
         
         _oracle = await upgradeProxy(_oracle.address, OracleForTesting_v3);
         common.print_contract_size(_oracle, "OracleForTesting_v3");
@@ -1144,7 +1144,7 @@ function parameterized_test(accounts,
                                                 _bond_redeemable_period);
         await _open_market_operation.overrideConstants(_price_change_interval,
                                                        _price_change_percentage,
-                                                       _start_price_multiplier);
+                                                       _price_multiplier);
         await _acb.overrideConstants(_epoch_duration,
                                      _deposit_rate,
                                      _damping_factor,
@@ -1164,7 +1164,7 @@ function parameterized_test(accounts,
         _tmp_reclaim_threshold = _reclaim_threshold;
         _tmp_price_change_interval = _price_change_interval;
         _tmp_price_change_percentage = _price_change_percentage;
-        _tmp_start_price_multiplier = _start_price_multiplier;
+        _tmp_price_multiplier = _price_multiplier;
         
         _bond_price += 100;
         _bond_redemption_price += 100;
@@ -1180,7 +1180,7 @@ function parameterized_test(accounts,
         _reclaim_threshold = 0;
         _price_change_interval = Math.trunc(_epoch_duration / 8) + 1;
         _price_change_percentage = 1;
-        _start_price_multiplier = 2;
+        _price_multiplier = 2;
         
         let old_acb = _acb;
         _acb = await deployProxy(
@@ -1202,7 +1202,7 @@ function parameterized_test(accounts,
                                                 _bond_redeemable_period);
         await _open_market_operation.overrideConstants(_price_change_interval,
                                                        _price_change_percentage,
-                                                       _start_price_multiplier);
+                                                       _price_multiplier);
         await _acb.overrideConstants(_epoch_duration,
                                      _deposit_rate,
                                      _damping_factor,
@@ -1229,7 +1229,7 @@ function parameterized_test(accounts,
         _reclaim_threshold = _tmp_reclaim_threshold;
         _price_change_interval = _tmp_price_change_interval;
         _price_change_percentage = _tmp_price_change_percentage;
-        _start_price_multiplier = _tmp_start_price_multiplier;
+        _price_multiplier = _tmp_price_multiplier;
         
         let old_bond_operation = _bond_operation;
         _bond_operation = await deployProxy(
@@ -1274,7 +1274,7 @@ function parameterized_test(accounts,
                                                 _bond_redeemable_period);
         await _open_market_operation.overrideConstants(_price_change_interval,
                                                        _price_change_percentage,
-                                                       _start_price_multiplier);
+                                                       _price_multiplier);
         await _acb.overrideConstants(_epoch_duration,
                                      _deposit_rate,
                                      _damping_factor,

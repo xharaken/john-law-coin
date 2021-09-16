@@ -5,7 +5,7 @@
 
 const ACB_ADDRESS_ON_LOCAL = "0xD12ab97677dFa1FaBf83Ee1cE1fb947641281F40";
 const ACB_ADDRESS_ON_ROPSTEN = "0xe3999999D94cEF27a54Fa324Bb93f595472CaFFF";
-const ACB_ADDRESS_ON_RINKEBY = "0xC930C263343815989cbfD7aCA861A428e99AF21B";
+const ACB_ADDRESS_ON_RINKEBY = "0x395cb8a3fDA6bb2636F88DB4cCCfC5768FE80E6F";
 const ACB_ADDRESS_ON_MAINNET = "";
 
 const ETHERSCAN_ADDRESS_ON_ROPSTEN = "https://ropsten.etherscan.io/";
@@ -2581,7 +2581,7 @@ const OPEN_MARKET_OPERATION_ABI = [
     },
     {
       "inputs": [],
-      "name": "START_PRICE_MULTIPLIER",
+      "name": "PRICE_MULTIPLIER",
       "outputs": [
         {
           "internalType": "uint256",

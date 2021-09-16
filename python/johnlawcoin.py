@@ -1185,7 +1185,7 @@ class OpenMarketOperation:
         # the amount of JLC to be purchased / sold by the open market operation.
         #
         # When the open market operation increases the total coin supply,
-        # the auction starts with the price of P * START_PRICE_MULTIPILER.
+        # the auction starts with the price of P * PRICE_MULTIPLIER.
         # Then the price is decreased by PRICE_CHANGE_PERCENTAGE % every
         # PRICE_CHANGE_INTERVAL seconds. JLC and ETH are exchanged at the
         # given price (the open market operation sells JLC and purchases ETH).
@@ -1193,7 +1193,7 @@ class OpenMarketOperation:
         # in the coin budget.
         #
         # When the open market operation decreases the total coin supply,
-        # the auction starts with the price of P / START_PRICE_MULTIPILER.
+        # the auction starts with the price of P / PRICE_MULTIPLIER.
         # Then the price is increased by PRICE_CHANGE_PERCENTAGE % every
         # PRICE_CHANGE_INTERVAL seconds. JLC and ETH are exchanged at the
         # given price (the open market operation sells ETH and purchases JLC).
@@ -1205,7 +1205,7 @@ class OpenMarketOperation:
         OpenMarketOperation.PRICE_CHANGE_INTERVAL = 8 * 60 * 60 # 8 hours
         OpenMarketOperation.PRICE_CHANGE_PERCENTAGE = 15 # 15%
         OpenMarketOperation.PRICE_CHANGE_MAX = 25
-        OpenMarketOperation.START_PRICE_MULTIPILER = 3
+        OpenMarketOperation.PRICE_MULTIPLIER = 3
 
         # Attributes.
 
@@ -1225,15 +1225,15 @@ class OpenMarketOperation:
     # Test only.
     def override_constants_for_testing(
             self, price_change_interval,
-            price_change_percentage, start_price_multiplier):
+            price_change_percentage, price_multiplier):
         OpenMarketOperation.PRICE_CHANGE_INTERVAL = price_change_interval
         OpenMarketOperation.PRICE_CHANGE_PERCENTAGE = price_change_percentage
-        OpenMarketOperation.START_PRICE_MULTIPILER = start_price_multiplier
+        OpenMarketOperation.PRICE_MULTIPLIER = price_multiplier
 
         assert(1 <= OpenMarketOperation.PRICE_CHANGE_INTERVAL)
         assert(0 <= OpenMarketOperation.PRICE_CHANGE_PERCENTAGE and
                OpenMarketOperation.PRICE_CHANGE_PERCENTAGE <= 100)
-        assert(1 <= OpenMarketOperation.START_PRICE_MULTIPILER)
+        assert(1 <= OpenMarketOperation.PRICE_MULTIPLIER)
 
     # Increase the total coin supply by purchasing ETH from the sender account.
     # This method returns the amount of JLC and ETH to be exchanged. The actual
@@ -1359,13 +1359,13 @@ class OpenMarketOperation:
                 # the price setting was too high. Lower the price.
                 self.latest_price = int(
                     self.latest_price /
-                    OpenMarketOperation.START_PRICE_MULTIPILER) + 1
+                    OpenMarketOperation.PRICE_MULTIPLIER) + 1
             elif self.coin_budget < 0:
                 # If no exchange was observed in the previous epoch,
                 # the price setting was too low. Raise the price.
                 self.latest_price = (
                     self.latest_price *
-                    OpenMarketOperation.START_PRICE_MULTIPILER)
+                    OpenMarketOperation.PRICE_MULTIPLIER)
                 
         self.coin_budget = coin_budget
         self.latest_price_updated = False
@@ -1373,13 +1373,13 @@ class OpenMarketOperation:
         if self.coin_budget > 0:
             self.start_price = (
                 self.latest_price *
-                OpenMarketOperation.START_PRICE_MULTIPILER)
+                OpenMarketOperation.PRICE_MULTIPLIER)
         elif self.coin_budget == 0:
             self.start_price = 0
         else:
             self.start_price = int(
                 self.latest_price /
-                OpenMarketOperation.START_PRICE_MULTIPILER) + 1
+                OpenMarketOperation.PRICE_MULTIPLIER) + 1
 
         
 #-------------------------------------------------------------------------------

@@ -1540,7 +1540,7 @@ contract OpenMarketOperation_v2 is OwnableUpgradeable {
   uint public PRICE_CHANGE_INTERVAL;
   uint public PRICE_CHANGE_PERCENTAGE;
   uint public PRICE_CHANGE_MAX;
-  uint public START_PRICE_MULTIPLIER;
+  uint public PRICE_MULTIPLIER;
 
   // Attributes. See the comment in initialize().
   uint public latest_price_;
@@ -1741,11 +1741,11 @@ contract OpenMarketOperation_v2 is OwnableUpgradeable {
       if (coin_budget_v2_ > 0) {
         // If no exchange was observed in the previous epoch, the price setting
         // was too high. Lower the price.
-        latest_price_v2_ = latest_price_v2_ / START_PRICE_MULTIPLIER + 1;
+        latest_price_v2_ = latest_price_v2_ / PRICE_MULTIPLIER + 1;
       } else if (coin_budget_v2_ < 0) {
         // If no exchange was observed in the previous epoch, the price setting
         // was too low. Raise the price.
-        latest_price_v2_ = latest_price_v2_ * START_PRICE_MULTIPLIER;
+        latest_price_v2_ = latest_price_v2_ * PRICE_MULTIPLIER;
       }
     }
     
@@ -1754,11 +1754,11 @@ contract OpenMarketOperation_v2 is OwnableUpgradeable {
     require(latest_price_v2_ > 0, "uc1");
     
     if (coin_budget_v2_ > 0) {
-      start_price_v2_ = latest_price_v2_ * START_PRICE_MULTIPLIER;
+      start_price_v2_ = latest_price_v2_ * PRICE_MULTIPLIER;
     } else if (coin_budget_v2_ == 0) {
       start_price_v2_ = 0;
     } else {
-      start_price_v2_ = latest_price_v2_ / START_PRICE_MULTIPLIER + 1;
+      start_price_v2_ = latest_price_v2_ / PRICE_MULTIPLIER + 1;
     }
     emit UpdateCoinBudgetEvent(coin_budget_v2_);
     latest_price_ = latest_price_v2_;

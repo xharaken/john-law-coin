@@ -51,7 +51,7 @@ function parameterized_test(accounts,
                             _tax,
                             _price_change_interval,
                             _price_change_percentage,
-                            _start_price_multiplier) {
+                            _price_multiplier) {
   let test_name = "ACB parameters:" +
       " bond_price=" + _bond_price +
       " bond_redemp_price=" + _bond_redemption_price +
@@ -66,7 +66,7 @@ function parameterized_test(accounts,
       " tax=" + _tax +
       " price_interval=" + _price_change_interval +
       " price_percent=" + _price_change_percentage +
-      " price_multiplier=" + _start_price_multiplier;
+      " price_multiplier=" + _price_multiplier;
   console.log(test_name);
   
   it(test_name, async function () {
@@ -116,7 +116,7 @@ function parameterized_test(accounts,
                                             {from: accounts[1]});
     await _open_market_operation.overrideConstants(
       _price_change_interval, _price_change_percentage,
-      _start_price_multiplier, {from: accounts[1]});
+      _price_multiplier, {from: accounts[1]});
     await _acb.overrideConstants(_epoch_duration,
                                  _deposit_rate,
                                  _damping_factor,
