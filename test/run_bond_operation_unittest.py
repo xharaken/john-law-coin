@@ -14,7 +14,7 @@ import common
 # - bond_redeemable_period
 
 common.reset_network(8)
-command = ("truffle test test/bond_operation_unittest.js " +
+command = ("truffle test --network test test/bond_operation_unittest.js " +
            "'996 1000 12 2'")
 common.run_test(command)
 

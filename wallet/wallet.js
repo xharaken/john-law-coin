@@ -68,7 +68,11 @@ window.onload = async () => {
       throw(
         "JohnLawCoin is not yet launched to the Ethereum Mainnet. " +
           "Click the Metamask extension and choose the Rinkeby Testnet.");
-    } else if (_chain_id == 3 || _chain_id == 4) {
+    } else if (_chain_id == 3) {
+      throw(
+        "JohnLawCoin is not supported on the Ropsten Testnet. " +
+          "Click the Metamask extension and choose the Rinkeby Testnet.");
+    } else if (_chain_id == 4) {
       $("network").innerHTML =
         "<span class='warning'>Note: You are connected to " +
         "the Testnet. For testing purpose, the duration of one epoch " +

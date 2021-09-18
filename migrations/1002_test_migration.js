@@ -9,22 +9,23 @@ const { deployProxy, upgradeProxy } = require('@openzeppelin/truffle-upgrades');
 const common = require("./common.js");
 const sleep = common.sleep;
 
-/*
-const JohnLawCoin_v2 = artifacts.require("JohnLawCoin_v2");
-const JohnLawBond_v2 = artifacts.require("JohnLawBond_v2");
-const Oracle_v3 = artifacts.require("Oracle_v3");
-const BondOperation_v2 = artifacts.require("BondOperation_v2");
-const OpenMarketOperation_v2 = artifacts.require("OpenMarketOperation_v2");
-const EthPool_v2 = artifacts.require("EthPool_v2");
-const Logging_v2 = artifacts.require("Logging_v2");
-const ACB_v3 = artifacts.require("ACB_v3");
-const ACB_v4 = artifacts.require("ACB_v4");
-
-const ACB_ADDRESS = ACB_v3.address; // Update the value before testing.
-*/
-
 module.exports = async function (deployer) {
-  /*
+  if (deployer.network != "upgrade_test") {
+    return;
+  }
+  
+  const JohnLawCoin_v2 = artifacts.require("JohnLawCoin_v2");
+  const JohnLawBond_v2 = artifacts.require("JohnLawBond_v2");
+  const Oracle_v3 = artifacts.require("Oracle_v3");
+  const BondOperation_v2 = artifacts.require("BondOperation_v2");
+  const OpenMarketOperation_v2 = artifacts.require("OpenMarketOperation_v2");
+  const EthPool_v2 = artifacts.require("EthPool_v2");
+  const Logging_v2 = artifacts.require("Logging_v2");
+  const ACB_v3 = artifacts.require("ACB_v3");
+  const ACB_v4 = artifacts.require("ACB_v4");
+
+  const ACB_ADDRESS = ACB_v3.address; // Update the value before testing.
+
   const old_acb = await ACB_v3.at(ACB_ADDRESS);
   await old_acb.pause();
   
@@ -66,5 +67,4 @@ module.exports = async function (deployer) {
   
   await acb.unpause();
   console.log("f");
-*/
 };

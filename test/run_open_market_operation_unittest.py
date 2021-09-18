@@ -13,7 +13,8 @@ import common
 # - start_price_multiplier
 
 common.reset_network(8)
-command = "truffle test test/open_market_operation_unittest.js '28800 15 3'"
+command = ("truffle test --network test " +
+           "test/open_market_operation_unittest.js '28800 15 3'")
 common.run_test(command)
 
 for price_change_interval in [1, 8 * 60 * 60]:

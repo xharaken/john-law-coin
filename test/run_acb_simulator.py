@@ -26,7 +26,7 @@ import common
 # - should_upgrade
 
 common.reset_network(41)
-command = ("truffle test test/acb_simulator.js " +
+command = ("truffle test --network test test/acb_simulator.js " +
            "'996 1000 12 2 604800 90 10 10 [6, 7, 8, 9, 10, 11, 12, 13, 14] " +
            "1 28800 20 3 40 40 0'")
 common.run_test(command)

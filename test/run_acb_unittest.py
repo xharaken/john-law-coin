@@ -24,7 +24,7 @@ import common
 # - start_price_multiplier
 
 common.reset_network(8)
-command = ("truffle test test/acb_unittest.js " +
+command = ("truffle test --network test test/acb_unittest.js " +
            "'996 1000 12 2 604800 90 10 10 [1, 11, 20] 1 12345 28800 20 3'")
 common.run_test(command)
 

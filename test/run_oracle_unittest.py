@@ -17,7 +17,8 @@ import common
 # - other_level
 
 common.reset_network(8)
-command = "truffle test test/oracle_unittest.js '5 1 90 100 20 2 0'"
+command = ("truffle test --network test test/oracle_unittest.js " +
+           "'5 1 90 100 20 2 0'")
 common.run_test(command)
 
 for level_max in [2, 4, 9]:

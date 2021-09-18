@@ -15,7 +15,8 @@ import common
 # - iteration
 
 common.reset_network(11)
-command = "truffle test test/oracle_simulator.js '5 1 90 10 10'"
+command = ("truffle test --network test test/oracle_simulator.js " +
+           '5 1 90 10 10'")
 common.run_test(command)
 
 iteration = 40

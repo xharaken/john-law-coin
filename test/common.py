@@ -32,7 +32,7 @@ def reset_network(voters):
     kill_ganache()
     time.sleep(6)
     network = subprocess.Popen(
-        "ganache-cli -l 1200000000 -a " + str(voters), shell=True,
+        "ganache-cli --port 8546 -l 1200000000 -a" + str(voters), shell=True,
         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL)
     time.sleep(6)
