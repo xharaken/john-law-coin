@@ -21,7 +21,8 @@ for price_change_interval in [1, 8 * 60 * 60]:
     for price_change_percentage in [0, 1, 15, 50, 99, 100]:
         for start_price_multiplier in [1, 3, 100]:
             command = (
-                "truffle test test/open_market_operation_unittest.js '" +
+                "truffle test --network test " +
+                "test/open_market_operation_unittest.js '" +
                 str(price_change_interval) + " " +
                 str(price_change_percentage) + " " +
                 str(start_price_multiplier) + "'")

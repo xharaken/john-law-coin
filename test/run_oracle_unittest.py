@@ -33,7 +33,8 @@ for level_max in [2, 4, 9]:
                             if other_level == mode_level:
                                 continue
                             command = (
-                                "truffle test test/oracle_unittest.js '" +
+                                "truffle test --network test " +
+                                "test/oracle_unittest.js '" +
                                 str(level_max) + " " +
                                 str(reclaim_threshold) + " " +
                                 str(proportional_reward_rate) + " " +

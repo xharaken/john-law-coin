@@ -46,7 +46,8 @@ for (bond_price, bond_redemption_price) in [(996, 1000)]:
                                     price_change_percentage = 20
                                     start_price_multiplier = 3
                                     command = (
-                                        "truffle test test/acb_unittest.js '" +
+                                        "truffle test --network test " +
+                                        "test/acb_unittest.js '" +
                                         str(bond_price) + " " +
                                         str(bond_redemption_price) + " " +
                                         str(bond_redemption_period) + " " +

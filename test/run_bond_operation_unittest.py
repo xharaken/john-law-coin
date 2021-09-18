@@ -22,7 +22,8 @@ for (bond_price, bond_redemption_price) in [(1, 3), (996, 1000), (1000, 1000)]:
     for bond_redemption_period in [1, 6, 12]:
         for bond_redeemable_period in [1, 6, 12]:
             command = (
-                "truffle test test/bond_operation_unittest.js '" +
+                "truffle test --network test " +
+                "test/bond_operation_unittest.js '" +
                 str(bond_price) + " " +
                 str(bond_redemption_price) + " " +
                 str(bond_redemption_period) + " " +

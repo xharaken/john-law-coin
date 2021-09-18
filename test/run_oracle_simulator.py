@@ -16,7 +16,7 @@ import common
 
 common.reset_network(11)
 command = ("truffle test --network test test/oracle_simulator.js " +
-           '5 1 90 10 10'")
+           "'5 1 90 10 10'")
 common.run_test(command)
 
 iteration = 40
@@ -25,7 +25,8 @@ for level_max in [2, 4, 9]:
         for proportional_reward_rate in [0, 90, 100]:
             for voter_count in [1, 20]:
                 command = (
-                    "truffle test test/oracle_simulator.js '" +
+                    "truffle test --network test " +
+                    "test/oracle_simulator.js '" +
                     str(level_max) + " " +
                     str(reclaim_threshold) + " " +
                     str(proportional_reward_rate) + " " +

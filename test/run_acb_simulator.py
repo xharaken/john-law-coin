@@ -50,7 +50,7 @@ for (bond_price, bond_redemption_price) in [(996, 1000)]:
                                     start_price_multiplier = 3
                                     for voter_count in [40]:
                                         command = (
-                                            "truffle test " +
+                                            "truffle test --network test " +
                                             "test/acb_simulator.js '" +
                                             str(bond_price) + " " +
                                             str(bond_redemption_price) + " " +
