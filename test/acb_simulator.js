@@ -372,7 +372,7 @@ function parameterized_test(accounts,
           _latest_price = _latest_price.div(
             new BN(_price_multiplier)).add(new BN(1));
         } else if ((await _open_market_operation.coin_budget_()) < 0) {
-          _latest_price = _latest_price.mul(_price_multiplier);
+          _latest_price = _latest_price.mul(new BN(_price_multiplier));
         }
       }
       
@@ -550,9 +550,6 @@ function parameterized_test(accounts,
           break;
         }
         let intervals = randint(0, 6);
-        let original_timestamp = (await _acb.getTimestamp()).toNumber();
-        await _acb.setTimestamp(original_timestamp +
-                                _price_change_interval * intervals);
         let price = _start_price;
         for (let i = 0; i < intervals; i++) {
           price = price.mul(new BN(100 - _price_change_percentage)).
@@ -567,16 +564,19 @@ function parameterized_test(accounts,
         let eth_amount = price.mul(new BN(requested_coin_amount));
         let voter_eth_balance =
             new BN(await web3.eth.getBalance(voter.address));
-        if (eth_amount.div(new BN(2)).gte(voter_eth_balance)) {
+        if (eth_amount.mul(new BN(2)).gte(voter_eth_balance)) {
           continue;
         }
         
+        let original_timestamp = (await _acb.getTimestamp()).toNumber();
+        await _acb.setTimestamp(original_timestamp +
+                                _price_change_interval * intervals);
         let coin_supply = await get_coin_supply();
         voter.balance += requested_coin_amount;
         await check_purchase_coins(
           {value: eth_amount.toString(),
            from: voter.address},
-          price.mul(new BN(requested_coin_amount)).toString(),
+          eth_amount.toString(),
           requested_coin_amount);
         if (requested_coin_amount) {
           _latest_price = price;
@@ -1330,8 +1330,8 @@ function parameterized_test(accounts,
       let args =
           receipt.logs.filter(e => e.event == 'PurchaseCoinsEvent')[0].args;
       assert.equal(args.sender, option.from);
-      assert.equal(args.eth_amount, eth_amount);
       assert.equal(args.coin_amount, coin_amount);
+      assert.equal(args.eth_amount.toString(), eth_amount);
       let eth_balance = new BN(await web3.eth.getBalance(_eth_pool.address));
       assert.equal(eth_balance.sub(old_eth_balance).toString(),
                    eth_amount);
