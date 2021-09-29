@@ -12,7 +12,7 @@ If JohnLawCoin is successful and proves the assumption is correct, it will provi
 
 There are a couple of preceding examples of non-collateralized stablecoins like BasisCoin and Empty Set Dollar. However, none of the coins has succeeded in stabilizing the currency price in the long run. JohnLawCoin is yet another experiment to solve the not-yet-solved problem by addressing issues of the existing stablecoins. The key difference between JohnLawCoin and the existing stablecoins is that JohnLawCoin implements an open market operation to stabilize the currency price.
 
-See [the whitepaper](./docs/whitepaper.pdf) for more details. See [the smart contract](https://github.com/xharaken/john-law-coin/blob/main/contracts/JohnLawCoin.sol) for the implementation.
+See [the overview slide](https://docs.google.com/presentation/d/115iIoL1q3oUpxEU7WHOL8CKSk6ZocKHOOPQDM6B83P4/edit#slide=id.g3fd63888d1_0_7) and [the whitepaper](./docs/whitepaper.pdf) for more details. See [the smart contract](https://github.com/xharaken/john-law-coin/blob/main/contracts/JohnLawCoin.sol) for the implementation.
 
 # Three steps to start
 

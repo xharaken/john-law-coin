@@ -1,6 +1,6 @@
 # Overview
 
-This page explains how to use the [JohnLawCoin wallet](https://xharaken.github.io/john-law-coin/wallet/wallet.html). If you are not familiar with the basic concepts of JohnLawCoin (e.g., ACB, Oracle, voting, bonds, open market operation), please read [the whitepaper](./docs/whitepaper.pdf).
+This page explains how to use the [JohnLawCoin wallet](https://xharaken.github.io/john-law-coin/wallet/wallet.html). If you are not familiar with the basic concepts of JohnLawCoin (e.g., ACB, Oracle, voting, bonds, open market operation), please read [the overview slide](https://docs.google.com/presentation/d/115iIoL1q3oUpxEU7WHOL8CKSk6ZocKHOOPQDM6B83P4/edit#slide=id.g3fd63888d1_0_7) or [the whitepaper](./docs/whitepaper.pdf).
 
 JohnLawCoin is simple. You can only do the following operations with the wallet:
 
