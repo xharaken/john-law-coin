@@ -5,7 +5,7 @@
 // This software is released under the MIT License.
 // http://opensource.org/licenses/mit-license.php
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.11;
 
 import "./JohnLawCoin_v5.sol";
 

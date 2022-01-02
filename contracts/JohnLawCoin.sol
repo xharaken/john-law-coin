@@ -5,7 +5,7 @@
 // This software is released under the MIT License.
 // http://opensource.org/licenses/mit-license.php
 
-pragma solidity ^0.8.6;
+pragma solidity ^0.8.11;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
