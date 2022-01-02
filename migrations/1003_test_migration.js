@@ -10,7 +10,7 @@ const common = require("./common.js");
 const sleep = common.sleep;
 
 module.exports = async function (deployer) {
-  if (deployer.network != "upgrade_test") {
+  if (deployer.network == "test") {
     return;
   }
   
