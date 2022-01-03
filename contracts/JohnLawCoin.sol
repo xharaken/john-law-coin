@@ -1436,6 +1436,8 @@ contract OpenMarketOperation is OwnableUpgradeable {
 
     // The latest price at which the open market operation exchanged JLC with
     // ETH.
+    // TODO: Adjust this value to realize roughly 1 JLC = 1.0 USD before
+    // launching to the mainnet.
     latest_price_ = 1000000000000;
 
     // Whether the latest price was updated in the current epoch.

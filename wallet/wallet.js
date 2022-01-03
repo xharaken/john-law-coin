@@ -78,10 +78,12 @@ window.onload = async () => {
         "the Testnet. For testing purpose, the duration of one epoch " +
         "and the price auction interval are set to 1 min. " +
         "Please test whatever you want and give us feedback!</span>";
+      $("wallet_version").innerHTML = "[beta]";
     } else if (_chain_id == 1337 || __chain_id == 1338) {
       $("network").innerHTML =
         "<span class='warning'>You are connected to " +
         "the local network.</span>";
+      $("wallet_version").innerHTML = "[local]";
     } else {
       $("network").innerHTML =
         "<span class='warning'>You are connected to " +
@@ -494,6 +496,8 @@ async function vote() {
     console.log("current_salt: ", current_salt);
     const current_commit = await getCommit(current_epoch_id);
     const previous_commit = await getCommit(current_epoch_id - 1);
+    console.log("current_commit: ", current_commit);
+    console.log("previous_commit: ", previous_commit);
     
     if (current_commit.voted) {
       throw("You have already voted in the current epoch. " +
@@ -552,6 +556,7 @@ async function vote() {
       throw(receipt);
     }
     const ret = receipt.events.VoteEvent.returnValues;
+    await sleep(6000);
     const updated_epoch_id = parseInt(
       await _oracle_contract.methods.epoch_id_().call());
     const message = "Commit for epoch " + updated_epoch_id + ": " +
@@ -1300,10 +1305,9 @@ async function showTransactionSuccessMessage(message, receipt) {
   showMessage(div, html);
   div.className = "success";
   document.body.scrollIntoView({behavior: "smooth", block: "start"});
-  
-  setTimeout(async () => {
-    await reloadInfo();
-  }, 3000);
+
+  await sleep(6000);
+  await reloadInfo();
 }
 
 async function showErrorMessage(message, object) {
@@ -1331,12 +1335,13 @@ async function getCommit(epoch_id) {
   const ret = await target_oracle_contract.methods.getCommit(
     epoch_id % 3, _selected_address).call();
   return {voted: ret[4] == epoch_id,
-          hash: ret[4] == epoch_id ? ret[0] : ""};
+          hash: ret[4] == epoch_id ? ret[0] : "",
+          ret: ret};
 }
 
 async function getSalt(epoch_id) {
   const message = "Vote (Epoch ID = " + epoch_id + ")";
-  const key = _selected_address + "-" + message;
+  const key = _selected_address + "-" + _acb_contract._address + "-" + message;
   let salt = localStorage[key];
   if (salt) {
     return salt;
@@ -1398,6 +1403,10 @@ function getPhaseString(phase) {
     return "RECLAIM";
   }
   return "";
+}
+
+async function sleep(msec) {
+  return new Promise(resolve => setTimeout(resolve, msec));
 }
 
 function $(id) {
