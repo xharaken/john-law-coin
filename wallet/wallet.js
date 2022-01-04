@@ -65,25 +65,36 @@ window.onload = async () => {
     _chain_id = await ethereum.request({ method: 'eth_chainId' });
     console.log("_chain_id: ", _chain_id);
     if (_chain_id == 1) {
+      $("wallet_version").innerHTML = "[on Ethereum Mainnet]";
       throw(
-        "JohnLawCoin is not yet launched to the Ethereum Mainnet. " +
+        "JohnLawCoin is not yet launched to the Ethereum Ethereum. " +
           "Click the Metamask extension and choose the Rinkeby Testnet.");
     } else if (_chain_id == 3) {
+      $("wallet_version").innerHTML = "[on Ropsten]";
       throw(
         "JohnLawCoin is not supported on the Ropsten Testnet. " +
           "Click the Metamask extension and choose the Rinkeby Testnet.");
     } else if (_chain_id == 4) {
       $("network").innerHTML =
         "<span class='warning'>Note: You are connected to " +
-        "the Testnet. For testing purpose, the duration of one epoch " +
+        "a Testnet. For testing purpose, the duration of one epoch " +
         "and the price auction interval are set to 1 min. " +
         "Please test whatever you want and give us feedback!</span>";
-      $("wallet_version").innerHTML = "[beta]";
+      $("wallet_version").innerHTML = "[on Rinkeby]";
+    } else if (_chain_id == 137) {
+      $("wallet_version").innerHTML = "[on Polygon]";
+    } else if (_chain_id == 80001) {
+      $("network").innerHTML =
+        "<span class='warning'>Note: You are connected to " +
+        "a Testnet. For testing purpose, the duration of one epoch " +
+        "and the price auction interval are set to 1 min. " +
+        "Please test whatever you want and give us feedback!</span>";
+      $("wallet_version").innerHTML = "[on Mumbai]";
     } else if (_chain_id == 1337 || __chain_id == 1338) {
       $("network").innerHTML =
         "<span class='warning'>You are connected to " +
         "the local network.</span>";
-      $("wallet_version").innerHTML = "[local]";
+      $("wallet_version").innerHTML = "[on local network]";
     } else {
       $("network").innerHTML =
         "<span class='warning'>You are connected to " +
@@ -1369,11 +1380,15 @@ function extractTransactionHash(error) {
 function getEtherScanURL() {
   let etherscan_address = "";
   if (_chain_id == 1) {
-    etherscan_address = ETHERSCAN_ADDRESS_ON_MAINNET;
+    etherscan_address = ETHERSCAN_ADDRESS_ON_ETHEREUM;
   } else if (_chain_id == 3) {
     etherscan_address = ETHERSCAN_ADDRESS_ON_ROPSTEN;
   } else if (_chain_id == 4) {
     etherscan_address = ETHERSCAN_ADDRESS_ON_RINKEBY;
+  } else if (_chain_id == 137) {
+    etherscan_address = ETHERSCAN_ADDRESS_ON_POLYGON;
+  } else if (_chain_id == 80001) {
+    etherscan_address = ETHERSCAN_ADDRESS_ON_MUMBAI;
   }
   return etherscan_address;
 }
@@ -1381,11 +1396,15 @@ function getEtherScanURL() {
 function getACBAddress() {
   let acb_address = ACB_ADDRESS_ON_LOCAL;
   if (_chain_id == 1) {
-    acb_address = ACB_ADDRESS_ON_MAINNET;
+    acb_address = ACB_ADDRESS_ON_ETHEREUM;
   } else if (_chain_id == 3) {
     acb_address = ACB_ADDRESS_ON_ROPSTEN;
   } else if (_chain_id == 4) {
     acb_address = ACB_ADDRESS_ON_RINKEBY;
+  } else if (_chain_id == 137) {
+    acb_address = ACB_ADDRESS_ON_POLYGON;
+  } else if (_chain_id == 80001) {
+    acb_address = ACB_ADDRESS_ON_MUMBAI;
   }
   return acb_address;
 }
