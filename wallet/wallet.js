@@ -100,6 +100,15 @@ window.onload = async () => {
         "<span class='warning'>You are connected to " +
         "an unknown network.</span>";
     }
+    
+    const elements =
+          document.getElementsByClassName("network_currency_symbol");
+    for (const element of elements) {
+      element.innerText = getNetworkCurrencySymbol();
+    }
+    $("donate_button_001").value = "Donate 0.01 " + getNetworkCurrencySymbol();
+    $("donate_button_01").value = "Donate 0.1 " + getNetworkCurrencySymbol();
+    $("donate_button_1").value = "Donate 1 " + getNetworkCurrencySymbol();
   } catch (error) {
     console.log(error);
     await showErrorMessage(
@@ -252,7 +261,8 @@ async function purchaseCoins() {
     const your_eth_balance =
           new BN(await _web3.eth.getBalance(_selected_address));
     if (eth_amount.gt(your_eth_balance)) {
-      throw("You don't have enough ETH balance to purchase the coins.");
+      throw("You don't have enough " + getNetworkCurrencySymbol() +
+            " balance to purchase the coins.");
     }
     
     const promise = _acb_contract.methods.purchaseCoins().send(
@@ -265,10 +275,12 @@ async function purchaseCoins() {
     }
     const ret = receipt.events.PurchaseCoinsEvent.returnValues;
     const message = "Sold " + _web3.utils.fromWei(ret.eth_amount) +
-          " ETH (" + ret.eth_amount + " wei) and purchased " +
+          " " + getNetworkCurrencySymbol() +
+          " (" + ret.eth_amount + " wei) and purchased " +
           ret.coin_amount + " JLC. The amount of the purchased coins " +
           "can be different from the amount of the coins you specified " +
-          "depending on the ETH / JLC price at the transaction timing.";
+          "depending on the " + getNetworkCurrencySymbol() +
+          " / JLC price at the transaction timing.";
           "transaction was processed.";
     await showTransactionSuccessMessage(message, receipt);
   } catch (error) {
@@ -323,8 +335,10 @@ async function sellCoins() {
     const eth_balance =
           new BN(await _web3.eth.getBalance(_eth_pool_contract._address));
     if (eth_amount.gt(eth_balance)) {
-      throw("The Open Market Operation does not have enough ETH to purchase " +
-            "the JLC coins you specified. Check the current ETH / JLC price " +
+      throw("The Open Market Operation does not have enough " +
+            getNetworkCurrencySymbol() + " to purchase " +
+            "the JLC coins you specified. Check the current " +
+            getNetworkCurrencySymbol() + " / JLC price " +
             "and specify a lower value.");
     }
     
@@ -339,7 +353,8 @@ async function sellCoins() {
     const ret = receipt.events.SellCoinsEvent.returnValues;
     const message = "Sold " + ret.coin_amount +
           " JLC and purchased " + _web3.utils.fromWei(ret.eth_amount) +
-          " ETH (" + ret.eth_amount + " wei).";
+          " " + getNetworkCurrencySymbol() +
+          " (" + ret.eth_amount + " wei).";
     await showTransactionSuccessMessage(message, receipt);
   } catch (error) {
     const transactionHash = extractTransactionHash(error);
@@ -567,9 +582,16 @@ async function vote() {
       throw(receipt);
     }
     const ret = receipt.events.VoteEvent.returnValues;
-    await sleep(6000);
-    const updated_epoch_id = parseInt(
-      await _oracle_contract.methods.epoch_id_().call());
+    let updated_epoch_id = 0;
+    for (let i = 0; i < 5; i++) {
+      updated_epoch_id = parseInt(
+        await _oracle_contract.methods.epoch_id_().call());
+      if (current_epoch_id <= updated_epoch_id) {
+        break;
+      }
+      await sleep(6000);
+    }
+    
     const message = "Commit for epoch " + updated_epoch_id + ": " +
           (ret.commit_result ? 
            "Succeeded. You voted for the oracle level " + current_level +
@@ -626,7 +648,8 @@ async function donate(eth) {
     showProcessingMessage();
     const receipt = await promise;
     console.log("receipt: ", receipt);
-    const message = "Donated " + eth + " ETH. Thank you very much!!";
+    const message = "Donated " + eth + " " + getNetworkCurrencySymbol() +
+          ". Thank you very much!!";
     await showTransactionSuccessMessage(message, receipt);
   } catch (error) {
     await showErrorMessage("Couldn't donate.", error);
@@ -658,8 +681,10 @@ async function reloadInfo() {
     html += "<tr><td>Bond balance</td><td class='right'>" +
       bond_balance + "</td></tr>";
     const your_eth_balance = await _web3.eth.getBalance(_selected_address);
-    html += "<tr><td>ETH balance</td><td class='right'>" +
-      _web3.utils.fromWei(your_eth_balance) + " ETH</td></tr>";
+    html += "<tr><td>" + getNetworkCurrencySymbol() +
+      " balance</td><td class='right'>" +
+      _web3.utils.fromWei(your_eth_balance) + " " +
+      getNetworkCurrencySymbol() + "</td></tr>";
     const epoch_id =
           parseInt(await _oracle_contract.methods.epoch_id_().call());
 
@@ -707,27 +732,34 @@ async function reloadInfo() {
     const coin_budget = parseInt(
       await _open_market_operation_contract.methods.coin_budget_().call());
     const current_state =
-          coin_budget > 0 ? "You can sell ETH and purchase JLC" :
-          (coin_budget < 0 ? "You can sell JLC and purchase ETH" : "Closed");
+          coin_budget > 0 ? "You can sell " + getNetworkCurrencySymbol() +
+          " and purchase JLC" :
+          (coin_budget < 0 ?
+           "You can sell JLC and purchase " + getNetworkCurrencySymbol() :
+           "Closed");
     html = "<table><tr><td>Current state</td><td class='right'>" +
       current_state + "</a></td></tr>";
     html += "<tr><td>Coin budget</td><td class='right'>" +
       coin_budget + "</td></tr>";
     const eth_balance =
           await _web3.eth.getBalance(_eth_pool_contract._address);
-    html += "<tr><td>ETH balance</td><td class='right'>" +
-      _web3.utils.fromWei(eth_balance) + " ETH<br>" +
+    html += "<tr><td>" + getNetworkCurrencySymbol() +
+      " balance</td><td class='right'>" +
+      _web3.utils.fromWei(eth_balance) + " " +
+      getNetworkCurrencySymbol() + "<br>" +
       "(" + eth_balance + " wei)</td></tr>";
     const current_price =
           await _open_market_operation_contract.methods.getCurrentPrice(
             Math.trunc((Date.now() - current_epoch_start_ms) / 1000)).call();
     html += "<tr><td>Current price</td><td class='right'>" +
-      "1 JLC = " + _web3.utils.fromWei(current_price) + " ETH<br>" +
+      "1 JLC = " + _web3.utils.fromWei(current_price) + " " +
+      getNetworkCurrencySymbol() + "<br>" +
       "(1 JLC = " + current_price + " wei)</td></tr>";
     const latest_price =
           await _open_market_operation_contract.methods.latest_price_().call();
     html += "<tr><td>Latest exchanged price</td><td class='right'>" +
-      "1 JLC = " + _web3.utils.fromWei(latest_price) + " ETH<br>" +
+      "1 JLC = " + _web3.utils.fromWei(latest_price) + " " +
+      getNetworkCurrencySymbol() + "<br>" +
       "(1 JLC = " + latest_price + " wei)</td></tr>";
     html += "<tr><td colspan=2 class='left' id='price_chart' " +
       "style='height: 200px; width: 600px'>" +
@@ -1149,7 +1181,7 @@ async function showHistoryChart() {
       table.addColumn("number", "exchanged_eth");
       table.addRows(logs["exchanged_eth"]);
       const options = {
-        title: "OpenMarketOperation: exchanged ETH",
+        title: "OpenMarketOperation: exchanged " + getNetworkCurrencySymbol(),
         legend: {position: "bottom"}};
       const chart = new google.visualization.LineChart(
         $("chart_exchanged_eth"));
@@ -1161,7 +1193,8 @@ async function showHistoryChart() {
       table.addColumn("number", "eth_balance");
       table.addRows(logs["eth_balance"]);
       const options = {
-        title: "OpenMarketOperation: ETH balance",
+        title: "OpenMarketOperation: " + getNetworkCurrencySymbol() +
+          " balance",
         legend: {position: "bottom"}};
       const chart = new google.visualization.LineChart(
         $("chart_eth_balance"));
@@ -1173,7 +1206,8 @@ async function showHistoryChart() {
       table.addColumn("number", "latest_price");
       table.addRows(logs["latest_price"]);
       const options = {
-        title: "OpenMarketOperation: ETH / JLC exchanged price",
+        title: "OpenMarketOperation: " + getNetworkCurrencySymbol() +
+          " / JLC exchanged price",
         legend: {position: "bottom"}};
       const chart = new google.visualization.LineChart(
         $("chart_latest_price"));
@@ -1257,7 +1291,7 @@ async function showPriceChart() {
     table.addColumn("number", "current time");
     table.addRows(prices);
     const options = {
-      title: "Price chart (ETH / JLC)",
+      title: "Price chart (" + getNetworkCurrencySymbol() + " / JLC)",
       legend: {position: "bottom"},
       vAxis: {
         gridlines: {count: 16},
@@ -1422,6 +1456,13 @@ function getPhaseString(phase) {
     return "RECLAIM";
   }
   return "";
+}
+
+function getNetworkCurrencySymbol() {
+  if (_chain_id == 137 || _chain_id == 80001) {
+    return "MATIC";
+  }
+  return "ETH";
 }
 
 async function sleep(msec) {

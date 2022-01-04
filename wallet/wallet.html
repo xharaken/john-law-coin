@@ -29,7 +29,7 @@
         <span class="bold">Account address</span>: Your account address.<br>
         <span class="bold">Coin balance</span>: Your coin balance.<br>
         <span class="bold">Bond balance</span>: Your bond balance.<br>
-        <span class="bold">ETH balance</span>: Your ETH balance.<br>
+        <span class="bold"><span class="network_currency_symbol"></span> balance</span>: Your <span class="network_currency_symbol"></span> balance.<br>
         <span class="bold">Voted in the current epoch</span>: Whether you have voted in the current epoch. You can vote only once per epoch.
   </span></span></h2>
   <div id="account_info"></div>
@@ -50,11 +50,11 @@
   
   <h2>Open Market Operation info
     <span class="tooltip">?<span class="tooltip-text">
-        <span class="bold">Current state</span>: You can sell ETH and purchase JLC / You can sell JLC and purchase ETH / Closed.<br>
-        <span class="bold">Coin budget</span>: If the budget is positive, it indicates the amount of JLC the you can purchase (by selling ETH). If the budget is negative, it indicates the amount of JLC you can sell (by purchasing ETH).<br>
-        <span class="bold">ETH balance</span>: The pooled ETH balance.<br>
+        <span class="bold">Current state</span>: You can sell <span class="network_currency_symbol"></span> and purchase JLC / You can sell JLC and purchase <span class="network_currency_symbol"></span> / Closed.<br>
+        <span class="bold">Coin budget</span>: If the budget is positive, it indicates the amount of JLC the you can purchase (by selling <span class="network_currency_symbol"></span>). If the budget is negative, it indicates the amount of JLC you can sell (by purchasing <span class="network_currency_symbol"></span>).<br>
+        <span class="bold"><span class="network_currency_symbol"></span> balance</span>: The pooled <span class="network_currency_symbol"></span> balance.<br>
         <span class="bold">Current price</span>: The current price.<br>
-        <span class="bold">Latest exchanged price</span>: The latest price at which the Open Market Operation exchanged JLC with ETH.<br>
+        <span class="bold">Latest exchanged price</span>: The latest price at which the Open Market Operation exchanged JLC with <span class="network_currency_symbol"></span>.<br>
         <span class="bold">Price chart</span>: The price auction is implemented as a Dutch auction. When the auction is selling JLC, the price is lowered until the coin budget becomes zero. When the auction is purchasing JLC, the price is raised until the coin budget becomes zero.<br>
   </span></span></h2>
   <div id="open_market_operation_info"></div>
@@ -62,7 +62,7 @@
   <h2>Send coins
     <span class="tooltip">?<span class="tooltip-text">
         You can send coins to your friend's account address.<br><br>
-        <span class="italic">[This operation consumes some ETH as transaction fee.]</span>
+        <span class="italic">[This operation consumes some <span class="network_currency_symbol"></span> as transaction fee.]</span>
   </span></span></h2>
   <p>Your friend address: <input type="text" id="send_coins_address" size="56"></input></p>
   <p>Amount of coins: <input type="number" min="1" id="send_coins_amount"></input></p>
@@ -72,7 +72,7 @@
     <span class="tooltip">?<span class="tooltip-text">
         Look up a real-world currency exchanger (e.g., Uniswap) and choose the JLC <-> USD exchange rate at the point when the current epoch started. If no currency exchanger supports the JLC <-> USD conversion yet, choose 1 JLC = 1.1 USD (Oracle level 5).<br><br>
             When you voted at epoch N, 10% of your coin balance is deposited to the ACB. The deposited coins will be returned to your wallet with some reward at epoch N+2 as long as you vote at epoch N+1 and epoch N+2. See <a href="https://github.com/xharaken/john-law-coin/blob/main/HowToUseWallet.md" target="_blank" rel="noopener noreferrer">help</a> to learn the mechanism more.<br><br>
-            <span class="italic">[This operation consumes some ETH as transaction fee.]</span>
+            <span class="italic">[This operation consumes some <span class="network_currency_symbol"></span> as transaction fee.]</span>
   </span></span></h2>
   <p>Current exchange rate: <select name="vote_oracle_level" id="vote_oracle_level" size="1">
       <option value="0">1 JLC = 0.6 USD (Oracle level 0)</option>
@@ -90,16 +90,16 @@
   
   <h2>Purchase coins
     <span class="tooltip">?<span class="tooltip-text">
-        You can sell ETH and purchase JLC as long as the coin budget is positive. The current ETH / JLC price is displayed in the Open Market Operation info.<br><br>
-        <span class="italic">[This operation consumes some ETH as transaction fee.]</span>
+        You can sell <span class="network_currency_symbol"></span> and purchase JLC as long as the coin budget is positive. The current <span class="network_currency_symbol"></span> / JLC price is displayed in the Open Market Operation info.<br><br>
+        <span class="italic">[This operation consumes some <span class="network_currency_symbol"></span> as transaction fee.]</span>
   </span></span></h2>
   <p>Amount of coins: <input type="number" min="1" id="purchase_coins_amount"></input></p>
   <p><input type="button" value="Purchase" id="purchase_coins_button"></input><span class="disabled" id="purchase_coins_button_disabled"></span></p>
   
   <h2>Sell coins
     <span class="tooltip">?<span class="tooltip-text">
-        You can sell JLC and purchase ETH as long as the coin budget is negative. The current ETH / JLC price is displayed in the Open Market Operation info.<br><br>
-        <span class="italic">[This operation consumes some ETH as transaction fee.]</span>
+        You can sell JLC and purchase <span class="network_currency_symbol"></span> as long as the coin budget is negative. The current <span class="network_currency_symbol"></span> / JLC price is displayed in the Open Market Operation info.<br><br>
+        <span class="italic">[This operation consumes some <span class="network_currency_symbol"></span> as transaction fee.]</span>
   </span></span></h2>
   <p>Amount of coins: <input type="number" min="1" id="sell_coins_amount"></input></p>
   <p><input type="button" value="Sell" id="sell_coins_button"></input><span class="disabled" id="sell_coins_button_disabled"></span></p>
@@ -107,7 +107,7 @@
   <h2>Purchase bonds
     <span class="tooltip">?<span class="tooltip-text">
         You can purchase bonds as long as the bond budget is positive. The bond price is 996 coins / bond. The bond can be redeemed for 1000 coins on the redemption date or when the bond budget becomes negative.<br><br>
-        <span class="italic">[This operation consumes some ETH as transaction fee.]</span>
+        <span class="italic">[This operation consumes some <span class="network_currency_symbol"></span> as transaction fee.]</span>
   </span></span></h2>
   <p>Amount of bonds: <input type="number" min="1" id="purchase_bonds_amount"></input></p>
   <p><input type="button" value="Purchase" id="purchase_bonds_button"></input><span class="disabled" id="purchase_bonds_button_disabled"></span></p>
@@ -115,18 +115,18 @@
   <h2>Redeem bonds
     <span class="tooltip">?<span class="tooltip-text">
         You can redeem bonds after the redemption dates. You can also redeem bonds regardless of the redemption dates when the bond budget is nevative. Expired bonds are not redeemable.<br><br>
-        <span class="italic">[This operation consumes some ETH as transaction fee.]</span>
+        <span class="italic">[This operation consumes some <span class="network_currency_symbol"></span> as transaction fee.]</span>
   </span></span></h2>
   <div id="bond_list"></div>
   <p><input type="button" value="Redeem as many bonds as possible" id="redeem_bonds_button"></input><span class="disabled" id="redeem_bonds_button_disabled"></span></p>
   
   <h2>Donate
     <span class="tooltip">?<span class="tooltip-text">
-        Donate some ETH to JohnLawCoin. The donated ETH will be used for the development (e.g., the transaction fee of creating contracts, the monthly fee to use an Ethereum node provider). Thanks!<br>
+        Donate some <span class="network_currency_symbol"></span> to JohnLawCoin. The donated <span class="network_currency_symbol"></span> will be used for the development (e.g., the transaction fee of creating contracts, the monthly fee to use an Ethereum node provider). Thanks!<br>
   </span></span></h2>
-  <p><input type="button" value="Donate 0.01 ETH" id="donate_button_001"></input>
-    <input type="button" value="Donate 0.1 ETH" id="donate_button_01"></input>
-    <input type="button" value="Donate 1 ETH" id="donate_button_1"></input></p>
+  <p><input type="button" id="donate_button_001"></input>
+    <input type="button" id="donate_button_01"></input>
+    <input type="button" id="donate_button_1"></input></p>
   
   <hr>
   <p>Show <a href=""><span id="advanced_button">advanced information</span></a>.</p>
