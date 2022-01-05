@@ -114,7 +114,7 @@ module.exports = {
       from: '0x65D0E8a5311A838EF6bE65A673e9F22573c3Deff',
       websocket: true,
       networkCheckTimeout: 1000000000,
-      network_id: 80001,   // Polygon's id
+      network_id: 137,     // Polygon's id
       gas: 5500000,        // Polygon has a lower block limit than mainnet
       confirmations: 2,    // # of confs to wait between deployments. (default: 0)
       timeoutBlocks: 2000000,  // # of blocks before a deployment times out  (minimum/default: 50)
