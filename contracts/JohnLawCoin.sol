@@ -52,6 +52,10 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 //
 // If you have any questions, file GitHub issues
 // (https://github.com/xharaken/john-law-coin).
+//
+// Note: When the smart contracts are deployed on Polygon networks, "ETH" in the
+// following contracts means MATIC on the Polygon networks.
+//
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
@@ -1425,9 +1429,9 @@ contract OpenMarketOperation is OwnableUpgradeable {
     // To avoid the price from increasing / decreasing too much, the price
     // is allowed to increase / decrease up to PRICE_CHANGE_MAX times.
     //
-    // TODO: Change PRICE_CHANGE_INTERVAL to 8 * 60 * 60 before launching to the
-    // mainnet. It's set to 60 seconds for the Ropsten Testnet.
-    PRICE_CHANGE_INTERVAL = 60; // 8 hours
+    // TODO: Set the value to 8 * 60 * 60 for the mainnet and 60 for the
+    // testnet.
+    PRICE_CHANGE_INTERVAL = 8 * 60 * 60; // 8 hours
     PRICE_CHANGE_PERCENTAGE = 15; // 15%
     PRICE_CHANGE_MAX = 25;
     PRICE_MULTIPLIER = 3;
@@ -1436,9 +1440,8 @@ contract OpenMarketOperation is OwnableUpgradeable {
 
     // The latest price at which the open market operation exchanged JLC with
     // ETH.
-    // TODO: Adjust this value to realize roughly 1 JLC = 1.0 USD before
-    // launching to the mainnet.
-    latest_price_ = 1000000000000;
+    // TODO: Set a reasonable value before launching to the mainnet.
+    latest_price_ = 1000000000000000;
 
     // Whether the latest price was updated in the current epoch.
     latest_price_updated_ = false;
@@ -1788,9 +1791,9 @@ contract ACB is OwnableUpgradeable, PausableUpgradeable {
     // The duration of the epoch. The ACB adjusts the total coin supply once
     // per epoch. Voters can vote once per epoch.
     //
-    // TODO: Change the value to 7 * 24 * 60 * 60 before launching to the
-    // mainnet. It's set to 1 min for the Ropsten Testnet.
-    EPOCH_DURATION = 60; // 1 week.
+    // TODO: Set the value to 7 * 24 * 60 * 60 for the mainnet and 60 for the
+    // testnet.
+    EPOCH_DURATION = 7 * 24 * 60 * 60; // 1 week.
 
     // The percentage of the coin balance voters need to deposit.
     DEPOSIT_RATE = 10; // 10%.
