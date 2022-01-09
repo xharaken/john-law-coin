@@ -115,7 +115,8 @@ module.exports = {
       websocket: true,
       networkCheckTimeout: 1000000000,
       network_id: 137,     // Polygon's id
-      gas: 5500000,        // Polygon has a lower block limit than mainnet
+      gas: 15000000,        // Polygon has a lower block limit than mainnet
+      gasPrice: 80000000000,
       confirmations: 2,    // # of confs to wait between deployments. (default: 0)
       timeoutBlocks: 2000000,  // # of blocks before a deployment times out  (minimum/default: 50)
       skipDryRun: true     // Skip dry run before migrations? (default: false for public nets )

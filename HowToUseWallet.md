@@ -38,11 +38,11 @@ The detailed calculation is described in the whitepaper, but in summary, **you j
 
 ## Purchase and sell coins
 
-The ACB implements an *open market operation* to increase / decrease the total coin supply. When the exchange rate is higher than 1 JLC = 1.0 USD, the open market operation sells JLC and purchases ETH to increase the total coin supply. When the exchange rate is 1 JLC = 0.6 USD or lower, the open market operation sells ETH and purchases JLC to decrease the total coin supply. The open market operation is controlled by the *coin budget*.
+The ACB implements an *open market operation* to increase / decrease the total coin supply. When the exchange rate is higher than 1 JLC = 1.0 USD, the open market operation sells JLC and purchases MATIC to increase the total coin supply. When the exchange rate is 1 JLC = 0.6 USD or lower, the open market operation sells MATIC and purchases JLC to decrease the total coin supply. The open market operation is controlled by the *coin budget*.
 
-You can sell ETH and purchase JLC when the coin budget is positive. You can sell JLC and purchase ETH when the coin budget is negative.
+You can sell MATIC and purchase JLC when the coin budget is positive. You can sell JLC and purchase MATIC when the coin budget is negative.
 
-The open market operation is implemented as a Dutch auction. When the coin budget is positive, the price (ETH / JLC) is lowered until the coin budget goes down to zero. When the coin budget is negative, the price (ETH / JLC) is raised until the coin budget goes up to zero.
+The open market operation is implemented as a Dutch auction. When the coin budget is positive, the price (MATIC / JLC) is lowered until the coin budget goes down to zero. When the coin budget is negative, the price (MATIC / JLC) is raised until the coin budget goes up to zero.
 
 ## Purchase and redeem bonds
 
@@ -57,12 +57,12 @@ You can redeem bonds after the redemption dates. You can also redeem bonds (rega
 Initially you have zero coins. There are two ways to increase your coins from zero:
 
 1. Contribute to the voting and earn the reward.
-1. Pay ETH and purchase coins using the open market operation.
+1. Pay MATIC and purchase coins using the open market operation.
 
 When you have coins, there are multiple ways to increase your coins:
 
 1. Contribute to the voting and earn the reward; the more coins you possess, the more reward you can earn.
-1. Pay ETH and purchase coins using the open market operation.
+1. Pay MATIC and purchase coins using the open market operation.
 1. Purchase and redeem bonds (996 coins become 1000 coins after 12 weeks).
 
 Once real-world currency exchangers support the JLC <-> USD conversion, you can purchase coins from the currency exchangers. You can also increase your coins by performing arbitrage. When the exchange rate is 1 JLC = 1.2 USD and you believe that the ACB has the ability of adjusting the exchange rate to 1 JLC = 1.0 USD, you can earn money by selling coins now and buying them back later. When the exchange rate is 1 JLC = 0.8 USD and you believe that the ACB has the ability of adjusting the exchange rate to 1 JLC = 1.0 USD, you can earn money by buying coins now and selling them back later. You can also perform arbitrage using the open market operation.

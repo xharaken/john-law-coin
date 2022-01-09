@@ -20,23 +20,23 @@ const JohnLawBond = artifacts.require("JohnLawBond");
 
 module.exports = async function (deployer) {
   const coin = await deployProxy(JohnLawCoin, []);
-  console.log("a");
+  console.log("a", coin.address);
   const bond = await deployProxy(JohnLawBond, []);
-  console.log("b");
+  console.log("b", bond.address);
   const oracle = await deployProxy(Oracle, []);
-  console.log("c");
+  console.log("c", oracle.address);
   const bond_operation = await deployProxy(BondOperation, [bond.address]);
-  console.log("d");
+  console.log("d", bond_operation.address);
   const open_market_operation = await deployProxy(OpenMarketOperation, []);
-  console.log("e");
+  console.log("e", open_market_operation.address);
   const eth_pool = await deployProxy(EthPool, []);
-  console.log("f");
+  console.log("f", eth_pool.address);
   const logging = await deployProxy(Logging, []);
-  console.log("g");
+  console.log("g", logging.address);
   const acb = await deployProxy(
     ACB, [coin.address, oracle.address, bond_operation.address,
           open_market_operation.address, eth_pool.address, logging.address]);
-  console.log("h");
+  console.log("h", acb.address);
   
   console.log("JohnLawCoin address: ", coin.address);
   console.log("JohnLawBond address: ", bond.address);

@@ -1,6 +1,6 @@
 # What is JohnLawCoin?
 
-***[Note: Currently JohnLawCoin is being tested on the Testnet. Your feedback is critical to improve the system before it's launched to the Ethereum Mainnet (planned in 2021).]***
+***[Note: Currently JohnLawCoin is being tested on the Testnet. Your feedback is critical to improve the system before it's launched to the [Polygon Mainnet](https://polygon.technology/) (planned in 2022 Jan).]***
 
 <img src="./docs/logo.png" width=120px>
 
@@ -18,7 +18,9 @@ See [the overview slide](https://docs.google.com/presentation/d/115iIoL1q3oUpxEU
 
 ## Step 1
 
-[Install MetaMask](./HowToInstallMetamask.md). MetaMask is a crypto wallet that enables you to connect to Ethereum's blockchain from your browser. MetaMask supports Chrome, Firefox, Opera and Brave.
+[Install MetaMask](./HowToInstallMetamask.md). MetaMask is a crypto wallet that enables you to connect to Ethereum-based blockchain from your browser. MetaMask supports Chrome, Firefox, Opera and Brave.
+
+JohnLawCoin uses the [Polygon Mainnet](https://polygon.technology/) instead of the Ethereum Mainnet. The reason is that as of 2022 Jan, the transaction fee of the Ethereum Mainnet is too high for users to use JohnLawCoin ($60 - $250 per transaction). On the other hand, the transaction fee on the Polygon Mainnet is $0.01 - $0.1 per transaction. JohnLawCoin will revisit the option to use the Ethereum Mainnet when Ethereum 2.0 is available and lowers the transaction fee enough.
 
 ## Step 2
 
