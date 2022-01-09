@@ -22,8 +22,6 @@ Click the Metamask extension and make sure that your account is marked as "Conne
 
 If it's marked as "Not connected", click it and then connect your account.
 
-<img src="./docs/metamask_not_connected.png" width=360px>
-
 # Step 4: Deposit MATIC
 
 You need to deposit some MATIC to your Polygon wallet to use JohnLawCoin because you need to pay the transaction fee in MATIC. There are [multiple ways](https://medium.com/prepo/setting-up-metamask-and-getting-eth-matic-on-polygon-step-by-step-guide-fd55147a0f05) to get MATIC. The easiest way is to buy MATIC at [Binance](https://www.binance.com/) or [Ascendex](https://ascendex.com/en/global-digital-asset-platform) and withdraw it to your Polygon wallet directly. As of 2022 Jan, the transaction fee of the Polygon Mainnet is around $0.01 - $0.05 per transaction. Putting $10 of MATIC will be sufficient to play with JohnLawCoin.
