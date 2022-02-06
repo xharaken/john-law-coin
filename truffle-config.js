@@ -28,7 +28,8 @@
 require('dotenv').config();
 const HDWalletProvider = require('@truffle/hdwallet-provider');
 const { ROPSTEN_GATEWAY_URL, RINKEBY_GATEWAY_URL, MUMBAI_GATEWAY_URL,
-        POLYGON_GATEWAY_URL, MNEMONIC, ETHERSCAN_API_KEY } = process.env;
+        POLYGON_GATEWAY_URL, MNEMONIC,
+        ETHERSCAN_API_KEY, POLYGONSCAN_API_KEY } = process.env;
 
 module.exports = {
   /**
@@ -153,6 +154,7 @@ module.exports = {
     'truffle-plugin-verify'
   ],
   api_keys: {
-    etherscan: ETHERSCAN_API_KEY
+    etherscan: ETHERSCAN_API_KEY,
+    polygonscan: POLYGONSCAN_API_KEY
   },
 };

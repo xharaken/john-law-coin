@@ -1,6 +1,6 @@
 # What is JohnLawCoin?
 
-***[Note: Currently JohnLawCoin is being tested on the Testnet. Your feedback is critical to improve the system before it's launched to the [Polygon Mainnet](https://polygon.technology/) (planned in 2022 Jan).]***
+***JohnLawCoin is now running on the [Polygon Mainnet](https://polygon.technology/)!***
 
 <img src="./docs/logo.png" width=120px>
 
