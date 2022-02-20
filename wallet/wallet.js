@@ -589,6 +589,7 @@ async function vote() {
       if (current_epoch_id <= updated_epoch_id) {
         break;
       }
+      console.log("Waiting for the epoch ID to be updated...");
       await sleep(6000);
     }
     
