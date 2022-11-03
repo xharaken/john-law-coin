@@ -6,9 +6,9 @@
 \renewcommand\arraystretch{1.4}
 \sloppy
 
-\title{\textbf{FiatACB: Issuing a Stable Fiat Currency\\on Public Blockchains}}
-\author{Kentaro Hara\footnote{Twitter: @johnlawcoin, GitHub: https://github.com/xharaken/john-law-coin. Opinions are my own and not the views of my employer.}}
-\date{2022 February}
+\title{\textbf{An Algorithmic Central Bank\\for Developing Countries}}
+\author{Kentaro Hara\footnote{Email: xharaken@gmail.com, GitHub: https://github.com/xharaken/john-law-coin. Opinions are my own and not the views of my employer.}}
+\date{2022 November}
 
 \begin{document}
 
@@ -16,22 +16,24 @@
 
 \begin{abstract}
 
-Real-world central banks of developing countries sometimes struggle with stabilizing the exchange rate of their domestic currencies or give up issuing domestic currencies by using major foreign currencies as legal tender (e.g., dollarization). This paper proposes an algorithm (called \textit{\textbf{FiatACB}}) that enables the central banks to issue a stable domestic currency on a public blockchain. The proposed algorithm stabilizes the exchange rate of the domestic currency by enforcing an algorithmically defined currency intervention. Unlike the traditional stabilization mechanisms like currency board and soft pegging, the algorithm does not require the central banks to hold adequate foreign currency reserves. Thus the algorithm can be adopted by central banks of broad developing countries.
+Real-world central banks of developing countries sometimes struggle with stabilizing the exchange rate of their domestic currencies or give up issuing domestic currencies by using major foreign currencies as legal tender (e.g., dollarization). This paper proposes an algorithm (called \textit{\textbf{FiatACB}}) that enables central banks to issue stable domestic currencies on a public blockchain. The proposed algorithm stabilizes the exchange rate of the domestic currency by enforcing an algorithmically defined currency intervention. Unlike the traditional stabilization mechanisms like currency board and soft pegging, the algorithm does not require central banks to hold adequate foreign currency reserves. Thus the algorithm can be adopted by central banks of broad developing countries.
 
-In general, the algorithm can be used by not only central banks but also any entities to issue a stable currency without holding adequate foreign currency reserves. For example, metaverse platforms can use the algorithm to issue their own stablecoin.
+In general, the algorithm can be used by not only central banks but also any entities to issue stablecoins without holding adequate foreign currency reserves. For example, metaverse platforms can use the algorithm to issue their own stablecoins.
 
 \end{abstract}
 
 \section{Background}
 
-\textit{\textbf{JohnLawCoin}}~\cite{johnlawcoin} is a non-collateralized stablecoin~\cite{arner2020stablecoins,moin2020sok} realized by an \textit{\textbf{Algorithmic Central Bank (ACB)}}. The whitepaper~\cite{johnlawcoin} proposed a way to stabilize the currency price with algorithmically defined monetary protocols without holding any collateral like USD. The whitepaper pointed out the following value propositions of the ACB:
+\textit{\textbf{JohnLawCoin}}~\cite{johnlawcoin} is an algorithmic stablecoin~\cite{arner2020stablecoins,moin2020sok} realized by an \textit{\textbf{Algorithmic Central Bank (ACB)}}. The whitepaper~\cite{johnlawcoin} proposed a way to stabilize the currency price with algorithmically defined monetary protocols without holding collateral like USD. The whitepaper pointed out the following value propositions of the ACB:
 
 \begin{itemize}
-\item Non-fiat cryptocurrencies can use the algorithm to implement a stablecoin without having any gatekeeper that holds collateral.
-\item Real-world central banks of developing countries can use the algorithm to issue a stable fiat currency without holding adequate USD reserves.
+\item Non-fiat cryptocurrencies can use the algorithm to implement stablecoins without having any gatekeeper that holds collateral.
+\item Real-world central banks of developing countries can use the algorithm to issue fiat stablecoins without holding adequate USD reserves.
 \end{itemize}
 
-The whitepaper mainly discussed the first bullet, and JohnLawCoin was launched as a fully decentralized cryptocurrency that stabilizes the currency price without having any gatekeeper that holds collateral. On the other hand, this paper investigates the second bullet. Real-world central banks of developing countries sometimes struggle with stabilizing the exchange rate of their domestic currencies or give up issuing domestic currencies by using major foreign currencies as legal tender (e.g., dollarization). This paper proposes a solution to the problem. \textbf{\textit{FiatACB} enables the central banks of developing countries to issue a stable domestic currency on a public blockchain without holding adequate USD reserves}. In general, FiatACB can be used by not only central banks but also any entities to issue a stable currency. For example, metaverse platforms~\cite{duan2021metaverse,wang2021non} can use FiatACB to issue their own stablecoin.
+The whitepaper mainly discussed the first bullet, and JohnLawCoin was launched as a fully decentralized cryptocurrency that stabilizes the currency price without having any gatekeeper that holds collateral. On the other hand, this paper investigates the second bullet.
+
+Real-world central banks of developing countries sometimes struggle with stabilizing the exchange rate of their domestic currencies or give up issuing domestic currencies by using major foreign currencies as legal tender (e.g., dollarization). This paper proposes a solution to the problem. \textbf{\textit{FiatACB} enables the central banks of developing countries to issue stable domestic currencies on a public blockchain without holding adequate USD reserves}. This is realized by FiatACB enforcing an algorithmically defined currency intervention based on a managed floating exchange rate regime. In general, FiatACB can be used by not only central banks but also any entities to issue stablecoins. For example, metaverse platforms~\cite{duan2021metaverse,wang2021non} can use FiatACB to issue their own stablecoins.
 
 \section{Exchange rate regimes}
 
@@ -134,10 +136,10 @@ The above discussion can be summarized as follows:
 \item As far as blockchain technologies are concerned, it is hard to enforce capital flow control.
 \item The impossible trinity states that only two of the free capital flows, the fixed exchange rate and the independent monetary policies can be realized. To ensure the free capital flows, only one of the fixed exchange rate and the independent monetary policies can be realized.
 \item The choice does not need to be one of the two corner solutions and may take somewhere between the fixed exchange rate regime and the floating exchange rate regime. However, the Bipolar View states that the intermediate exchange rate regime is not sustainable for developing countries. Thus FiatACB needs to choose either the fixed exchange rate regime or the floating exchange rate regime.
-\item The goal of FiatACB is to enable central banks of developing countries to issue a stable fiat currency without holding adequate USD reserves. FiatACB cannot choose the fixed exchange rate regime because it requires adequate USD reserves. Thus FiatACB chooses the floating exchange rate regime. To stabilize the exchange rate, just like real-world central banks are doing for fear of floating, \textbf{FiatACB runs the managed floating exchange rate regime with algorithmically defined currency intervention}.
+\item The goal of FiatACB is to enable central banks of developing countries to issue fiat stablecoins without holding adequate USD reserves. FiatACB cannot choose the fixed exchange rate regime because it requires adequate USD reserves. Thus FiatACB chooses the floating exchange rate regime. To stabilize the exchange rate, just like real-world central banks are doing for fear of floating, \textbf{FiatACB runs the managed floating exchange rate regime with an algorithmically defined currency intervention}.
 \end{itemize}
 
-In summary, FiatACB is a mechanism to run the managed floating exchange rate regime on a public blockchain. Thus FiatACB shares the benefits and the cost of the managed floating exchange rate regime. It does not require the central bank to hold adequate USD reserves. It generates seigniorage. Table \ref{pros_cons_regimes} compares the benefits and the cost of FiatACB with those of the dollarization and the currency board.
+In summary, FiatACB is a mechanism to run the managed floating exchange rate regime on a public blockchain. Thus FiatACB shares the benefits and the cost of the managed floating exchange rate regime. It does not require central banks to hold adequate USD reserves. It generates seigniorage. Table \ref{pros_cons_regimes} compares the benefits and the cost of FiatACB with those of the dollarization and the currency board.
 
 \section{Algorithm}
 
@@ -148,12 +150,12 @@ First of all, the central bank needs to define what the issued coin's value shou
 FiatACB consists of the three components:
 
 \begin{description}
-\item{\textbf{Coins}}: The goal of FiatACB is to stabilize the coin price to 1 coin = 1.0 USD. FiatACB expands and contracts the total coin supply with algorithmically defined monetary protocols so that the USD / coin exchange rate becomes 1.0. In addition, the central bank has discretionary power to mint and burn coins to enforce independent monetary policies. However, if the central bank uses the discretionary power and mints too many coins, FiatACB will lose trust and stop working. When the central bank is expected to use or not use the discretionary power is discussed in the section \ref{discretionary_power}.
-\item{\textbf{Bonds}}: FiatACB issues and redeems bonds to expand and contract the total coin supply and thus adjust the coin price. The bonds are designed as zero-coupon bonds where the annual interest rate is set to $R$. Let $T$ be the redemption period (measured in days), $B_{\mathrm{issue}}$ be the bond issue price and $B_{\mathrm{redemp}}$ be the redemption price. $R$, $T$, $B_{\mathrm{redemp}}$ and $B_{\mathrm{issue}}$ meet $R=(B_{\mathrm{redemp}}/B_{\mathrm{issue}})^{365/T}-1$. The bonds are designed to expire $T_{\mathrm{expire}}$ days after the redemption dates\footnote{The bonds are never expired before their redemption dates. Bondholders do not need to worry that they may not have a chance to redeem the bonds they own.}.
-\item{\textbf{Open market operation}}: The open market operation is another mechanism for FiatACB to expand and contract the total coin supply. To expand the total coin supply, FiatACB purchases ETH and issues coins. This increases the ETH reserves held by FiatACB. To contract the total coin supply, FiatACB sells the reserved ETH and burns coins. This corresponds to the currency intervention run by real-world central banks to maintain the managed floating exchange rate regime.
+\item{\textbf{Coins}}: The goal of FiatACB is to stabilize the coin price to 1 coin = 1.0 USD. FiatACB expands and contracts the total coin supply with algorithmically defined monetary protocols so that the USD / coin exchange rate becomes 1.0. In addition, the central bank has discretionary power to mint and burn coins to enforce independent monetary policies. However, if the central bank uses the discretionary power and mints too many coins, FiatACB will lose trust and stop working. When the central bank is expected to use or not use the discretionary power is discussed in the section \ref{seigniorage}.
+\item{\textbf{Bonds}}: FiatACB issues and redeems bonds to expand and contract the total coin supply and thus adjust the coin price. The bonds are designed as zero-coupon bonds where the annual interest rate is set to $R$. Let $T$ be the redemption period (measured in days), $B_{\mathrm{issue}}$ be the bond issue price and $B_{\mathrm{redemp}}$ be the redemption price. $R$, $T$, $B_{\mathrm{redemp}}$ and $B_{\mathrm{issue}}$ meet $R=(B_{\mathrm{redemp}}/B_{\mathrm{issue}})^{365/T}-1$. The bonds are designed to expire $T_{\mathrm{expire}}$ days after the redemption dates\footnote{The bonds never expire before their redemption dates. Bondholders do not need to worry that they may not have a chance to redeem the bonds they own.}.
+\item{\textbf{Currency intervention}}: The currency intervention is another mechanism for FiatACB to expand and contract the total coin supply. To expand the total coin supply, FiatACB purchases ETH and issues coins. This increases the ETH reserves held by FiatACB. To contract the total coin supply, FiatACB sells the reserved ETH and burns coins. This corresponds to the currency intervention run by real-world central banks to maintain the managed floating exchange rate regime.
 \end{description}
 
-The key difference between FiatACB and JohnLawCoin's ACB~\cite{johnlawcoin} is that FiatACB is operated by the central bank whereas JohnLawCoin works in a fully decentralized manner without any gatekeeper. This leads to a few differences in the algorithm. First, JohnLawCoin's ACB needs an oracle to determine the latest exchange rate with a fully decentralized voting scheme but FiatACB does not need it because the central bank can feed the latest exchange rate. Second, FiatACB gives the central bank the ability to mint and burn coins.
+For readers who are familiar with JohnLawCoin~\cite{johnlawcoin}: The key difference between FiatACB and JohnLawCoin's ACB is that FiatACB is operated by the central bank whereas JohnLawCoin works in a fully decentralized manner without any gatekeeper. This leads to a few differences in the algorithm. First, JohnLawCoin's ACB needs an oracle to determine the latest exchange rate with a fully decentralized voting scheme but FiatACB does not need it because the central bank can feed the latest exchange rate. Second, there is no initial coin supply in FiatACB. Alternatively, FiatACB gives the central bank the power to mint and burn coins.
 
 \subsection{Algorithm}
 
@@ -175,11 +177,6 @@ FiatACB obtains the latest exchange rate from the central bank. FiatACB expands 
 \tab int \textit{bond\_budget};\\
 \tab \texttt{\# The latest exchange rate set by the central bank.}\\
 \tab float \textit{exchange\_rate};\\
-\\
-\texttt{\# This function is called only once when initializing the system.}\\
-\textbf{function} Initialize(address \textit{central\_bank}, int \textit{initial\_coin\_supply}):\\
-\tab \textit{acb.coin\_supply} $=$ \textit{initial\_coin\_supply};\\
-\tab \textit{acb.coins}[\textit{central\_bank}] $=$ \textit{initial\_coin\_supply};\\
 \\
 \texttt{\# Only the central bank can call this function.}\\
 \textbf{function} MintCoins(address \textit{central\_bank}, int \textit{amount}):\\
@@ -214,14 +211,14 @@ FiatACB obtains the latest exchange rate from the central bank. FiatACB expands 
 \tab\tab\tab \textit{acb.bond\_budget} $=$ $-$\textit{acb.bond\_supply};\\
 \tab\tab\tab \texttt{\# Mint the remaining coins to achieve the target total coin supply.}\\
 \tab\tab\tab int \textit{mint} = (\textit{count} $-$ \textit{acb.bond\_supply}) $*$ $B_\mathrm{redemp}$;\\
-\tab\tab\tab \texttt{\# Sell} \textit{mint} \texttt{coins with the open market operation.}\\
+\tab\tab\tab \texttt{\# Sell} \textit{mint} \texttt{coins with the currency intervention.}\\
 \tab\tab\tab \texttt{\# This increases} \textit{acb.coin\_supply} \texttt{by} \textit{mint}\texttt{ by purchasing ETH.}\\
 \tab\tab\tab \textit{acb}.increaseCoinSupplyWithOpenMarketOperation(\textit{mint});\\
 \tab \textbf{else}:\\
 \tab\tab \texttt{\# Issue new bonds to contract the total coin supply.}\\
 \tab\tab \textit{acb.bond\_budget} $=$ $-$\textit{delta} $/$ $B_\mathrm{issue}$;\\
 \tab\tab \textbf{if} \textit{exchange\_rate} $<=$ $E_{\mathrm{threshold}}$:\\
-\tab\tab\tab \texttt{\# Purchase} $-$\textit{delta} \texttt{coins with the open market operation.}\\
+\tab\tab\tab \texttt{\# Purchase} $-$\textit{delta} \texttt{coins with the currency intervention.}\\
 \tab\tab\tab \texttt{\# This decreases} \textit{acb.coin\_supply} \texttt{by} $-$\textit{delta}\texttt{ by selling ETH.}\\
 \tab\tab\tab \textit{acb}.decreaseCoinSupplyWithOpenMarketOperation($-$\textit{delta});\\
 \\
@@ -269,7 +266,7 @@ FiatACB obtains the latest exchange rate from the central bank. FiatACB expands 
 \tab\tab \textit{acb.coins}[\textit{user}] $=$ \textit{acb.coins}[\textit{user}] $+$ \textit{amount};\\
 \hrulefill\\
 
-Table \ref{example_parameters} shows one example of the parameter setting. The proposed parameter setting is conservative compared to existing algorithm-based stablecoins. For example, Empty Set Dollar (ESD)~\cite{emptysetdollar} adjusts the total coin supply every 8 hours while the proposed setting adjusts it every 1 week. The maximum increase of the total coin supply of ESD is set to 6\% per 8 hours while that of the proposed setting is set to 4\% per week. The risk premium of the proposed setting is set to only 1.76\%. The proposed setting is conservative about making changes in the total coin supply because the goal of FiatACB is to stabilize the coin price in the long run, not to create yet another toy for speculative investors.
+Table \ref{example_parameters} shows one example of the parameter setting. The proposed parameter setting is conservative compared to the existing algorithmic stablecoins. For example, Empty Set Dollar (ESD)~\cite{emptysetdollar} adjusts the total coin supply every 8 hours while the proposed setting adjusts it every 1 week. The maximum increase of the total coin supply of ESD is set to 6\% per 8 hours while that of the proposed setting is set to 4\% per week. The risk premium of the proposed setting is set to only 1.76\%. The proposed setting is conservative about making changes in the total coin supply because the goal of FiatACB is to stabilize the coin price in the long run, not to create yet another toy for speculative investors.
 
 \begin{table}[tb]
 \begin{center}
@@ -281,8 +278,8 @@ $B_{\mathrm{redemp}}$ (The bond redemption price) & 1000 coins (corresponding to
 $T$ (The bond redemption period) & 12 weeks\\\hline
 $R=(B_{\mathrm{redemp}}/B_{\mathrm{issue}})^{365/T}-1$ (The annual interest rate of holding bonds) & 1.76\%\\\hline
 $T_{\mathrm{expire}}$ (The bond expiration period) & 2 weeks\\\hline
-Initial coin supply & 100000000 coins (corresponding to 100000000 USD)\\\hline
-$E_{\mathrm{threshold}}$ (the threshold to contract the total coin supply using the open market operation) & 0.6\\\hline
+Initial coin supply & 0 coins\\\hline
+$E_{\mathrm{threshold}}$ (the threshold to contract the total coin supply using the currency intervention) & 0.6\\\hline
 \end{tabular}
 \label{example_parameters}
 \end{center}
@@ -298,13 +295,13 @@ If $E>1$, FiatACB expands the total coin supply by $KM(E-1)$. If $E<1$, FiatACB 
 
 Now FiatACB knows how many coins should be minted (when $E>1$) or burned (when $E<1$). The next question is how FiatACB mints or burns the coins.
 
-FiatACB mints coins by redeeming issued bonds regardless of their redemption dates. Specifically, FiatACB redeems $KM(E-1)/B_{\mathrm{redemp}}$ bonds regardless of their redemption dates. FiatACB does not need to worry about what bonds should be redeemed first (e.g., first-issued-first-redeemed) because it is the bondholder's responsibility to request the redemption. FiatACB only needs to redeem bonds as requested reactively until $KM(E-1)/B_{\mathrm{redemp}}$ bonds are redeemed. Note that bondholders are incentivized to redeem bonds as soon as possible to maximize their profit. If $KM(E-1)/B_{\mathrm{redemp}}$ exceeds the number of already issued bonds, FiatACB mints the remaining coins using the open market operation.\footnote{Bonds are designed to expire $T_{\mathrm{expire}}$ days after the redemption dates. This is important to avoid the following situation. If some bondholders stop using the system, the bonds they own are left unredeemed forever. FiatACB cannot mint coins using the open market operation because there are bonds to be redeemed. This prevents FiatACB from increasing the total coin supply.}
+FiatACB mints coins by redeeming issued bonds regardless of their redemption dates. Specifically, FiatACB redeems $KM(E-1)/B_{\mathrm{redemp}}$ bonds regardless of their redemption dates. FiatACB does not need to worry about what bonds should be redeemed first (e.g., first-issued-first-redeemed) because it is the bondholder's responsibility to request the redemption. FiatACB only needs to redeem bonds as requested reactively until $KM(E-1)/B_{\mathrm{redemp}}$ bonds are redeemed. Note that bondholders are incentivized to redeem bonds as soon as possible to maximize their profit. If $KM(E-1)/B_{\mathrm{redemp}}$ exceeds the number of already issued bonds, FiatACB mints the remaining coins using the currency intervention.\footnote{Bonds are designed to expire $T_{\mathrm{expire}}$ days after the redemption dates. This is important to avoid the following situation. If some bondholders stop using the system, the bonds they own are left unredeemed forever. FiatACB cannot mint coins using the currency intervention because there are bonds to be redeemed. This prevents FiatACB from increasing the total coin supply.}
 
 FiatACB burns coins by issuing new bonds. Specifically, FiatACB issues $KM(1-E)/B_{\mathrm{issue}}$ bonds.
 
 In this way, FiatACB expands / contracts the total coin supply by redeeming / issuing bonds. FiatACB issues a bond at the price of $B_{\mathrm{issue}}$ and redeems the bond at the price of $B_{\mathrm{redemp}}$.
 
-\subsection{Open market operation}
+\subsection{Currency intervention}
 \label{section_overshoot}
 
 \begin{figure}[tb]
@@ -316,40 +313,38 @@ In this way, FiatACB expands / contracts the total coin supply by redeeming / is
 
 When $E<1$, FiatACB contracts the total coin supply by issuing bonds. This works to some extent but has two problems.
 
-First, bonds are not useful as a mechanism to contract overly supplied coins. Imagine that initially the coin price is 1.0 USD. In a bootstrap phase, the market expects that the coin value will increase. This increases the demand for the coins, and the coin price increases to 1.1 USD. Then FiatACB mints new coins and expands the total coin supply to adjust the coin price down to 1.0 USD. This process increases the total coin supply significantly. The problem is that the market expectation may overshoot; i.e., at some point, the market notices that the coin price is overvalued and the total coin supply is too much. The coin price may drop down to 0.9 USD and then 0.8 USD. People start selling their coins before the coin price drops too much, which lowers the coin price even more, as shown in Figure \ref{market_overshoot}. Once the negative feedback loop starts, it is challenging to contract the total coin supply by issuing bonds because no one is willing to purchase the bonds. \textbf{The bonds are not useful as a mechanism to contract the overly supplied coins}. This phenomenon was actually observed in ESD. After the launch, ESD had succeeded in stabilizing the coin price to mostly 1.0 USD from September 2020 to January 2021 but then the coin price dropped to 0.02 USD or less. As of February 2022, the coin price is 0.01 USD and it is hard to say that ESD is working as a stablecoin.
+First, bonds are not useful as a mechanism to contract overly supplied coins. Imagine that initially the coin price is 1.0 USD. In a bootstrap phase, the market expects that the coin value will increase. This increases the demand for the coins, and the coin price increases to 1.1 USD. Then FiatACB mints new coins and expands the total coin supply to adjust the coin price down to 1.0 USD. This process increases the total coin supply significantly. The problem is that the market expectation may overshoot; i.e., at some point, the market notices that the coin price is overvalued and the total coin supply is too much. The coin price may drop down to 0.9 USD and then 0.8 USD. People start selling their coins before the coin price drops too much, which lowers the coin price even more, as shown in Figure \ref{market_overshoot}. Once the negative feedback loop starts, it is challenging to contract the total coin supply by issuing bonds because no one is willing to purchase the bonds. \textbf{The bonds are not useful as a mechanism to contract the overly supplied coins}. This phenomenon was actually observed in ESD. After the launch, ESD had succeeded in stabilizing the coin price to mostly 1.0 USD from September 2020 to January 2021 but then the coin price dropped to 0.02 USD or less. As of November 2022, the coin price is 0.002 USD and it is hard to say that ESD is working as a stablecoin.
 
 Second, FiatACB needs to redeem the issued bonds with the annual interest rate $R$ when the redemption date comes. This means that \textbf{the bonds are useful to contract the total coin supply only temporarily and increase the total coin supply in the long run}.
 
 \begin{figure}[tb]
 \centering
 \includegraphics[width=\linewidth]{price_auction.png}
-\caption{The Dutch price auction of the open market operation.}
+\caption{The Dutch price auction used in the currency intervention.}
 \label{price_auction}
 \end{figure}
 
-The open market operation solves the problems. When FiatACB needs to mint new coins to expand the total coin supply, FiatACB does it by purchasing ETH and minting coins. This increases the ETH reserves of FiatACB. When $E$ becomes lower than $E_{\mathrm{threshold}}$, FiatACB judges that it cannot contract the total coin supply enough only by issuing bonds. FiatACB contracts the total coin supply by selling the reserved ETH and burning coins.
+The currency intervention solves the problems. When FiatACB needs to mint new coins to expand the total coin supply, FiatACB does it by purchasing ETH and minting coins. This increases the ETH reserves of FiatACB. When $E$ becomes lower than $E_{\mathrm{threshold}}$, FiatACB judges that it cannot contract the total coin supply enough only by issuing bonds. FiatACB contracts the total coin supply by selling the reserved ETH and burning coins.
 
-The price to exchange coins and ETH is determined by a Dutch price auction as shown in Figure \ref{price_auction}.\footnote{Open market operations of real-world central banks are sometimes implemented as a Dutch price auction.~\cite{ayuso2003model}} Let $P$ be the latest price at which the open market operation exchanged coins with ETH (i.e., 1 coin = $P$ ETH).
+The price to exchange coins and ETH is determined by a Dutch price auction as shown in Figure \ref{price_auction}.\footnote{Currency intervention of real-world central banks is sometimes implemented as a Dutch price auction~\cite{ayuso2003model}.} Let $P$ be the latest price at which the currency intervention exchanged coins with ETH (i.e., 1 coin = $P$ ETH).
 
-When the open market operation expands the total coin supply, the auction starts with the price of $uP\,(u>1)$. Then the price decreases by $v$\% every hour. The open market operation purchases ETH and sells coins at the given price of the time. The auction stops when the open market operation has finished selling coins to be minted.
+When the currency intervention expands the total coin supply, the auction starts with the price of $uP\,(u>1)$. Then the price decreases by $v$\% every hour. The currency intervention purchases ETH and sells coins at the given price of the time. The auction stops when the currency intervention has finished selling coins to be minted.
 
-When the open market operation contracts the total coin supply, the auction starts with the price of $u'P\,(u'<1)$. Then the price increases by $v'$\% every hour. The open market operation purchases coins and sells the reserved ETH at the given price of the time. The auction stops when the open market operation has finished purchasing coins to be burned or the ETH reserves go down to zero.
+When the currency intervention contracts the total coin supply, the auction starts with the price of $u'P\,(u'<1)$. Then the price increases by $v'$\% every hour. The currency intervention purchases coins and sells the reserved ETH at the given price of the time. The auction stops when the currency intervention has finished purchasing coins to be burned or the ETH reserves go down to zero.
 
-If the ETH reserves go down to zero, FiatACB no longer works as a stablecoin. In theory, there is no guarantee that FiatACB can contract a necessary amount of coins with the open market operation without exhausting the ETH reserves. FiatACB may run out of the ETH reserves in two situations. The first situation is when the market expectation overshot and FiatACB overly expanded the total coin supply while the exchange rate was around 1 coin = 1.0 USD. When the market notices that the total coin supply is too much, people start selling coins and the coin price drops. Then FiatACB needs to contract the total coin supply significantly and may run out of the ETH reserves. To avoid the market expectation overshooting, FiatACB uses conservative parameters to change the total coin supply slowly. The second situation is when the ETH price crashes.
+If the ETH reserves go down to zero, FiatACB no longer works as a stablecoin. In theory, there is no guarantee that FiatACB can contract a necessary amount of coins with the currency intervention without exhausting the ETH reserves. FiatACB may run out of the ETH reserves in two situations. The first situation is when the market expectation overshot and FiatACB overly expanded the total coin supply while the exchange rate was around 1 coin = 1.0 USD. When the market notices that the total coin supply is too much, people start selling coins and the coin price drops. Then FiatACB needs to contract the total coin supply significantly and may run out of the ETH reserves. To avoid the market expectation overshooting, FiatACB uses conservative parameters to change the total coin supply slowly. The second situation is when the ETH price crashes.
 
 Remember that real-world central banks that operate with the managed floating exchange rate regime are facing the same problem. The central banks can enforce currency intervention and control the floating exchange rate only while they have foreign currency reserves.
 
+\subsection{Bootstrap}
+
+The initial coin supply is zero. Initially, there is no trusted external currency exchanger that exchanges the coins with USD and thus the exchange rate does not exist. FiatACB bootstraps as follows.
+
+Until external currency exchangers establish the USD / coin exchange rate, FiatACB issues one coin in exchange for ETH that is worth 1.0 USD. If the USD / ETH exchange rate is constant, the collateral ratio (i.e., what percentage of the total coin supply is backed by the ETH reserves) is 100\%. Eventually external currency exchangers will start exchanging the coins with USD, and at that point, the exchange rate will be established at around 1 coin = 1.0 USD. Then the central bank starts feeding the established exchange rate into FiatACB and starts running the above algorithm. FiatACB stops issuing coins in exchange for ETH.
+
+During the bootstrap phase, FiatACB only issues one coin in exchange for ETH and does not do the opposite (i.e., does not release ETH in exchange for one coin). The reason is that if the USD / ETH exchange rate drops, FiatACB has a risk of exhausting the ETH reserves before it bootstraps.
+
 \section{Discussion}
-
-\subsection{Seigniorage}
-
-\textbf{The central bank can obtain seigniorage} from the three sources:
-
-\begin{itemize}
-\item The initial coin supply.
-\item The central bank has the discretionary power to mint coins.
-\item In a bootstrap phase, the central bank can purchase coins at a lower price using the open market operation. That produces seigniorage when the price increases.
-\end{itemize}
 
 \subsection{Money supply control}
 
@@ -358,15 +353,27 @@ The central bank is responsible for controlling the money supply and circulating
 \begin{itemize}
 \item The central bank can purchase coins from other coinholders at external currency exchangers.
 \item The central bank can use the discretionary power to mint coins.
-\item In the situation where the money supply needs to increase, there is likely an increased demand for the coins. The increased demand raises the exchange rate (e.g., 1 coin = 1.1 USD) and FiatACB expands the total coin supply using the open market operation. The central bank can pay ETH and purchase the coins from the open market operation.
+\item In the situation where the money supply needs to increase, there is likely an increased demand for the coins. The increased demand raises the exchange rate (e.g., 1 coin = 1.1 USD) and FiatACB expands the total coin supply using the currency intervention. The central bank can pay ETH and purchase the coins from the currency intervention.
 \end{itemize}
 
-\subsection{Discretionary power to mint and burn coins}
-\label{discretionary_power}
+\subsection{Seigniorage}
+\label{seigniorage}
 
-FiatACB gives central banks the discretionary power to mint and burn coins. However, central banks of developing countries are not likely to be trusted and any discretionary monetary operations have the risk of crashing the value of the issued coins. Even if the central bank enforces disciplined monetary policies, investors may think that the central bank may end up minting too many coins and that may crash the value of the coins. Then the investors sell their coins to avoid the risk, which lowers the USD / coin price. FiatACB tries to move the USD / coin price back to 1.0 using the bonds and the open market operation but FiatACB may not be able to tolerate the selling pressure and may run out of the ETH reserves. Thus it is highly discouraged to use the discretionary power in a bootstrap phase.
+The central bank cannot obtain seigniorage from the initial coin supply because it is zero. Alternatively, FiatACB gives the central bank the discretionary power to mint and burn coins. The central bank can obtain seigniorage by minting coins.
 
-The central bank may start using the discretionary power after the central bank establishes full trust and the coin price is backed by the country's real economy rather than speculations. For example, when the central bank observes deflation / inflation and needs to increase / decrease the money supply in the country, it may mint / burn coins with disciplined monetary policies. Another example is sterilization~\cite{aizenman2009sterilization}. When the USD / coin price increases in the foreign exchange market, FiatACB runs the currency intervention and attempts to move the USD / coin price back to 1.0 by minting coins. However, if the USD / price increase is a result of external shocks in the foreign exchange market, it is not desirable that FiatACB's currency intervention increases the money supply because it may lead to inflation in the country. In this case, the central bank may burn coins to neutralize the impact of the currency intervention conducted by FiatACB. \textbf{FiatACB's currency intervention is conducted with the goal of stabilizing the exchange rate in the foreign exchange market}, not with the goal of stabilizing the price level in the country. \textbf{The central bank may use discretionary monetary policies to neutralize the impact of FiatACB's currency intervention with the goal of stabilizing the price level in the country}, just like real-world central banks do\footnote{In economics, normally the central bank's operation to stabilize the foreign exchange rate is called currency intervention, and the central bank's operation to control the money supply and stabilize the price level in the country is called open market operations. FiatACB assumes that FiatACB does the former algorithmically and the central bank does the latter manually. Also FiatACB calls the former an open market operation (because the currency intervention is done by exchanging coins with ETH in the open market).}. Remember that the sterilization makes sense only after the issued coins are adopted broadly and the coin price is backed by the country's real economy enough to affect the price level.
+However, central banks of developing countries are not likely to be trusted and discretionary monetary operations have the risk of crashing the value of the issued coins. Investors may think that the central bank will end up minting too many coins and that will crash the value of the coins. Then the investors will sell their coins, which lowers the USD / coin price. FiatACB tries to move the USD / coin price back to 1.0 using the bonds and the currency intervention but FiatACB may not be able to tolerate the selling pressure and run out of the ETH reserves. Thus \textbf{it is critical for the central bank to mint coins based on disciplined monetary policies}. There are multiple approaches to design disciplined monetary policies.
+
+One approach is to mint and burn coins based on the collateral ratio (i.e., what percentage of the circulating coins is backed by the ETH reserves). For simplicity, imagine that the USD / ETH exchange rate stays constant. In the bootstrap phase, FiatACB issues one coin in exchange for ETH that is worth 1.0 USD. The collateral ratio is 100\%. The central bank does not yet obtain any seigniorage\footnote{Note that the collateral (i.e., the ETH reserves) does not give any seigniorage to the central bank. The collateral is fully under control of the smart contract of FiatACB to execute the currency intervention. The central bank cannot use the collateral at their will.}. After FiatACB bootstraps, FiatACB runs the currency intervention algorithm and adjusts the total coin supply. When the USD / coin exchange rate is above 1.0, FiatACB sells coins and purchases ETH. When the USD / coin exchange rate is below 1.0, FiatACB sells ETH and purchases coins. This currency intervention algorithm always increases the collateral ratio because it sells coins when the coin price is high and purchases coins when the coin price is low. The collateral ratio can be 120\%, 150\% or more. The central bank can set a target collateral ratio (e.g., 60\%) and mint coins until the collateral ratio reaches the target value. In reality, the collateral ratio fluctuates as the USD / ETH exchange rate fluctuates, and thus it is desirable to set a conservative target value.
+
+Another approach is to mint and burn coins based on the price level in the country. This approach makes sense only after the coins are circulated broadly in the country and the coin price is backed by its real economy rather than speculations. When the central bank observes deflation / inflation, it can increase / decrease the money supply in the country by minting / burning coins. For example, this is needed for sterilization~\cite{aizenman2009sterilization}. When the USD / coin price increases in the foreign exchange market, FiatACB runs the currency intervention and attempts to move the USD / coin price back to 1.0 by minting coins. However, if the USD / coin price increase is a result of external shocks in the foreign exchange market, it is not desirable that FiatACB's currency intervention increases the money supply because it may lead to inflation in the country. In this case, the central bank may burn coins to neutralize the impact of the currency intervention conducted by FiatACB. FiatACB's currency intervention is conducted with the goal of stabilizing the exchange rate in the foreign exchange market, not with the goal of stabilizing the price level in the country. \textbf{The central bank may use discretionary monetary policies to neutralize the impact of FiatACB's currency intervention with the goal of stabilizing the price level in the country}, just like real-world central banks do\footnote{In economics, normally the central bank's operation to stabilize the foreign exchange rate is called currency intervention, and the central bank's operation to control the money supply and stabilize the price level in the country is called open market operations. FiatACB assumes that FiatACB does the former algorithmically and the central bank does the latter manually.}. Remember that the sterilization makes sense only after the issued coins are adopted broadly and the coin price is backed by the country's real economy enough to affect the price level.
+
+\subsection{Reserve currency}
+
+In international economics, a reserve currency means a foreign currency that is held in significant quantities by central banks as part of their foreign exchange reserves. A reserve currency can be used for the currency intervention of the managed floating exchange rate regime.
+
+FiatACB uses ETH as a reserve currency. Given the high volatility of ETH, the collateral ratio may drop significantly when the price of ETH crashes. One way to mitigate the risk is to use fiat-collateralized stablecoins (e.g., USDT, USDC) because fiat-collateralized stablecoins are fully backed by major fiat currencies and thus the volatility is low. For example, Frax~\cite{frax} accepts USDC as a major reserve currency for this reason. However, this brings a different type of risk. Fiat-collateralized stablecoins have gatekeepers that hold collateral and the gatekeepers may be regulated or go bankrupt. People are questioning whether Tether really holds adequate USD reserves to back the circulating USDT, but Tether has not yet provided a promised audit about it. Recently stablecoins are getting more and more regulated in advanced countries and the counterparty risk about the gatekeepers is not a hypothetical concern. Also, using fiat-collateralized stablecoins as a reserve currency introduces an external dependency on other smart contracts.
+
+Overall the author thinks that using a native cryptocurrency of the blockchain platform (e.g., ETH for Ethereum) as a reserve currency is the most reasonable option because the fact that FiatACB uses the blockchain platform indicates that it trusts the native cryptocurrency. However, this can be customizable. It's possible to accept both ETH and fiat-collateralized stablecoins and create a portfolio.
 
 \subsection{Distributing coins to end users}
 
@@ -379,26 +386,64 @@ The central bank may start using the discretionary power after the central bank 
 
 There are multiple ways to distribute the coins owned by the central bank to end users in the country. A straightforward approach is that the central bank sends coins to end user's addresses on the blockchain in exchange for receiving real-world money from the end user. For example, the central bank can provide ATMs\footnote{El Salvador accepts Bitcoin as legal tender and provides ATMs to enable end users to convert dollars with Bitcoin~\cite{elsalvador}.} to enable the end users to convert 100 USD with 100 coins. This may create privacy problems because the addresses and the transaction history of the end users are exposed on the public blockchain.
 
-To solve the privacy problems, the central bank can use a hierarchical model as shown in Figure \ref{hierarchical_model}. The central bank only manages addresses of private banks and financial institutions on the public blockchain, and the private banks and financial institutions manage end user's addresses on their private ledgers\footnote{The private ledgers can be a traditional distributed database and do not need to be a blockchain.}. The central bank sends coins to the private banks and financial institutions in exchange for receiving real-world money. The private banks and financial institutions provide a nice wallet application and process transactions between the end users. The private banks and financial institutions are regulated by the central bank not to issue coins on their private ledgers exceeding the coins they hold on the public blockchain. This hierarchical model is being explored by the Bank of England~\cite{cbdc1,cbdc2} and other central banks in the context of Central Bank Digital Currencies (CBDC)~\cite{fung2016central}\footnote{Note that FiatACB is not a CBDC. FiatACB and CBDCs solve different problems. FiatACB provides a solution for central banks to issue a stable fiat currency from scratch. On the other hand, CBDCs assume that the central bank already has a fiat currency (e.g., USD, pounds, coins issued by FiatACB) and provide a solution to make it accessible as a digital currency from end users. CBDCs are only about digitalizing transactions of an existing fiat currency and that does not necessarily require blockchain technologies~\cite{ubssurvey}.}.
+To solve the privacy problems, the central bank can use a hierarchical model as shown in Figure \ref{hierarchical_model}. The central bank only manages addresses of private banks and financial institutions on the public blockchain, and the private banks and financial institutions manage end user's addresses on their private ledgers\footnote{The private ledgers can be a traditional distributed database and do not need to be a blockchain.}. The central bank sends coins to the private banks and financial institutions in exchange for receiving real-world money. The private banks and financial institutions provide a nice wallet application and process transactions between the end users. The private banks and financial institutions are regulated by the central bank not to issue coins on their private ledgers exceeding the coins they hold on the public blockchain. This hierarchical model is being explored by the Bank of England~\cite{cbdc1,cbdc2} and other central banks in the context of Central Bank Digital Currency (CBDC)~\cite{fung2016central}\footnote{Note that FiatACB is not CBDC. FiatACB and CBDC solve different problems. FiatACB provides a solution for central banks to issue fiat stablecoins from scratch. On the other hand, CBDC assumes that the central bank already has fiat currency (e.g., USD, pounds, coins issued by FiatACB) and provides a solution to make it accessible as a digital currency from end users. CBDC is only about digitizing transactions of an existing fiat currency and that does not necessarily require blockchain technologies~\cite{ubssurvey}.}.
+
+\subsection{Differences from existing algorithmic stablecoins}
+
+From the cryptocurrency perspective, \textbf{FiatACB can be classified as an algorithmic stablecoin with partial collateral}. This section compares FiatACB with Empty Set Dollar (ESD)~\cite{emptysetdollar} (an algorithmic stablecoin with no collateral), Terra~\cite{terra} (an algorithmic stablecoin with no collateral), and Frax~\cite{frax} (an algorithmic stablecoin with partial collateral).
+
+\subsubsection{Empty Set Dollar}
+
+ESD expanded on the pioneering work of BasisCoin~\cite{basiscoin}. The idea is to expand or contract the total coin supply so that the coin price measured by USD is stabilized. When the coin price is higher than 1.0 USD, ESD expands the total coin supply by minting new coins. When the coin price is lower than 1.0 USD, ESD contracts the total coin supply by issuing bonds.
+
+The real problem is that as described in the section \ref{section_overshoot}, bonds are not useful as a mechanism to contract overly supplied coins. ESD had succeeded in stabilizing the coin price to mostly 1.0 USD from September 2020 to January 2021, when the coin demand had been increasing and thus ESD was able to stabilize the coin price just by minting new coins. However, when the market noticed that the coin supply was too much, ESD's bonds did not work as a mechanism to contract the coin supply and the coin price dropped significantly and crashed.
+
+The important observation is that \textbf{a purely algorithmic stablecoin with no collateral does not have any mechanism to contract overly supplied coins}.
+
+\subsubsection{Terra}
+
+Terra is another purely algorithmic stablecoin that hit the same problem as ESD and crashed but in a more complicated manner.
+
+Terra has two tokens: UST and LUNA. UST is a stablecoin. LUNA is a governance token and at the same time it is used as a ``cushion'' currency to absorb the volatility of UST. Terra guarantees an exchange between 1 UST and LUNA that is worth 1.0 USD at any given time.
+
+When UST is overvalued (e.g., 1 UST = 1.1 USD), users are incentivized to do the following arbitrage. 1) Purchase LUNA that is worth 1.0 USD in the market, 2) Convert the LUNA with 1 UST using Terra, 3) Sell the 1 UST in the market and get 1.1 USD. As a result of 2), the coin supply of UST increases and the USD / UST price is expected to move toward 1.0.
+
+When UST is undervalued (e.g., 1 UST = 0.9 USD), users are incentivized to do the following arbitrage. 1) Pay 0.9 USD and purchase 1 UST in the market, 2) Convert the 1 UST with LUNA that is worth 1.0 USD using Terra, 3) Sell the LUNA in the market and get 1.0 USD. As a result of 2), the coin supply of UST decreases and the USD / UST price is expected to move toward 1.0.
+
+This mechanism works as long as the demand for UST increases. Initially the demand for UST is high (note that it includes a lot of speculative, fragile demand). In this overvalued phase, Terra can keep 1 UST = 1.0 USD just by burning LUNA and minting UST. The problem happens when the demand shrinks. When the market notices that the coin supply of UST is too much, the USD / UST price drops to 1 UST = 0.9 USD. In this undervalued phase, Terra burns UST by minting LUNA. This drops the USD / LUNA price. The market expects that the USD / LUNA price will drop more in the process of contracting the overly supplied UST. This creates a strong sell pressure and the USD / LUNA price crashes. At this point, LUNA that is worth 1.0 USD may become 1 billion LUNA and it can no longer work as a ``cushion'' currency to absorb the volatility of UST. Thus the USD / UST price crashes as well. Terra actually crashed in May 2022.
+
+Terra is just making the mechanism complicated by introducing a ``cushion'' currency. In essence, it is hitting the same problem as ESD. A purely algorithmic stablecoin with no collateral does not have any mechanism to contract overly supplied coins and does not work.
+
+\subsubsection{Frax}
+
+Frax is a fully decentralized algorithmic stablecoin with partial collateral to solve the problems of purely algorithmic stablecoins. Frax has two tokens: FRAX and FXS. FRAX is a stablecoin. FXS is a governance token and at the same time, it is used as a ``cushion'' currency to absorb the volatility of FRAX. The structure is similar to Terra but Frax takes collateral in the form of USDC and other cryptocurrencies to partially back the circulating FRAX. Frax controls the collateral ratio $c (0<c\le 1)$ as follows.
+
+When FRAX is overvalued (e.g., 1 FRAX = 1.1 USD), Frax mints 1 FRAX in exchange for collateral (e.g., USDC) that is worth $c$ USD and FXS that is worth $(1-c)$ USD. Also Frax decreases $c$ slightly since it is safe to decrease the collateral ratio in the overvalued phase. When FRAX is undervalued (e.g., 1 FRAX = 0.9 USD), Frax redeems 1 FRAX in exchange for collateral (e.g., USDC) that is worth $c$ USD and FXS that is worth $(1-c)$ USD. Also Frax increases $c$ slightly.
+
+The difference from Terra is that Terra sets $c$ to 0 whereas Frax sets $c$ to a positive value. Initially $c$ is set to 1, and as of November 2022, $c$ is 0.93. Frax can be viewed as a safer version of Terra in the sense that some portion of the circulating FRAX is backed by the collateral. However, this indicates that Frax shares the same problem as Terra. Imagine that $c$ drops to 0.4 and that Frax needs to contract the overly supplied coins. This will lead to the same situation as Terra and the USD / FXS price will crash. The difference from Terra is that when the USD / FXS price crashes, the USD / FRAX price converges to 0.4, instead of 0. This is an improvement but it is hard to say that Frax works as a stablecoin (i.e., 1 FRAX = 1.0 USD).
+
+In addition, Frax implements a bunch of advanced techniques to attract cryptocurrency investors (e.g., lending, DeFi). FiatACB is much simpler because it sticks to only implementing the managed floating exchange rate regime.
+
+In summary, the major differences between Frax and FiatACB are as follows. First, it is not yet proven that Frax's stabilization technique works. On the other hand, FiatACB implements the managed floating exchange rate regime, which is an already established exchange rate stabilization technique in developed countries. Second, Frax is fully decentralized whereas FiatACB is designed for central banks to run the managed floating exchange rate regime (e.g., FiatACB gives central banks the power to mint and burn coins). Third, FiatACB is much simpler.
 
 \subsection{Incentive analysis}
 
 For FiatACB to work, the following conditions must be met:
 
 \begin{description}
-\item{Condition 1}: FiatACB can find users who are willing to purchase coins using the open market operation when FiatACB needs to expand the total coin supply.
-\item{Condition 2}: FiatACB can find users who are willing to sell coins using the open market operation when FiatACB needs to contract the total coin supply.
+\item{Condition 1}: FiatACB can find users who are willing to purchase coins using the currency intervention when FiatACB needs to expand the total coin supply.
+\item{Condition 2}: FiatACB can find users who are willing to sell coins using the currency intervention when FiatACB needs to contract the total coin supply.
 \item{Condition 3}: FiatACB can find users who are willing to purchase bonds when FiatACB needs to contract the total coin supply.
 \item{Condition 4}: FiatACB does not run out of the ETH reserves.
 \end{description}
 
-Regarding Condition 1, the ETH / coin price is low in a bootstrap phase. Investors and the central bank can make a profit later by purchasing the coins at the low price. After the ETH / coin price is stabilized, the investors are incentivized to purchase coins for arbitrage. Let $E_1$ be the ETH / coin price, $E_2$ be the ETH / USD price and $E_3$ be the USD / coin price. When $E_3>1$ (e.g., 1 coin = 1.1 USD), FiatACB expands the total coin supply and the open market operation lowers $E_1$ over time to run the Dutch price auction. The investors will purchase coins when $E_1<E_2E_3$ is met.
+Regarding Condition 1, investors are incentivized to purchase coins for arbitrage. Let $E_1$ be the ETH / coin price, $E_2$ be the ETH / USD price and $E_3$ be the USD / coin price. When $E_3>1$ (e.g., 1 coin = 1.1 USD), FiatACB expands the total coin supply and the currency intervention lowers $E_1$ over time to run the Dutch price auction. The investors will purchase coins when $E_1<E_2E_3$ is met.
 
-Regarding Condition 2, when $E_3<1$ (e.g., 1 coin = 0.9 USD), FiatACB contracts the total coin supply and the open market operation raises $E_1$ over time to run the Dutch price auction. The investors will sell coins when $E_1>E_2E_3$ is met.
+Regarding Condition 2, when $E_3<1$ (e.g., 1 coin = 0.9 USD), FiatACB contracts the total coin supply and the currency intervention raises $E_1$ over time to run the Dutch price auction. The investors will sell coins when $E_1>E_2E_3$ is met.
 
-Regarding Condition 3, FiatACB issues bonds when $E_3<1$. It is guaranteed that one bond is redeemed for $B_{\mathrm{redemp}}$ coins when the redemption date comes\footnote{Empty Set Dollar (ESD)~\cite{emptysetdollar} does not guarantee the redemption. This is one of the reasons ESD could not find users who were willing to purchase bonds when the coin price dropped and ESD had to contract the total coin supply. ESD's bonds become redeemable only when the coin price becomes higher than 1.0 USD and expire in 90 days. If the coin price is 0.01 USD (this is the actual ESD price as of February 2022) and the bonds expire if the coin price does not recover to 1.0 USD in 90 days, no one will purchase the bonds.}. The investors are incentivized to purchase bonds if they believe that FiatACB has the ability to move the exchange rate back to 1 coin = 1.0 USD. If the difference between $E_3$ and 1 is small, the investors will believe so and purchase bonds. If the difference is large, the investors will believe so only when FiatACB has enough ETH reserves to contract the total coin supply. In other words, Condition 3 is met when Condition 4 is met.
+Regarding Condition 3, FiatACB issues bonds when $E_3<1$. It is guaranteed that one bond is redeemed for $B_{\mathrm{redemp}}$ coins when the redemption date comes\footnote{Empty Set Dollar (ESD)~\cite{emptysetdollar} does not guarantee the redemption. This is one of the reasons ESD could not find users who were willing to purchase bonds when the coin price dropped and ESD had to contract the total coin supply. ESD's bonds become redeemable only when the coin price becomes higher than 1.0 USD and expire in 90 days. If the coin price is 0.002 USD (this is the actual ESD price as of November 2022) and the bonds expire if the coin price does not recover to 1.0 USD in 90 days, no one will purchase the bonds.}. The investors are incentivized to purchase bonds if they believe that FiatACB has the ability to move the exchange rate back to 1 coin = 1.0 USD. If the difference between $E_3$ and 1 is small, the investors will believe so and purchase bonds. If the difference is large, the investors will believe so only when FiatACB has enough ETH reserves to contract the total coin supply. In other words, Condition 3 is met when Condition 4 is met.
 
-Regarding Condition 4, as described in the section \ref{section_overshoot}, FiatACB may run out of the ETH reserves only when the market expectation overly overshoots or the ETH price crashes. To mitigate the risk of the market expectation overshoot, FiatACB uses conservative parameters to expand the total coin supply slowly. To mitigate the risk of the ETH price crash, FiatACB could use a stablecoin (e.g., USDC) instead of ETH as the reserved currency\footnote{The downside of using a stablecoin as the reserved currency is that the smart contracts of FiatACB need to create dependencies on external smart contracts to delegate transactions about the stablecoin.}.
+Regarding Condition 4, as described in the section \ref{section_overshoot}, FiatACB may run out of the ETH reserves only when the market expectation overly overshoots or the ETH price crashes. To mitigate the risk of the market expectation overshoot, FiatACB uses conservative parameters to expand the total coin supply slowly. To mitigate the risk of the ETH price crash, FiatACB could use a stablecoin (e.g., USDC) instead of ETH as the reserved currency.
 
 Also, the investors are incentivized to purchase or sell coins at external currency exchangers when $E_3\neq 1$. When $E_3>1$ and if they believe that FiatACB has the ability to move the exchange rate back to 1 coin = 1.0 USD, they can make a profit by selling their coins now and purchasing the coins back later. When $E_3<1$ and if they believe FiatACB has the ability to move the exchange rate back to 1 coin = 1.0 USD, they can make a profit by purchasing coins now and selling the coins back later. The arbitrage helps $E_3$ move toward to 1.0.
 
@@ -408,7 +453,7 @@ In conclusion, \textbf{the investors are incentivized to do things that enable F
 
 \textbf{FiatACB operates with the (managed) floating exchange rate regime and is considered to be tolerant to speculative attacks}. With the floating exchange rate regime, unlike the intermediate exchange rate regime, investors cannot make a profit by short-selling the currency and purchasing it back later because the exchange rate is floating. Investors are not likely to have incentives to attack the floating exchange rate regime.
 
-Also, investors are not likely to have incentives to make FiatACB run out of the ETH reserves. To make that happen, the investors need to short-sell a substantial amount of coins and lower the exchange rate enough to make FiatACB sell the reserved ETH using the open market operation for a long time. Then the investors need to sell coins and purchase the reserved ETH until FiatACB runs out of the reserves. Since the exchange rate between the coins and USD and the exchange rate between the coins and ETH are both floating, the investors are not likely to make a profit by doing so.
+Also, investors are not likely to have incentives to make FiatACB run out of the ETH reserves. To make that happen, the investors need to short-sell a substantial amount of coins and lower the exchange rate enough to make FiatACB sell the reserved ETH using the currency intervention for a long time. Then the investors need to sell coins and purchase the reserved ETH until FiatACB runs out of the reserves. Since the exchange rate between the coins and USD and the exchange rate between the coins and ETH are both floating, the investors are not likely to make a profit by doing so.
 
 Note that the situation is similar to the real-world central banks that operate with the managed floating exchange rate regime using foreign currency reserves. They are considered to be tolerant to speculative attacks. For example, after the Asian financial crisis~\cite{radelet1998east}, Thailand, Malaysia, Indonesia and the Philippines moved from the intermediate exchange rate regime to the floating exchange rate regime to improve tolerance.
 
@@ -418,9 +463,9 @@ The central bank may customize the smart contracts as necessary. For example, th
 
 \section{Conclusion}
 
-Real-world central banks of developing countries sometimes struggle with stabilizing the exchange rate of their domestic currencies or give up issuing domestic currencies by using major foreign currencies as legal tender (e.g., dollarization). This paper proposed a solution (FiatACB) that enables real-world central banks of developing countries to issue a stable domestic currency without holding adequate USD reserves. \textbf{FiatACB runs the managed floating exchange rate regime and stabilizes the exchange rate by enforcing an algorithmically defined currency intervention on a public blockchain}. In general, FiatACB can be used by not only central banks but also any entities to issue a stable currency. For example, metaverse platforms can use FiatACB to issue their own stablecoins.
+Real-world central banks of developing countries sometimes struggle with stabilizing the exchange rate of their domestic currencies or give up issuing domestic currencies by using major foreign currencies as legal tender (e.g., dollarization). This paper proposed a solution (FiatACB) that enables real-world central banks of developing countries to issue a stable domestic currency without holding adequate USD reserves. \textbf{FiatACB runs the managed floating exchange rate regime and stabilizes the exchange rate by enforcing an algorithmically defined currency intervention on a public blockchain}. In general, FiatACB can be used by not only central banks but also any entities to issue stablecoins. For example, metaverse platforms can use FiatACB to issue their own stablecoins.
 
-If you are interested in using FiatACB, please contact https://github.com/xharaken/john-law-coin.
+If you are interested in using FiatACB, please contact xharaken@gmail.com.
 
 \bibliography{whitepaper.bib}
 \bibliographystyle{unsrt}
