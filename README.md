@@ -1,9 +1,9 @@
 # The latest status
 
-**As of 2022 December, JohnLawCoin on the Polygon Mainnet does not have many users and it is hard to say it has boostrapped successfully yet. In parallel with running the JohnLawCoin experiment, I am actively working on the following two things:
+***As of 2022 December, JohnLawCoin on the Polygon Mainnet does not have many users and it is hard to say it has boostrapped successfully yet. In parallel with running the JohnLawCoin experiment, I am actively working on the following two things:***
 
-* Use the Algorithmic Central Bank algorithm to [enable developing countries to issue their own fiat currencies](./docs/acb_whitepaper.pdf).
-* Enable the central banks to issue [Central Bank Stablecoin](./docs/cbs_whitepaper.pdf).**
+* ***Use the Algorithmic Central Bank algorithm to [enable developing countries to issue their own fiat currencies](./docs/acb_whitepaper.pdf).***
+* ***Enable the central banks to issue [Central Bank Stablecoin](./docs/cbs_whitepaper.pdf).***
 
 
 # What is JohnLawCoin?
